@@ -15,6 +15,11 @@ class EditOffer extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('preview')
+                ->label('Preview ofertă')
+                ->icon('heroicon-o-eye')
+                ->url(fn (): string => OfferResource::getUrl('view', ['record' => $this->record]))
+                ->openUrlInNewTab(),
             Actions\DeleteAction::make(),
         ];
     }

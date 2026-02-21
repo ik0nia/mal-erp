@@ -20,6 +20,11 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
+use Filament\Infolists\Components\ImageEntry;
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\Section as InfolistSection;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
 use Filament\Support\Enums\MaxWidth;
 use Filament\Tables;
@@ -133,10 +138,13 @@ class OfferResource extends Resource
                             ->reorderable(false)
                             ->reorderableWithButtons(false)
                             ->reorderableWithDragAndDrop(false)
+                            ->extraAttributes([
+                                'class' => 'offer-items-repeater',
+                            ])
                             ->headers([
                                 Header::make('thumbnail')
                                     ->label('Imagine')
-                                    ->width('84px'),
+                                    ->width('64px'),
                                 Header::make('woo_product_id')
                                     ->label('Produs')
                                     ->markAsRequired(),
@@ -159,7 +167,7 @@ class OfferResource extends Resource
                                 Header::make('line_total_preview')
                                     ->label('Total linie')
                                     ->align('right')
-                                    ->width('130px'),
+                                    ->width('140px'),
                             ])
                             ->addAction(fn (FormAction $action): FormAction => $action
                                 ->extraAttributes([
@@ -340,12 +348,91 @@ class OfferResource extends Resource
                     }),
             ])
             ->actions([
+                Tables\Actions\Action::make('preview')
+                    ->label('Preview')
+                    ->icon('heroicon-o-eye')
+                    ->url(fn (Offer $record): string => static::getUrl('view', ['record' => $record]))
+                    ->openUrlInNewTab(),
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
+            ]);
+    }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                InfolistSection::make('Detalii ofertă')
+                    ->columns(3)
+                    ->schema([
+                        TextEntry::make('number')->label('Număr'),
+                        TextEntry::make('status')
+                            ->label('Status')
+                            ->badge()
+                            ->formatStateUsing(fn (string $state): string => Offer::statusOptions()[$state] ?? $state),
+                        TextEntry::make('valid_until')
+                            ->label('Valabilă până la')
+                            ->date('d.m.Y'),
+                        TextEntry::make('client_name')->label('Client'),
+                        TextEntry::make('client_company')->label('Companie')->placeholder('-'),
+                        TextEntry::make('client_phone')->label('Telefon')->placeholder('-'),
+                        TextEntry::make('client_email')->label('Email')->placeholder('-'),
+                        TextEntry::make('location.name')->label('Magazin')->placeholder('-'),
+                        TextEntry::make('user.name')->label('Operator')->placeholder('-'),
+                        TextEntry::make('notes')
+                            ->label('Observații')
+                            ->placeholder('-')
+                            ->columnSpanFull(),
+                    ]),
+                InfolistSection::make('Produse ofertă')
+                    ->schema([
+                        RepeatableEntry::make('items')
+                            ->label('')
+                            ->schema([
+                                ImageEntry::make('product.main_image_url')
+                                    ->label('Imagine')
+                                    ->height(40)
+                                    ->defaultImageUrl('https://placehold.co/40x40?text=No+Img'),
+                                TextEntry::make('product_name')
+                                    ->label('Produs')
+                                    ->weight('medium'),
+                                TextEntry::make('sku')
+                                    ->label('SKU')
+                                    ->placeholder('-'),
+                                TextEntry::make('quantity')
+                                    ->label('Cant.')
+                                    ->formatStateUsing(fn ($state): string => number_format((float) $state, 3, '.', '')),
+                                TextEntry::make('unit_price')
+                                    ->label('Preț unitar')
+                                    ->formatStateUsing(fn ($state): string => static::formatCurrency((float) $state)),
+                                TextEntry::make('discount_percent')
+                                    ->label('Discount %')
+                                    ->formatStateUsing(fn ($state): string => number_format((float) $state, 2, '.', '').' %'),
+                                TextEntry::make('line_total')
+                                    ->label('Total linie')
+                                    ->formatStateUsing(fn ($state): string => static::formatCurrency((float) $state))
+                                    ->weight('bold'),
+                            ])
+                            ->columns(7),
+                    ]),
+                InfolistSection::make('Totaluri')
+                    ->columns(3)
+                    ->schema([
+                        TextEntry::make('subtotal')
+                            ->label('Subtotal')
+                            ->formatStateUsing(fn ($state): string => static::formatCurrency((float) $state)),
+                        TextEntry::make('discount_total')
+                            ->label('Discount total')
+                            ->formatStateUsing(fn ($state): string => static::formatCurrency((float) $state)),
+                        TextEntry::make('total')
+                            ->label('Total')
+                            ->weight('bold')
+                            ->formatStateUsing(fn ($state): string => static::formatCurrency((float) $state)),
+                    ]),
             ]);
     }
 
@@ -502,7 +589,7 @@ class OfferResource extends Resource
         $productId = (int) ($get('woo_product_id') ?? 0);
 
         if ($productId <= 0) {
-            return new HtmlString('<span class="inline-block h-14 w-14 rounded bg-gray-100 text-[10px] leading-[56px] text-center text-gray-400">No Img</span>');
+            return new HtmlString('<span class="inline-flex h-10 w-10 items-center justify-center rounded bg-gray-100 text-[10px] text-gray-400">No Img</span>');
         }
 
         static $imageCache = [];
@@ -520,7 +607,7 @@ class OfferResource extends Resource
             : 'https://placehold.co/56x56?text=No+Img';
 
         return new HtmlString(
-            '<img src="'.$resolvedImage.'" alt="Produs" class="h-14 w-14 rounded object-cover ring-1 ring-gray-200/70" />'
+            '<img src="'.$resolvedImage.'" alt="Produs" class="h-10 w-10 rounded object-cover ring-1 ring-gray-200/70" />'
         );
     }
 
@@ -586,6 +673,7 @@ class OfferResource extends Resource
         return [
             'index' => Pages\ListOffers::route('/'),
             'create' => Pages\CreateOffer::route('/create'),
+            'view' => Pages\ViewOffer::route('/{record}'),
             'edit' => Pages\EditOffer::route('/{record}/edit'),
         ];
     }
