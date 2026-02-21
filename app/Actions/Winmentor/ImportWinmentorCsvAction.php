@@ -35,6 +35,7 @@ class ImportWinmentorCsvAction
                 'pages' => 1,
                 'created' => 0,
                 'updated' => 0,
+                'unchanged' => 0,
                 'processed' => 0,
                 'matched_products' => 0,
                 'missing_products' => 0,
@@ -118,6 +119,12 @@ class ImportWinmentorCsvAction
                 }
             }
 
+            $stocksByProductId = ProductStock::query()
+                ->where('location_id', $connection->location_id)
+                ->whereIn('woo_product_id', collect($productsBySku)->pluck('id')->all())
+                ->get()
+                ->keyBy('woo_product_id');
+
             foreach ($rows as $rowNumber => $row) {
                 $lineNumber = $rowNumber + 2; // +1 header and 1-indexed rows
                 $stats['processed']++;
@@ -183,12 +190,17 @@ class ImportWinmentorCsvAction
                     }
                 }
 
-                $stock = ProductStock::query()->firstOrNew([
-                    'woo_product_id' => $product->id,
-                    'location_id' => $connection->location_id,
-                ]);
+                /** @var ProductStock|null $stock */
+                $stock = $stocksByProductId->get($product->id);
 
-                $isNew = ! $stock->exists;
+                $isNew = ! $stock;
+                if (! $stock) {
+                    $stock = new ProductStock([
+                        'woo_product_id' => $product->id,
+                        'location_id' => $connection->location_id,
+                    ]);
+                }
+
                 $oldQuantity = $stock->quantity !== null ? (float) $stock->quantity : null;
                 $oldPrice = $stock->price !== null ? (float) $stock->price : null;
                 $newQuantity = (float) ($quantity ?? 0);
@@ -196,19 +208,31 @@ class ImportWinmentorCsvAction
                 $priceUpdated = $this->isPriceUpdated($oldPrice, $price);
                 $quantityChanged = $this->numbersDiffer($oldQuantity, $newQuantity);
 
-                $stock->fill([
-                    'quantity' => $newQuantity,
-                    'price' => $price,
-                    'source' => IntegrationConnection::PROVIDER_WINMENTOR_CSV,
-                    'sync_run_id' => $run->id,
-                    'synced_at' => Carbon::now(),
-                ]);
-                $stock->save();
-
                 if ($isNew) {
+                    $stock->fill([
+                        'quantity' => $newQuantity,
+                        'price' => $price,
+                        'source' => IntegrationConnection::PROVIDER_WINMENTOR_CSV,
+                        'sync_run_id' => $run->id,
+                        'synced_at' => Carbon::now(),
+                    ]);
+                    $stock->save();
+
+                    $stocksByProductId->put($product->id, $stock);
                     $stats['created']++;
                 } elseif ($quantityChanged || $priceDifferent) {
+                    $stock->fill([
+                        'quantity' => $newQuantity,
+                        'price' => $price,
+                        'source' => IntegrationConnection::PROVIDER_WINMENTOR_CSV,
+                        'sync_run_id' => $run->id,
+                        'synced_at' => Carbon::now(),
+                    ]);
+                    $stock->save();
+
                     $stats['updated']++;
+                } else {
+                    $stats['unchanged']++;
                 }
 
                 if ($priceUpdated) {
@@ -277,8 +301,15 @@ class ImportWinmentorCsvAction
                 }
 
                 if ($quantity !== null) {
-                    $productUpdates['stock_status'] = $newQuantity > 0 ? 'instock' : 'outofstock';
-                    $productUpdates['manage_stock'] = true;
+                    $targetStockStatus = $newQuantity > 0 ? 'instock' : 'outofstock';
+
+                    if ((string) ($product->stock_status ?? '') !== $targetStockStatus) {
+                        $productUpdates['stock_status'] = $targetStockStatus;
+                    }
+
+                    if ($product->manage_stock !== true) {
+                        $productUpdates['manage_stock'] = true;
+                    }
                 }
 
                 if ($productUpdates !== []) {
