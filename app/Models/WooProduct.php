@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WooProduct extends Model
 {
@@ -52,5 +53,15 @@ class WooProduct extends Model
             'woo_product_id',
             'woo_category_id'
         );
+    }
+
+    public function stocks(): HasMany
+    {
+        return $this->hasMany(ProductStock::class, 'woo_product_id');
+    }
+
+    public function priceLogs(): HasMany
+    {
+        return $this->hasMany(ProductPriceLog::class, 'woo_product_id');
     }
 }

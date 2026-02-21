@@ -77,4 +77,14 @@ class Location extends Model
     {
         return $this->hasMany(IntegrationConnection::class);
     }
+
+    public function productStocks(): HasMany
+    {
+        return $this->hasMany(ProductStock::class);
+    }
+
+    public function productPriceLogs(): HasMany
+    {
+        return $this->hasMany(ProductPriceLog::class);
+    }
 }

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class IntegrationConnection extends Model
 {
     public const PROVIDER_WOOCOMMERCE = 'woocommerce';
+    public const PROVIDER_WINMENTOR_CSV = 'winmentor_csv';
 
     protected $fillable = [
         'location_id',
@@ -38,7 +39,15 @@ class IntegrationConnection extends Model
     {
         static::saving(function (self $connection): void {
             $connection->provider = $connection->provider ?: self::PROVIDER_WOOCOMMERCE;
-            $connection->base_url = rtrim((string) $connection->base_url, '/');
+
+            if ($connection->provider === self::PROVIDER_WINMENTOR_CSV) {
+                $csvUrl = trim((string) data_get($connection->settings, 'csv_url', $connection->base_url));
+                $connection->base_url = $csvUrl;
+                $connection->consumer_key = '';
+                $connection->consumer_secret = '';
+            } else {
+                $connection->base_url = rtrim((string) $connection->base_url, '/');
+            }
         });
     }
 
@@ -74,5 +83,31 @@ class IntegrationConnection extends Model
         $value = (int) data_get($this->settings, 'timeout', $default);
 
         return max(5, $value);
+    }
+
+    public function isWooCommerce(): bool
+    {
+        return $this->provider === self::PROVIDER_WOOCOMMERCE;
+    }
+
+    public function isWinmentorCsv(): bool
+    {
+        return $this->provider === self::PROVIDER_WINMENTOR_CSV;
+    }
+
+    public function csvUrl(): string
+    {
+        return trim((string) data_get($this->settings, 'csv_url', $this->base_url));
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function providerOptions(): array
+    {
+        return [
+            self::PROVIDER_WOOCOMMERCE => 'WooCommerce',
+            self::PROVIDER_WINMENTOR_CSV => 'WinMentor CSV',
+        ];
     }
 }

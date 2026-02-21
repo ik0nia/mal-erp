@@ -64,7 +64,8 @@ class SyncRunResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('provider')
                     ->label('Provider')
-                    ->badge(),
+                    ->badge()
+                    ->formatStateUsing(fn (string $state): string => IntegrationConnection::providerOptions()[$state] ?? $state),
                 Tables\Columns\TextColumn::make('connection.name')
                     ->label('Conexiune')
                     ->searchable()
@@ -106,9 +107,7 @@ class SyncRunResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('provider')
                     ->label('Provider')
-                    ->options([
-                        IntegrationConnection::PROVIDER_WOOCOMMERCE => 'woocommerce',
-                    ]),
+                    ->options(IntegrationConnection::providerOptions()),
                 Tables\Filters\SelectFilter::make('connection_id')
                     ->label('Conexiune')
                     ->options(fn (): array => IntegrationConnection::query()
@@ -120,6 +119,7 @@ class SyncRunResource extends Resource
                     ->options([
                         SyncRun::TYPE_CATEGORIES => 'categories',
                         SyncRun::TYPE_PRODUCTS => 'products',
+                        SyncRun::TYPE_WINMENTOR_STOCK => 'winmentor_stock',
                     ]),
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Status')
