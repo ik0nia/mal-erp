@@ -79,13 +79,14 @@ class WooProductResource extends Resource
                     ->defaultImageUrl('https://placehold.co/96x96?text=No+Img'),
                 TextColumn::make('name')
                     ->label('Produs')
-                    ->searchable()
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return static::applyOptimizedSearch($query, $search);
+                    })
                     ->sortable()
                     ->wrap(),
                 TextColumn::make('sku')
                     ->label('SKU')
                     ->placeholder('-')
-                    ->searchable()
                     ->toggleable(),
                 TextColumn::make('price')
                     ->label('Preț')
@@ -145,6 +146,8 @@ class WooProductResource extends Resource
                     }),
             ])
             ->recordUrl(fn (WooProduct $record): string => static::getUrl('view', ['record' => $record]))
+            ->searchPlaceholder('Caută după nume, SKU, slug sau categorie...')
+            ->searchDebounce('800ms')
             ->defaultSort('name');
     }
 
@@ -171,6 +174,34 @@ class WooProductResource extends Resource
 
         return $query->whereHas('connection', function (Builder $connectionQuery) use ($user): void {
             $connectionQuery->whereIn('location_id', $user->operationalLocationIds());
+        });
+    }
+
+    private static function applyOptimizedSearch(Builder $query, string $search): Builder
+    {
+        $terms = collect(preg_split('/\s+/', trim($search)))
+            ->filter(fn ($term): bool => is_string($term) && $term !== '')
+            ->map(fn (string $term): string => str_replace(['%', '_'], ['\\%', '\\_'], $term))
+            ->values();
+
+        if ($terms->isEmpty()) {
+            return $query;
+        }
+
+        return $query->where(function (Builder $searchQuery) use ($terms): void {
+            foreach ($terms as $term) {
+                $like = "%{$term}%";
+
+                $searchQuery->where(function (Builder $termQuery) use ($like): void {
+                    $termQuery
+                        ->where('woo_products.name', 'like', $like)
+                        ->orWhere('woo_products.sku', 'like', $like)
+                        ->orWhere('woo_products.slug', 'like', $like)
+                        ->orWhereHas('categories', function (Builder $categoryQuery) use ($like): void {
+                            $categoryQuery->where('woo_categories.name', 'like', $like);
+                        });
+                });
+            }
         });
     }
 
