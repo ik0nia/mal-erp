@@ -95,6 +95,14 @@ class SyncRunResource extends Resource
                 Tables\Columns\TextColumn::make('stats.pages')
                     ->label('Pages')
                     ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['pages'] ?? 0)),
+                Tables\Columns\TextColumn::make('stats.missing_products')
+                    ->label('Missing SKU')
+                    ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['missing_products'] ?? 0))
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('stats.name_mismatches')
+                    ->label('Name mismatch')
+                    ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['name_mismatches'] ?? 0))
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('started_at')
                     ->label('Started')
                     ->dateTime('d.m.Y H:i:s')

@@ -38,6 +38,9 @@ class ImportWinmentorCsvAction
                 'matched_products' => 0,
                 'missing_products' => 0,
                 'price_changes' => 0,
+                'name_mismatches' => 0,
+                'missing_skus_sample' => [],
+                'name_mismatch_sample' => [],
             ],
             'errors' => [],
         ]);
@@ -114,6 +117,14 @@ class ImportWinmentorCsvAction
 
                 if (! $product) {
                     $stats['missing_products']++;
+
+                    if (
+                        count($stats['missing_skus_sample']) < 50
+                        && ! in_array($sku, $stats['missing_skus_sample'], true)
+                    ) {
+                        $stats['missing_skus_sample'][] = $sku;
+                    }
+
                     $this->appendError($errors, [
                         'row' => $lineNumber,
                         'sku' => $sku,
@@ -124,6 +135,18 @@ class ImportWinmentorCsvAction
                 }
 
                 $stats['matched_products']++;
+
+                if ($this->isNameMismatch($row['name'] ?? null, (string) $product->name)) {
+                    $stats['name_mismatches']++;
+
+                    if (count($stats['name_mismatch_sample']) < 50) {
+                        $stats['name_mismatch_sample'][] = [
+                            'sku' => $sku,
+                            'site_name' => $product->name,
+                            'csv_name' => $row['name'],
+                        ];
+                    }
+                }
 
                 $stock = ProductStock::query()->firstOrNew([
                     'woo_product_id' => $product->id,
@@ -168,6 +191,7 @@ class ImportWinmentorCsvAction
                 }
 
                 if ($price !== null || $quantity !== null) {
+                    // Accounting CSV updates only stock/price fields, never catalog naming fields.
                     $product->update([
                         'regular_price' => $price !== null ? (string) $price : $product->regular_price,
                         'price' => $price !== null ? (string) $price : $product->price,
@@ -292,6 +316,26 @@ class ImportWinmentorCsvAction
         }
 
         return (float) $raw;
+    }
+
+    private function isNameMismatch(?string $csvName, string $siteName): bool
+    {
+        $csvNormalized = $this->normalizeName((string) ($csvName ?? ''));
+        $siteNormalized = $this->normalizeName($siteName);
+
+        if ($csvNormalized === '' || $siteNormalized === '') {
+            return false;
+        }
+
+        return $csvNormalized !== $siteNormalized;
+    }
+
+    private function normalizeName(string $value): string
+    {
+        $value = mb_strtolower(trim($value));
+        $value = preg_replace('/\s+/u', ' ', $value);
+
+        return $value ?? '';
     }
 
     /**
