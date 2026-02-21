@@ -1,0 +1,32 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\Location;
+use Illuminate\Database\Seeder;
+
+class InitialLocationsSeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     */
+    public function run(): void
+    {
+        Location::updateOrCreate(
+            ['name' => 'Magazin Oradea'],
+            [
+                'type' => Location::TYPE_STORE,
+                'city' => 'Oradea',
+                'is_active' => true,
+            ],
+        );
+
+        Location::updateOrCreate(
+            ['name' => 'Depozit principal'],
+            [
+                'type' => Location::TYPE_WAREHOUSE,
+                'is_active' => true,
+            ],
+        );
+    }
+}
