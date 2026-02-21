@@ -107,11 +107,12 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        $isAdminUser = $this->location_id === null;
+        $isSuperAdmin = strtolower((string) $this->email) === 'codrut@maritanu.ro';
+        $isAdminUser = $isSuperAdmin || $this->location_id === null;
 
         return match ($panel->getId()) {
             'admin' => $isAdminUser,
-            'app' => ! $isAdminUser,
+            'app' => ! $isSuperAdmin && ! $isAdminUser,
             default => false,
         };
     }
