@@ -20,6 +20,11 @@ class EditOffer extends EditRecord
                 ->icon('heroicon-o-eye')
                 ->url(fn (): string => OfferResource::getUrl('view', ['record' => $this->record]))
                 ->openUrlInNewTab(),
+            Actions\Action::make('print')
+                ->label('Print ofertă')
+                ->icon('heroicon-o-printer')
+                ->url(fn (): string => OfferResource::getUrl('print', ['record' => $this->record]))
+                ->openUrlInNewTab(),
             Actions\DeleteAction::make(),
         ];
     }

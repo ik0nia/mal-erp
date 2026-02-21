@@ -13,6 +13,11 @@ class ViewOffer extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('print')
+                ->label('Print ofertă')
+                ->icon('heroicon-o-printer')
+                ->url(fn (): string => OfferResource::getUrl('print', ['record' => $this->record]))
+                ->openUrlInNewTab(),
             Actions\EditAction::make(),
         ];
     }

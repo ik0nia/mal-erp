@@ -353,6 +353,11 @@ class OfferResource extends Resource
                     ->icon('heroicon-o-eye')
                     ->url(fn (Offer $record): string => static::getUrl('view', ['record' => $record]))
                     ->openUrlInNewTab(),
+                Tables\Actions\Action::make('print')
+                    ->label('Print')
+                    ->icon('heroicon-o-printer')
+                    ->url(fn (Offer $record): string => static::getUrl('print', ['record' => $record]))
+                    ->openUrlInNewTab(),
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
@@ -589,7 +594,7 @@ class OfferResource extends Resource
         $productId = (int) ($get('woo_product_id') ?? 0);
 
         if ($productId <= 0) {
-            return new HtmlString('<span class="inline-flex h-10 w-10 items-center justify-center rounded bg-gray-100 text-[10px] text-gray-400">No Img</span>');
+            return new HtmlString('<span class="inline-flex h-8 w-8 items-center justify-center rounded bg-gray-100 text-[9px] text-gray-400">No Img</span>');
         }
 
         static $imageCache = [];
@@ -607,7 +612,7 @@ class OfferResource extends Resource
             : 'https://placehold.co/56x56?text=No+Img';
 
         return new HtmlString(
-            '<img src="'.$resolvedImage.'" alt="Produs" class="h-10 w-10 rounded object-cover ring-1 ring-gray-200/70" />'
+            '<img src="'.$resolvedImage.'" alt="Produs" class="h-8 w-8 rounded object-cover ring-1 ring-gray-200/70" />'
         );
     }
 
@@ -674,6 +679,7 @@ class OfferResource extends Resource
             'index' => Pages\ListOffers::route('/'),
             'create' => Pages\CreateOffer::route('/create'),
             'view' => Pages\ViewOffer::route('/{record}'),
+            'print' => Pages\PrintOffer::route('/{record}/print'),
             'edit' => Pages\EditOffer::route('/{record}/edit'),
         ];
     }
