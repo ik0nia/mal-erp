@@ -3,7 +3,6 @@
 namespace App\Filament\App\Resources;
 
 use App\Filament\App\Resources\WooCategoryResource\Pages;
-use App\Models\IntegrationConnection;
 use App\Models\User;
 use App\Models\WooCategory;
 use Filament\Resources\Resource;
@@ -61,33 +60,19 @@ class WooCategoryResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Categorie')
-                    ->formatStateUsing(fn (WooCategory $record): string => self::hierarchicalName($record))
-                    ->searchable()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('connection.name')
-                    ->label('Conexiune')
-                    ->sortable(),
+                    ->formatStateUsing(fn (WooCategory $record): string => str_repeat('— ', (int) $record->getAttribute('_tree_depth')).$record->name)
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('slug')
                     ->label('Slug')
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('count')
                     ->label('Produse')
-                    ->numeric()
-                    ->sortable(),
+                    ->numeric(),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->label('Actualizat')
-                    ->dateTime('d.m.Y H:i:s')
-                    ->sortable(),
+                    ->dateTime('d.m.Y H:i:s'),
             ])
-            ->filters([
-                Tables\Filters\SelectFilter::make('connection_id')
-                    ->label('Conexiune')
-                    ->options(fn (): array => IntegrationConnection::query()
-                        ->orderBy('name')
-                        ->pluck('name', 'id')
-                        ->all()),
-            ])
-            ->defaultSort('name');
+            ->paginated(false);
     }
 
     public static function getPages(): array
@@ -113,18 +98,5 @@ class WooCategoryResource extends Resource
         return $query->whereHas('connection', function (Builder $connectionQuery) use ($user): void {
             $connectionQuery->whereIn('location_id', $user->operationalLocationIds());
         });
-    }
-
-    private static function hierarchicalName(WooCategory $record): string
-    {
-        $depth = 0;
-        $parent = $record->parent;
-
-        while ($parent) {
-            $depth++;
-            $parent = $parent->parent;
-        }
-
-        return str_repeat('— ', $depth).$record->name;
     }
 }
