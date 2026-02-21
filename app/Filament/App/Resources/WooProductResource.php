@@ -14,8 +14,6 @@ use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\ImageColumn;
-use Filament\Tables\Columns\Layout\Split;
-use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -74,38 +72,36 @@ class WooProductResource extends Resource
     {
         return $table
             ->columns([
-                Split::make([
-                    ImageColumn::make('main_image_url')
-                        ->label('')
-                        ->size(72)
-                        ->square()
-                        ->defaultImageUrl('https://placehold.co/72x72?text=No+Img'),
-                    Stack::make([
-                        TextColumn::make('name')
-                            ->label('Produs')
-                            ->weight('bold')
-                            ->searchable()
-                            ->sortable(),
-                        TextColumn::make('sku')
-                            ->label('SKU')
-                            ->placeholder('-')
-                            ->badge()
-                            ->toggleable(),
-                        TextColumn::make('price')
-                            ->label('Preț')
-                            ->placeholder('-'),
-                        TextColumn::make('stock_status')
-                            ->label('Stoc')
-                            ->badge(),
-                        TextColumn::make('categories_list')
-                            ->label('Categorii')
-                            ->state(fn (WooProduct $record): string => $record->categories->pluck('name')->implode(', '))
-                            ->placeholder('-'),
-                    ])->space(1),
-                ])->from('md')
-                  ->extraAttributes([
-                      'class' => 'w-full rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-white/10 dark:bg-white/5',
-                  ]),
+                ImageColumn::make('main_image_url')
+                    ->label('Imagine')
+                    ->size(96)
+                    ->square()
+                    ->defaultImageUrl('https://placehold.co/96x96?text=No+Img'),
+                TextColumn::make('name')
+                    ->label('Produs')
+                    ->searchable()
+                    ->sortable()
+                    ->wrap(),
+                TextColumn::make('sku')
+                    ->label('SKU')
+                    ->placeholder('-')
+                    ->searchable()
+                    ->toggleable(),
+                TextColumn::make('price')
+                    ->label('Preț')
+                    ->placeholder('-'),
+                TextColumn::make('stock_status')
+                    ->label('Stoc')
+                    ->badge(),
+                TextColumn::make('categories_list')
+                    ->label('Categorii')
+                    ->state(fn (WooProduct $record): string => $record->categories->pluck('name')->implode(', '))
+                    ->placeholder('-')
+                    ->toggleable(),
+                TextColumn::make('updated_at')
+                    ->label('Actualizat')
+                    ->dateTime('d.m.Y H:i:s')
+                    ->sortable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('connection_id')
@@ -149,10 +145,6 @@ class WooProductResource extends Resource
                     }),
             ])
             ->recordUrl(fn (WooProduct $record): string => static::getUrl('view', ['record' => $record]))
-            ->contentGrid([
-                'md' => 2,
-                'xl' => 3,
-            ])
             ->defaultSort('name');
     }
 
