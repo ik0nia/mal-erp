@@ -7,22 +7,25 @@ use App\Models\Location;
 use App\Models\Offer;
 use App\Models\User;
 use App\Models\WooProduct;
+use Awcodes\TableRepeater\Components\TableRepeater;
+use Awcodes\TableRepeater\Header;
+use Filament\Forms\Components\Actions\Action as FormAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
+use Illuminate\Support\HtmlString;
 
 class OfferResource extends Resource
 {
@@ -115,20 +118,57 @@ class OfferResource extends Resource
                     ]),
                 Section::make('Produse ofertă')
                     ->schema([
-                        Repeater::make('items')
+                        TableRepeater::make('items')
                             ->relationship()
                             ->orderColumn('position')
-                            ->defaultItems(1)
+                            ->defaultItems(0)
                             ->minItems(1)
                             ->addActionLabel('Adaugă produs')
-                            ->collapsed()
+                            ->addActionAlignment('start')
+                            ->streamlined()
+                            ->headers([
+                                Header::make('thumbnail')
+                                    ->label('Imagine')
+                                    ->width('84px'),
+                                Header::make('woo_product_id')
+                                    ->label('Produs')
+                                    ->markAsRequired(),
+                                Header::make('sku')
+                                    ->label('SKU'),
+                                Header::make('quantity')
+                                    ->label('Cant.')
+                                    ->markAsRequired()
+                                    ->align('right')
+                                    ->width('100px'),
+                                Header::make('unit_price')
+                                    ->label('Preț unitar')
+                                    ->markAsRequired()
+                                    ->align('right')
+                                    ->width('150px'),
+                                Header::make('discount_percent')
+                                    ->label('Discount %')
+                                    ->align('right')
+                                    ->width('110px'),
+                                Header::make('line_total_preview')
+                                    ->label('Total linie')
+                                    ->align('right')
+                                    ->width('130px'),
+                            ])
+                            ->addAction(fn (FormAction $action): FormAction => $action
+                                ->extraAttributes([
+                                    'data-offer-add-item' => '1',
+                                ])
+                            )
                             ->schema([
+                                Placeholder::make('thumbnail')
+                                    ->label('Imagine')
+                                    ->content(fn (Get $get): HtmlString => static::productThumbnail($get))
+                                    ->extraAttributes(['class' => 'w-16']),
                                 Select::make('woo_product_id')
                                     ->label('Produs')
                                     ->required()
                                     ->searchable()
                                     ->live()
-                                    ->helperText('Se afișează produse cu stoc disponibil pentru magazinul selectat.')
                                     ->getSearchResultsUsing(fn (string $search, Get $get): array => static::getProductSearchResults($search, $get))
                                     ->getOptionLabelUsing(fn ($value): ?string => static::getProductOptionLabel($value))
                                     ->afterStateUpdated(function ($state, Set $set): void {
@@ -157,7 +197,8 @@ class OfferResource extends Resource
                                     ->disabled()
                                     ->dehydrated()
                                     ->maxLength(255)
-                                    ->columnSpan(2),
+                                    ->columnSpan(2)
+                                    ->extraInputAttributes(['class' => 'font-mono text-xs']),
                                 TextInput::make('quantity')
                                     ->label('Cantitate')
                                     ->numeric()
@@ -166,7 +207,8 @@ class OfferResource extends Resource
                                     ->step(0.001)
                                     ->required()
                                     ->live()
-                                    ->columnSpan(2),
+                                    ->columnSpan(2)
+                                    ->inputMode('decimal'),
                                 TextInput::make('unit_price')
                                     ->label('Preț unitar')
                                     ->numeric()
@@ -176,7 +218,8 @@ class OfferResource extends Resource
                                     ->required()
                                     ->prefix('RON')
                                     ->live()
-                                    ->columnSpan(2),
+                                    ->columnSpan(2)
+                                    ->inputMode('decimal'),
                                 TextInput::make('discount_percent')
                                     ->label('Discount %')
                                     ->numeric()
@@ -186,15 +229,19 @@ class OfferResource extends Resource
                                     ->step(0.01)
                                     ->suffix('%')
                                     ->live()
-                                    ->columnSpan(1),
+                                    ->columnSpan(1)
+                                    ->inputMode('decimal')
+                                    ->extraInputAttributes([
+                                        'x-on:keydown.tab' => "if (! \$event.shiftKey) { const row = \$el.closest('tr.table-repeater-row'); if (! row || row.nextElementSibling) { return; } const wrapper = \$el.closest('.table-repeater-component'); const addButton = wrapper?.querySelector('[data-offer-add-item]'); if (! addButton) { return; } \$event.preventDefault(); addButton.click(); setTimeout(() => { const rows = wrapper.querySelectorAll('tr.table-repeater-row'); const lastRow = rows[rows.length - 1]; const productInput = lastRow?.querySelector('input[role=combobox], input[type=text], input[type=search]'); productInput?.focus(); }, 180); }",
+                                    ]),
                                 Placeholder::make('line_total_preview')
                                     ->label('Total linie')
                                     ->content(fn (Get $get): string => static::linePreview($get))
-                                    ->columnSpan(3),
+                                    ->columnSpan(3)
+                                    ->extraAttributes(['class' => 'font-semibold']),
                                 Hidden::make('product_name'),
                                 Hidden::make('position'),
                             ])
-                            ->columns(12)
                             ->columnSpanFull(),
                     ]),
                 Section::make('Totaluri')
@@ -436,6 +483,27 @@ class OfferResource extends Resource
         }
 
         return (int) $candidate;
+    }
+
+    private static function productThumbnail(Get $get): HtmlString
+    {
+        $productId = (int) ($get('woo_product_id') ?? 0);
+
+        if ($productId <= 0) {
+            return new HtmlString('<span class="text-xs text-gray-400">-</span>');
+        }
+
+        $imageUrl = WooProduct::query()
+            ->whereKey($productId)
+            ->value('main_image_url');
+
+        $resolvedImage = filled($imageUrl)
+            ? e((string) $imageUrl)
+            : 'https://placehold.co/56x56?text=No+Img';
+
+        return new HtmlString(
+            '<img src="'.$resolvedImage.'" alt="Produs" class="h-14 w-14 rounded object-cover ring-1 ring-gray-200/70" />'
+        );
     }
 
     private static function linePreview(Get $get): string
