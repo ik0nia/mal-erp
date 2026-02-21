@@ -67,9 +67,42 @@ class User extends Authenticatable implements FilamentUser
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::saving(function (self $user): void {
+            if (! $user->location_id) {
+                return;
+            }
+
+            $location = Location::query()->select(['id', 'type', 'store_id'])->find($user->location_id);
+
+            if ($location?->type === Location::TYPE_WAREHOUSE) {
+                $user->location_id = $location->store_id;
+            }
+        });
+    }
+
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class);
+    }
+
+    /**
+     * Store access automatically includes warehouses under that store.
+     *
+     * @return array<int, int>
+     */
+    public function operationalLocationIds(): array
+    {
+        if (! $this->location_id) {
+            return [];
+        }
+
+        return Location::query()
+            ->where('id', $this->location_id)
+            ->orWhere('store_id', $this->location_id)
+            ->pluck('id')
+            ->all();
     }
 
     public function canAccessPanel(Panel $panel): bool

@@ -10,7 +10,6 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Validation\Rule;
 
 class UserResource extends Resource
 {
@@ -39,26 +38,26 @@ class UserResource extends Resource
                     ->email()
                     ->required()
                     ->maxLength(255)
-                    ->rules([
-                        fn (?User $record): Rule => Rule::unique(User::class, 'email')->ignore($record?->id),
-                    ]),
+                    ->unique(ignoreRecord: true),
                 Forms\Components\Select::make('role')
                     ->label('Rol')
                     ->required()
                     ->options(User::roleOptions())
                     ->native(false),
                 Forms\Components\Select::make('location_id')
-                    ->label('Locație')
+                    ->label('Magazin')
                     ->required()
                     ->options(function (): array {
                         return Location::query()
                             ->where('is_active', true)
+                            ->where('type', Location::TYPE_STORE)
                             ->orderBy('name')
                             ->pluck('name', 'id')
                             ->all();
                     })
                     ->searchable()
                     ->preload()
+                    ->helperText('Depozitele magazinului sunt accesibile automat utilizatorului.')
                     ->native(false),
                 Forms\Components\TextInput::make('password')
                     ->label('Parolă')
@@ -89,7 +88,7 @@ class UserResource extends Resource
                     ->formatStateUsing(fn (string $state): string => User::roleOptions()[$state] ?? $state)
                     ->sortable(),
                 Tables\Columns\TextColumn::make('location.name')
-                    ->label('Locație')
+                    ->label('Magazin')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
@@ -102,9 +101,10 @@ class UserResource extends Resource
                     ->label('Rol')
                     ->options(User::roleOptions()),
                 Tables\Filters\SelectFilter::make('location_id')
-                    ->label('Locație')
+                    ->label('Magazin')
                     ->options(function (): array {
                         return Location::query()
+                            ->where('type', Location::TYPE_STORE)
                             ->orderBy('name')
                             ->pluck('name', 'id')
                             ->all();
