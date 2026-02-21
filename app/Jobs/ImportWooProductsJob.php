@@ -11,6 +11,10 @@ class ImportWooProductsJob implements ShouldQueue
 {
     use Queueable;
 
+    public int $timeout = 1800;
+
+    public int $tries = 1;
+
     /**
      * Create a new job instance.
      */

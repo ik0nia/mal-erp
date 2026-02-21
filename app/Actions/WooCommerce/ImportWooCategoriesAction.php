@@ -6,6 +6,7 @@ use App\Models\IntegrationConnection;
 use App\Models\SyncRun;
 use App\Models\WooCategory;
 use App\Services\WooCommerce\WooClient;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use Throwable;
 
@@ -13,6 +14,8 @@ class ImportWooCategoriesAction
 {
     public function execute(IntegrationConnection $connection): SyncRun
     {
+        DB::connection()->disableQueryLog();
+
         $run = SyncRun::query()->create([
             'provider' => IntegrationConnection::PROVIDER_WOOCOMMERCE,
             'location_id' => $connection->location_id,

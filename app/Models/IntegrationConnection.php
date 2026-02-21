@@ -62,7 +62,7 @@ class IntegrationConnection extends Model
         return $this->hasMany(WooProduct::class, 'connection_id');
     }
 
-    public function resolvePerPage(int $default = 100): int
+    public function resolvePerPage(int $default = 50): int
     {
         $value = (int) data_get($this->settings, 'per_page', $default);
 
