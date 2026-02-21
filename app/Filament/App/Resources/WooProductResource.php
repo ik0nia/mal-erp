@@ -5,6 +5,7 @@ namespace App\Filament\App\Resources;
 use App\Filament\App\Resources\WooProductResource\Pages;
 use App\Models\IntegrationConnection;
 use App\Models\User;
+use App\Models\WooCategory;
 use App\Models\WooProduct;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -98,6 +99,31 @@ class WooProductResource extends Resource
                         ->orderBy('type')
                         ->pluck('type', 'type')
                         ->all()),
+                Tables\Filters\SelectFilter::make('category_id')
+                    ->label('Categorie')
+                    ->options(function (): array {
+                        $query = WooCategory::query()->orderBy('name');
+                        $user = static::currentUser();
+
+                        if ($user && ! $user->isSuperAdmin()) {
+                            $query->whereHas('connection', function (Builder $connectionQuery) use ($user): void {
+                                $connectionQuery->whereIn('location_id', $user->operationalLocationIds());
+                            });
+                        }
+
+                        return $query->pluck('name', 'id')->all();
+                    })
+                    ->query(function (Builder $query, array $data): Builder {
+                        $categoryId = (int) ($data['value'] ?? 0);
+
+                        if ($categoryId <= 0) {
+                            return $query;
+                        }
+
+                        return $query->whereHas('categories', function (Builder $categoryQuery) use ($categoryId): void {
+                            $categoryQuery->where('woo_categories.id', $categoryId);
+                        });
+                    }),
             ])
             ->defaultSort('name');
     }

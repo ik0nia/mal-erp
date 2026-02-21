@@ -7,6 +7,8 @@ use App\Models\User;
 use App\Models\WooCategory;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Columns\Layout\Stack;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -58,20 +60,31 @@ class WooCategoryResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')
-                    ->label('Categorie')
-                    ->formatStateUsing(fn (WooCategory $record): string => str_repeat('— ', (int) $record->getAttribute('_tree_depth')).$record->name)
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('slug')
-                    ->label('Slug')
-                    ->toggleable(),
-                Tables\Columns\TextColumn::make('count')
-                    ->label('Produse')
-                    ->numeric(),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Actualizat')
-                    ->dateTime('d.m.Y H:i:s'),
+                Stack::make([
+                    TextColumn::make('name')
+                        ->label('')
+                        ->formatStateUsing(fn (WooCategory $record): string => str_repeat('— ', (int) $record->getAttribute('_tree_depth')).$record->name)
+                        ->weight('bold')
+                        ->searchable(),
+                    TextColumn::make('count')
+                        ->label('')
+                        ->formatStateUsing(fn (WooCategory $record): string => ((int) ($record->count ?? 0)).' produse'),
+                ])
+                    ->space(1)
+                    ->extraAttributes([
+                        'class' => 'rounded-xl border border-gray-200 bg-white px-4 py-4 shadow-sm dark:border-white/10 dark:bg-white/5',
+                    ]),
             ])
+            ->contentGrid([
+                'md' => 2,
+                'xl' => 3,
+            ])
+            ->recordUrl(fn (WooCategory $record): string => WooProductResource::getUrl('index', [
+                'tableFilters' => [
+                    'connection_id' => ['value' => (string) $record->connection_id],
+                    'category_id' => ['value' => (string) $record->id],
+                ],
+            ]))
             ->paginated(false);
     }
 
