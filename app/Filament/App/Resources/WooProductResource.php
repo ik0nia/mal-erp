@@ -7,11 +7,20 @@ use App\Models\IntegrationConnection;
 use App\Models\User;
 use App\Models\WooCategory;
 use App\Models\WooProduct;
+use Filament\Infolists\Components\ImageEntry;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\Layout\Split;
+use Filament\Tables\Columns\Layout\Stack;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\HtmlString;
 
 class WooProductResource extends Resource
 {
@@ -46,6 +55,11 @@ class WooProductResource extends Resource
         return false;
     }
 
+    public static function canView(Model $record): bool
+    {
+        return auth()->check();
+    }
+
     public static function canEdit(Model $record): bool
     {
         return false;
@@ -60,29 +74,38 @@ class WooProductResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')
-                    ->label('Produs')
-                    ->searchable()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('sku')
-                    ->label('SKU')
-                    ->searchable()
-                    ->toggleable(),
-                Tables\Columns\TextColumn::make('price')
-                    ->label('Preț'),
-                Tables\Columns\TextColumn::make('stock_status')
-                    ->label('Stoc')
-                    ->badge(),
-                Tables\Columns\TextColumn::make('connection.name')
-                    ->label('Conexiune')
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('categories_count')
-                    ->label('Categorii')
-                    ->counts('categories'),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Actualizat')
-                    ->dateTime('d.m.Y H:i:s')
-                    ->sortable(),
+                Split::make([
+                    ImageColumn::make('main_image_url')
+                        ->label('')
+                        ->size(72)
+                        ->square()
+                        ->defaultImageUrl('https://placehold.co/72x72?text=No+Img'),
+                    Stack::make([
+                        TextColumn::make('name')
+                            ->label('Produs')
+                            ->weight('bold')
+                            ->searchable()
+                            ->sortable(),
+                        TextColumn::make('sku')
+                            ->label('SKU')
+                            ->placeholder('-')
+                            ->badge()
+                            ->toggleable(),
+                        TextColumn::make('price')
+                            ->label('Preț')
+                            ->placeholder('-'),
+                        TextColumn::make('stock_status')
+                            ->label('Stoc')
+                            ->badge(),
+                        TextColumn::make('categories_list')
+                            ->label('Categorii')
+                            ->state(fn (WooProduct $record): string => $record->categories->pluck('name')->implode(', '))
+                            ->placeholder('-'),
+                    ])->space(1),
+                ])->from('md')
+                  ->extraAttributes([
+                      'class' => 'w-full rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-white/10 dark:bg-white/5',
+                  ]),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('connection_id')
@@ -125,6 +148,11 @@ class WooProductResource extends Resource
                         });
                     }),
             ])
+            ->recordUrl(fn (WooProduct $record): string => static::getUrl('view', ['record' => $record]))
+            ->contentGrid([
+                'md' => 2,
+                'xl' => 3,
+            ])
             ->defaultSort('name');
     }
 
@@ -132,6 +160,7 @@ class WooProductResource extends Resource
     {
         return [
             'index' => Pages\ListWooProducts::route('/'),
+            'view' => Pages\ViewWooProduct::route('/{record}'),
         ];
     }
 
@@ -151,5 +180,58 @@ class WooProductResource extends Resource
         return $query->whereHas('connection', function (Builder $connectionQuery) use ($user): void {
             $connectionQuery->whereIn('location_id', $user->operationalLocationIds());
         });
+    }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                Section::make('Produs')
+                    ->columns(2)
+                    ->schema([
+                        ImageEntry::make('main_image_url')
+                            ->label('Imagine')
+                            ->height(180)
+                            ->defaultImageUrl('https://placehold.co/300x180?text=No+Image')
+                            ->columnSpanFull(),
+                        TextEntry::make('name')->label('Nume'),
+                        TextEntry::make('woo_id')->label('Woo ID'),
+                        TextEntry::make('sku')->label('SKU'),
+                        TextEntry::make('type')->label('Tip'),
+                        TextEntry::make('status')->label('Status'),
+                        TextEntry::make('price')->label('Preț'),
+                        TextEntry::make('regular_price')->label('Preț regulat'),
+                        TextEntry::make('sale_price')->label('Preț promo'),
+                        TextEntry::make('stock_status')->label('Stoc'),
+                        TextEntry::make('manage_stock')
+                            ->label('Manage stock')
+                            ->formatStateUsing(fn (?bool $state): string => $state === null ? '-' : ($state ? 'Da' : 'Nu')),
+                        TextEntry::make('woo_parent_id')->label('Woo parent ID'),
+                        TextEntry::make('slug')->label('Slug'),
+                        TextEntry::make('connection.name')->label('Conexiune'),
+                        TextEntry::make('connection.location.name')->label('Magazin'),
+                        TextEntry::make('categories_list')
+                            ->label('Categorii')
+                            ->state(fn (WooProduct $record): string => $record->categories->pluck('name')->implode(', '))
+                            ->columnSpanFull(),
+                        TextEntry::make('short_description')
+                            ->label('Short description')
+                            ->html()
+                            ->columnSpanFull(),
+                        TextEntry::make('description')
+                            ->label('Description')
+                            ->html()
+                            ->columnSpanFull(),
+                    ]),
+                Section::make('Payload brut (Woo)')
+                    ->schema([
+                        TextEntry::make('data_pretty')
+                            ->label('')
+                            ->state(fn (WooProduct $record): HtmlString => new HtmlString(
+                                '<pre style="white-space: pre-wrap;">'.e(json_encode($record->data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)).'</pre>'
+                            ))
+                            ->html(),
+                    ]),
+            ]);
     }
 }
