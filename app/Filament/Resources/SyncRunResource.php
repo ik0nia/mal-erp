@@ -103,6 +103,14 @@ class SyncRunResource extends Resource
                     ->label('Name mismatch')
                     ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['name_mismatches'] ?? 0))
                     ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('stats.site_price_updates')
+                    ->label('Price push OK')
+                    ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['site_price_updates'] ?? 0))
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('stats.site_price_update_failures')
+                    ->label('Price push failed')
+                    ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['site_price_update_failures'] ?? 0))
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('started_at')
                     ->label('Started')
                     ->dateTime('d.m.Y H:i:s')

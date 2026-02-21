@@ -177,6 +177,9 @@ class IntegrationConnectionResource extends Resource
                             ->required(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WINMENTOR_CSV)
                             ->default('pret')
                             ->maxLength(255),
+                        Toggle::make('settings.push_price_to_site')
+                            ->label('Trimite prețul către site (Woo)')
+                            ->default(true),
                         TextInput::make('settings.timeout')
                             ->label('Timeout (sec)')
                             ->numeric()

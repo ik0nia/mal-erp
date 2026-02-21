@@ -72,6 +72,24 @@ class WooClient
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    public function updateProductPrice(int $productId, string $regularPrice): array
+    {
+        $response = $this->http->put(
+            $this->apiBase.'/products/'.max(1, $productId),
+            [
+                'regular_price' => $regularPrice,
+            ],
+        );
+        $response->throw();
+
+        $payload = $response->json();
+
+        return is_array($payload) ? $payload : [];
+    }
+
+    /**
      * @param  array<string, mixed>  $query
      * @return array<int, array<string, mixed>>
      */

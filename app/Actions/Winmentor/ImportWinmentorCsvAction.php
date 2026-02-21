@@ -7,6 +7,7 @@ use App\Models\ProductPriceLog;
 use App\Models\ProductStock;
 use App\Models\SyncRun;
 use App\Models\WooProduct;
+use App\Services\WooCommerce\WooClient;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -39,6 +40,8 @@ class ImportWinmentorCsvAction
                 'missing_products' => 0,
                 'price_changes' => 0,
                 'name_mismatches' => 0,
+                'site_price_updates' => 0,
+                'site_price_update_failures' => 0,
                 'missing_skus_sample' => [],
                 'name_mismatch_sample' => [],
             ],
@@ -80,6 +83,14 @@ class ImportWinmentorCsvAction
             if ($wooConnectionIds === []) {
                 throw new RuntimeException('No WooCommerce connection found for this location.');
             }
+
+            $wooConnectionsById = IntegrationConnection::query()
+                ->whereIn('id', $wooConnectionIds)
+                ->get()
+                ->keyBy('id');
+
+            $pushPriceToSite = $connection->shouldPushPriceToSite();
+            $wooClients = [];
 
             $products = WooProduct::query()
                 ->whereIn('connection_id', $wooConnectionIds)
@@ -156,9 +167,13 @@ class ImportWinmentorCsvAction
                 $isNew = ! $stock->exists;
                 $oldQuantity = $stock->quantity !== null ? (float) $stock->quantity : null;
                 $oldPrice = $stock->price !== null ? (float) $stock->price : null;
+                $newQuantity = (float) ($quantity ?? 0);
+                $priceDifferent = $this->numbersDiffer($oldPrice, $price);
+                $priceUpdated = $this->isPriceUpdated($oldPrice, $price);
+                $quantityChanged = $this->numbersDiffer($oldQuantity, $newQuantity);
 
                 $stock->fill([
-                    'quantity' => $quantity ?? 0,
+                    'quantity' => $newQuantity,
                     'price' => $price,
                     'source' => IntegrationConnection::PROVIDER_WINMENTOR_CSV,
                     'sync_run_id' => $run->id,
@@ -168,11 +183,11 @@ class ImportWinmentorCsvAction
 
                 if ($isNew) {
                     $stats['created']++;
-                } elseif ($oldQuantity !== (float) ($quantity ?? 0) || $oldPrice !== $price) {
+                } elseif ($quantityChanged || $priceDifferent) {
                     $stats['updated']++;
                 }
 
-                if ($oldPrice !== null && $price !== null && (float) $oldPrice !== (float) $price) {
+                if ($priceUpdated) {
                     ProductPriceLog::query()->create([
                         'woo_product_id' => $product->id,
                         'location_id' => $connection->location_id,
@@ -188,16 +203,63 @@ class ImportWinmentorCsvAction
                     ]);
 
                     $stats['price_changes']++;
+
+                    if ($pushPriceToSite) {
+                        $wooConnection = $wooConnectionsById->get($product->connection_id);
+
+                        if (! $wooConnection instanceof IntegrationConnection) {
+                            $stats['site_price_update_failures']++;
+                            $this->appendError($errors, [
+                                'row' => $lineNumber,
+                                'sku' => $sku,
+                                'message' => 'No WooCommerce connection available for product price push.',
+                            ]);
+                        } elseif (! $wooConnection->is_active) {
+                            $stats['site_price_update_failures']++;
+                            $this->appendError($errors, [
+                                'row' => $lineNumber,
+                                'sku' => $sku,
+                                'message' => 'WooCommerce connection is inactive; price push skipped.',
+                            ]);
+                        } else {
+                            try {
+                                if (! isset($wooClients[$wooConnection->id])) {
+                                    $wooClients[$wooConnection->id] = new WooClient($wooConnection);
+                                }
+
+                                $wooClients[$wooConnection->id]->updateProductPrice(
+                                    (int) $product->woo_id,
+                                    $this->formatPrice($price),
+                                );
+                                $stats['site_price_updates']++;
+                            } catch (Throwable $exception) {
+                                $stats['site_price_update_failures']++;
+                                $this->appendError($errors, [
+                                    'row' => $lineNumber,
+                                    'sku' => $sku,
+                                    'message' => 'Failed to push price to WooCommerce: '.$exception->getMessage(),
+                                ]);
+                            }
+                        }
+                    }
                 }
 
-                if ($price !== null || $quantity !== null) {
+                $productUpdates = [];
+
+                if ($price !== null && $priceDifferent) {
+                    $formattedPrice = $this->formatPrice($price);
+                    $productUpdates['regular_price'] = $formattedPrice;
+                    $productUpdates['price'] = $formattedPrice;
+                }
+
+                if ($quantity !== null) {
+                    $productUpdates['stock_status'] = $newQuantity > 0 ? 'instock' : 'outofstock';
+                    $productUpdates['manage_stock'] = true;
+                }
+
+                if ($productUpdates !== []) {
                     // Accounting CSV updates only stock/price fields, never catalog naming fields.
-                    $product->update([
-                        'regular_price' => $price !== null ? (string) $price : $product->regular_price,
-                        'price' => $price !== null ? (string) $price : $product->price,
-                        'stock_status' => (($quantity ?? 0) > 0) ? 'instock' : 'outofstock',
-                        'manage_stock' => true,
-                    ]);
+                    $product->update($productUpdates);
                 }
             }
 
@@ -316,6 +378,35 @@ class ImportWinmentorCsvAction
         }
 
         return (float) $raw;
+    }
+
+    private function numbersDiffer(?float $oldValue, ?float $newValue): bool
+    {
+        if ($oldValue === null && $newValue === null) {
+            return false;
+        }
+
+        if ($oldValue === null || $newValue === null) {
+            return true;
+        }
+
+        return abs($oldValue - $newValue) > 0.00001;
+    }
+
+    private function isPriceUpdated(?float $oldPrice, ?float $newPrice): bool
+    {
+        if ($oldPrice === null || $newPrice === null) {
+            return false;
+        }
+
+        return $this->numbersDiffer($oldPrice, $newPrice);
+    }
+
+    private function formatPrice(float $price): string
+    {
+        $value = number_format($price, 4, '.', '');
+
+        return rtrim(rtrim($value, '0'), '.');
     }
 
     private function isNameMismatch(?string $csvName, string $siteName): bool

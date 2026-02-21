@@ -100,6 +100,11 @@ class IntegrationConnection extends Model
         return trim((string) data_get($this->settings, 'csv_url', $this->base_url));
     }
 
+    public function shouldPushPriceToSite(bool $default = true): bool
+    {
+        return (bool) data_get($this->settings, 'push_price_to_site', $default);
+    }
+
     /**
      * @return array<string, string>
      */
