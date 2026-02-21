@@ -1,0 +1,56 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+
+class WooProduct extends Model
+{
+    protected $fillable = [
+        'connection_id',
+        'woo_id',
+        'type',
+        'status',
+        'sku',
+        'name',
+        'slug',
+        'short_description',
+        'description',
+        'regular_price',
+        'sale_price',
+        'price',
+        'stock_status',
+        'manage_stock',
+        'woo_parent_id',
+        'main_image_url',
+        'data',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'connection_id' => 'integer',
+            'woo_id' => 'integer',
+            'woo_parent_id' => 'integer',
+            'manage_stock' => 'boolean',
+            'data' => 'array',
+        ];
+    }
+
+    public function connection(): BelongsTo
+    {
+        return $this->belongsTo(IntegrationConnection::class, 'connection_id');
+    }
+
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            WooCategory::class,
+            'woo_product_category',
+            'woo_product_id',
+            'woo_category_id'
+        );
+    }
+}

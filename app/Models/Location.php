@@ -72,4 +72,9 @@ class Location extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    public function integrationConnections(): HasMany
+    {
+        return $this->hasMany(IntegrationConnection::class);
+    }
 }
