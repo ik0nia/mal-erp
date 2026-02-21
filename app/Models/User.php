@@ -112,7 +112,7 @@ class User extends Authenticatable implements FilamentUser
 
         return match ($panel->getId()) {
             'admin' => $isAdminUser,
-            'app' => ! $isSuperAdmin && ! $isAdminUser,
+            'app' => $isSuperAdmin || ! $isAdminUser,
             default => false,
         };
     }
