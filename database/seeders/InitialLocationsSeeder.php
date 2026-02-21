@@ -12,7 +12,7 @@ class InitialLocationsSeeder extends Seeder
      */
     public function run(): void
     {
-        Location::updateOrCreate(
+        $store = Location::updateOrCreate(
             ['name' => 'Magazin Oradea'],
             [
                 'type' => Location::TYPE_STORE,
@@ -25,6 +25,7 @@ class InitialLocationsSeeder extends Seeder
             ['name' => 'Depozit principal'],
             [
                 'type' => Location::TYPE_WAREHOUSE,
+                'store_id' => $store->id,
                 'is_active' => true,
             ],
         );

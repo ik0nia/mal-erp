@@ -5,6 +5,8 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\LocationResource\Pages;
 use App\Models\Location;
 use Filament\Forms;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -36,7 +38,34 @@ class LocationResource extends Resource
                     ->label('Tip')
                     ->required()
                     ->options(Location::typeOptions())
+                    ->live()
+                    ->afterStateUpdated(function (Set $set, ?string $state): void {
+                        if ($state !== Location::TYPE_WAREHOUSE) {
+                            $set('store_id', null);
+                        }
+
+                        if ($state === Location::TYPE_WAREHOUSE) {
+                            $set('company_name', null);
+                            $set('company_vat_number', null);
+                            $set('company_registration_number', null);
+                        }
+                    })
                     ->native(false),
+                Forms\Components\Select::make('store_id')
+                    ->label('Magazin părinte')
+                    ->options(function (): array {
+                        return Location::query()
+                            ->where('type', Location::TYPE_STORE)
+                            ->orderBy('name')
+                            ->pluck('name', 'id')
+                            ->all();
+                    })
+                    ->searchable()
+                    ->preload()
+                    ->native(false)
+                    ->visible(fn (Get $get): bool => $get('type') === Location::TYPE_WAREHOUSE)
+                    ->required(fn (Get $get): bool => $get('type') === Location::TYPE_WAREHOUSE)
+                    ->helperText('Depozitul este întotdeauna sub un magazin.'),
                 Forms\Components\TextInput::make('address')
                     ->label('Adresă')
                     ->maxLength(255),
@@ -48,12 +77,15 @@ class LocationResource extends Resource
                     ->maxLength(255),
                 Forms\Components\TextInput::make('company_name')
                     ->label('Denumire firmă')
+                    ->visible(fn (Get $get): bool => $get('type') !== Location::TYPE_WAREHOUSE)
                     ->maxLength(255),
                 Forms\Components\TextInput::make('company_vat_number')
                     ->label('CUI')
+                    ->visible(fn (Get $get): bool => $get('type') !== Location::TYPE_WAREHOUSE)
                     ->maxLength(255),
                 Forms\Components\TextInput::make('company_registration_number')
                     ->label('Nr. Reg. Com.')
+                    ->visible(fn (Get $get): bool => $get('type') !== Location::TYPE_WAREHOUSE)
                     ->maxLength(255),
                 Forms\Components\Toggle::make('is_active')
                     ->label('Activă')
@@ -77,6 +109,10 @@ class LocationResource extends Resource
                     ->label('Oraș')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('store.name')
+                    ->label('Magazin părinte')
+                    ->placeholder('-')
+                    ->toggleable(),
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Activă')
                     ->boolean()

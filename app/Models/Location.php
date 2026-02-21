@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Location extends Model
 {
@@ -13,6 +15,7 @@ class Location extends Model
     protected $fillable = [
         'name',
         'type',
+        'store_id',
         'address',
         'city',
         'county',
@@ -24,6 +27,7 @@ class Location extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'store_id' => 'integer',
     ];
 
     public const TYPE_STORE = 'store';
@@ -37,5 +41,30 @@ class Location extends Model
             self::TYPE_WAREHOUSE => 'warehouse',
             self::TYPE_OFFICE => 'office',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $location): void {
+            if ($location->type !== self::TYPE_WAREHOUSE) {
+                $location->store_id = null;
+            }
+
+            if ($location->type === self::TYPE_WAREHOUSE) {
+                $location->company_name = null;
+                $location->company_vat_number = null;
+                $location->company_registration_number = null;
+            }
+        });
+    }
+
+    public function store(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'store_id');
+    }
+
+    public function warehouses(): HasMany
+    {
+        return $this->hasMany(self::class, 'store_id');
     }
 }
