@@ -67,4 +67,9 @@ class Location extends Model
     {
         return $this->hasMany(self::class, 'store_id');
     }
+
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
 }

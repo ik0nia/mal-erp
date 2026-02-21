@@ -6,6 +6,7 @@ namespace App\Models;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -23,6 +24,8 @@ class User extends Authenticatable implements FilamentUser
         'name',
         'email',
         'password',
+        'role',
+        'location_id',
     ];
 
     /**
@@ -45,7 +48,28 @@ class User extends Authenticatable implements FilamentUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'location_id' => 'integer',
         ];
+    }
+
+    public const ROLE_MANAGER = 'manager';
+    public const ROLE_ACCOUNTANT = 'accountant';
+    public const ROLE_SUPERVISOR = 'supervisor';
+    public const ROLE_OPERATOR = 'operator';
+
+    public static function roleOptions(): array
+    {
+        return [
+            self::ROLE_MANAGER => 'Manager',
+            self::ROLE_ACCOUNTANT => 'Contabil',
+            self::ROLE_SUPERVISOR => 'Supervizor',
+            self::ROLE_OPERATOR => 'Operator',
+        ];
+    }
+
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(Location::class);
     }
 
     public function canAccessPanel(Panel $panel): bool
