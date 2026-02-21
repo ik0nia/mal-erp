@@ -12,6 +12,11 @@ class InitialLocationsSeeder extends Seeder
      */
     public function run(): void
     {
+        // Seed doar la inițializare. Dacă există deja locații, nu mai adăugăm nimic.
+        if (Location::query()->exists()) {
+            return;
+        }
+
         $store = Location::updateOrCreate(
             ['name' => 'Magazin Oradea'],
             [
