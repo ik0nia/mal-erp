@@ -72,12 +72,12 @@ class WooCategoryResource extends Resource
                 ])
                     ->space(1)
                     ->extraAttributes([
-                        'class' => 'rounded-xl border border-gray-200 bg-white px-4 py-4 shadow-sm dark:border-white/10 dark:bg-white/5',
+                        'class' => 'w-full rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-white/10 dark:bg-white/5',
                     ]),
             ])
             ->contentGrid([
-                'md' => 2,
-                'xl' => 3,
+                'md' => 1,
+                'xl' => 1,
             ])
             ->recordUrl(fn (WooCategory $record): string => WooProductResource::getUrl('index', [
                 'tableFilters' => [
