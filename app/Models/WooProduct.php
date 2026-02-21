@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WooProduct extends Model
 {
+    public const SOURCE_WOOCOMMERCE = 'woocommerce';
+    public const SOURCE_WINMENTOR_CSV = 'winmentor_csv';
+
     protected $fillable = [
         'connection_id',
         'woo_id',
@@ -27,6 +30,8 @@ class WooProduct extends Model
         'woo_parent_id',
         'main_image_url',
         'data',
+        'source',
+        'is_placeholder',
     ];
 
     protected function casts(): array
@@ -37,6 +42,7 @@ class WooProduct extends Model
             'woo_parent_id' => 'integer',
             'manage_stock' => 'boolean',
             'data' => 'array',
+            'is_placeholder' => 'boolean',
         ];
     }
 

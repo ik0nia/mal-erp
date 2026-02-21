@@ -42,6 +42,7 @@ class ImportWinmentorCsvAction
                 'name_mismatches' => 0,
                 'site_price_updates' => 0,
                 'site_price_update_failures' => 0,
+                'created_placeholders' => 0,
                 'missing_skus_sample' => [],
                 'name_mismatch_sample' => [],
             ],
@@ -88,6 +89,11 @@ class ImportWinmentorCsvAction
                 ->whereIn('id', $wooConnectionIds)
                 ->get()
                 ->keyBy('id');
+            $defaultWooConnection = IntegrationConnection::query()
+                ->whereIn('id', $wooConnectionIds)
+                ->orderByDesc('is_active')
+                ->orderBy('id')
+                ->first();
 
             $pushPriceToSite = $connection->shouldPushPriceToSite();
             $wooClients = [];
@@ -101,7 +107,13 @@ class ImportWinmentorCsvAction
             foreach ($products as $product) {
                 $skuKey = $this->normalizeKey((string) $product->sku);
 
-                if ($skuKey !== '' && ! isset($productsBySku[$skuKey])) {
+                if (
+                    $skuKey !== ''
+                    && (
+                        ! isset($productsBySku[$skuKey])
+                        || ($productsBySku[$skuKey]->is_placeholder && ! $product->is_placeholder)
+                    )
+                ) {
                     $productsBySku[$skuKey] = $product;
                 }
             }
@@ -136,13 +148,25 @@ class ImportWinmentorCsvAction
                         $stats['missing_skus_sample'][] = $sku;
                     }
 
-                    $this->appendError($errors, [
-                        'row' => $lineNumber,
-                        'sku' => $sku,
-                        'message' => 'SKU not found in imported Woo products.',
-                    ]);
+                    if ($defaultWooConnection instanceof IntegrationConnection) {
+                        $product = $this->createPlaceholderProduct(
+                            wooConnection: $defaultWooConnection,
+                            sku: $sku,
+                            csvName: $row['name'] ?? null,
+                            price: $price,
+                            quantity: $quantity
+                        );
+                        $productsBySku[$skuKey] = $product;
+                        $stats['created_placeholders']++;
+                    } else {
+                        $this->appendError($errors, [
+                            'row' => $lineNumber,
+                            'sku' => $sku,
+                            'message' => 'SKU not found and no Woo connection available for ERP placeholder.',
+                        ]);
 
-                    continue;
+                        continue;
+                    }
                 }
 
                 $stats['matched_products']++;
@@ -204,7 +228,7 @@ class ImportWinmentorCsvAction
 
                     $stats['price_changes']++;
 
-                    if ($pushPriceToSite) {
+                    if ($pushPriceToSite && ! $product->is_placeholder) {
                         $wooConnection = $wooConnectionsById->get($product->connection_id);
 
                         if (! $wooConnection instanceof IntegrationConnection) {
@@ -427,6 +451,83 @@ class ImportWinmentorCsvAction
         $value = preg_replace('/\s+/u', ' ', $value);
 
         return $value ?? '';
+    }
+
+    private function createPlaceholderProduct(
+        IntegrationConnection $wooConnection,
+        string $sku,
+        ?string $csvName,
+        ?float $price,
+        ?float $quantity
+    ): WooProduct {
+        $existing = WooProduct::query()
+            ->where('connection_id', $wooConnection->id)
+            ->where('sku', $sku)
+            ->first();
+
+        if ($existing instanceof WooProduct) {
+            return $existing;
+        }
+
+        $wooId = $this->generatePlaceholderWooId($wooConnection->id, $sku);
+
+        while (
+            WooProduct::query()
+                ->where('connection_id', $wooConnection->id)
+                ->where('woo_id', $wooId)
+                ->exists()
+        ) {
+            $wooId++;
+        }
+
+        $formattedPrice = $price !== null ? $this->formatPrice($price) : null;
+        $safeName = $this->resolvePlaceholderName($sku, $csvName);
+        $safeQuantity = (float) ($quantity ?? 0);
+
+        return WooProduct::query()->create([
+            'connection_id' => $wooConnection->id,
+            'woo_id' => $wooId,
+            'type' => 'external',
+            'status' => 'draft',
+            'sku' => $sku,
+            'name' => $safeName,
+            'slug' => null,
+            'short_description' => null,
+            'description' => null,
+            'regular_price' => $formattedPrice,
+            'sale_price' => null,
+            'price' => $formattedPrice,
+            'stock_status' => $safeQuantity > 0 ? 'instock' : 'outofstock',
+            'manage_stock' => true,
+            'woo_parent_id' => null,
+            'main_image_url' => null,
+            'data' => [
+                'source' => IntegrationConnection::PROVIDER_WINMENTOR_CSV,
+                'placeholder' => true,
+                'csv_name' => $csvName,
+                'placeholder_reason' => 'SKU exists in accounting feed but is missing in Woo import.',
+            ],
+            'source' => WooProduct::SOURCE_WINMENTOR_CSV,
+            'is_placeholder' => true,
+        ]);
+    }
+
+    private function generatePlaceholderWooId(int $connectionId, string $sku): int
+    {
+        $hash = (int) sprintf('%u', crc32($connectionId.'|'.$sku));
+
+        return 8_000_000_000_000_000_000 + $hash;
+    }
+
+    private function resolvePlaceholderName(string $sku, ?string $csvName): string
+    {
+        $name = trim((string) ($csvName ?? ''));
+
+        if ($name !== '') {
+            return mb_substr($name, 0, 255);
+        }
+
+        return mb_substr('Produs contabilitate '.$sku, 0, 255);
     }
 
     /**

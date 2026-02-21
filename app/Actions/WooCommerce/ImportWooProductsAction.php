@@ -52,20 +52,6 @@ class ImportWooProductsAction
 
                 $stats['pages']++;
 
-                $wooIds = collect($products)
-                    ->pluck('id')
-                    ->filter()
-                    ->map(fn ($id): int => (int) $id)
-                    ->all();
-
-                $existingWooIds = WooProduct::query()
-                    ->where('connection_id', $connection->id)
-                    ->whereIn('woo_id', $wooIds)
-                    ->pluck('woo_id')
-                    ->map(fn ($id): int => (int) $id)
-                    ->all();
-                $existingLookup = array_flip($existingWooIds);
-
                 foreach ($products as $productPayload) {
                     if (! is_array($productPayload)) {
                         continue;
@@ -77,36 +63,59 @@ class ImportWooProductsAction
                         continue;
                     }
 
-                    if (isset($existingLookup[$wooId])) {
+                    $sku = $this->nullableString($productPayload['sku'] ?? null);
+
+                    $product = WooProduct::query()
+                        ->where('connection_id', $connection->id)
+                        ->where('woo_id', $wooId)
+                        ->first();
+
+                    if ($product) {
                         $stats['updated']++;
                     } else {
-                        $stats['created']++;
+                        $placeholder = null;
+
+                        if ($sku !== null) {
+                            $placeholder = WooProduct::query()
+                                ->where('connection_id', $connection->id)
+                                ->where('sku', $sku)
+                                ->where('is_placeholder', true)
+                                ->first();
+                        }
+
+                        if ($placeholder) {
+                            $product = $placeholder;
+                            $product->woo_id = $wooId;
+                            $stats['updated']++;
+                        } else {
+                            $product = new WooProduct([
+                                'connection_id' => $connection->id,
+                                'woo_id' => $wooId,
+                            ]);
+                            $stats['created']++;
+                        }
                     }
 
-                    /** @var WooProduct $product */
-                    $product = WooProduct::query()->updateOrCreate(
-                        [
-                            'connection_id' => $connection->id,
-                            'woo_id' => $wooId,
-                        ],
-                        [
-                            'type' => $this->nullableString($productPayload['type'] ?? null),
-                            'status' => $this->nullableString($productPayload['status'] ?? null),
-                            'sku' => $this->nullableString($productPayload['sku'] ?? null),
-                            'name' => (string) ($productPayload['name'] ?? ''),
-                            'slug' => $this->nullableString($productPayload['slug'] ?? null),
-                            'short_description' => $this->nullableString($productPayload['short_description'] ?? null),
-                            'description' => $this->nullableString($productPayload['description'] ?? null),
-                            'regular_price' => $this->nullableString($productPayload['regular_price'] ?? null),
-                            'sale_price' => $this->nullableString($productPayload['sale_price'] ?? null),
-                            'price' => $this->nullableString($productPayload['price'] ?? null),
-                            'stock_status' => $this->nullableString($productPayload['stock_status'] ?? null),
-                            'manage_stock' => $this->nullableBool($productPayload['manage_stock'] ?? null),
-                            'woo_parent_id' => $this->nullableInt($productPayload['parent_id'] ?? null),
-                            'main_image_url' => $this->extractMainImageUrl($productPayload),
-                            'data' => $productPayload,
-                        ]
-                    );
+                    $product->fill([
+                        'type' => $this->nullableString($productPayload['type'] ?? null),
+                        'status' => $this->nullableString($productPayload['status'] ?? null),
+                        'sku' => $sku,
+                        'name' => (string) ($productPayload['name'] ?? ''),
+                        'slug' => $this->nullableString($productPayload['slug'] ?? null),
+                        'short_description' => $this->nullableString($productPayload['short_description'] ?? null),
+                        'description' => $this->nullableString($productPayload['description'] ?? null),
+                        'regular_price' => $this->nullableString($productPayload['regular_price'] ?? null),
+                        'sale_price' => $this->nullableString($productPayload['sale_price'] ?? null),
+                        'price' => $this->nullableString($productPayload['price'] ?? null),
+                        'stock_status' => $this->nullableString($productPayload['stock_status'] ?? null),
+                        'manage_stock' => $this->nullableBool($productPayload['manage_stock'] ?? null),
+                        'woo_parent_id' => $this->nullableInt($productPayload['parent_id'] ?? null),
+                        'main_image_url' => $this->extractMainImageUrl($productPayload),
+                        'data' => $productPayload,
+                        'source' => WooProduct::SOURCE_WOOCOMMERCE,
+                        'is_placeholder' => false,
+                    ]);
+                    $product->save();
 
                     $categoryWooIds = collect($productPayload['categories'] ?? [])
                         ->pluck('id')

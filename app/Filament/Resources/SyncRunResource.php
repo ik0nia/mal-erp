@@ -103,6 +103,10 @@ class SyncRunResource extends Resource
                     ->label('Name mismatch')
                     ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['name_mismatches'] ?? 0))
                     ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('stats.created_placeholders')
+                    ->label('Placeholder ERP')
+                    ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['created_placeholders'] ?? 0))
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('stats.site_price_updates')
                     ->label('Price push OK')
                     ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['site_price_updates'] ?? 0))

@@ -84,6 +84,12 @@ class WooProductResource extends Resource
                     })
                     ->sortable()
                     ->wrap(),
+                TextColumn::make('source')
+                    ->label('Sursă')
+                    ->badge()
+                    ->formatStateUsing(fn (WooProduct $record): string => $record->is_placeholder ? 'ERP (contabilitate)' : 'WooCommerce')
+                    ->color(fn (WooProduct $record): string => $record->is_placeholder ? 'warning' : 'success')
+                    ->toggleable(),
                 TextColumn::make('sku')
                     ->label('SKU')
                     ->placeholder('-')
@@ -233,6 +239,9 @@ class WooProductResource extends Resource
                         TextEntry::make('slug')->label('Slug'),
                         TextEntry::make('connection.name')->label('Conexiune'),
                         TextEntry::make('connection.location.name')->label('Magazin'),
+                        TextEntry::make('source')
+                            ->label('Sursă')
+                            ->formatStateUsing(fn (WooProduct $record): string => $record->is_placeholder ? 'ERP (contabilitate)' : 'WooCommerce'),
                         TextEntry::make('categories_list')
                             ->label('Categorii')
                             ->state(fn (WooProduct $record): string => $record->categories->pluck('name')->implode(', '))
