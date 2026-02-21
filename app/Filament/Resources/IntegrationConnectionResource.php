@@ -103,6 +103,7 @@ class IntegrationConnectionResource extends Resource
                     ->maxLength(255),
                 TextInput::make('base_url')
                     ->label('Base URL')
+                    ->visible(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE)
                     ->required(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE)
                     ->url()
                     ->maxLength(255),
@@ -111,7 +112,7 @@ class IntegrationConnectionResource extends Resource
                     ->password()
                     ->revealable()
                     ->visible(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE)
-                    ->required(fn (string $operation, Get $get): bool => $operation === 'create' && $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE)
+                    ->required(fn (Get $get, string $operation): bool => $operation === 'create' && $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE)
                     ->dehydrated(fn (Get $get, ?string $state): bool => $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE ? filled($state) : false)
                     ->maxLength(65535),
                 TextInput::make('consumer_secret')
@@ -119,7 +120,7 @@ class IntegrationConnectionResource extends Resource
                     ->password()
                     ->revealable()
                     ->visible(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE)
-                    ->required(fn (string $operation, Get $get): bool => $operation === 'create' && $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE)
+                    ->required(fn (Get $get, string $operation): bool => $operation === 'create' && $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE)
                     ->dehydrated(fn (Get $get, ?string $state): bool => $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE ? filled($state) : false)
                     ->maxLength(65535),
                 Toggle::make('verify_ssl')
