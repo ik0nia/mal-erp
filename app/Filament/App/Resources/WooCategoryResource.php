@@ -12,6 +12,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\HtmlString;
 
 class WooCategoryResource extends Resource
 {
@@ -63,7 +64,16 @@ class WooCategoryResource extends Resource
                 Stack::make([
                     TextColumn::make('name')
                         ->label('')
-                        ->formatStateUsing(fn (WooCategory $record): string => str_repeat('— ', (int) $record->getAttribute('_tree_depth')).$record->name)
+                        ->formatStateUsing(function (WooCategory $record): HtmlString {
+                            $depth = (int) $record->getAttribute('_tree_depth');
+                            $paddingLeft = max(0, $depth) * 24;
+                            $prefix = $depth > 0 ? '↳ ' : '';
+
+                            return new HtmlString(
+                                '<span style="display:inline-block;padding-left:'.$paddingLeft.'px;">'.$prefix.e($record->name).'</span>'
+                            );
+                        })
+                        ->html()
                         ->weight('bold')
                         ->searchable(),
                     TextColumn::make('count')
