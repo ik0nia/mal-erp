@@ -87,4 +87,9 @@ class Location extends Model
     {
         return $this->hasMany(ProductPriceLog::class);
     }
+
+    public function offers(): HasMany
+    {
+        return $this->hasMany(Offer::class);
+    }
 }
