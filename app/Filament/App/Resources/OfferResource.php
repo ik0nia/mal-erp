@@ -21,6 +21,7 @@ use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Resources\Resource;
+use Filament\Support\Enums\MaxWidth;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -121,11 +122,17 @@ class OfferResource extends Resource
                         TableRepeater::make('items')
                             ->relationship()
                             ->orderColumn('position')
+                            ->live()
                             ->defaultItems(0)
                             ->minItems(1)
                             ->addActionLabel('Adaugă produs')
                             ->addActionAlignment('start')
                             ->streamlined()
+                            ->stackAt(MaxWidth::Large)
+                            ->emptyLabel('Nu ai produse în ofertă. Adaugă primul produs.')
+                            ->reorderable(false)
+                            ->reorderableWithButtons(false)
+                            ->reorderableWithDragAndDrop(false)
                             ->headers([
                                 Header::make('thumbnail')
                                     ->label('Imagine')
@@ -162,6 +169,7 @@ class OfferResource extends Resource
                             ->schema([
                                 Placeholder::make('thumbnail')
                                     ->label('Imagine')
+                                    ->hiddenLabel()
                                     ->content(fn (Get $get): HtmlString => static::productThumbnail($get))
                                     ->extraAttributes(['class' => 'w-16']),
                                 Select::make('woo_product_id')
@@ -169,6 +177,7 @@ class OfferResource extends Resource
                                     ->required()
                                     ->searchable()
                                     ->live()
+                                    ->placeholder('Alege produs')
                                     ->getSearchResultsUsing(fn (string $search, Get $get): array => static::getProductSearchResults($search, $get))
                                     ->getOptionLabelUsing(fn ($value): ?string => static::getProductOptionLabel($value))
                                     ->afterStateUpdated(function ($state, Set $set): void {
@@ -194,6 +203,7 @@ class OfferResource extends Resource
                                     ->columnSpan(5),
                                 TextInput::make('sku')
                                     ->label('SKU')
+                                    ->hiddenLabel()
                                     ->disabled()
                                     ->dehydrated()
                                     ->maxLength(255)
@@ -201,6 +211,7 @@ class OfferResource extends Resource
                                     ->extraInputAttributes(['class' => 'font-mono text-xs']),
                                 TextInput::make('quantity')
                                     ->label('Cantitate')
+                                    ->hiddenLabel()
                                     ->numeric()
                                     ->default(1)
                                     ->minValue(0.001)
@@ -208,9 +219,11 @@ class OfferResource extends Resource
                                     ->required()
                                     ->live()
                                     ->columnSpan(2)
-                                    ->inputMode('decimal'),
+                                    ->inputMode('decimal')
+                                    ->extraInputAttributes(['class' => 'text-right']),
                                 TextInput::make('unit_price')
                                     ->label('Preț unitar')
+                                    ->hiddenLabel()
                                     ->numeric()
                                     ->default(0)
                                     ->minValue(0)
@@ -219,9 +232,11 @@ class OfferResource extends Resource
                                     ->prefix('RON')
                                     ->live()
                                     ->columnSpan(2)
-                                    ->inputMode('decimal'),
+                                    ->inputMode('decimal')
+                                    ->extraInputAttributes(['class' => 'text-right']),
                                 TextInput::make('discount_percent')
                                     ->label('Discount %')
+                                    ->hiddenLabel()
                                     ->numeric()
                                     ->default(0)
                                     ->minValue(0)
@@ -232,13 +247,15 @@ class OfferResource extends Resource
                                     ->columnSpan(1)
                                     ->inputMode('decimal')
                                     ->extraInputAttributes([
+                                        'class' => 'text-right',
                                         'x-on:keydown.tab' => "if (! \$event.shiftKey) { const row = \$el.closest('tr.table-repeater-row'); if (! row || row.nextElementSibling) { return; } const wrapper = \$el.closest('.table-repeater-component'); const addButton = wrapper?.querySelector('[data-offer-add-item]'); if (! addButton) { return; } \$event.preventDefault(); addButton.click(); setTimeout(() => { const rows = wrapper.querySelectorAll('tr.table-repeater-row'); const lastRow = rows[rows.length - 1]; const productInput = lastRow?.querySelector('input[role=combobox], input[type=text], input[type=search]'); productInput?.focus(); }, 180); }",
                                     ]),
                                 Placeholder::make('line_total_preview')
                                     ->label('Total linie')
+                                    ->hiddenLabel()
                                     ->content(fn (Get $get): string => static::linePreview($get))
                                     ->columnSpan(3)
-                                    ->extraAttributes(['class' => 'font-semibold']),
+                                    ->extraAttributes(['class' => 'text-right font-semibold']),
                                 Hidden::make('product_name'),
                                 Hidden::make('position'),
                             ])
@@ -247,21 +264,16 @@ class OfferResource extends Resource
                 Section::make('Totaluri')
                     ->columns(3)
                     ->schema([
-                        TextInput::make('subtotal')
+                        Placeholder::make('subtotal_live')
                             ->label('Subtotal')
-                            ->disabled()
-                            ->dehydrated(false)
-                            ->prefix('RON'),
-                        TextInput::make('discount_total')
+                            ->content(fn (Get $get): string => static::formatCurrency(static::offerTotals($get)['subtotal'])),
+                        Placeholder::make('discount_total_live')
                             ->label('Discount total')
-                            ->disabled()
-                            ->dehydrated(false)
-                            ->prefix('RON'),
-                        TextInput::make('total')
+                            ->content(fn (Get $get): string => static::formatCurrency(static::offerTotals($get)['discount_total'])),
+                        Placeholder::make('total_live')
                             ->label('Total')
-                            ->disabled()
-                            ->dehydrated(false)
-                            ->prefix('RON'),
+                            ->content(fn (Get $get): string => static::formatCurrency(static::offerTotals($get)['total']))
+                            ->extraAttributes(['class' => 'font-bold']),
                     ]),
             ]);
     }
@@ -490,12 +502,18 @@ class OfferResource extends Resource
         $productId = (int) ($get('woo_product_id') ?? 0);
 
         if ($productId <= 0) {
-            return new HtmlString('<span class="text-xs text-gray-400">-</span>');
+            return new HtmlString('<span class="inline-block h-14 w-14 rounded bg-gray-100 text-[10px] leading-[56px] text-center text-gray-400">No Img</span>');
         }
 
-        $imageUrl = WooProduct::query()
-            ->whereKey($productId)
-            ->value('main_image_url');
+        static $imageCache = [];
+
+        if (! array_key_exists($productId, $imageCache)) {
+            $imageCache[$productId] = WooProduct::query()
+                ->whereKey($productId)
+                ->value('main_image_url');
+        }
+
+        $imageUrl = $imageCache[$productId];
 
         $resolvedImage = filled($imageUrl)
             ? e((string) $imageUrl)
@@ -504,6 +522,52 @@ class OfferResource extends Resource
         return new HtmlString(
             '<img src="'.$resolvedImage.'" alt="Produs" class="h-14 w-14 rounded object-cover ring-1 ring-gray-200/70" />'
         );
+    }
+
+    /**
+     * @return array{subtotal: float, discount_total: float, total: float}
+     */
+    private static function offerTotals(Get $get): array
+    {
+        $items = $get('items');
+
+        if (! is_array($items)) {
+            return [
+                'subtotal' => 0.0,
+                'discount_total' => 0.0,
+                'total' => 0.0,
+            ];
+        }
+
+        $subtotal = 0.0;
+        $total = 0.0;
+
+        foreach ($items as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $quantity = max(0, (float) ($item['quantity'] ?? 0));
+            $unitPrice = max(0, (float) ($item['unit_price'] ?? 0));
+            $discountPercent = min(100, max(0, (float) ($item['discount_percent'] ?? 0)));
+
+            $lineSubtotal = $quantity * $unitPrice;
+            $lineTotal = $lineSubtotal * (1 - ($discountPercent / 100));
+
+            $subtotal += $lineSubtotal;
+            $total += $lineTotal;
+        }
+
+        return [
+            'subtotal' => $subtotal,
+            'discount_total' => max(0, $subtotal - $total),
+            'total' => $total,
+        ];
+    }
+
+    private static function formatCurrency(float $value): string
+    {
+        return number_format($value, 2, '.', ',').' RON';
     }
 
     private static function linePreview(Get $get): string
