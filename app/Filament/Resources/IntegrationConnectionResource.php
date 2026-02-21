@@ -240,6 +240,22 @@ class IntegrationConnectionResource extends Resource
                             'connection_id' => ['value' => (string) $record->id],
                         ],
                     ])),
+                Tables\Actions\Action::make('view_categories')
+                    ->label('Vezi categorii')
+                    ->icon('heroicon-o-tag')
+                    ->url(fn (IntegrationConnection $record): string => WooCategoryResource::getUrl('index', [
+                        'tableFilters' => [
+                            'connection_id' => ['value' => (string) $record->id],
+                        ],
+                    ])),
+                Tables\Actions\Action::make('view_products')
+                    ->label('Vezi produse')
+                    ->icon('heroicon-o-shopping-bag')
+                    ->url(fn (IntegrationConnection $record): string => WooProductResource::getUrl('index', [
+                        'tableFilters' => [
+                            'connection_id' => ['value' => (string) $record->id],
+                        ],
+                    ])),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
