@@ -209,6 +209,41 @@ class IntegrationConnectionResource extends Resource
                     ->label('Magazin')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('latestSyncRun.type')
+                    ->label('Ultim import')
+                    ->badge()
+                    ->placeholder('-')
+                    ->formatStateUsing(function (?string $state, IntegrationConnection $record): string {
+                        if ($state === null) {
+                            return '-';
+                        }
+
+                        $labels = [
+                            'categories' => 'Categorii',
+                            'products' => 'Produse',
+                            'winmentor_stock' => 'Stoc/Preț CSV',
+                        ];
+
+                        return $labels[$state] ?? $state;
+                    })
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('latestSyncRun.status')
+                    ->label('Status import')
+                    ->badge()
+                    ->placeholder('-')
+                    ->formatStateUsing(fn (?string $state): string => $state ?? '-')
+                    ->color(fn (?string $state): string => match ($state) {
+                        'success' => 'success',
+                        'failed' => 'danger',
+                        'running' => 'warning',
+                        default => 'gray',
+                    })
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('latestSyncRun.started_at')
+                    ->label('Ultimul start')
+                    ->dateTime('d.m.Y H:i:s')
+                    ->placeholder('-')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('base_url')
                     ->label('Base URL')
                     ->searchable()
@@ -226,9 +261,28 @@ class IntegrationConnectionResource extends Resource
                 Tables\Filters\SelectFilter::make('provider')
                     ->label('Provider')
                     ->options(IntegrationConnection::providerOptions()),
+                Tables\Filters\SelectFilter::make('latest_sync_status')
+                    ->label('Status ultim import')
+                    ->options([
+                        'running' => 'running',
+                        'success' => 'success',
+                        'failed' => 'failed',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        $status = $data['value'] ?? null;
+
+                        if (! is_string($status) || $status === '') {
+                            return $query;
+                        }
+
+                        return $query->whereHas('latestSyncRun', function (Builder $syncQuery) use ($status): void {
+                            $syncQuery->where('status', $status);
+                        });
+                    }),
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Activă'),
             ])
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('latestSyncRun'))
             ->actions([
                 Tables\Actions\Action::make('view')
                     ->label('View')

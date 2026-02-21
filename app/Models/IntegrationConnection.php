@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class IntegrationConnection extends Model
 {
@@ -59,6 +60,11 @@ class IntegrationConnection extends Model
     public function syncRuns(): HasMany
     {
         return $this->hasMany(SyncRun::class, 'connection_id');
+    }
+
+    public function latestSyncRun(): HasOne
+    {
+        return $this->hasOne(SyncRun::class, 'connection_id')->latestOfMany('started_at');
     }
 
     public function wooCategories(): HasMany
