@@ -26,6 +26,8 @@ class User extends Authenticatable implements FilamentUser
         'password',
         'role',
         'location_id',
+        'is_admin',
+        'is_super_admin',
     ];
 
     /**
@@ -49,6 +51,8 @@ class User extends Authenticatable implements FilamentUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'location_id' => 'integer',
+            'is_admin' => 'boolean',
+            'is_super_admin' => 'boolean',
         ];
     }
 
@@ -70,6 +74,10 @@ class User extends Authenticatable implements FilamentUser
     protected static function booted(): void
     {
         static::saving(function (self $user): void {
+            if ($user->is_super_admin) {
+                $user->is_admin = true;
+            }
+
             if (! $user->location_id) {
                 return;
             }
@@ -85,6 +93,21 @@ class User extends Authenticatable implements FilamentUser
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class);
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return (bool) $this->is_super_admin;
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->isSuperAdmin() || (bool) $this->is_admin;
+    }
+
+    public function isOperational(): bool
+    {
+        return ! $this->isAdmin();
     }
 
     /**
@@ -107,8 +130,8 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        $isSuperAdmin = strtolower((string) $this->email) === 'codrut@ikonia.ro';
-        $isAdminUser = $isSuperAdmin || $this->location_id === null;
+        $isSuperAdmin = $this->isSuperAdmin();
+        $isAdminUser = $this->isAdmin();
 
         return match ($panel->getId()) {
             'admin' => $isAdminUser,

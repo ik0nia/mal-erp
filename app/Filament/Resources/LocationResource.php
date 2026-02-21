@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\LocationResource\Pages;
 use App\Models\Location;
+use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
@@ -11,6 +12,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 
 class LocationResource extends Resource
 {
@@ -25,6 +27,38 @@ class LocationResource extends Resource
     protected static ?string $modelLabel = 'Locație';
 
     protected static ?string $pluralModelLabel = 'Locații';
+
+    protected static function currentUser(): ?User
+    {
+        $user = auth()->user();
+
+        return $user instanceof User ? $user : null;
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::currentUser()?->isAdmin() ?? false;
+    }
+
+    public static function canViewAny(): bool
+    {
+        return static::currentUser()?->isAdmin() ?? false;
+    }
+
+    public static function canCreate(): bool
+    {
+        return static::currentUser()?->isAdmin() ?? false;
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return static::currentUser()?->isAdmin() ?? false;
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return static::currentUser()?->isAdmin() ?? false;
+    }
 
     public static function form(Form $form): Form
     {

@@ -31,6 +31,8 @@ class UserFactory extends Factory
             'password' => static::$password ??= Hash::make('password'),
             'role' => User::ROLE_OPERATOR,
             'location_id' => null,
+            'is_admin' => false,
+            'is_super_admin' => false,
             'remember_token' => Str::random(10),
         ];
     }

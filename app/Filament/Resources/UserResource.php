@@ -6,10 +6,13 @@ use App\Filament\Resources\UserResource\Pages;
 use App\Models\Location;
 use App\Models\User;
 use Filament\Forms;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 
 class UserResource extends Resource
 {
@@ -24,6 +27,54 @@ class UserResource extends Resource
     protected static ?string $modelLabel = 'Utilizator';
 
     protected static ?string $pluralModelLabel = 'Utilizatori';
+
+    protected static function currentUser(): ?User
+    {
+        $user = auth()->user();
+
+        return $user instanceof User ? $user : null;
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::currentUser()?->isAdmin() ?? false;
+    }
+
+    public static function canViewAny(): bool
+    {
+        return static::currentUser()?->isAdmin() ?? false;
+    }
+
+    public static function canCreate(): bool
+    {
+        return static::currentUser()?->isAdmin() ?? false;
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        $user = static::currentUser();
+
+        if (! $user?->isAdmin()) {
+            return false;
+        }
+
+        return $user->isSuperAdmin() || ! ($record instanceof User && $record->isAdmin());
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        $user = static::currentUser();
+
+        if (! $user?->isAdmin()) {
+            return false;
+        }
+
+        if ($record instanceof User && $record->id === $user->id) {
+            return false;
+        }
+
+        return $user->isSuperAdmin() || ! ($record instanceof User && $record->isAdmin());
+    }
 
     public static function form(Form $form): Form
     {
@@ -46,7 +97,7 @@ class UserResource extends Resource
                     ->native(false),
                 Forms\Components\Select::make('location_id')
                     ->label('Magazin')
-                    ->required()
+                    ->required(fn (Get $get): bool => ! ((bool) $get('is_admin') || (bool) $get('is_super_admin')))
                     ->options(function (): array {
                         return Location::query()
                             ->where('is_active', true)
@@ -59,6 +110,20 @@ class UserResource extends Resource
                     ->preload()
                     ->helperText('Depozitele magazinului sunt accesibile automat utilizatorului.')
                     ->native(false),
+                Forms\Components\Toggle::make('is_admin')
+                    ->label('Admin')
+                    ->live()
+                    ->visible(fn (): bool => static::currentUser()?->isSuperAdmin() ?? false),
+                Forms\Components\Toggle::make('is_super_admin')
+                    ->label('Super admin')
+                    ->helperText('Super admin poate accesa atât /admin cât și ERP-ul operațional.')
+                    ->live()
+                    ->afterStateUpdated(function (Set $set, ?bool $state): void {
+                        if ($state === true) {
+                            $set('is_admin', true);
+                        }
+                    })
+                    ->visible(fn (): bool => static::currentUser()?->isSuperAdmin() ?? false),
                 Forms\Components\TextInput::make('password')
                     ->label('Parolă')
                     ->password()
@@ -91,6 +156,14 @@ class UserResource extends Resource
                     ->label('Magazin')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\IconColumn::make('is_admin')
+                    ->label('Admin')
+                    ->boolean()
+                    ->visible(fn (): bool => static::currentUser()?->isSuperAdmin() ?? false),
+                Tables\Columns\IconColumn::make('is_super_admin')
+                    ->label('Super')
+                    ->boolean()
+                    ->visible(fn (): bool => static::currentUser()?->isSuperAdmin() ?? false),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Creat la')
                     ->dateTime('d.m.Y H:i')
@@ -109,6 +182,12 @@ class UserResource extends Resource
                             ->pluck('name', 'id')
                             ->all();
                     }),
+                Tables\Filters\TernaryFilter::make('is_admin')
+                    ->label('Admin')
+                    ->visible(fn (): bool => static::currentUser()?->isSuperAdmin() ?? false),
+                Tables\Filters\TernaryFilter::make('is_super_admin')
+                    ->label('Super admin')
+                    ->visible(fn (): bool => static::currentUser()?->isSuperAdmin() ?? false),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
