@@ -25,6 +25,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\HtmlString;
 use Throwable;
 
@@ -388,6 +389,24 @@ class IntegrationConnectionResource extends Resource
                             ->success()
                             ->title('Import produse pornit')
                             ->body('Job-ul de import produse a fost trimis în coadă.')
+                            ->send();
+                    }),
+                Tables\Actions\Action::make('import_all')
+                    ->label('Import all')
+                    ->icon('heroicon-o-arrow-path')
+                    ->color('primary')
+                    ->requiresConfirmation()
+                    ->visible(fn (IntegrationConnection $record): bool => $record->isWooCommerce())
+                    ->action(function (IntegrationConnection $record): void {
+                        Bus::chain([
+                            new ImportWooCategoriesJob($record->id),
+                            new ImportWooProductsJob($record->id),
+                        ])->dispatch();
+
+                        Notification::make()
+                            ->success()
+                            ->title('Import complet pornit')
+                            ->body('Categorii + produse au fost trimise în coadă, în ordinea corectă.')
                             ->send();
                     }),
                 Tables\Actions\Action::make('import_winmentor_stock')
