@@ -4,7 +4,6 @@ namespace App\Filament\App\Resources;
 
 use App\Filament\App\Resources\CustomerResource\Pages;
 use App\Models\Customer;
-use App\Models\Location;
 use App\Models\User;
 use App\Services\CompanyData\OpenApiCompanyLookupService;
 use Filament\Forms;
@@ -42,11 +41,6 @@ class CustomerResource extends Resource
         return $user instanceof User ? $user : null;
     }
 
-    private static function isSuperAdmin(): bool
-    {
-        return static::currentUser()?->isSuperAdmin() ?? false;
-    }
-
     public static function canViewAny(): bool
     {
         return auth()->check();
@@ -74,29 +68,8 @@ class CustomerResource extends Resource
                 Forms\Components\Section::make('Detalii client')
                     ->columns(3)
                     ->schema([
-                        Forms\Components\Select::make('location_id')
-                            ->label('Magazin')
-                            ->relationship(
-                                name: 'location',
-                                titleAttribute: 'name',
-                                modifyQueryUsing: function (Builder $query): void {
-                                    $query
-                                        ->where('type', Location::TYPE_STORE)
-                                        ->where('is_active', true);
-
-                                    $user = static::currentUser();
-
-                                    if ($user && ! $user->isSuperAdmin()) {
-                                        $query->whereIn('id', $user->operationalLocationIds());
-                                    }
-                                }
-                            )
-                            ->required()
-                            ->searchable()
-                            ->preload()
-                            ->native(false)
+                        Forms\Components\Hidden::make('location_id')
                             ->default(fn (): ?int => static::currentUser()?->location_id)
-                            ->disabled(fn (): bool => ! static::isSuperAdmin())
                             ->dehydrated(),
                         Forms\Components\Select::make('type')
                             ->label('Tip client')
@@ -118,29 +91,14 @@ class CustomerResource extends Resource
                         Forms\Components\Toggle::make('is_active')
                             ->label('Activ')
                             ->default(true),
-                        Forms\Components\TextInput::make('name')
-                            ->label('Nume client')
-                            ->required()
-                            ->maxLength(255)
-                            ->columnSpan(2),
-                        Forms\Components\TextInput::make('representative_name')
-                            ->label('Nume reprezentant')
-                            ->visible(fn (Get $get): bool => $get('type') === Customer::TYPE_COMPANY)
-                            ->required(fn (Get $get): bool => $get('type') === Customer::TYPE_COMPANY)
-                            ->maxLength(255),
-                        Forms\Components\TextInput::make('phone')
-                            ->label('Telefon')
-                            ->tel()
-                            ->required(fn (Get $get): bool => $get('type') === Customer::TYPE_COMPANY)
-                            ->maxLength(64),
-                        Forms\Components\TextInput::make('email')
-                            ->label('Email')
-                            ->email()
-                            ->maxLength(255),
                         Forms\Components\TextInput::make('cui')
                             ->label('CUI')
                             ->visible(fn (Get $get): bool => $get('type') === Customer::TYPE_COMPANY)
-                            ->helperText('La ieșirea din câmp, datele firmei se precompletează automat din OpenAPI.')
+                            ->required(fn (Get $get): bool => $get('type') === Customer::TYPE_COMPANY)
+                            ->helperText('Introdu doar cifre. La ieșirea din câmp, datele firmei se precompletează automat din OpenAPI.')
+                            ->inputMode('numeric')
+                            ->rule('regex:/^[0-9]+$/')
+                            ->extraInputAttributes(['pattern' => '[0-9]*'])
                             ->live(onBlur: true)
                             ->afterStateUpdated(function (Get $get, Set $set, ?string $state): void {
                                 if ($get('type') !== Customer::TYPE_COMPANY) {
@@ -151,6 +109,10 @@ class CustomerResource extends Resource
 
                                 if ($normalizedCui === '') {
                                     return;
+                                }
+
+                                if ($normalizedCui !== (string) $state) {
+                                    $set('cui', $normalizedCui);
                                 }
 
                                 try {
@@ -192,6 +154,25 @@ class CustomerResource extends Resource
                                 }
                             })
                             ->maxLength(64),
+                        Forms\Components\TextInput::make('name')
+                            ->label('Nume client')
+                            ->required()
+                            ->maxLength(255)
+                            ->columnSpan(2),
+                        Forms\Components\TextInput::make('representative_name')
+                            ->label('Nume reprezentant')
+                            ->visible(fn (Get $get): bool => $get('type') === Customer::TYPE_COMPANY)
+                            ->required(fn (Get $get): bool => $get('type') === Customer::TYPE_COMPANY)
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('phone')
+                            ->label('Telefon')
+                            ->tel()
+                            ->required(fn (Get $get): bool => $get('type') === Customer::TYPE_COMPANY)
+                            ->maxLength(64),
+                        Forms\Components\TextInput::make('email')
+                            ->label('Email')
+                            ->email()
+                            ->maxLength(255),
                         Forms\Components\Toggle::make('is_vat_payer')
                             ->label('Plătitor TVA')
                             ->visible(fn (Get $get): bool => $get('type') === Customer::TYPE_COMPANY)
@@ -287,11 +268,6 @@ class CustomerResource extends Resource
                     ->badge()
                     ->formatStateUsing(fn (string $state): string => Customer::typeOptions()[$state] ?? $state)
                     ->sortable(),
-                Tables\Columns\TextColumn::make('location.name')
-                    ->label('Magazin')
-                    ->searchable()
-                    ->sortable()
-                    ->toggleable(),
                 Tables\Columns\TextColumn::make('representative_name')
                     ->label('Reprezentant')
                     ->searchable()
@@ -317,25 +293,9 @@ class CustomerResource extends Resource
                 Tables\Filters\SelectFilter::make('type')
                     ->label('Tip client')
                     ->options(Customer::typeOptions()),
-                Tables\Filters\SelectFilter::make('location_id')
-                    ->label('Magazin')
-                    ->options(function (): array {
-                        $query = Location::query()
-                            ->where('type', Location::TYPE_STORE)
-                            ->orderBy('name');
-
-                        $user = static::currentUser();
-
-                        if ($user && ! $user->isSuperAdmin()) {
-                            $query->whereIn('id', $user->operationalLocationIds());
-                        }
-
-                        return $query->pluck('name', 'id')->all();
-                    }),
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Activ'),
             ])
-            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('location'))
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
@@ -354,14 +314,18 @@ class CustomerResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery()->with('location');
+        $query = parent::getEloquentQuery();
         $user = static::currentUser();
 
-        if (! $user || $user->isSuperAdmin()) {
-            return $query;
+        if (! $user) {
+            return $query->whereRaw('1 = 0');
         }
 
-        return $query->whereIn('location_id', $user->operationalLocationIds());
+        if (! $user->location_id) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where('location_id', (int) $user->location_id);
     }
 
     private static function canAccessRecord(Model $record): bool
@@ -372,11 +336,11 @@ class CustomerResource extends Resource
             return false;
         }
 
-        if ($user->isSuperAdmin()) {
-            return true;
+        if (! $user->location_id) {
+            return false;
         }
 
-        return $record instanceof Customer && in_array((int) $record->location_id, $user->operationalLocationIds(), true);
+        return $record instanceof Customer && (int) $record->location_id === (int) $user->location_id;
     }
 
     public static function getPages(): array

@@ -15,13 +15,13 @@ class CreateCustomer extends CreateRecord
     {
         $user = auth()->user();
 
-        if ($user instanceof User && ! $user->isSuperAdmin()) {
+        if ($user instanceof User) {
             $data['location_id'] = $user->location_id;
         }
 
         if (blank($data['location_id'] ?? null)) {
             throw ValidationException::withMessages([
-                'location_id' => 'Magazinul este obligatoriu.',
+                'location_id' => 'Utilizatorul nu are setat un magazin.',
             ]);
         }
 
