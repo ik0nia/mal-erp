@@ -97,7 +97,7 @@ class ImportWinmentorCsvAction
                 ->first();
 
             $pushPriceToSite = $connection->shouldPushPriceToSite();
-            $wooClients = [];
+            $batchTimestamp = Carbon::now();
 
             $products = WooProduct::query()
                 ->whereIn('connection_id', $wooConnectionIds)
@@ -119,11 +119,21 @@ class ImportWinmentorCsvAction
                 }
             }
 
+            $productIds = collect($productsBySku)
+                ->pluck('id')
+                ->map(fn (mixed $id): int => (int) $id)
+                ->all();
+
             $stocksByProductId = ProductStock::query()
                 ->where('location_id', $connection->location_id)
-                ->whereIn('woo_product_id', collect($productsBySku)->pluck('id')->all())
+                ->whereIn('woo_product_id', $productIds)
                 ->get()
                 ->keyBy('woo_product_id');
+
+            $stockUpserts = [];
+            $priceLogsToInsert = [];
+            $productUpdatesById = [];
+            $sitePricePushesByConnection = [];
 
             foreach ($rows as $rowNumber => $row) {
                 $lineNumber = $rowNumber + 2; // +1 header and 1-indexed rows
@@ -222,47 +232,53 @@ class ImportWinmentorCsvAction
                 $priceUpdated = $this->isPriceUpdated($oldPrice, $price);
                 $quantityChanged = $this->numbersDiffer($oldQuantity, $newQuantity);
 
-                if ($isNew) {
-                    $stock->fill([
+                if ($isNew || $quantityChanged || $priceDifferent) {
+                    if ($isNew) {
+                        $stats['created']++;
+                    } else {
+                        $stats['updated']++;
+                    }
+
+                    $createdAt = $stock->created_at instanceof Carbon ? $stock->created_at : $batchTimestamp;
+                    $stockUpserts[$product->id] = [
+                        'woo_product_id' => $product->id,
+                        'location_id' => $connection->location_id,
                         'quantity' => $newQuantity,
                         'price' => $price,
                         'source' => IntegrationConnection::PROVIDER_WINMENTOR_CSV,
                         'sync_run_id' => $run->id,
-                        'synced_at' => Carbon::now(),
-                    ]);
-                    $stock->save();
+                        'synced_at' => $batchTimestamp,
+                        'created_at' => $createdAt,
+                        'updated_at' => $batchTimestamp,
+                    ];
 
+                    $stock->quantity = $newQuantity;
+                    $stock->price = $price;
+                    $stock->source = IntegrationConnection::PROVIDER_WINMENTOR_CSV;
+                    $stock->sync_run_id = $run->id;
+                    $stock->synced_at = $batchTimestamp;
+                    $stock->created_at = $createdAt;
                     $stocksByProductId->put($product->id, $stock);
-                    $stats['created']++;
-                } elseif ($quantityChanged || $priceDifferent) {
-                    $stock->fill([
-                        'quantity' => $newQuantity,
-                        'price' => $price,
-                        'source' => IntegrationConnection::PROVIDER_WINMENTOR_CSV,
-                        'sync_run_id' => $run->id,
-                        'synced_at' => Carbon::now(),
-                    ]);
-                    $stock->save();
-
-                    $stats['updated']++;
                 } else {
                     $stats['unchanged']++;
                 }
 
                 if ($priceUpdated) {
-                    ProductPriceLog::query()->create([
+                    $priceLogsToInsert[] = [
                         'woo_product_id' => $product->id,
                         'location_id' => $connection->location_id,
                         'old_price' => $oldPrice,
                         'new_price' => $price,
                         'source' => IntegrationConnection::PROVIDER_WINMENTOR_CSV,
                         'sync_run_id' => $run->id,
-                        'payload' => [
+                        'payload' => json_encode([
                             'sku' => $sku,
                             'name' => $row['name'],
-                        ],
-                        'changed_at' => Carbon::now(),
-                    ]);
+                        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}',
+                        'changed_at' => $batchTimestamp,
+                        'created_at' => $batchTimestamp,
+                        'updated_at' => $batchTimestamp,
+                    ];
 
                     $stats['price_changes']++;
 
@@ -284,24 +300,12 @@ class ImportWinmentorCsvAction
                                 'message' => 'WooCommerce connection is inactive; price push skipped.',
                             ]);
                         } else {
-                            try {
-                                if (! isset($wooClients[$wooConnection->id])) {
-                                    $wooClients[$wooConnection->id] = new WooClient($wooConnection);
-                                }
-
-                                $wooClients[$wooConnection->id]->updateProductPrice(
-                                    (int) $product->woo_id,
-                                    $this->formatPrice($price),
-                                );
-                                $stats['site_price_updates']++;
-                            } catch (Throwable $exception) {
-                                $stats['site_price_update_failures']++;
-                                $this->appendError($errors, [
-                                    'row' => $lineNumber,
-                                    'sku' => $sku,
-                                    'message' => 'Failed to push price to WooCommerce: '.$exception->getMessage(),
-                                ]);
-                            }
+                            $sitePricePushesByConnection[$wooConnection->id][] = [
+                                'row' => $lineNumber,
+                                'sku' => $sku,
+                                'woo_id' => (int) $product->woo_id,
+                                'regular_price' => $this->formatPrice($price),
+                            ];
                         }
                     }
                 }
@@ -328,7 +332,113 @@ class ImportWinmentorCsvAction
 
                 if ($productUpdates !== []) {
                     // Accounting CSV updates only stock/price fields, never catalog naming fields.
-                    $product->update($productUpdates);
+                    $productUpdatesById[$product->id] = array_merge(
+                        $productUpdatesById[$product->id] ?? [],
+                        $productUpdates,
+                        ['updated_at' => $batchTimestamp],
+                    );
+
+                    foreach ($productUpdates as $field => $value) {
+                        $product->{$field} = $value;
+                    }
+                }
+            }
+
+            if ($stockUpserts !== []) {
+                foreach (array_chunk(array_values($stockUpserts), 1000) as $stockChunk) {
+                    ProductStock::query()->upsert(
+                        $stockChunk,
+                        ['woo_product_id', 'location_id'],
+                        ['quantity', 'price', 'source', 'sync_run_id', 'synced_at', 'updated_at']
+                    );
+                }
+            }
+
+            if ($priceLogsToInsert !== []) {
+                foreach (array_chunk($priceLogsToInsert, 1000) as $logChunk) {
+                    ProductPriceLog::query()->insert($logChunk);
+                }
+            }
+
+            if ($productUpdatesById !== []) {
+                foreach ($productUpdatesById as $productId => $updatePayload) {
+                    WooProduct::query()
+                        ->whereKey((int) $productId)
+                        ->update($updatePayload);
+                }
+            }
+
+            if ($sitePricePushesByConnection !== []) {
+                $wooClients = [];
+
+                foreach ($sitePricePushesByConnection as $wooConnectionId => $updates) {
+                    $wooConnection = $wooConnectionsById->get((int) $wooConnectionId);
+
+                    if (! $wooConnection instanceof IntegrationConnection) {
+                        $stats['site_price_update_failures'] += count($updates);
+
+                        foreach ($updates as $update) {
+                            $this->appendError($errors, [
+                                'row' => $update['row'] ?? null,
+                                'sku' => $update['sku'] ?? null,
+                                'message' => 'No WooCommerce connection available for product price push.',
+                            ]);
+                        }
+
+                        continue;
+                    }
+
+                    try {
+                        if (! isset($wooClients[$wooConnection->id])) {
+                            $wooClients[$wooConnection->id] = new WooClient($wooConnection);
+                        }
+
+                        $client = $wooClients[$wooConnection->id];
+
+                        foreach (array_chunk($updates, 50) as $updateChunk) {
+                            $batchPayload = [];
+
+                            foreach ($updateChunk as $update) {
+                                $batchPayload[] = [
+                                    'id' => (int) ($update['woo_id'] ?? 0),
+                                    'regular_price' => (string) ($update['regular_price'] ?? ''),
+                                ];
+                            }
+
+                            try {
+                                $client->updateProductPricesBatch($batchPayload);
+                                $stats['site_price_updates'] += count($updateChunk);
+                            } catch (Throwable $batchException) {
+                                // Fallback to single updates only for failed chunk.
+                                foreach ($updateChunk as $update) {
+                                    try {
+                                        $client->updateProductPrice(
+                                            (int) ($update['woo_id'] ?? 0),
+                                            (string) ($update['regular_price'] ?? ''),
+                                        );
+                                        $stats['site_price_updates']++;
+                                    } catch (Throwable $singleException) {
+                                        $stats['site_price_update_failures']++;
+                                        $this->appendError($errors, [
+                                            'row' => $update['row'] ?? null,
+                                            'sku' => $update['sku'] ?? null,
+                                            'message' => 'Failed to push price to WooCommerce: '.$singleException->getMessage(),
+                                        ]);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Throwable $exception) {
+                        $stats['site_price_update_failures'] += count($updates);
+
+                        foreach ($updates as $update) {
+                            $this->appendError($errors, [
+                                'row' => $update['row'] ?? null,
+                                'sku' => $update['sku'] ?? null,
+                                'message' => 'Failed to push price to WooCommerce: '.$exception->getMessage(),
+                            ]);
+                        }
+                    }
                 }
             }
 
