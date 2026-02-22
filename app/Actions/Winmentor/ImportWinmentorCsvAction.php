@@ -2,12 +2,12 @@
 
 namespace App\Actions\Winmentor;
 
+use App\Jobs\PushWinmentorPricesToWooJob;
 use App\Models\IntegrationConnection;
 use App\Models\ProductPriceLog;
 use App\Models\ProductStock;
 use App\Models\SyncRun;
 use App\Models\WooProduct;
-use App\Services\WooCommerce\WooClient;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -35,6 +35,9 @@ class ImportWinmentorCsvAction
             'name_mismatches' => 0,
             'site_price_updates' => 0,
             'site_price_update_failures' => 0,
+            'site_price_push_jobs' => 0,
+            'site_price_push_queued' => 0,
+            'site_price_push_processed' => 0,
             'created_placeholders' => 0,
             'missing_skus_sample' => [],
             'name_mismatch_sample' => [],
@@ -335,7 +338,7 @@ class ImportWinmentorCsvAction
                                 'message' => 'WooCommerce connection is inactive; price push skipped.',
                             ]);
                         } else {
-                            $sitePricePushesByConnection[$wooConnection->id][] = [
+                            $sitePricePushesByConnection[$wooConnection->id][$product->woo_id] = [
                                 'row' => $lineNumber,
                                 'sku' => $sku,
                                 'woo_id' => (int) $product->woo_id,
@@ -404,77 +407,21 @@ class ImportWinmentorCsvAction
             }
 
             if (! $cancelled && $sitePricePushesByConnection !== []) {
-                $wooClients = [];
+                $queuedJobs = 0;
+                $queuedUpdates = 0;
 
-                foreach ($sitePricePushesByConnection as $wooConnectionId => $updates) {
-                    $wooConnection = $wooConnectionsById->get((int) $wooConnectionId);
+                foreach ($sitePricePushesByConnection as $wooConnectionId => $updatesByWooId) {
+                    $updates = array_values($updatesByWooId);
 
-                    if (! $wooConnection instanceof IntegrationConnection) {
-                        $stats['site_price_update_failures'] += count($updates);
-
-                        foreach ($updates as $update) {
-                            $this->appendError($errors, [
-                                'row' => $update['row'] ?? null,
-                                'sku' => $update['sku'] ?? null,
-                                'message' => 'No WooCommerce connection available for product price push.',
-                            ]);
-                        }
-
-                        continue;
-                    }
-
-                    try {
-                        if (! isset($wooClients[$wooConnection->id])) {
-                            $wooClients[$wooConnection->id] = new WooClient($wooConnection);
-                        }
-
-                        $client = $wooClients[$wooConnection->id];
-
-                        foreach (array_chunk($updates, 50) as $updateChunk) {
-                            $batchPayload = [];
-
-                            foreach ($updateChunk as $update) {
-                                $batchPayload[] = [
-                                    'id' => (int) ($update['woo_id'] ?? 0),
-                                    'regular_price' => (string) ($update['regular_price'] ?? ''),
-                                ];
-                            }
-
-                            try {
-                                $client->updateProductPricesBatch($batchPayload);
-                                $stats['site_price_updates'] += count($updateChunk);
-                            } catch (Throwable $batchException) {
-                                // Fallback to single updates only for failed chunk.
-                                foreach ($updateChunk as $update) {
-                                    try {
-                                        $client->updateProductPrice(
-                                            (int) ($update['woo_id'] ?? 0),
-                                            (string) ($update['regular_price'] ?? ''),
-                                        );
-                                        $stats['site_price_updates']++;
-                                    } catch (Throwable $singleException) {
-                                        $stats['site_price_update_failures']++;
-                                        $this->appendError($errors, [
-                                            'row' => $update['row'] ?? null,
-                                            'sku' => $update['sku'] ?? null,
-                                            'message' => 'Failed to push price to WooCommerce: '.$singleException->getMessage(),
-                                        ]);
-                                    }
-                                }
-                            }
-                        }
-                    } catch (Throwable $exception) {
-                        $stats['site_price_update_failures'] += count($updates);
-
-                        foreach ($updates as $update) {
-                            $this->appendError($errors, [
-                                'row' => $update['row'] ?? null,
-                                'sku' => $update['sku'] ?? null,
-                                'message' => 'Failed to push price to WooCommerce: '.$exception->getMessage(),
-                            ]);
-                        }
+                    foreach (array_chunk($updates, 100) as $updateChunk) {
+                        PushWinmentorPricesToWooJob::dispatch((int) $run->id, (int) $wooConnectionId, $updateChunk);
+                        $queuedJobs++;
+                        $queuedUpdates += count($updateChunk);
                     }
                 }
+
+                $stats['site_price_push_jobs'] = $queuedJobs;
+                $stats['site_price_push_queued'] = $queuedUpdates;
             }
 
             if ($cancelled) {

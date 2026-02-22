@@ -118,6 +118,18 @@ class SyncRunResource extends Resource
                     ->label('Price push failed')
                     ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['site_price_update_failures'] ?? 0))
                     ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('stats.site_price_push_jobs')
+                    ->label('Price push jobs')
+                    ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['site_price_push_jobs'] ?? 0))
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('stats.site_price_push_queued')
+                    ->label('Price push queued')
+                    ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['site_price_push_queued'] ?? 0))
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('stats.site_price_push_processed')
+                    ->label('Price push processed')
+                    ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['site_price_push_processed'] ?? 0))
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('started_at')
                     ->label('Started')
                     ->dateTime('d.m.Y H:i:s')
