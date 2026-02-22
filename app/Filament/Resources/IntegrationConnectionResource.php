@@ -242,6 +242,21 @@ class IntegrationConnectionResource extends Resource
                         default => 'gray',
                     })
                     ->toggleable(),
+                Tables\Columns\TextColumn::make('latestSyncRun.stats.phase')
+                    ->label('Fază import')
+                    ->badge()
+                    ->placeholder('-')
+                    ->formatStateUsing(fn (?string $state): string => $state ?? '-')
+                    ->color(fn (?string $state): string => match ($state) {
+                        'queued' => 'info',
+                        'local_import', 'queueing_price_push' => 'warning',
+                        'pushing_prices' => 'primary',
+                        'completed' => 'success',
+                        'completed_with_errors', 'failed' => 'danger',
+                        'cancelled' => 'gray',
+                        default => 'gray',
+                    })
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('latestSyncRun.started_at')
                     ->label('Ultimul start')
                     ->dateTime('d.m.Y H:i:s')
@@ -407,6 +422,7 @@ class IntegrationConnectionResource extends Resource
                             'started_at' => now(),
                             'finished_at' => null,
                             'stats' => [
+                                'phase' => 'queued',
                                 'pages' => 1,
                                 'created' => 0,
                                 'updated' => 0,
@@ -418,7 +434,15 @@ class IntegrationConnectionResource extends Resource
                                 'name_mismatches' => 0,
                                 'site_price_updates' => 0,
                                 'site_price_update_failures' => 0,
+                                'site_price_push_jobs' => 0,
+                                'site_price_push_queued' => 0,
+                                'site_price_push_processed' => 0,
                                 'created_placeholders' => 0,
+                                'local_started_at' => null,
+                                'local_finished_at' => null,
+                                'push_started_at' => null,
+                                'push_finished_at' => null,
+                                'last_heartbeat_at' => now()->toIso8601String(),
                                 'missing_skus_sample' => [],
                                 'name_mismatch_sample' => [],
                             ],

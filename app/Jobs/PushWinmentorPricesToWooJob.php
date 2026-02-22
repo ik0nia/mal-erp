@@ -7,7 +7,9 @@ use App\Models\SyncRun;
 use App\Services\WooCommerce\WooClient;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class PushWinmentorPricesToWooJob implements ShouldQueue
@@ -36,8 +38,20 @@ class PushWinmentorPricesToWooJob implements ShouldQueue
         $run = SyncRun::query()->find($this->syncRunId);
 
         if (! $run || $run->status === SyncRun::STATUS_CANCELLED) {
+            Log::warning('Deferred Woo price push skipped: run missing or cancelled', [
+                'sync_run_id' => $this->syncRunId,
+                'woo_connection_id' => $this->wooConnectionId,
+                'updates' => count($this->updates),
+            ]);
+
             return;
         }
+
+        Log::info('Deferred Woo price push job started', [
+            'sync_run_id' => $this->syncRunId,
+            'woo_connection_id' => $this->wooConnectionId,
+            'updates' => count($this->updates),
+        ]);
 
         $wooConnection = IntegrationConnection::query()->find($this->wooConnectionId);
 
@@ -46,6 +60,12 @@ class PushWinmentorPricesToWooJob implements ShouldQueue
                 [
                     'message' => 'WooCommerce connection unavailable for deferred price push.',
                 ],
+            ]);
+
+            Log::warning('Deferred Woo price push failed: invalid connection', [
+                'sync_run_id' => $this->syncRunId,
+                'woo_connection_id' => $this->wooConnectionId,
+                'updates' => count($this->updates),
             ]);
 
             return;
@@ -86,6 +106,13 @@ class PushWinmentorPricesToWooJob implements ShouldQueue
                 $client->updateProductPricesBatch($batchPayload);
                 $successCount += count($batchPayload);
             } catch (Throwable $batchException) {
+                Log::warning('Deferred Woo batch push failed, falling back to single updates', [
+                    'sync_run_id' => $this->syncRunId,
+                    'woo_connection_id' => $this->wooConnectionId,
+                    'error' => $batchException->getMessage(),
+                    'batch_size' => count($batchPayload),
+                ]);
+
                 foreach ($batchPayload as $index => $payload) {
                     try {
                         $client->updateProductPrice((int) $payload['id'], (string) $payload['regular_price']);
@@ -104,6 +131,13 @@ class PushWinmentorPricesToWooJob implements ShouldQueue
         }
 
         $this->recordProgress($successCount, $failureCount, $newErrors);
+
+        Log::info('Deferred Woo price push job finished', [
+            'sync_run_id' => $this->syncRunId,
+            'woo_connection_id' => $this->wooConnectionId,
+            'success' => $successCount,
+            'failures' => $failureCount,
+        ]);
     }
 
     /**
@@ -132,6 +166,8 @@ class PushWinmentorPricesToWooJob implements ShouldQueue
                 0,
                 (int) ($stats['site_price_push_queued'] ?? 0) - ($successCount + $failureCount)
             );
+            $stats['phase'] = 'pushing_prices';
+            $stats['last_heartbeat_at'] = now()->toIso8601String();
 
             $errors = is_array($run->errors) ? $run->errors : [];
 
@@ -147,6 +183,30 @@ class PushWinmentorPricesToWooJob implements ShouldQueue
                 'stats' => $stats,
                 'errors' => $errors,
             ]);
+
+            if ((int) ($stats['site_price_push_queued'] ?? 0) <= 0 && $run->status !== SyncRun::STATUS_CANCELLED) {
+                $finalStatus = (int) ($stats['site_price_update_failures'] ?? 0) > 0
+                    ? SyncRun::STATUS_FAILED
+                    : SyncRun::STATUS_SUCCESS;
+
+                $stats['phase'] = $finalStatus === SyncRun::STATUS_SUCCESS ? 'completed' : 'completed_with_errors';
+                $stats['push_finished_at'] = now()->toIso8601String();
+                $stats['last_heartbeat_at'] = now()->toIso8601String();
+
+                $run->update([
+                    'status' => $finalStatus,
+                    'finished_at' => Carbon::now(),
+                    'stats' => $stats,
+                    'errors' => $errors,
+                ]);
+
+                Log::info('Deferred Woo price push stage completed', [
+                    'sync_run_id' => $run->id,
+                    'status' => $finalStatus,
+                    'site_price_updates' => $stats['site_price_updates'] ?? 0,
+                    'site_price_update_failures' => $stats['site_price_update_failures'] ?? 0,
+                ]);
+            }
         });
     }
 }

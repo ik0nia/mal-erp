@@ -89,6 +89,24 @@ class SyncRunResource extends Resource
                         SyncRun::STATUS_CANCELLED => 'gray',
                         default => 'warning',
                     }),
+                Tables\Columns\TextColumn::make('stats.phase')
+                    ->label('Fază')
+                    ->badge()
+                    ->formatStateUsing(fn (SyncRun $record): string => (string) ($record->stats['phase'] ?? '-'))
+                    ->color(fn (SyncRun $record): string => match ((string) ($record->stats['phase'] ?? '')) {
+                        'queued' => 'info',
+                        'local_import' => 'warning',
+                        'queueing_price_push' => 'warning',
+                        'pushing_prices' => 'primary',
+                        'completed' => 'success',
+                        'completed_with_errors' => 'danger',
+                        'failed' => 'danger',
+                        'cancelled' => 'gray',
+                        default => 'gray',
+                    }),
+                Tables\Columns\TextColumn::make('stats.processed')
+                    ->label('Processed')
+                    ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['processed'] ?? 0)),
                 Tables\Columns\TextColumn::make('stats.created')
                     ->label('Created')
                     ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['created'] ?? 0)),
@@ -125,11 +143,11 @@ class SyncRunResource extends Resource
                 Tables\Columns\TextColumn::make('stats.site_price_push_queued')
                     ->label('Price push queued')
                     ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['site_price_push_queued'] ?? 0))
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('stats.site_price_push_processed')
                     ->label('Price push processed')
                     ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['site_price_push_processed'] ?? 0))
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('started_at')
                     ->label('Started')
                     ->dateTime('d.m.Y H:i:s')
@@ -138,6 +156,11 @@ class SyncRunResource extends Resource
                     ->label('Finished')
                     ->dateTime('d.m.Y H:i:s')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('stats.last_heartbeat_at')
+                    ->label('Heartbeat')
+                    ->getStateUsing(fn (SyncRun $record): ?string => data_get($record->stats, 'last_heartbeat_at'))
+                    ->dateTime('d.m.Y H:i:s')
+                    ->toggleable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('provider')
@@ -186,6 +209,7 @@ class SyncRunResource extends Resource
                         }
 
                         $errors = is_array($record->errors) ? $record->errors : [];
+                        $stats = is_array($record->stats) ? $record->stats : [];
                         $errors[] = [
                             'message' => 'Oprit manual din platformă.',
                             'cancelled_at' => now()->toIso8601String(),
@@ -196,9 +220,13 @@ class SyncRunResource extends Resource
                             $errors = array_slice($errors, -200);
                         }
 
+                        $stats['phase'] = 'cancelled';
+                        $stats['last_heartbeat_at'] = now()->toIso8601String();
+
                         $record->update([
                             'status' => SyncRun::STATUS_CANCELLED,
                             'finished_at' => now(),
+                            'stats' => $stats,
                             'errors' => $errors,
                         ]);
 

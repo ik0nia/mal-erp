@@ -11,6 +11,7 @@ use App\Models\WooProduct;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Throwable;
 
@@ -24,6 +25,7 @@ class ImportWinmentorCsvAction
 
         DB::connection()->disableQueryLog();
         $initialStats = [
+            'phase' => 'queued',
             'pages' => 1,
             'created' => 0,
             'updated' => 0,
@@ -39,6 +41,11 @@ class ImportWinmentorCsvAction
             'site_price_push_queued' => 0,
             'site_price_push_processed' => 0,
             'created_placeholders' => 0,
+            'local_started_at' => null,
+            'local_finished_at' => null,
+            'push_started_at' => null,
+            'push_finished_at' => null,
+            'last_heartbeat_at' => null,
             'missing_skus_sample' => [],
             'name_mismatch_sample' => [],
         ];
@@ -62,7 +69,23 @@ class ImportWinmentorCsvAction
                 'status' => SyncRun::STATUS_RUNNING,
                 'started_at' => Carbon::now(),
                 'finished_at' => null,
-                'stats' => is_array($run->stats) ? $run->stats : $initialStats,
+                'stats' => array_merge(
+                    $initialStats,
+                    is_array($run->stats) ? $run->stats : [],
+                    [
+                        'phase' => 'local_import',
+                        'local_started_at' => now()->toIso8601String(),
+                        'local_finished_at' => null,
+                        'push_started_at' => null,
+                        'push_finished_at' => null,
+                        'site_price_push_jobs' => 0,
+                        'site_price_push_queued' => 0,
+                        'site_price_push_processed' => 0,
+                        'site_price_updates' => 0,
+                        'site_price_update_failures' => 0,
+                        'last_heartbeat_at' => now()->toIso8601String(),
+                    ]
+                ),
                 'errors' => [],
             ]);
         } else {
@@ -73,13 +96,25 @@ class ImportWinmentorCsvAction
                 'type' => SyncRun::TYPE_WINMENTOR_STOCK,
                 'status' => SyncRun::STATUS_RUNNING,
                 'started_at' => Carbon::now(),
-                'stats' => $initialStats,
+                'stats' => array_merge($initialStats, [
+                    'phase' => 'local_import',
+                    'local_started_at' => now()->toIso8601String(),
+                    'last_heartbeat_at' => now()->toIso8601String(),
+                ]),
                 'errors' => [],
             ]);
         }
 
-        $stats = is_array($run->stats) ? $run->stats : $initialStats;
+        $stats = array_merge($initialStats, is_array($run->stats) ? $run->stats : []);
         $errors = [];
+        $startedAt = microtime(true);
+
+        Log::info('Winmentor import started', [
+            'sync_run_id' => $run->id,
+            'connection_id' => $connection->id,
+            'location_id' => $connection->location_id,
+            'csv_url' => $connection->csvUrl(),
+        ]);
 
         try {
             $csvUrl = $connection->csvUrl();
@@ -95,6 +130,16 @@ class ImportWinmentorCsvAction
             $response->throw();
 
             $rows = $this->parseRows($response->body(), $connection);
+            $stats['total_rows'] = count($rows);
+            $stats['last_heartbeat_at'] = now()->toIso8601String();
+
+            $this->persistProgress($run, $stats, $errors);
+
+            Log::info('Winmentor CSV parsed', [
+                'sync_run_id' => $run->id,
+                'rows' => count($rows),
+                'elapsed_seconds' => round(microtime(true) - $startedAt, 2),
+            ]);
 
             $skuValues = collect($rows)
                 ->pluck('sku')
@@ -176,6 +221,20 @@ class ImportWinmentorCsvAction
 
                 $lineNumber = $rowNumber + 2; // +1 header and 1-indexed rows
                 $stats['processed']++;
+
+                if (($stats['processed'] % 1000) === 0) {
+                    $stats['last_heartbeat_at'] = now()->toIso8601String();
+                    $this->persistProgress($run, $stats, $errors);
+
+                    Log::info('Winmentor import progress checkpoint', [
+                        'sync_run_id' => $run->id,
+                        'processed' => $stats['processed'],
+                        'created' => $stats['created'] ?? 0,
+                        'updated' => $stats['updated'] ?? 0,
+                        'price_changes' => $stats['price_changes'] ?? 0,
+                        'elapsed_seconds' => round(microtime(true) - $startedAt, 2),
+                    ]);
+                }
 
                 $sku = trim($row['sku']);
                 $skuKey = $this->normalizeKey($sku);
@@ -406,6 +465,13 @@ class ImportWinmentorCsvAction
                 }
             }
 
+            if (! $cancelled) {
+                $stats['local_finished_at'] = now()->toIso8601String();
+                $stats['phase'] = 'queueing_price_push';
+                $stats['last_heartbeat_at'] = now()->toIso8601String();
+                $this->persistProgress($run, $stats, $errors);
+            }
+
             if (! $cancelled && $sitePricePushesByConnection !== []) {
                 $queuedJobs = 0;
                 $queuedUpdates = 0;
@@ -422,9 +488,31 @@ class ImportWinmentorCsvAction
 
                 $stats['site_price_push_jobs'] = $queuedJobs;
                 $stats['site_price_push_queued'] = $queuedUpdates;
+                $stats['phase'] = 'pushing_prices';
+                $stats['push_started_at'] = $stats['push_started_at'] ?: now()->toIso8601String();
+                $stats['last_heartbeat_at'] = now()->toIso8601String();
+
+                $run->update([
+                    'status' => SyncRun::STATUS_RUNNING,
+                    'finished_at' => null,
+                    'stats' => $stats,
+                    'errors' => $errors,
+                ]);
+
+                Log::info('Winmentor local import done, queued Woo push jobs', [
+                    'sync_run_id' => $run->id,
+                    'queued_jobs' => $queuedJobs,
+                    'queued_updates' => $queuedUpdates,
+                    'elapsed_seconds' => round(microtime(true) - $startedAt, 2),
+                ]);
+
+                return $run;
             }
 
             if ($cancelled) {
+                $stats['phase'] = 'cancelled';
+                $stats['last_heartbeat_at'] = now()->toIso8601String();
+
                 $run->update([
                     'status' => SyncRun::STATUS_CANCELLED,
                     'finished_at' => Carbon::now(),
@@ -432,8 +520,18 @@ class ImportWinmentorCsvAction
                     'errors' => $errors,
                 ]);
 
+                Log::warning('Winmentor import cancelled', [
+                    'sync_run_id' => $run->id,
+                    'processed' => $stats['processed'] ?? 0,
+                    'elapsed_seconds' => round(microtime(true) - $startedAt, 2),
+                ]);
+
                 return $run;
             }
+
+            $stats['phase'] = 'completed';
+            $stats['push_finished_at'] = now()->toIso8601String();
+            $stats['last_heartbeat_at'] = now()->toIso8601String();
 
             $run->update([
                 'status' => SyncRun::STATUS_SUCCESS,
@@ -441,16 +539,34 @@ class ImportWinmentorCsvAction
                 'stats' => $stats,
                 'errors' => $errors,
             ]);
+
+            Log::info('Winmentor import completed without deferred pushes', [
+                'sync_run_id' => $run->id,
+                'processed' => $stats['processed'] ?? 0,
+                'created' => $stats['created'] ?? 0,
+                'updated' => $stats['updated'] ?? 0,
+                'elapsed_seconds' => round(microtime(true) - $startedAt, 2),
+            ]);
         } catch (Throwable $exception) {
             $this->appendError($errors, [
                 'message' => $exception->getMessage(),
             ]);
+
+            $stats['phase'] = 'failed';
+            $stats['last_heartbeat_at'] = now()->toIso8601String();
 
             $run->update([
                 'status' => SyncRun::STATUS_FAILED,
                 'finished_at' => Carbon::now(),
                 'stats' => $stats,
                 'errors' => $errors,
+            ]);
+
+            Log::error('Winmentor import failed', [
+                'sync_run_id' => $run->id,
+                'processed' => $stats['processed'] ?? 0,
+                'error' => $exception->getMessage(),
+                'elapsed_seconds' => round(microtime(true) - $startedAt, 2),
             ]);
 
             throw $exception;
@@ -691,6 +807,18 @@ class ImportWinmentorCsvAction
         }
 
         return trim($name);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $errors
+     * @param  array<string, mixed>  $error
+     */
+    private function persistProgress(SyncRun $run, array $stats, array $errors): void
+    {
+        $run->update([
+            'stats' => $stats,
+            'errors' => $errors,
+        ]);
     }
 
     /**

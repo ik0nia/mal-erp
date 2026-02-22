@@ -7,7 +7,7 @@ use App\Models\IntegrationConnection;
 use App\Models\SyncRun;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Queue\Middleware\WithoutOverlapping;
+use Illuminate\Support\Facades\Log;
 
 class ImportWinmentorCsvJob implements ShouldQueue
 {
@@ -15,7 +15,7 @@ class ImportWinmentorCsvJob implements ShouldQueue
 
     public int $timeout = 1800;
 
-    public int $tries = 200;
+    public int $tries = 3;
 
     /**
      * Create a new job instance.
@@ -24,20 +24,6 @@ class ImportWinmentorCsvJob implements ShouldQueue
         public int $connectionId,
         public ?int $syncRunId = null,
     ) {}
-
-    /**
-     * Prevent duplicate imports for same connection.
-     *
-     * @return array<int, object>
-     */
-    public function middleware(): array
-    {
-        return [
-            (new WithoutOverlapping('import-winmentor-'.$this->connectionId))
-                ->expireAfter($this->timeout)
-                ->releaseAfter(10),
-        ];
-    }
 
     /**
      * Execute the job.
@@ -50,6 +36,12 @@ class ImportWinmentorCsvJob implements ShouldQueue
         if ($this->syncRunId) {
             $run = SyncRun::query()->find($this->syncRunId);
         }
+
+        Log::info('Winmentor import queue job picked by worker', [
+            'connection_id' => $this->connectionId,
+            'sync_run_id' => $this->syncRunId,
+            'resolved_run_status' => $run?->status,
+        ]);
 
         (new ImportWinmentorCsvAction())->execute($connection, $run);
     }
