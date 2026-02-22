@@ -84,6 +84,7 @@ class LocationResource extends Resource
                         if ($state === Location::TYPE_WAREHOUSE) {
                             $set('company_name', null);
                             $set('company_vat_number', null);
+                            $set('company_is_vat_payer', null);
                             $set('company_registration_number', null);
                             $set('company_postal_code', null);
                             $set('company_phone', null);
@@ -155,6 +156,10 @@ class LocationResource extends Resource
                                 }
                             }
 
+                            if (array_key_exists('company_is_vat_payer', $companyData)) {
+                                $set('company_is_vat_payer', (bool) $companyData['company_is_vat_payer']);
+                            }
+
                             Notification::make()
                                 ->success()
                                 ->title('Date firmă actualizate')
@@ -173,6 +178,11 @@ class LocationResource extends Resource
                     ->label('Nr. Reg. Com.')
                     ->visible(fn (Get $get): bool => $get('type') !== Location::TYPE_WAREHOUSE)
                     ->maxLength(255),
+                Forms\Components\Toggle::make('company_is_vat_payer')
+                    ->label('Plătitor TVA')
+                    ->visible(fn (Get $get): bool => $get('type') !== Location::TYPE_WAREHOUSE)
+                    ->inline(false)
+                    ->default(false),
                 Forms\Components\TextInput::make('company_postal_code')
                     ->label('Cod poștal')
                     ->visible(fn (Get $get): bool => $get('type') !== Location::TYPE_WAREHOUSE)
@@ -220,6 +230,10 @@ class LocationResource extends Resource
                     ->label('Bancă')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\IconColumn::make('company_is_vat_payer')
+                    ->label('TVA')
+                    ->boolean()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('store.name')
                     ->label('Magazin părinte')
                     ->placeholder('-')

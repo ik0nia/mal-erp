@@ -37,6 +37,9 @@
                     @if($location?->company_vat_number)
                         <div>CUI: {{ $location->company_vat_number }}</div>
                     @endif
+                    @if(! is_null($location?->company_is_vat_payer))
+                        <div>Plătitor TVA: {{ $location->company_is_vat_payer ? 'Da' : 'Nu' }}</div>
+                    @endif
                     @if($location?->company_registration_number)
                         <div>Reg. Com.: {{ $location->company_registration_number }}</div>
                     @endif

@@ -21,6 +21,7 @@ class Location extends Model
         'county',
         'company_name',
         'company_vat_number',
+        'company_is_vat_payer',
         'company_registration_number',
         'company_postal_code',
         'company_phone',
@@ -32,6 +33,7 @@ class Location extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'store_id' => 'integer',
+        'company_is_vat_payer' => 'boolean',
     ];
 
     public const TYPE_STORE = 'store';
@@ -57,6 +59,7 @@ class Location extends Model
             if ($location->type === self::TYPE_WAREHOUSE) {
                 $location->company_name = null;
                 $location->company_vat_number = null;
+                $location->company_is_vat_payer = null;
                 $location->company_registration_number = null;
                 $location->company_postal_code = null;
                 $location->company_phone = null;

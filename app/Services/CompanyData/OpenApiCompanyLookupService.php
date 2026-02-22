@@ -44,7 +44,7 @@ class OpenApiCompanyLookupService
 
             $cif = $this->firstNonEmptyString($company, ['cif']) ?: $normalizedCui;
 
-            return [
+            $result = [
                 'company_name' => $this->firstNonEmptyString($company, ['denumire']),
                 'company_vat_number' => $cif,
                 'company_registration_number' => $this->firstNonEmptyString($company, ['numar_reg_com']),
@@ -55,6 +55,14 @@ class OpenApiCompanyLookupService
                 'county' => $this->firstNonEmptyString($company, ['judet', 'county']),
                 'source' => $company,
             ];
+
+            $isVatPayer = $this->extractVatPayer($company);
+
+            if ($isVatPayer !== null) {
+                $result['company_is_vat_payer'] = $isVatPayer;
+            }
+
+            return $result;
         }
 
         if ($response->status() === 202) {
@@ -156,5 +164,33 @@ class OpenApiCompanyLookupService
         }
 
         return '';
+    }
+
+    /**
+     * @param  array<string, mixed>  $company
+     */
+    private function extractVatPayer(array $company): ?bool
+    {
+        foreach (['tva', 'vat'] as $key) {
+            if (! Arr::has($company, $key)) {
+                continue;
+            }
+
+            $value = Arr::get($company, $key);
+
+            if (is_bool($value)) {
+                return $value;
+            }
+
+            if ($value === null) {
+                return false;
+            }
+
+            if (is_scalar($value)) {
+                return trim((string) $value) !== '';
+            }
+        }
+
+        return null;
     }
 }
