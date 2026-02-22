@@ -85,6 +85,10 @@ class LocationResource extends Resource
                             $set('company_name', null);
                             $set('company_vat_number', null);
                             $set('company_registration_number', null);
+                            $set('company_postal_code', null);
+                            $set('company_phone', null);
+                            $set('company_bank', null);
+                            $set('company_bank_account', null);
                         }
                     })
                     ->native(false),
@@ -138,6 +142,8 @@ class LocationResource extends Resource
                             foreach ([
                                 'company_name',
                                 'company_registration_number',
+                                'company_postal_code',
+                                'company_phone',
                                 'address',
                                 'city',
                                 'county',
@@ -167,6 +173,23 @@ class LocationResource extends Resource
                     ->label('Nr. Reg. Com.')
                     ->visible(fn (Get $get): bool => $get('type') !== Location::TYPE_WAREHOUSE)
                     ->maxLength(255),
+                Forms\Components\TextInput::make('company_postal_code')
+                    ->label('Cod poștal')
+                    ->visible(fn (Get $get): bool => $get('type') !== Location::TYPE_WAREHOUSE)
+                    ->maxLength(50),
+                Forms\Components\TextInput::make('company_phone')
+                    ->label('Număr de telefon')
+                    ->tel()
+                    ->visible(fn (Get $get): bool => $get('type') !== Location::TYPE_WAREHOUSE)
+                    ->maxLength(255),
+                Forms\Components\TextInput::make('company_bank')
+                    ->label('Bancă')
+                    ->visible(fn (Get $get): bool => $get('type') !== Location::TYPE_WAREHOUSE)
+                    ->maxLength(255),
+                Forms\Components\TextInput::make('company_bank_account')
+                    ->label('Cont bancar')
+                    ->visible(fn (Get $get): bool => $get('type') !== Location::TYPE_WAREHOUSE)
+                    ->maxLength(255),
                 Forms\Components\Toggle::make('is_active')
                     ->label('Activă')
                     ->default(true),
@@ -189,6 +212,14 @@ class LocationResource extends Resource
                     ->label('Oraș')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('company_phone')
+                    ->label('Telefon')
+                    ->searchable()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('company_bank')
+                    ->label('Bancă')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('store.name')
                     ->label('Magazin părinte')
                     ->placeholder('-')

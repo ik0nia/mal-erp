@@ -22,6 +22,10 @@ class Location extends Model
         'company_name',
         'company_vat_number',
         'company_registration_number',
+        'company_postal_code',
+        'company_phone',
+        'company_bank',
+        'company_bank_account',
         'is_active',
     ];
 
@@ -54,6 +58,10 @@ class Location extends Model
                 $location->company_name = null;
                 $location->company_vat_number = null;
                 $location->company_registration_number = null;
+                $location->company_postal_code = null;
+                $location->company_phone = null;
+                $location->company_bank = null;
+                $location->company_bank_account = null;
             }
         });
     }

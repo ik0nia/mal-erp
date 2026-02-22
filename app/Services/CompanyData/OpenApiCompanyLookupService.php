@@ -48,6 +48,8 @@ class OpenApiCompanyLookupService
                 'company_name' => $this->firstNonEmptyString($company, ['denumire']),
                 'company_vat_number' => $cif,
                 'company_registration_number' => $this->firstNonEmptyString($company, ['numar_reg_com']),
+                'company_postal_code' => $this->firstNonEmptyString($company, ['cod_postal', 'postal_code']),
+                'company_phone' => $this->firstNonEmptyString($company, ['telefon', 'phone']),
                 'address' => $this->firstNonEmptyString($company, ['adresa']),
                 'city' => $this->firstNonEmptyString($company, ['localitate', 'oras', 'city']),
                 'county' => $this->firstNonEmptyString($company, ['judet', 'county']),

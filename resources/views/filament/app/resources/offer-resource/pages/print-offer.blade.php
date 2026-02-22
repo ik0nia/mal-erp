@@ -31,12 +31,23 @@
                 <div class="company-box">
                     <strong>{{ $location?->company_name ?: ($location?->name ?: 'Malinco ERP') }}</strong>
                     <div>{{ $location?->address ?: '-' }}</div>
-                    <div>{{ trim(($location?->city ?: '') . ' ' . ($location?->county ?: '')) }}</div>
+                    <div>
+                        {{ trim(($location?->city ?: '') . ' ' . ($location?->county ?: '') . ' ' . ($location?->company_postal_code ?: '')) }}
+                    </div>
                     @if($location?->company_vat_number)
                         <div>CUI: {{ $location->company_vat_number }}</div>
                     @endif
                     @if($location?->company_registration_number)
                         <div>Reg. Com.: {{ $location->company_registration_number }}</div>
+                    @endif
+                    @if($location?->company_phone)
+                        <div>Telefon: {{ $location->company_phone }}</div>
+                    @endif
+                    @if($location?->company_bank)
+                        <div>Bancă: {{ $location->company_bank }}</div>
+                    @endif
+                    @if($location?->company_bank_account)
+                        <div>Cont: {{ $location->company_bank_account }}</div>
                     @endif
                 </div>
             </header>
