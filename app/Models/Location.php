@@ -103,4 +103,9 @@ class Location extends Model
     {
         return $this->hasMany(Offer::class);
     }
+
+    public function customers(): HasMany
+    {
+        return $this->hasMany(Customer::class);
+    }
 }
