@@ -178,6 +178,20 @@ class ImportWinmentorCsvAction
 
                 $stats['matched_products']++;
 
+                if ($product->is_placeholder && $product->source === WooProduct::SOURCE_WINMENTOR_CSV) {
+                    $normalizedMentorName = $this->resolvePlaceholderName($sku, $row['name'] ?? null);
+
+                    if ($normalizedMentorName !== '' && $product->name !== $normalizedMentorName) {
+                        $data = is_array($product->data) ? $product->data : [];
+                        $data['csv_name'] = $normalizedMentorName;
+
+                        $product->update([
+                            'name' => $normalizedMentorName,
+                            'data' => $data,
+                        ]);
+                    }
+                }
+
                 if ($this->isNameMismatch($row['name'] ?? null, (string) $product->name)) {
                     $stats['name_mismatches']++;
 
@@ -390,7 +404,7 @@ class ImportWinmentorCsvAction
 
             $rows[] = [
                 'sku' => trim((string) ($columns[$headerMap[$skuColumn]] ?? '')),
-                'name' => isset($headerMap[$nameColumn]) ? trim((string) ($columns[$headerMap[$nameColumn]] ?? '')) : null,
+                'name' => isset($headerMap[$nameColumn]) ? $this->sanitizeMentorName((string) ($columns[$headerMap[$nameColumn]] ?? '')) : null,
                 'quantity' => $this->toFloat($columns[$headerMap[$qtyColumn]] ?? null),
                 'price' => $this->toFloat($columns[$headerMap[$priceColumn]] ?? null),
             ];
@@ -552,13 +566,28 @@ class ImportWinmentorCsvAction
 
     private function resolvePlaceholderName(string $sku, ?string $csvName): string
     {
-        $name = trim((string) ($csvName ?? ''));
+        $name = $this->sanitizeMentorName((string) ($csvName ?? ''));
 
         if ($name !== '') {
             return mb_substr($name, 0, 255);
         }
 
         return mb_substr('Produs contabilitate '.$sku, 0, 255);
+    }
+
+    private function sanitizeMentorName(string $value): string
+    {
+        $name = trim($value);
+
+        if ($name === '') {
+            return '';
+        }
+
+        if (! preg_match('/^\p{L}/u', $name)) {
+            $name = ltrim((string) mb_substr($name, 1));
+        }
+
+        return trim($name);
     }
 
     /**
