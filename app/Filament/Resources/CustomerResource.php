@@ -106,6 +106,7 @@ class CustomerResource extends Resource
                             }),
                         Forms\Components\Toggle::make('is_active')
                             ->label('Activ')
+                            ->visible(fn (string $operation): bool => $operation !== 'create')
                             ->default(true),
                         Forms\Components\TextInput::make('name')
                             ->label('Nume client')
