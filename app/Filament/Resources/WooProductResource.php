@@ -88,6 +88,7 @@ class WooProductResource extends Resource
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nume')
+                    ->formatStateUsing(fn (WooProduct $record): string => $record->decoded_name)
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('type')

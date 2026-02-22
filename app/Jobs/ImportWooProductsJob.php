@@ -6,6 +6,7 @@ use App\Actions\WooCommerce\ImportWooProductsAction;
 use App\Models\IntegrationConnection;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 
 class ImportWooProductsJob implements ShouldQueue
 {
@@ -19,6 +20,18 @@ class ImportWooProductsJob implements ShouldQueue
      * Create a new job instance.
      */
     public function __construct(public readonly int $connectionId) {}
+
+    /**
+     * @return array<int, object>
+     */
+    public function middleware(): array
+    {
+        return [
+            (new WithoutOverlapping('import-woo-products-'.$this->connectionId))
+                ->expireAfter($this->timeout)
+                ->dontRelease(),
+        ];
+    }
 
     /**
      * Execute the job.
