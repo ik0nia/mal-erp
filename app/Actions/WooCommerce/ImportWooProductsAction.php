@@ -44,6 +44,22 @@ class ImportWooProductsAction
 
         try {
             while (true) {
+                if ($this->isRunCancellationRequested((int) $run->id)) {
+                    $errors[] = [
+                        'page' => $page,
+                        'message' => 'Import oprit manual din platformă.',
+                    ];
+
+                    $run->update([
+                        'status' => SyncRun::STATUS_CANCELLED,
+                        'finished_at' => Carbon::now(),
+                        'stats' => $stats,
+                        'errors' => $errors,
+                    ]);
+
+                    return $run;
+                }
+
                 $products = $client->getProducts($page, $perPage);
 
                 if ($products === []) {
@@ -217,5 +233,13 @@ class ImportWooProductsAction
     private function decodeHtmlEntityText(string $value): string
     {
         return trim(html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    }
+
+    private function isRunCancellationRequested(int $runId): bool
+    {
+        return SyncRun::query()
+            ->whereKey($runId)
+            ->where('status', SyncRun::STATUS_CANCELLED)
+            ->exists();
     }
 }

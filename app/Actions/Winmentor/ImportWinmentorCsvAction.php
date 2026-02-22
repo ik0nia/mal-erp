@@ -134,8 +134,18 @@ class ImportWinmentorCsvAction
             $priceLogsToInsert = [];
             $productUpdatesById = [];
             $sitePricePushesByConnection = [];
+            $cancelled = false;
 
             foreach ($rows as $rowNumber => $row) {
+                if (($rowNumber % 100) === 0 && $this->isRunCancellationRequested((int) $run->id)) {
+                    $cancelled = true;
+                    $this->appendError($errors, [
+                        'message' => 'Import oprit manual din platformă.',
+                    ]);
+
+                    break;
+                }
+
                 $lineNumber = $rowNumber + 2; // +1 header and 1-indexed rows
                 $stats['processed']++;
 
@@ -368,7 +378,7 @@ class ImportWinmentorCsvAction
                 }
             }
 
-            if ($sitePricePushesByConnection !== []) {
+            if (! $cancelled && $sitePricePushesByConnection !== []) {
                 $wooClients = [];
 
                 foreach ($sitePricePushesByConnection as $wooConnectionId => $updates) {
@@ -440,6 +450,17 @@ class ImportWinmentorCsvAction
                         }
                     }
                 }
+            }
+
+            if ($cancelled) {
+                $run->update([
+                    'status' => SyncRun::STATUS_CANCELLED,
+                    'finished_at' => Carbon::now(),
+                    'stats' => $stats,
+                    'errors' => $errors,
+                ]);
+
+                return $run;
             }
 
             $run->update([
@@ -709,5 +730,13 @@ class ImportWinmentorCsvAction
         if (count($errors) < 200) {
             $errors[] = $error;
         }
+    }
+
+    private function isRunCancellationRequested(int $runId): bool
+    {
+        return SyncRun::query()
+            ->whereKey($runId)
+            ->where('status', SyncRun::STATUS_CANCELLED)
+            ->exists();
     }
 }

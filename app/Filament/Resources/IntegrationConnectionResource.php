@@ -236,6 +236,7 @@ class IntegrationConnectionResource extends Resource
                         'success' => 'success',
                         'failed' => 'danger',
                         'running' => 'warning',
+                        'cancelled' => 'gray',
                         default => 'gray',
                     })
                     ->toggleable(),
@@ -267,6 +268,7 @@ class IntegrationConnectionResource extends Resource
                         'running' => 'running',
                         'success' => 'success',
                         'failed' => 'failed',
+                        'cancelled' => 'cancelled',
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         $status = $data['value'] ?? null;

@@ -6,6 +6,7 @@ use App\Filament\Resources\SyncRunResource\Pages;
 use App\Models\IntegrationConnection;
 use App\Models\SyncRun;
 use App\Models\User;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -84,6 +85,7 @@ class SyncRunResource extends Resource
                     ->color(fn (string $state): string => match ($state) {
                         SyncRun::STATUS_SUCCESS => 'success',
                         SyncRun::STATUS_FAILED => 'danger',
+                        SyncRun::STATUS_CANCELLED => 'gray',
                         default => 'warning',
                     }),
                 Tables\Columns\TextColumn::make('stats.created')
@@ -147,9 +149,51 @@ class SyncRunResource extends Resource
                         SyncRun::STATUS_RUNNING => 'running',
                         SyncRun::STATUS_SUCCESS => 'success',
                         SyncRun::STATUS_FAILED => 'failed',
+                        SyncRun::STATUS_CANCELLED => 'cancelled',
                     ]),
             ])
             ->actions([
+                Tables\Actions\Action::make('stop')
+                    ->label('Stop')
+                    ->icon('heroicon-o-stop')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->visible(fn (SyncRun $record): bool => $record->status === SyncRun::STATUS_RUNNING)
+                    ->action(function (SyncRun $record): void {
+                        $record->refresh();
+
+                        if ($record->status !== SyncRun::STATUS_RUNNING) {
+                            Notification::make()
+                                ->warning()
+                                ->title('Importul nu mai este în curs')
+                                ->send();
+
+                            return;
+                        }
+
+                        $errors = is_array($record->errors) ? $record->errors : [];
+                        $errors[] = [
+                            'message' => 'Oprit manual din platformă.',
+                            'cancelled_at' => now()->toIso8601String(),
+                            'cancelled_by' => auth()->user()?->email ?? auth()->id(),
+                        ];
+
+                        if (count($errors) > 200) {
+                            $errors = array_slice($errors, -200);
+                        }
+
+                        $record->update([
+                            'status' => SyncRun::STATUS_CANCELLED,
+                            'finished_at' => now(),
+                            'errors' => $errors,
+                        ]);
+
+                        Notification::make()
+                            ->success()
+                            ->title('Import oprit')
+                            ->body('Execuția va fi întreruptă în siguranță la următorul checkpoint.')
+                            ->send();
+                    }),
                 Tables\Actions\Action::make('details')
                     ->label('View details')
                     ->icon('heroicon-o-eye')
