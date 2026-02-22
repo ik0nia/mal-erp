@@ -140,6 +140,23 @@ class PushWinmentorPricesToWooJob implements ShouldQueue
         ]);
     }
 
+    public function failed(Throwable $exception): void
+    {
+        Log::error('Deferred Woo price push job failed', [
+            'sync_run_id' => $this->syncRunId,
+            'woo_connection_id' => $this->wooConnectionId,
+            'updates' => count($this->updates),
+            'error' => $exception->getMessage(),
+        ]);
+
+        $this->recordProgress(0, count($this->updates), [
+            [
+                'message' => 'Deferred Woo price push job failed: '.$exception->getMessage(),
+                'failed_at' => now()->toIso8601String(),
+            ],
+        ]);
+    }
+
     /**
      * @param  array<int, array<string, mixed>>  $newErrors
      */
