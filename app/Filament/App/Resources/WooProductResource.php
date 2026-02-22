@@ -3,7 +3,6 @@
 namespace App\Filament\App\Resources;
 
 use App\Filament\App\Resources\WooProductResource\Pages;
-use App\Models\IntegrationConnection;
 use App\Models\User;
 use App\Models\WooCategory;
 use App\Models\WooProduct;
@@ -15,6 +14,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -79,11 +79,18 @@ class WooProductResource extends Resource
                     ->defaultImageUrl('https://placehold.co/96x96?text=No+Img'),
                 TextColumn::make('name')
                     ->label('Produs')
+                    ->formatStateUsing(fn (WooProduct $record): string => $record->decoded_name)
                     ->searchable(query: function (Builder $query, string $search): Builder {
                         return static::applyOptimizedSearch($query, $search);
                     })
                     ->sortable()
                     ->wrap(),
+                TextColumn::make('source')
+                    ->label('Sursă')
+                    ->badge()
+                    ->formatStateUsing(fn (WooProduct $record): string => $record->is_placeholder ? 'ERP (contabilitate)' : 'WooCommerce')
+                    ->color(fn (WooProduct $record): string => $record->is_placeholder ? 'warning' : 'success')
+                    ->toggleable(),
                 TextColumn::make('sku')
                     ->label('SKU')
                     ->placeholder('-')
@@ -105,20 +112,19 @@ class WooProductResource extends Resource
                     ->sortable(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('connection_id')
-                    ->label('Conexiune')
-                    ->options(fn (): array => IntegrationConnection::query()
-                        ->orderBy('name')
-                        ->pluck('name', 'id')
-                        ->all()),
-                Tables\Filters\SelectFilter::make('type')
-                    ->label('Tip')
-                    ->options(fn (): array => WooProduct::query()
-                        ->whereNotNull('type')
-                        ->distinct()
-                        ->orderBy('type')
-                        ->pluck('type', 'type')
-                        ->all()),
+                Tables\Filters\SelectFilter::make('source')
+                    ->label('Sursă')
+                    ->options([
+                        WooProduct::SOURCE_WOOCOMMERCE => 'WooCommerce',
+                        WooProduct::SOURCE_WINMENTOR_CSV => 'ERP (contabilitate)',
+                    ]),
+                Tables\Filters\SelectFilter::make('stock_status')
+                    ->label('Stoc')
+                    ->options([
+                        'instock' => 'În stoc',
+                        'outofstock' => 'Fără stoc',
+                        'onbackorder' => 'Precomandă',
+                    ]),
                 Tables\Filters\SelectFilter::make('category_id')
                     ->label('Categorie')
                     ->options(function (): array {
@@ -144,7 +150,9 @@ class WooProductResource extends Resource
                             $categoryQuery->where('woo_categories.id', $categoryId);
                         });
                     }),
-            ])
+            ], layout: FiltersLayout::AboveContent)
+            ->filtersFormColumns(3)
+            ->persistFiltersInSession()
             ->recordUrl(fn (WooProduct $record): string => static::getUrl('view', ['record' => $record]))
             ->searchPlaceholder('Caută după nume, SKU, slug sau categorie...')
             ->searchDebounce('800ms')
@@ -217,7 +225,9 @@ class WooProductResource extends Resource
                             ->height(180)
                             ->defaultImageUrl('https://placehold.co/300x180?text=No+Image')
                             ->columnSpanFull(),
-                        TextEntry::make('name')->label('Nume'),
+                        TextEntry::make('name')
+                            ->label('Nume')
+                            ->state(fn (WooProduct $record): string => $record->decoded_name),
                         TextEntry::make('woo_id')->label('Woo ID'),
                         TextEntry::make('sku')->label('SKU'),
                         TextEntry::make('type')->label('Tip'),
@@ -233,6 +243,9 @@ class WooProductResource extends Resource
                         TextEntry::make('slug')->label('Slug'),
                         TextEntry::make('connection.name')->label('Conexiune'),
                         TextEntry::make('connection.location.name')->label('Magazin'),
+                        TextEntry::make('source')
+                            ->label('Sursă')
+                            ->formatStateUsing(fn (WooProduct $record): string => $record->is_placeholder ? 'ERP (contabilitate)' : 'WooCommerce'),
                         TextEntry::make('categories_list')
                             ->label('Categorii')
                             ->state(fn (WooProduct $record): string => $record->categories->pluck('name')->implode(', '))

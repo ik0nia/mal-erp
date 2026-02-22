@@ -21,13 +21,19 @@ class Location extends Model
         'county',
         'company_name',
         'company_vat_number',
+        'company_is_vat_payer',
         'company_registration_number',
+        'company_postal_code',
+        'company_phone',
+        'company_bank',
+        'company_bank_account',
         'is_active',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'store_id' => 'integer',
+        'company_is_vat_payer' => 'boolean',
     ];
 
     public const TYPE_STORE = 'store';
@@ -53,7 +59,12 @@ class Location extends Model
             if ($location->type === self::TYPE_WAREHOUSE) {
                 $location->company_name = null;
                 $location->company_vat_number = null;
+                $location->company_is_vat_payer = null;
                 $location->company_registration_number = null;
+                $location->company_postal_code = null;
+                $location->company_phone = null;
+                $location->company_bank = null;
+                $location->company_bank_account = null;
             }
         });
     }
@@ -76,5 +87,25 @@ class Location extends Model
     public function integrationConnections(): HasMany
     {
         return $this->hasMany(IntegrationConnection::class);
+    }
+
+    public function productStocks(): HasMany
+    {
+        return $this->hasMany(ProductStock::class);
+    }
+
+    public function productPriceLogs(): HasMany
+    {
+        return $this->hasMany(ProductPriceLog::class);
+    }
+
+    public function offers(): HasMany
+    {
+        return $this->hasMany(Offer::class);
+    }
+
+    public function customers(): HasMany
+    {
+        return $this->hasMany(Customer::class);
     }
 }

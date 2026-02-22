@@ -5,14 +5,17 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\LocationResource\Pages;
 use App\Models\Location;
 use App\Models\User;
+use App\Services\CompanyData\OpenApiCompanyLookupService;
 use Filament\Forms;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
+use Throwable;
 
 class LocationResource extends Resource
 {
@@ -81,7 +84,12 @@ class LocationResource extends Resource
                         if ($state === Location::TYPE_WAREHOUSE) {
                             $set('company_name', null);
                             $set('company_vat_number', null);
+                            $set('company_is_vat_payer', null);
                             $set('company_registration_number', null);
+                            $set('company_postal_code', null);
+                            $set('company_phone', null);
+                            $set('company_bank', null);
+                            $set('company_bank_account', null);
                         }
                     })
                     ->native(false),
@@ -116,9 +124,80 @@ class LocationResource extends Resource
                 Forms\Components\TextInput::make('company_vat_number')
                     ->label('CUI')
                     ->visible(fn (Get $get): bool => $get('type') !== Location::TYPE_WAREHOUSE)
+                    ->helperText('La ieșirea din câmp, datele firmei se precompletează automat din OpenAPI.')
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(function (Get $get, Set $set, ?string $state): void {
+                        if ($get('type') === Location::TYPE_WAREHOUSE) {
+                            return;
+                        }
+
+                        $normalizedCui = OpenApiCompanyLookupService::normalizeCui($state);
+
+                        if ($normalizedCui === '') {
+                            return;
+                        }
+
+                        try {
+                            $companyData = app(OpenApiCompanyLookupService::class)->lookupByCui($normalizedCui);
+
+                            foreach ([
+                                'company_name',
+                                'company_registration_number',
+                                'company_postal_code',
+                                'company_phone',
+                                'address',
+                                'city',
+                                'county',
+                            ] as $field) {
+                                $value = trim((string) ($companyData[$field] ?? ''));
+
+                                if ($value !== '') {
+                                    $set($field, $value);
+                                }
+                            }
+
+                            if (array_key_exists('company_is_vat_payer', $companyData)) {
+                                $set('company_is_vat_payer', (bool) $companyData['company_is_vat_payer']);
+                            }
+
+                            Notification::make()
+                                ->success()
+                                ->title('Date firmă actualizate')
+                                ->body('Datele firmei au fost preluate automat din OpenAPI.')
+                                ->send();
+                        } catch (Throwable $exception) {
+                            Notification::make()
+                                ->warning()
+                                ->title('Nu am putut prelua datele firmei')
+                                ->body($exception->getMessage())
+                                ->send();
+                        }
+                    })
                     ->maxLength(255),
                 Forms\Components\TextInput::make('company_registration_number')
                     ->label('Nr. Reg. Com.')
+                    ->visible(fn (Get $get): bool => $get('type') !== Location::TYPE_WAREHOUSE)
+                    ->maxLength(255),
+                Forms\Components\Toggle::make('company_is_vat_payer')
+                    ->label('Plătitor TVA')
+                    ->visible(fn (Get $get): bool => $get('type') !== Location::TYPE_WAREHOUSE)
+                    ->inline(false)
+                    ->default(false),
+                Forms\Components\TextInput::make('company_postal_code')
+                    ->label('Cod poștal')
+                    ->visible(fn (Get $get): bool => $get('type') !== Location::TYPE_WAREHOUSE)
+                    ->maxLength(50),
+                Forms\Components\TextInput::make('company_phone')
+                    ->label('Număr de telefon')
+                    ->tel()
+                    ->visible(fn (Get $get): bool => $get('type') !== Location::TYPE_WAREHOUSE)
+                    ->maxLength(255),
+                Forms\Components\TextInput::make('company_bank')
+                    ->label('Bancă')
+                    ->visible(fn (Get $get): bool => $get('type') !== Location::TYPE_WAREHOUSE)
+                    ->maxLength(255),
+                Forms\Components\TextInput::make('company_bank_account')
+                    ->label('Cont bancar')
                     ->visible(fn (Get $get): bool => $get('type') !== Location::TYPE_WAREHOUSE)
                     ->maxLength(255),
                 Forms\Components\Toggle::make('is_active')
@@ -143,6 +222,18 @@ class LocationResource extends Resource
                     ->label('Oraș')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('company_phone')
+                    ->label('Telefon')
+                    ->searchable()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('company_bank')
+                    ->label('Bancă')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\IconColumn::make('company_is_vat_payer')
+                    ->label('TVA')
+                    ->boolean()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('store.name')
                     ->label('Magazin părinte')
                     ->placeholder('-')

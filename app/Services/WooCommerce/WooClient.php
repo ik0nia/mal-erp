@@ -72,6 +72,63 @@ class WooClient
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    public function updateProductPrice(int $productId, string $regularPrice): array
+    {
+        $response = $this->http->put(
+            $this->apiBase.'/products/'.max(1, $productId),
+            [
+                'regular_price' => $regularPrice,
+            ],
+        );
+        $response->throw();
+
+        $payload = $response->json();
+
+        return is_array($payload) ? $payload : [];
+    }
+
+    /**
+     * @param  array<int, array{id:int, regular_price:string}>  $updates
+     * @return array<string, mixed>
+     */
+    public function updateProductPricesBatch(array $updates): array
+    {
+        $payload = [];
+
+        foreach ($updates as $update) {
+            $productId = (int) ($update['id'] ?? 0);
+            $regularPrice = trim((string) ($update['regular_price'] ?? ''));
+
+            if ($productId <= 0 || $regularPrice === '') {
+                continue;
+            }
+
+            $payload[] = [
+                'id' => $productId,
+                'regular_price' => $regularPrice,
+            ];
+        }
+
+        if ($payload === []) {
+            return [];
+        }
+
+        $response = $this->http->post(
+            $this->apiBase.'/products/batch',
+            [
+                'update' => $payload,
+            ],
+        );
+        $response->throw();
+
+        $decoded = $response->json();
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
      * @param  array<string, mixed>  $query
      * @return array<int, array<string, mixed>>
      */

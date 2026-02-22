@@ -6,6 +6,7 @@ use App\Filament\Resources\SyncRunResource\Pages;
 use App\Models\IntegrationConnection;
 use App\Models\SyncRun;
 use App\Models\User;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -64,7 +65,8 @@ class SyncRunResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('provider')
                     ->label('Provider')
-                    ->badge(),
+                    ->badge()
+                    ->formatStateUsing(fn (string $state): string => IntegrationConnection::providerOptions()[$state] ?? $state),
                 Tables\Columns\TextColumn::make('connection.name')
                     ->label('Conexiune')
                     ->searchable()
@@ -81,10 +83,30 @@ class SyncRunResource extends Resource
                     ->label('Status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
+                        SyncRun::STATUS_QUEUED => 'info',
                         SyncRun::STATUS_SUCCESS => 'success',
                         SyncRun::STATUS_FAILED => 'danger',
+                        SyncRun::STATUS_CANCELLED => 'gray',
                         default => 'warning',
                     }),
+                Tables\Columns\TextColumn::make('stats.phase')
+                    ->label('Fază')
+                    ->badge()
+                    ->formatStateUsing(fn (SyncRun $record): string => (string) ($record->stats['phase'] ?? '-'))
+                    ->color(fn (SyncRun $record): string => match ((string) ($record->stats['phase'] ?? '')) {
+                        'queued' => 'info',
+                        'local_import' => 'warning',
+                        'queueing_price_push' => 'warning',
+                        'pushing_prices' => 'primary',
+                        'completed' => 'success',
+                        'completed_with_errors' => 'danger',
+                        'failed' => 'danger',
+                        'cancelled' => 'gray',
+                        default => 'gray',
+                    }),
+                Tables\Columns\TextColumn::make('stats.processed')
+                    ->label('Processed')
+                    ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['processed'] ?? 0)),
                 Tables\Columns\TextColumn::make('stats.created')
                     ->label('Created')
                     ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['created'] ?? 0)),
@@ -94,6 +116,38 @@ class SyncRunResource extends Resource
                 Tables\Columns\TextColumn::make('stats.pages')
                     ->label('Pages')
                     ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['pages'] ?? 0)),
+                Tables\Columns\TextColumn::make('stats.missing_products')
+                    ->label('Missing SKU')
+                    ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['missing_products'] ?? 0))
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('stats.name_mismatches')
+                    ->label('Name mismatch')
+                    ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['name_mismatches'] ?? 0))
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('stats.created_placeholders')
+                    ->label('Placeholder ERP')
+                    ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['created_placeholders'] ?? 0))
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('stats.site_price_updates')
+                    ->label('Price push OK')
+                    ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['site_price_updates'] ?? 0))
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('stats.site_price_update_failures')
+                    ->label('Price push failed')
+                    ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['site_price_update_failures'] ?? 0))
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('stats.site_price_push_jobs')
+                    ->label('Price push jobs')
+                    ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['site_price_push_jobs'] ?? 0))
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('stats.site_price_push_queued')
+                    ->label('Price push queued')
+                    ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['site_price_push_queued'] ?? 0))
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('stats.site_price_push_processed')
+                    ->label('Price push processed')
+                    ->getStateUsing(fn (SyncRun $record): int => (int) ($record->stats['site_price_push_processed'] ?? 0))
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('started_at')
                     ->label('Started')
                     ->dateTime('d.m.Y H:i:s')
@@ -102,13 +156,16 @@ class SyncRunResource extends Resource
                     ->label('Finished')
                     ->dateTime('d.m.Y H:i:s')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('stats.last_heartbeat_at')
+                    ->label('Heartbeat')
+                    ->getStateUsing(fn (SyncRun $record): ?string => data_get($record->stats, 'last_heartbeat_at'))
+                    ->dateTime('d.m.Y H:i:s')
+                    ->toggleable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('provider')
                     ->label('Provider')
-                    ->options([
-                        IntegrationConnection::PROVIDER_WOOCOMMERCE => 'woocommerce',
-                    ]),
+                    ->options(IntegrationConnection::providerOptions()),
                 Tables\Filters\SelectFilter::make('connection_id')
                     ->label('Conexiune')
                     ->options(fn (): array => IntegrationConnection::query()
@@ -120,16 +177,65 @@ class SyncRunResource extends Resource
                     ->options([
                         SyncRun::TYPE_CATEGORIES => 'categories',
                         SyncRun::TYPE_PRODUCTS => 'products',
+                        SyncRun::TYPE_WINMENTOR_STOCK => 'winmentor_stock',
                     ]),
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Status')
                     ->options([
+                        SyncRun::STATUS_QUEUED => 'queued',
                         SyncRun::STATUS_RUNNING => 'running',
                         SyncRun::STATUS_SUCCESS => 'success',
                         SyncRun::STATUS_FAILED => 'failed',
+                        SyncRun::STATUS_CANCELLED => 'cancelled',
                     ]),
             ])
             ->actions([
+                Tables\Actions\Action::make('stop')
+                    ->label('Stop')
+                    ->icon('heroicon-o-stop')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->visible(fn (SyncRun $record): bool => in_array($record->status, [SyncRun::STATUS_QUEUED, SyncRun::STATUS_RUNNING], true))
+                    ->action(function (SyncRun $record): void {
+                        $record->refresh();
+
+                        if (! in_array($record->status, [SyncRun::STATUS_QUEUED, SyncRun::STATUS_RUNNING], true)) {
+                            Notification::make()
+                                ->warning()
+                                ->title('Importul nu mai este în curs')
+                                ->send();
+
+                            return;
+                        }
+
+                        $errors = is_array($record->errors) ? $record->errors : [];
+                        $stats = is_array($record->stats) ? $record->stats : [];
+                        $errors[] = [
+                            'message' => 'Oprit manual din platformă.',
+                            'cancelled_at' => now()->toIso8601String(),
+                            'cancelled_by' => auth()->user()?->email ?? auth()->id(),
+                        ];
+
+                        if (count($errors) > 200) {
+                            $errors = array_slice($errors, -200);
+                        }
+
+                        $stats['phase'] = 'cancelled';
+                        $stats['last_heartbeat_at'] = now()->toIso8601String();
+
+                        $record->update([
+                            'status' => SyncRun::STATUS_CANCELLED,
+                            'finished_at' => now(),
+                            'stats' => $stats,
+                            'errors' => $errors,
+                        ]);
+
+                        Notification::make()
+                            ->success()
+                            ->title('Import oprit')
+                            ->body('Execuția va fi întreruptă în siguranță la următorul checkpoint.')
+                            ->send();
+                    }),
                 Tables\Actions\Action::make('details')
                     ->label('View details')
                     ->icon('heroicon-o-eye')
