@@ -53,7 +53,7 @@ class OfferItem extends Model
                     ->find($item->woo_product_id);
 
                 if ($product) {
-                    $item->product_name = $item->product_name ?: $product->name;
+                    $item->product_name = $item->product_name ?: $product->decoded_name;
                     $item->sku = $item->sku ?: $product->sku;
                 }
             }

@@ -201,7 +201,7 @@ class OfferResource extends Resource
                                             return;
                                         }
 
-                                        $set('product_name', $product->name);
+                                        $set('product_name', $product->decoded_name);
                                         $set('sku', $product->sku);
 
                                         if ($product->price !== null) {
@@ -404,6 +404,7 @@ class OfferResource extends Resource
                                     ->defaultImageUrl('https://placehold.co/40x40?text=No+Img'),
                                 TextEntry::make('product_name')
                                     ->label('Produs')
+                                    ->formatStateUsing(fn ($state): string => html_entity_decode((string) $state, ENT_QUOTES | ENT_HTML5, 'UTF-8'))
                                     ->weight('medium'),
                                 TextEntry::make('sku')
                                     ->label('SKU')
@@ -539,8 +540,9 @@ class OfferResource extends Resource
     {
         $price = $product->price !== null ? number_format((float) $product->price, 2, '.', '') : '-';
         $sku = $product->sku ?: '-';
+        $name = $product->decoded_name;
 
-        return "{$product->name} [{$sku}] - {$price} RON";
+        return "{$name} [{$sku}] - {$price} RON";
     }
 
     private static function applyProductScope(Builder $query, ?int $locationId): void

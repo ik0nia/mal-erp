@@ -88,7 +88,7 @@ class ImportWooCategoriesAction
                             'woo_id' => $wooId,
                         ],
                         [
-                            'name' => (string) ($category['name'] ?? ''),
+                            'name' => $this->decodeHtmlEntityText((string) ($category['name'] ?? '')),
                             'slug' => $this->nullableString($category['slug'] ?? null),
                             'description' => $this->nullableString($category['description'] ?? null),
                             'parent_woo_id' => $this->nullableInt($category['parent'] ?? null),
@@ -191,5 +191,10 @@ class ImportWooCategoriesAction
         }
 
         return (int) $value;
+    }
+
+    private function decodeHtmlEntityText(string $value): string
+    {
+        return trim(html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
     }
 }

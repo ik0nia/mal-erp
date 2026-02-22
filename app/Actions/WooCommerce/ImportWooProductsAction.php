@@ -100,7 +100,7 @@ class ImportWooProductsAction
                         'type' => $this->nullableString($productPayload['type'] ?? null),
                         'status' => $this->nullableString($productPayload['status'] ?? null),
                         'sku' => $sku,
-                        'name' => (string) ($productPayload['name'] ?? ''),
+                        'name' => $this->decodeHtmlEntityText((string) ($productPayload['name'] ?? '')),
                         'slug' => $this->nullableString($productPayload['slug'] ?? null),
                         'short_description' => $this->nullableString($productPayload['short_description'] ?? null),
                         'description' => $this->nullableString($productPayload['description'] ?? null),
@@ -212,5 +212,10 @@ class ImportWooProductsAction
         }
 
         return (bool) $value;
+    }
+
+    private function decodeHtmlEntityText(string $value): string
+    {
+        return trim(html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
     }
 }

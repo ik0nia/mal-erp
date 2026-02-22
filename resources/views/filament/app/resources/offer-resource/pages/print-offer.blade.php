@@ -71,7 +71,7 @@
                                     @if($item->product?->main_image_url)
                                         <img src="{{ $item->product->main_image_url }}" alt="Produs">
                                     @endif
-                                    <span>{{ $item->product_name }}</span>
+                                    <span>{{ html_entity_decode((string) $item->product_name, ENT_QUOTES | ENT_HTML5, 'UTF-8') }}</span>
                                 </div>
                             </td>
                             <td>{{ $item->sku ?: '-' }}</td>

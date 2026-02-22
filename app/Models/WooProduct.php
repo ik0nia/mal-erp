@@ -75,4 +75,9 @@ class WooProduct extends Model
     {
         return $this->hasMany(OfferItem::class, 'woo_product_id');
     }
+
+    public function getDecodedNameAttribute(): string
+    {
+        return html_entity_decode((string) $this->name, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
 }

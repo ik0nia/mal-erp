@@ -79,6 +79,7 @@ class WooProductResource extends Resource
                     ->defaultImageUrl('https://placehold.co/96x96?text=No+Img'),
                 TextColumn::make('name')
                     ->label('Produs')
+                    ->formatStateUsing(fn (WooProduct $record): string => $record->decoded_name)
                     ->searchable(query: function (Builder $query, string $search): Builder {
                         return static::applyOptimizedSearch($query, $search);
                     })
@@ -224,7 +225,9 @@ class WooProductResource extends Resource
                             ->height(180)
                             ->defaultImageUrl('https://placehold.co/300x180?text=No+Image')
                             ->columnSpanFull(),
-                        TextEntry::make('name')->label('Nume'),
+                        TextEntry::make('name')
+                            ->label('Nume')
+                            ->state(fn (WooProduct $record): string => $record->decoded_name),
                         TextEntry::make('woo_id')->label('Woo ID'),
                         TextEntry::make('sku')->label('SKU'),
                         TextEntry::make('type')->label('Tip'),
