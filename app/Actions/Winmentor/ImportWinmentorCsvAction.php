@@ -16,41 +16,66 @@ use Throwable;
 
 class ImportWinmentorCsvAction
 {
-    public function execute(IntegrationConnection $connection): SyncRun
+    public function execute(IntegrationConnection $connection, ?SyncRun $run = null): SyncRun
     {
         if (! $connection->isWinmentorCsv()) {
             throw new RuntimeException('Connection provider is not winmentor_csv.');
         }
 
         DB::connection()->disableQueryLog();
+        $initialStats = [
+            'pages' => 1,
+            'created' => 0,
+            'updated' => 0,
+            'unchanged' => 0,
+            'processed' => 0,
+            'matched_products' => 0,
+            'missing_products' => 0,
+            'price_changes' => 0,
+            'name_mismatches' => 0,
+            'site_price_updates' => 0,
+            'site_price_update_failures' => 0,
+            'created_placeholders' => 0,
+            'missing_skus_sample' => [],
+            'name_mismatch_sample' => [],
+        ];
 
-        $run = SyncRun::query()->create([
-            'provider' => IntegrationConnection::PROVIDER_WINMENTOR_CSV,
-            'location_id' => $connection->location_id,
-            'connection_id' => $connection->id,
-            'type' => SyncRun::TYPE_WINMENTOR_STOCK,
-            'status' => SyncRun::STATUS_RUNNING,
-            'started_at' => Carbon::now(),
-            'stats' => [
-                'pages' => 1,
-                'created' => 0,
-                'updated' => 0,
-                'unchanged' => 0,
-                'processed' => 0,
-                'matched_products' => 0,
-                'missing_products' => 0,
-                'price_changes' => 0,
-                'name_mismatches' => 0,
-                'site_price_updates' => 0,
-                'site_price_update_failures' => 0,
-                'created_placeholders' => 0,
-                'missing_skus_sample' => [],
-                'name_mismatch_sample' => [],
-            ],
-            'errors' => [],
-        ]);
+        if ($run instanceof SyncRun) {
+            if ((int) $run->connection_id !== (int) $connection->id) {
+                throw new RuntimeException('Sync run does not belong to selected connection.');
+            }
 
-        $stats = $run->stats ?? [];
+            $run->refresh();
+
+            if ($run->status === SyncRun::STATUS_CANCELLED) {
+                return $run;
+            }
+
+            $run->update([
+                'provider' => IntegrationConnection::PROVIDER_WINMENTOR_CSV,
+                'location_id' => $connection->location_id,
+                'connection_id' => $connection->id,
+                'type' => SyncRun::TYPE_WINMENTOR_STOCK,
+                'status' => SyncRun::STATUS_RUNNING,
+                'started_at' => Carbon::now(),
+                'finished_at' => null,
+                'stats' => is_array($run->stats) ? $run->stats : $initialStats,
+                'errors' => [],
+            ]);
+        } else {
+            $run = SyncRun::query()->create([
+                'provider' => IntegrationConnection::PROVIDER_WINMENTOR_CSV,
+                'location_id' => $connection->location_id,
+                'connection_id' => $connection->id,
+                'type' => SyncRun::TYPE_WINMENTOR_STOCK,
+                'status' => SyncRun::STATUS_RUNNING,
+                'started_at' => Carbon::now(),
+                'stats' => $initialStats,
+                'errors' => [],
+            ]);
+        }
+
+        $stats = is_array($run->stats) ? $run->stats : $initialStats;
         $errors = [];
 
         try {

@@ -12,7 +12,7 @@ class IntegrationImportStatusWidget extends BaseWidget
     protected function getStats(): array
     {
         $runningCount = SyncRun::query()
-            ->where('status', SyncRun::STATUS_RUNNING)
+            ->whereIn('status', [SyncRun::STATUS_QUEUED, SyncRun::STATUS_RUNNING])
             ->count();
 
         $failedLast24h = SyncRun::query()
@@ -42,7 +42,7 @@ class IntegrationImportStatusWidget extends BaseWidget
 
         return [
             Stat::make('Importuri în curs', (string) $runningCount)
-                ->description($runningCount > 0 ? 'Există job-uri active acum' : 'Nu există job-uri active')
+                ->description($runningCount > 0 ? 'Există job-uri active / în coadă' : 'Nu există job-uri active')
                 ->descriptionIcon('heroicon-m-arrow-path')
                 ->color($runningCount > 0 ? 'warning' : 'success'),
             Stat::make('Fail ultimele 24h', (string) $failedLast24h)

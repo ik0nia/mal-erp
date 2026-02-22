@@ -83,6 +83,7 @@ class SyncRunResource extends Resource
                     ->label('Status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
+                        SyncRun::STATUS_QUEUED => 'info',
                         SyncRun::STATUS_SUCCESS => 'success',
                         SyncRun::STATUS_FAILED => 'danger',
                         SyncRun::STATUS_CANCELLED => 'gray',
@@ -146,6 +147,7 @@ class SyncRunResource extends Resource
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Status')
                     ->options([
+                        SyncRun::STATUS_QUEUED => 'queued',
                         SyncRun::STATUS_RUNNING => 'running',
                         SyncRun::STATUS_SUCCESS => 'success',
                         SyncRun::STATUS_FAILED => 'failed',
@@ -158,11 +160,11 @@ class SyncRunResource extends Resource
                     ->icon('heroicon-o-stop')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->visible(fn (SyncRun $record): bool => $record->status === SyncRun::STATUS_RUNNING)
+                    ->visible(fn (SyncRun $record): bool => in_array($record->status, [SyncRun::STATUS_QUEUED, SyncRun::STATUS_RUNNING], true))
                     ->action(function (SyncRun $record): void {
                         $record->refresh();
 
-                        if ($record->status !== SyncRun::STATUS_RUNNING) {
+                        if (! in_array($record->status, [SyncRun::STATUS_QUEUED, SyncRun::STATUS_RUNNING], true)) {
                             Notification::make()
                                 ->warning()
                                 ->title('Importul nu mai este în curs')

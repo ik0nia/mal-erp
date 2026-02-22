@@ -8,6 +8,7 @@ use App\Jobs\ImportWooCategoriesJob;
 use App\Jobs\ImportWooProductsJob;
 use App\Models\IntegrationConnection;
 use App\Models\Location;
+use App\Models\SyncRun;
 use App\Models\User;
 use App\Services\WooCommerce\WooClient;
 use Filament\Forms\Components\Section;
@@ -233,6 +234,7 @@ class IntegrationConnectionResource extends Resource
                     ->placeholder('-')
                     ->formatStateUsing(fn (?string $state): string => $state ?? '-')
                     ->color(fn (?string $state): string => match ($state) {
+                        'queued' => 'info',
                         'success' => 'success',
                         'failed' => 'danger',
                         'running' => 'warning',
@@ -265,6 +267,7 @@ class IntegrationConnectionResource extends Resource
                 Tables\Filters\SelectFilter::make('latest_sync_status')
                     ->label('Status ultim import')
                     ->options([
+                        'queued' => 'queued',
                         'running' => 'running',
                         'success' => 'success',
                         'failed' => 'failed',
@@ -379,12 +382,55 @@ class IntegrationConnectionResource extends Resource
                     ->requiresConfirmation()
                     ->visible(fn (IntegrationConnection $record): bool => $record->isWinmentorCsv())
                     ->action(function (IntegrationConnection $record): void {
-                        ImportWinmentorCsvJob::dispatch($record->id);
+                        $existingQueueOrRunning = SyncRun::query()
+                            ->where('connection_id', $record->id)
+                            ->whereIn('status', [SyncRun::STATUS_QUEUED, SyncRun::STATUS_RUNNING])
+                            ->latest('id')
+                            ->first();
+
+                        if ($existingQueueOrRunning instanceof SyncRun) {
+                            Notification::make()
+                                ->warning()
+                                ->title('Import deja în curs')
+                                ->body("Există deja import #{$existingQueueOrRunning->id} cu status {$existingQueueOrRunning->status}.")
+                                ->send();
+
+                            return;
+                        }
+
+                        $run = SyncRun::query()->create([
+                            'provider' => IntegrationConnection::PROVIDER_WINMENTOR_CSV,
+                            'location_id' => $record->location_id,
+                            'connection_id' => $record->id,
+                            'type' => SyncRun::TYPE_WINMENTOR_STOCK,
+                            'status' => SyncRun::STATUS_QUEUED,
+                            'started_at' => now(),
+                            'finished_at' => null,
+                            'stats' => [
+                                'pages' => 1,
+                                'created' => 0,
+                                'updated' => 0,
+                                'unchanged' => 0,
+                                'processed' => 0,
+                                'matched_products' => 0,
+                                'missing_products' => 0,
+                                'price_changes' => 0,
+                                'name_mismatches' => 0,
+                                'site_price_updates' => 0,
+                                'site_price_update_failures' => 0,
+                                'created_placeholders' => 0,
+                                'missing_skus_sample' => [],
+                                'name_mismatch_sample' => [],
+                            ],
+                            'errors' => [],
+                        ]);
+
+                        ImportWinmentorCsvJob::dispatch($record->id, (int) $run->id);
 
                         Notification::make()
                             ->success()
-                            ->title('Import CSV pornit')
-                            ->body('Job-ul WinMentor a fost trimis în coadă.')
+                            ->title('Import CSV pus în coadă')
+                            ->body("Job-ul WinMentor a fost trimis în coadă (run #{$run->id}).")
                             ->send();
                     }),
                 Tables\Actions\Action::make('sync_runs')

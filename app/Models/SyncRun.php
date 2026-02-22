@@ -11,6 +11,7 @@ class SyncRun extends Model
     public const TYPE_PRODUCTS = 'products';
     public const TYPE_WINMENTOR_STOCK = 'winmentor_stock';
 
+    public const STATUS_QUEUED = 'queued';
     public const STATUS_RUNNING = 'running';
     public const STATUS_SUCCESS = 'success';
     public const STATUS_FAILED = 'failed';
