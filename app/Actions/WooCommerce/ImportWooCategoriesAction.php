@@ -107,7 +107,9 @@ class ImportWooCategoriesAction
                             'name' => $this->decodeHtmlEntityText((string) ($category['name'] ?? '')),
                             'slug' => $this->nullableString($category['slug'] ?? null),
                             'description' => $this->nullableString($category['description'] ?? null),
-                            'parent_woo_id' => $this->nullableInt($category['parent'] ?? null),
+                            'parent_woo_id' => $this->nullablePositiveInt($category['parent'] ?? null),
+                            // Always reset and rebuild hierarchy after each import pass.
+                            'parent_id' => null,
                             'image_url' => $this->extractCategoryImageUrl($category),
                             'menu_order' => $this->nullableInt($category['menu_order'] ?? null),
                             'count' => $this->nullableInt($category['count'] ?? null),
@@ -207,6 +209,17 @@ class ImportWooCategoriesAction
         }
 
         return (int) $value;
+    }
+
+    private function nullablePositiveInt(mixed $value): ?int
+    {
+        if (! is_numeric($value)) {
+            return null;
+        }
+
+        $intValue = (int) $value;
+
+        return $intValue > 0 ? $intValue : null;
     }
 
     private function decodeHtmlEntityText(string $value): string

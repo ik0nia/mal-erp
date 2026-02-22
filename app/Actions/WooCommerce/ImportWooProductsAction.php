@@ -227,7 +227,7 @@ class ImportWooProductsAction
             return null;
         }
 
-        return (bool) $value;
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
     }
 
     private function decodeHtmlEntityText(string $value): string
