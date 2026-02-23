@@ -347,7 +347,10 @@ class OfferResource extends Resource
                 Tables\Actions\Action::make('print')
                     ->label('Print')
                     ->icon('heroicon-o-printer')
-                    ->url(fn (Offer $record): string => static::getUrl('print', ['record' => $record]))
+                    ->url(fn (Offer $record): string => static::getUrl('print', [
+                        'record' => $record,
+                        'auto_print' => 1,
+                    ]))
                     ->openUrlInNewTab(),
                 Tables\Actions\EditAction::make(),
             ])
