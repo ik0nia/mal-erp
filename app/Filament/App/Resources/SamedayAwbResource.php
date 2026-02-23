@@ -212,17 +212,75 @@ class SamedayAwbResource extends Resource
                         TextInput::make('recipient_postal_code')
                             ->label('Cod poștal')
                             ->maxLength(32),
+                        Toggle::make('recipient_manual_locality')
+                            ->label('Introdu localitatea manual')
+                            ->helperText('Dezactivează pentru a selecta județ și oraș din nomenclatorul Sameday.')
+                            ->default(false)
+                            ->live()
+                            ->inline(false)
+                            ->columnSpanFull(),
+                        Select::make('recipient_county_id')
+                            ->label('Județ (Sameday)')
+                            ->options(fn (): array => static::countyOptionsForCurrentUserLocation())
+                            ->visible(fn (Get $get): bool => ! (bool) $get('recipient_manual_locality'))
+                            ->required(fn (Get $get): bool => ! (bool) $get('recipient_manual_locality'))
+                            ->searchable()
+                            ->preload()
+                            ->native(false)
+                            ->live()
+                            ->afterStateUpdated(function (Set $set, mixed $state): void {
+                                $countyId = (int) ($state ?? 0);
+                                $set('recipient_city_id', null);
+                                $set('recipient_county', static::countyNameForCurrentUserLocation($countyId) ?? '');
+                                $set('recipient_city', '');
+                            }),
+                        Select::make('recipient_city_id')
+                            ->label('Oraș (Sameday)')
+                            ->options(fn (Get $get): array => static::cityOptionsForCurrentUserLocation((int) ($get('recipient_county_id') ?? 0)))
+                            ->visible(fn (Get $get): bool => ! (bool) $get('recipient_manual_locality'))
+                            ->required(fn (Get $get): bool => ! (bool) $get('recipient_manual_locality'))
+                            ->disabled(fn (Get $get): bool => (int) ($get('recipient_county_id') ?? 0) <= 0)
+                            ->searchable()
+                            ->preload()
+                            ->native(false)
+                            ->live()
+                            ->afterStateUpdated(function (Set $set, Get $get, mixed $state): void {
+                                $countyId = (int) ($get('recipient_county_id') ?? 0);
+                                $cityId = (int) ($state ?? 0);
+                                $set('recipient_city', static::cityNameForCurrentUserLocation($countyId, $cityId) ?? '');
+                            }),
                         TextInput::make('recipient_county')
                             ->label('Județ')
                             ->required()
+                            ->readOnly(fn (Get $get): bool => ! (bool) $get('recipient_manual_locality'))
                             ->maxLength(255),
                         TextInput::make('recipient_city')
                             ->label('Oraș')
                             ->required()
+                            ->readOnly(fn (Get $get): bool => ! (bool) $get('recipient_manual_locality'))
                             ->maxLength(255),
-                        Textarea::make('recipient_address')
-                            ->label('Adresă')
+                        TextInput::make('recipient_street')
+                            ->label('Stradă')
                             ->required()
+                            ->maxLength(255),
+                        TextInput::make('recipient_street_no')
+                            ->label('Număr')
+                            ->maxLength(50),
+                        TextInput::make('recipient_block')
+                            ->label('Bloc')
+                            ->maxLength(50),
+                        TextInput::make('recipient_staircase')
+                            ->label('Scară')
+                            ->maxLength(50),
+                        TextInput::make('recipient_floor')
+                            ->label('Etaj')
+                            ->maxLength(50),
+                        TextInput::make('recipient_apartment')
+                            ->label('Apartament')
+                            ->maxLength(50),
+                        Textarea::make('recipient_address')
+                            ->label('Adresă completă (opțional, override)')
+                            ->helperText('Dacă lași gol, adresa se compune automat din stradă + număr + bloc + scară + etaj + apartament.')
                             ->rows(3)
                             ->columnSpanFull(),
                     ]),
@@ -661,6 +719,74 @@ class SamedayAwbResource extends Resource
     public static function serviceOptionsForCurrentUserLocation(): array
     {
         return static::serviceOptionsForLocation(static::currentUserLocationId());
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function countyOptionsForLocation(int $locationId): array
+    {
+        $connection = static::resolveSamedayConnectionForLocation($locationId);
+        if (! $connection) {
+            return [];
+        }
+
+        try {
+            return app(SamedayAwbService::class)->getCountyOptions($connection);
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function countyOptionsForCurrentUserLocation(): array
+    {
+        return static::countyOptionsForLocation(static::currentUserLocationId());
+    }
+
+    public static function countyNameForCurrentUserLocation(int $countyId): ?string
+    {
+        if ($countyId <= 0) {
+            return null;
+        }
+
+        return static::countyOptionsForCurrentUserLocation()[$countyId] ?? null;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function cityOptionsForLocation(int $locationId, int $countyId): array
+    {
+        $connection = static::resolveSamedayConnectionForLocation($locationId);
+        if (! $connection || $countyId <= 0) {
+            return [];
+        }
+
+        try {
+            return app(SamedayAwbService::class)->getCityOptions($connection, $countyId);
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function cityOptionsForCurrentUserLocation(int $countyId): array
+    {
+        return static::cityOptionsForLocation(static::currentUserLocationId(), $countyId);
+    }
+
+    public static function cityNameForCurrentUserLocation(int $countyId, int $cityId): ?string
+    {
+        if ($countyId <= 0 || $cityId <= 0) {
+            return null;
+        }
+
+        return static::cityOptionsForCurrentUserLocation($countyId)[$cityId] ?? null;
     }
 
     /**

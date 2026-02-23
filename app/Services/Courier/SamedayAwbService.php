@@ -43,14 +43,17 @@ class SamedayAwbService
         $awbPaymentType = $this->resolveAwbPaymentType($input['awb_payment_type'] ?? null);
         $codCollectorType = $this->resolveCodCollectorType($input['cod_collector_type'] ?? null, $cashOnDelivery > 0);
         $recipientCompany = $this->resolveRecipientCompany($input);
+        $resolvedCounty = $this->resolveRecipientCounty($input);
+        $resolvedCity = $this->resolveRecipientCity($input);
+        $resolvedAddress = $this->buildRecipientAddress($input);
 
         $recipientClass = '\\Sameday\\Objects\\PostAwb\\Request\\AwbRecipientEntityObject';
         $postAwbRequestClass = '\\Sameday\\Requests\\SamedayPostAwbRequest';
 
         $recipient = new $recipientClass(
-            trim((string) ($input['recipient_city'] ?? '')),
-            trim((string) ($input['recipient_county'] ?? '')),
-            trim((string) ($input['recipient_address'] ?? '')),
+            $resolvedCity['value'],
+            $resolvedCounty['value'],
+            $resolvedAddress,
             trim((string) ($input['recipient_name'] ?? '')),
             trim((string) ($input['recipient_phone'] ?? '')),
             trim((string) ($input['recipient_email'] ?? '')),
@@ -118,9 +121,17 @@ class SamedayAwbService
                 'recipient_company_onrc' => filled($input['recipient_company_onrc'] ?? null) ? trim((string) $input['recipient_company_onrc']) : null,
                 'recipient_company_iban' => filled($input['recipient_company_iban'] ?? null) ? trim((string) $input['recipient_company_iban']) : null,
                 'recipient_company_bank' => filled($input['recipient_company_bank'] ?? null) ? trim((string) $input['recipient_company_bank']) : null,
-                'recipient_county' => trim((string) ($input['recipient_county'] ?? '')),
-                'recipient_city' => trim((string) ($input['recipient_city'] ?? '')),
-                'recipient_address' => trim((string) ($input['recipient_address'] ?? '')),
+                'recipient_county_id' => $resolvedCounty['id'],
+                'recipient_city_id' => $resolvedCity['id'],
+                'recipient_county' => $resolvedCounty['name'],
+                'recipient_city' => $resolvedCity['name'],
+                'recipient_address' => $resolvedAddress,
+                'recipient_street' => filled($input['recipient_street'] ?? null) ? trim((string) $input['recipient_street']) : null,
+                'recipient_street_no' => filled($input['recipient_street_no'] ?? null) ? trim((string) $input['recipient_street_no']) : null,
+                'recipient_block' => filled($input['recipient_block'] ?? null) ? trim((string) $input['recipient_block']) : null,
+                'recipient_staircase' => filled($input['recipient_staircase'] ?? null) ? trim((string) $input['recipient_staircase']) : null,
+                'recipient_floor' => filled($input['recipient_floor'] ?? null) ? trim((string) $input['recipient_floor']) : null,
+                'recipient_apartment' => filled($input['recipient_apartment'] ?? null) ? trim((string) $input['recipient_apartment']) : null,
                 'recipient_postal_code' => filled($input['recipient_postal_code'] ?? null) ? trim((string) $input['recipient_postal_code']) : null,
                 'package_count' => $packageCount,
                 'package_weight_kg' => $packageWeightKg,
@@ -175,9 +186,9 @@ class SamedayAwbService
 
         $recipientName = $this->requireFilledString($input, 'recipient_name', 'Nume destinatar');
         $recipientPhone = $this->requireFilledString($input, 'recipient_phone', 'Telefon destinatar');
-        $recipientCounty = $this->requireFilledString($input, 'recipient_county', 'Județ');
-        $recipientCity = $this->requireFilledString($input, 'recipient_city', 'Oraș');
-        $recipientAddress = $this->requireFilledString($input, 'recipient_address', 'Adresă');
+        $resolvedCounty = $this->resolveRecipientCounty($input);
+        $resolvedCity = $this->resolveRecipientCity($input);
+        $recipientAddress = $this->buildRecipientAddress($input);
         $recipientEmail = filled($input['recipient_email'] ?? null) ? trim((string) $input['recipient_email']) : '';
         $recipientPostalCode = filled($input['recipient_postal_code'] ?? null) ? trim((string) $input['recipient_postal_code']) : null;
         $recipientCompany = $this->resolveRecipientCompany($input);
@@ -189,8 +200,8 @@ class SamedayAwbService
         $awbPaymentType = $this->resolveAwbPaymentType($input['awb_payment_type'] ?? null);
 
         $recipient = new $recipientClass(
-            $recipientCity,
-            $recipientCounty,
+            $resolvedCity['value'],
+            $resolvedCounty['value'],
             $recipientAddress,
             $recipientName,
             $recipientPhone,
@@ -348,6 +359,101 @@ class SamedayAwbService
 
             $options[$serviceId] = $label;
         }
+
+        return $options;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function getCountyOptions(IntegrationConnection $connection): array
+    {
+        $sameday = $this->newSamedayInstance($connection);
+        $requestClass = '\\Sameday\\Requests\\SamedayGetCountiesRequest';
+
+        $options = [];
+        $page = 1;
+        $pages = 1;
+
+        do {
+            $request = new $requestClass(null);
+            if (method_exists($request, 'setCountPerPage')) {
+                $request->setCountPerPage(200);
+            }
+            if (method_exists($request, 'setPage')) {
+                $request->setPage($page);
+            }
+
+            $response = $sameday->getCounties($request);
+
+            foreach ($response->getCounties() as $county) {
+                $countyId = (int) $county->getId();
+                if ($countyId <= 0) {
+                    continue;
+                }
+
+                $options[$countyId] = trim((string) $county->getName());
+            }
+
+            $pages = method_exists($response, 'getPages') ? max(1, (int) $response->getPages()) : 1;
+            $page++;
+        } while ($page <= $pages);
+
+        asort($options, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return $options;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function getCityOptions(IntegrationConnection $connection, ?int $countyId = null): array
+    {
+        $countyId = max(0, (int) $countyId);
+        if ($countyId <= 0) {
+            return [];
+        }
+
+        $sameday = $this->newSamedayInstance($connection);
+        $requestClass = '\\Sameday\\Requests\\SamedayGetCitiesRequest';
+
+        $options = [];
+        $page = 1;
+        $pages = 1;
+
+        do {
+            $request = new $requestClass($countyId);
+            if (method_exists($request, 'setCountPerPage')) {
+                $request->setCountPerPage(200);
+            }
+            if (method_exists($request, 'setPage')) {
+                $request->setPage($page);
+            }
+
+            $response = $sameday->getCities($request);
+
+            foreach ($response->getCities() as $city) {
+                $cityId = (int) $city->getId();
+                if ($cityId <= 0) {
+                    continue;
+                }
+
+                $label = trim((string) $city->getName());
+                if (method_exists($city, 'getVillage')) {
+                    $village = trim((string) $city->getVillage());
+                    if ($village !== '') {
+                        $label .= ' ('.$village.')';
+                    }
+                }
+
+                $options[$cityId] = $label;
+            }
+
+            $pages = method_exists($response, 'getPages') ? max(1, (int) $response->getPages()) : 1;
+            $page++;
+        } while ($page <= $pages);
+
+        asort($options, SORT_NATURAL | SORT_FLAG_CASE);
 
         return $options;
     }
@@ -618,6 +724,8 @@ class SamedayAwbService
             '\\Sameday\\Sameday',
             '\\Sameday\\Requests\\SamedayGetPickupPointsRequest',
             '\\Sameday\\Requests\\SamedayGetServicesRequest',
+            '\\Sameday\\Requests\\SamedayGetCountiesRequest',
+            '\\Sameday\\Requests\\SamedayGetCitiesRequest',
             '\\Sameday\\Requests\\SamedayPostAwbRequest',
             '\\Sameday\\Requests\\SamedayPostAwbEstimationRequest',
             '\\Sameday\\Requests\\SamedayDeleteAwbRequest',
@@ -779,6 +887,108 @@ class SamedayAwbService
         }
 
         return new $deliveryIntervalTypeClass($deliveryIntervalId);
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     * @return array{id: int|null, value: int|string, name: string}
+     */
+    private function resolveRecipientCounty(array $input): array
+    {
+        $countyId = $this->nullablePositiveInt($input['recipient_county_id'] ?? null);
+        $countyName = trim((string) ($input['recipient_county'] ?? ''));
+
+        if ($countyId !== null) {
+            if ($countyName === '') {
+                $countyName = (string) $countyId;
+            }
+
+            return [
+                'id' => $countyId,
+                'value' => $countyId,
+                'name' => $countyName,
+            ];
+        }
+
+        $countyName = $this->requireFilledString($input, 'recipient_county', 'Județ');
+
+        return [
+            'id' => null,
+            'value' => $countyName,
+            'name' => $countyName,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     * @return array{id: int|null, value: int|string, name: string}
+     */
+    private function resolveRecipientCity(array $input): array
+    {
+        $cityId = $this->nullablePositiveInt($input['recipient_city_id'] ?? null);
+        $cityName = trim((string) ($input['recipient_city'] ?? ''));
+
+        if ($cityId !== null) {
+            if ($cityName === '') {
+                $cityName = (string) $cityId;
+            }
+
+            return [
+                'id' => $cityId,
+                'value' => $cityId,
+                'name' => $cityName,
+            ];
+        }
+
+        $cityName = $this->requireFilledString($input, 'recipient_city', 'Oraș');
+
+        return [
+            'id' => null,
+            'value' => $cityName,
+            'name' => $cityName,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    private function buildRecipientAddress(array $input): string
+    {
+        $explicitAddress = trim((string) ($input['recipient_address'] ?? ''));
+        if ($explicitAddress !== '') {
+            return $explicitAddress;
+        }
+
+        $street = $this->requireFilledString($input, 'recipient_street', 'Stradă');
+
+        $parts = ["Str. {$street}"];
+
+        $streetNo = trim((string) ($input['recipient_street_no'] ?? ''));
+        if ($streetNo !== '') {
+            $parts[] = "Nr. {$streetNo}";
+        }
+
+        $block = trim((string) ($input['recipient_block'] ?? ''));
+        if ($block !== '') {
+            $parts[] = "Bl. {$block}";
+        }
+
+        $staircase = trim((string) ($input['recipient_staircase'] ?? ''));
+        if ($staircase !== '') {
+            $parts[] = "Sc. {$staircase}";
+        }
+
+        $floor = trim((string) ($input['recipient_floor'] ?? ''));
+        if ($floor !== '') {
+            $parts[] = "Et. {$floor}";
+        }
+
+        $apartment = trim((string) ($input['recipient_apartment'] ?? ''));
+        if ($apartment !== '') {
+            $parts[] = "Ap. {$apartment}";
+        }
+
+        return implode(', ', $parts);
     }
 
     private function normalizeRecipientType(mixed $value): string
