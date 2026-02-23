@@ -3,10 +3,13 @@
 namespace App\Services\Courier;
 
 use App\Models\IntegrationConnection;
+use Illuminate\Support\Facades\Cache;
 use RuntimeException;
 
 class SamedayAwbService
 {
+    private const OPTIONS_CACHE_TTL_MINUTES = 15;
+
     /**
      * @param  array<string, mixed>  $input
      * @return array<string, mixed>
@@ -20,12 +23,14 @@ class SamedayAwbService
         $sameday = $this->newSamedayInstance($connection);
         $pickupPointId = $this->resolvePickupPointId(
             $sameday,
-            $input['pickup_point_id'] ?? data_get($connection->settings, 'pickup_point_id')
+            $input['pickup_point_id'] ?? data_get($connection->settings, 'pickup_point_id'),
+            $connection
         );
         $contactPersonId = $this->nullablePositiveInt($input['contact_person_id'] ?? null);
         $serviceId = $this->resolveServiceId(
             $sameday,
-            $input['service_id'] ?? data_get($connection->settings, 'default_service_id')
+            $input['service_id'] ?? data_get($connection->settings, 'default_service_id'),
+            $connection
         );
 
         $cashOnDelivery = max(0, (float) ($input['cod_amount'] ?? 0));
@@ -167,12 +172,14 @@ class SamedayAwbService
         $sameday = $this->newSamedayInstance($connection);
         $pickupPointId = $this->resolvePickupPointId(
             $sameday,
-            $input['pickup_point_id'] ?? data_get($connection->settings, 'pickup_point_id')
+            $input['pickup_point_id'] ?? data_get($connection->settings, 'pickup_point_id'),
+            $connection
         );
         $contactPersonId = $this->nullablePositiveInt($input['contact_person_id'] ?? null);
         $serviceId = $this->resolveServiceId(
             $sameday,
-            $input['service_id'] ?? data_get($connection->settings, 'default_service_id')
+            $input['service_id'] ?? data_get($connection->settings, 'default_service_id'),
+            $connection
         );
 
         $cashOnDelivery = max(0, (float) ($input['cod_amount'] ?? 0));
@@ -295,35 +302,15 @@ class SamedayAwbService
      */
     public function getPickupPointOptions(IntegrationConnection $connection): array
     {
-        $sameday = $this->newSamedayInstance($connection);
-        $requestClass = '\\Sameday\\Requests\\SamedayGetPickupPointsRequest';
-
-        $request = new $requestClass();
-        if (method_exists($request, 'setCountPerPage')) {
-            $request->setCountPerPage(100);
-        }
-
-        $response = $sameday->getPickupPoints($request);
         $options = [];
 
-        foreach ($response->getPickupPoints() as $pickupPoint) {
-            $pickupPointId = (int) $pickupPoint->getId();
-            $city = '';
-            if (method_exists($pickupPoint, 'getCity')) {
-                $cityObject = $pickupPoint->getCity();
-                if (is_object($cityObject) && method_exists($cityObject, 'getName')) {
-                    $city = (string) $cityObject->getName();
-                }
-            }
-            $alias = method_exists($pickupPoint, 'getAlias') ? (string) $pickupPoint->getAlias() : '';
-
-            $parts = array_filter([$alias, $city, (string) $pickupPoint->getAddress()]);
-            $label = implode(' - ', $parts);
-            if (method_exists($pickupPoint, 'isDefault') && $pickupPoint->isDefault()) {
-                $label .= ' (default)';
+        foreach ($this->getPickupPointDataset($connection) as $pickupPointData) {
+            $pickupPointId = (int) ($pickupPointData['id'] ?? 0);
+            if ($pickupPointId <= 0) {
+                continue;
             }
 
-            $options[$pickupPointId] = $label !== '' ? $label : "Pickup #{$pickupPointId}";
+            $options[$pickupPointId] = (string) ($pickupPointData['label'] ?? "Pickup #{$pickupPointId}");
         }
 
         return $options;
@@ -334,30 +321,15 @@ class SamedayAwbService
      */
     public function getServiceOptions(IntegrationConnection $connection): array
     {
-        $sameday = $this->newSamedayInstance($connection);
-        $requestClass = '\\Sameday\\Requests\\SamedayGetServicesRequest';
-
-        $request = new $requestClass();
-        if (method_exists($request, 'setCountPerPage')) {
-            $request->setCountPerPage(100);
-        }
-
-        $response = $sameday->getServices($request);
         $options = [];
 
-        foreach ($response->getServices() as $service) {
-            $serviceId = (int) $service->getId();
-            $label = (string) $service->getName();
-
-            if (method_exists($service, 'getCode') && $service->getCode() !== '') {
-                $label .= ' ['.$service->getCode().']';
+        foreach ($this->getServiceDataset($connection) as $serviceData) {
+            $serviceId = (int) ($serviceData['id'] ?? 0);
+            if ($serviceId <= 0) {
+                continue;
             }
 
-            if (method_exists($service, 'isDefault') && $service->isDefault()) {
-                $label .= ' (default)';
-            }
-
-            $options[$serviceId] = $label;
+            $options[$serviceId] = (string) ($serviceData['label'] ?? "Service #{$serviceId}");
         }
 
         return $options;
@@ -368,40 +340,42 @@ class SamedayAwbService
      */
     public function getCountyOptions(IntegrationConnection $connection): array
     {
-        $sameday = $this->newSamedayInstance($connection);
-        $requestClass = '\\Sameday\\Requests\\SamedayGetCountiesRequest';
+        return $this->rememberConnectionCache($connection, 'counties-options-v1', function () use ($connection): array {
+            $sameday = $this->newSamedayInstance($connection);
+            $requestClass = '\\Sameday\\Requests\\SamedayGetCountiesRequest';
 
-        $options = [];
-        $page = 1;
-        $pages = 1;
+            $options = [];
+            $page = 1;
+            $pages = 1;
 
-        do {
-            $request = new $requestClass(null);
-            if (method_exists($request, 'setCountPerPage')) {
-                $request->setCountPerPage(200);
-            }
-            if (method_exists($request, 'setPage')) {
-                $request->setPage($page);
-            }
-
-            $response = $sameday->getCounties($request);
-
-            foreach ($response->getCounties() as $county) {
-                $countyId = (int) $county->getId();
-                if ($countyId <= 0) {
-                    continue;
+            do {
+                $request = new $requestClass(null);
+                if (method_exists($request, 'setCountPerPage')) {
+                    $request->setCountPerPage(200);
+                }
+                if (method_exists($request, 'setPage')) {
+                    $request->setPage($page);
                 }
 
-                $options[$countyId] = trim((string) $county->getName());
-            }
+                $response = $sameday->getCounties($request);
 
-            $pages = method_exists($response, 'getPages') ? max(1, (int) $response->getPages()) : 1;
-            $page++;
-        } while ($page <= $pages);
+                foreach ($response->getCounties() as $county) {
+                    $countyId = (int) $county->getId();
+                    if ($countyId <= 0) {
+                        continue;
+                    }
 
-        asort($options, SORT_NATURAL | SORT_FLAG_CASE);
+                    $options[$countyId] = trim((string) $county->getName());
+                }
 
-        return $options;
+                $pages = method_exists($response, 'getPages') ? max(1, (int) $response->getPages()) : 1;
+                $page++;
+            } while ($page <= $pages);
+
+            asort($options, SORT_NATURAL | SORT_FLAG_CASE);
+
+            return $options;
+        });
     }
 
     /**
@@ -414,48 +388,50 @@ class SamedayAwbService
             return [];
         }
 
-        $sameday = $this->newSamedayInstance($connection);
-        $requestClass = '\\Sameday\\Requests\\SamedayGetCitiesRequest';
+        return $this->rememberConnectionCache($connection, "cities-options-county-{$countyId}-v1", function () use ($connection, $countyId): array {
+            $sameday = $this->newSamedayInstance($connection);
+            $requestClass = '\\Sameday\\Requests\\SamedayGetCitiesRequest';
 
-        $options = [];
-        $page = 1;
-        $pages = 1;
+            $options = [];
+            $page = 1;
+            $pages = 1;
 
-        do {
-            $request = new $requestClass($countyId);
-            if (method_exists($request, 'setCountPerPage')) {
-                $request->setCountPerPage(200);
-            }
-            if (method_exists($request, 'setPage')) {
-                $request->setPage($page);
-            }
-
-            $response = $sameday->getCities($request);
-
-            foreach ($response->getCities() as $city) {
-                $cityId = (int) $city->getId();
-                if ($cityId <= 0) {
-                    continue;
+            do {
+                $request = new $requestClass($countyId);
+                if (method_exists($request, 'setCountPerPage')) {
+                    $request->setCountPerPage(200);
+                }
+                if (method_exists($request, 'setPage')) {
+                    $request->setPage($page);
                 }
 
-                $label = trim((string) $city->getName());
-                if (method_exists($city, 'getVillage')) {
-                    $village = trim((string) $city->getVillage());
-                    if ($village !== '') {
-                        $label .= ' ('.$village.')';
+                $response = $sameday->getCities($request);
+
+                foreach ($response->getCities() as $city) {
+                    $cityId = (int) $city->getId();
+                    if ($cityId <= 0) {
+                        continue;
                     }
+
+                    $label = trim((string) $city->getName());
+                    if (method_exists($city, 'getVillage')) {
+                        $village = trim((string) $city->getVillage());
+                        if ($village !== '') {
+                            $label .= ' ('.$village.')';
+                        }
+                    }
+
+                    $options[$cityId] = $label;
                 }
 
-                $options[$cityId] = $label;
-            }
+                $pages = method_exists($response, 'getPages') ? max(1, (int) $response->getPages()) : 1;
+                $page++;
+            } while ($page <= $pages);
 
-            $pages = method_exists($response, 'getPages') ? max(1, (int) $response->getPages()) : 1;
-            $page++;
-        } while ($page <= $pages);
+            asort($options, SORT_NATURAL | SORT_FLAG_CASE);
 
-        asort($options, SORT_NATURAL | SORT_FLAG_CASE);
-
-        return $options;
+            return $options;
+        });
     }
 
     /**
@@ -463,18 +439,8 @@ class SamedayAwbService
      */
     public function getContactPersonOptions(IntegrationConnection $connection, ?int $pickupPointId = null): array
     {
-        $sameday = $this->newSamedayInstance($connection);
-        $requestClass = '\\Sameday\\Requests\\SamedayGetPickupPointsRequest';
-
-        $request = new $requestClass();
-        if (method_exists($request, 'setCountPerPage')) {
-            $request->setCountPerPage(100);
-        }
-
-        $response = $sameday->getPickupPoints($request);
-        $pickupPoints = $response->getPickupPoints();
-
-        if (! is_array($pickupPoints) || $pickupPoints === []) {
+        $pickupPoints = $this->getPickupPointDataset($connection);
+        if ($pickupPoints === []) {
             return [];
         }
 
@@ -482,7 +448,7 @@ class SamedayAwbService
         $pickupPointId = max(0, (int) $pickupPointId);
         if ($pickupPointId > 0) {
             foreach ($pickupPoints as $pickupPoint) {
-                if ((int) $pickupPoint->getId() === $pickupPointId) {
+                if ((int) ($pickupPoint['id'] ?? 0) === $pickupPointId) {
                     $targetPickupPoint = $pickupPoint;
                     break;
                 }
@@ -491,7 +457,7 @@ class SamedayAwbService
 
         if (! $targetPickupPoint) {
             foreach ($pickupPoints as $pickupPoint) {
-                if (method_exists($pickupPoint, 'isDefault') && $pickupPoint->isDefault()) {
+                if ((bool) ($pickupPoint['is_default'] ?? false)) {
                     $targetPickupPoint = $pickupPoint;
                     break;
                 }
@@ -499,30 +465,16 @@ class SamedayAwbService
         }
 
         $targetPickupPoint ??= $pickupPoints[0];
-
-        if (! method_exists($targetPickupPoint, 'getContactPersons')) {
-            return [];
-        }
+        $contactPersons = $targetPickupPoint['contact_persons'] ?? [];
 
         $options = [];
-        foreach ($targetPickupPoint->getContactPersons() as $contactPerson) {
-            $contactPersonId = (int) $contactPerson->getId();
+        foreach ($contactPersons as $contactPerson) {
+            $contactPersonId = (int) ($contactPerson['id'] ?? 0);
             if ($contactPersonId <= 0) {
                 continue;
             }
 
-            $label = (string) $contactPerson->getName();
-            if (method_exists($contactPerson, 'getPhone')) {
-                $phone = trim((string) $contactPerson->getPhone());
-                if ($phone !== '') {
-                    $label .= ' ('.$phone.')';
-                }
-            }
-            if (method_exists($contactPerson, 'isDefault') && $contactPerson->isDefault()) {
-                $label .= ' (default)';
-            }
-
-            $options[$contactPersonId] = $label;
+            $options[$contactPersonId] = (string) ($contactPerson['label'] ?? "Contact #{$contactPersonId}");
         }
 
         return $options;
@@ -533,47 +485,24 @@ class SamedayAwbService
      */
     public function getServiceTaxOptions(IntegrationConnection $connection, ?int $serviceId = null): array
     {
-        $sameday = $this->newSamedayInstance($connection);
-        $requestClass = '\\Sameday\\Requests\\SamedayGetServicesRequest';
-
-        $request = new $requestClass();
-        if (method_exists($request, 'setCountPerPage')) {
-            $request->setCountPerPage(100);
-        }
-
-        $response = $sameday->getServices($request);
+        $services = $this->getServiceDataset($connection);
         $options = [];
 
         $serviceId = max(0, (int) $serviceId);
-        foreach ($response->getServices() as $service) {
-            $currentServiceId = (int) $service->getId();
+        foreach ($services as $service) {
+            $currentServiceId = (int) ($service['id'] ?? 0);
             if ($serviceId > 0 && $currentServiceId !== $serviceId) {
                 continue;
             }
 
-            if (! method_exists($service, 'getOptionalTaxes')) {
-                if ($serviceId > 0) {
-                    break;
-                }
-
-                continue;
-            }
-
-            foreach ($service->getOptionalTaxes() as $optionalTax) {
-                $optionalTaxId = (int) $optionalTax->getId();
+            $optionalTaxes = $service['optional_taxes'] ?? [];
+            foreach ($optionalTaxes as $optionalTax) {
+                $optionalTaxId = (int) ($optionalTax['id'] ?? 0);
                 if ($optionalTaxId <= 0) {
                     continue;
                 }
 
-                $label = (string) $optionalTax->getName();
-                if (method_exists($optionalTax, 'getCode') && $optionalTax->getCode() !== '') {
-                    $label .= ' ['.$optionalTax->getCode().']';
-                }
-                if (method_exists($optionalTax, 'getTax')) {
-                    $label .= ' - '.number_format((float) $optionalTax->getTax(), 2).' RON';
-                }
-
-                $options[$optionalTaxId] = $label;
+                $options[$optionalTaxId] = (string) ($optionalTax['label'] ?? "Tax #{$optionalTaxId}");
             }
 
             if ($serviceId > 0) {
@@ -594,68 +523,271 @@ class SamedayAwbService
             return [];
         }
 
-        $sameday = $this->newSamedayInstance($connection);
-        $requestClass = '\\Sameday\\Requests\\SamedayGetServicesRequest';
-        $deliveryIntervalClass = '\\Sameday\\Objects\\Types\\DeliveryIntervalServiceType';
-
-        if (! class_exists($deliveryIntervalClass) || ! method_exists($deliveryIntervalClass, 'getDeliveryIntervals')) {
-            return [];
-        }
-
-        $request = new $requestClass();
-        if (method_exists($request, 'setCountPerPage')) {
-            $request->setCountPerPage(100);
-        }
-
-        $response = $sameday->getServices($request);
-        $serviceCode = null;
-
-        foreach ($response->getServices() as $service) {
-            if ((int) $service->getId() !== $serviceId) {
+        $services = $this->getServiceDataset($connection);
+        foreach ($services as $service) {
+            if ((int) ($service['id'] ?? 0) !== $serviceId) {
                 continue;
             }
 
-            if (method_exists($service, 'getCode')) {
-                $code = trim((string) $service->getCode());
-                $serviceCode = $code !== '' ? $code : null;
-            }
-
-            break;
+            return is_array($service['delivery_intervals'] ?? null)
+                ? $service['delivery_intervals']
+                : [];
         }
 
-        if (! $serviceCode) {
-            return [];
-        }
-
-        $intervals = $deliveryIntervalClass::getDeliveryIntervals($serviceCode);
-        if (! is_array($intervals) || $intervals === []) {
-            return [];
-        }
-
-        $options = [];
-        foreach ($intervals as $intervalId => $intervalData) {
-            $intervalId = (int) $intervalId;
-            if ($intervalId <= 0 || ! is_array($intervalData)) {
-                continue;
-            }
-
-            $startHour = (int) ($intervalData['startHour'] ?? 0);
-            $endHour = (int) ($intervalData['endHour'] ?? 0);
-            if ($startHour <= 0 || $endHour <= 0) {
-                continue;
-            }
-
-            $options[$intervalId] = sprintf('%02d:00 - %02d:00', $startHour, $endHour);
-        }
-
-        return $options;
+        return [];
     }
 
-    private function resolvePickupPointId(object $sameday, mixed $explicitPickupPointId): int
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function getPickupPointDataset(IntegrationConnection $connection): array
+    {
+        return $this->rememberConnectionCache($connection, 'pickup-points-dataset-v1', function () use ($connection): array {
+            $sameday = $this->newSamedayInstance($connection);
+            $requestClass = '\\Sameday\\Requests\\SamedayGetPickupPointsRequest';
+
+            $dataset = [];
+            $page = 1;
+            $pages = 1;
+
+            do {
+                $request = new $requestClass();
+                if (method_exists($request, 'setCountPerPage')) {
+                    $request->setCountPerPage(200);
+                }
+                if (method_exists($request, 'setPage')) {
+                    $request->setPage($page);
+                }
+
+                $response = $sameday->getPickupPoints($request);
+
+                foreach ($response->getPickupPoints() as $pickupPoint) {
+                    $pickupPointId = (int) $pickupPoint->getId();
+                    if ($pickupPointId <= 0) {
+                        continue;
+                    }
+
+                    $city = '';
+                    if (method_exists($pickupPoint, 'getCity')) {
+                        $cityObject = $pickupPoint->getCity();
+                        if (is_object($cityObject) && method_exists($cityObject, 'getName')) {
+                            $city = trim((string) $cityObject->getName());
+                        }
+                    }
+
+                    $alias = method_exists($pickupPoint, 'getAlias') ? trim((string) $pickupPoint->getAlias()) : '';
+                    $address = method_exists($pickupPoint, 'getAddress') ? trim((string) $pickupPoint->getAddress()) : '';
+                    $isDefault = method_exists($pickupPoint, 'isDefault') && $pickupPoint->isDefault();
+
+                    $parts = array_filter([$alias, $city, $address]);
+                    $label = implode(' - ', $parts);
+                    if ($isDefault) {
+                        $label .= ' (default)';
+                    }
+                    $label = $label !== '' ? $label : "Pickup #{$pickupPointId}";
+
+                    $contactPersons = [];
+                    if (method_exists($pickupPoint, 'getContactPersons')) {
+                        foreach ($pickupPoint->getContactPersons() as $contactPerson) {
+                            $contactPersonId = (int) $contactPerson->getId();
+                            if ($contactPersonId <= 0) {
+                                continue;
+                            }
+
+                            $contactLabel = trim((string) $contactPerson->getName());
+                            if (method_exists($contactPerson, 'getPhone')) {
+                                $phone = trim((string) $contactPerson->getPhone());
+                                if ($phone !== '') {
+                                    $contactLabel .= ' ('.$phone.')';
+                                }
+                            }
+
+                            $contactIsDefault = method_exists($contactPerson, 'isDefault') && $contactPerson->isDefault();
+                            if ($contactIsDefault) {
+                                $contactLabel .= ' (default)';
+                            }
+
+                            $contactPersons[] = [
+                                'id' => $contactPersonId,
+                                'label' => $contactLabel !== '' ? $contactLabel : "Contact #{$contactPersonId}",
+                                'is_default' => $contactIsDefault,
+                            ];
+                        }
+                    }
+
+                    $dataset[] = [
+                        'id' => $pickupPointId,
+                        'label' => $label,
+                        'is_default' => $isDefault,
+                        'contact_persons' => $contactPersons,
+                    ];
+                }
+
+                $pages = method_exists($response, 'getPages') ? max(1, (int) $response->getPages()) : 1;
+                $page++;
+            } while ($page <= $pages);
+
+            return $dataset;
+        });
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function getServiceDataset(IntegrationConnection $connection): array
+    {
+        return $this->rememberConnectionCache($connection, 'services-dataset-v1', function () use ($connection): array {
+            $sameday = $this->newSamedayInstance($connection);
+            $requestClass = '\\Sameday\\Requests\\SamedayGetServicesRequest';
+            $deliveryIntervalClass = '\\Sameday\\Objects\\Types\\DeliveryIntervalServiceType';
+            $supportsDeliveryIntervals = class_exists($deliveryIntervalClass) && method_exists($deliveryIntervalClass, 'getDeliveryIntervals');
+
+            $dataset = [];
+            $page = 1;
+            $pages = 1;
+
+            do {
+                $request = new $requestClass();
+                if (method_exists($request, 'setCountPerPage')) {
+                    $request->setCountPerPage(200);
+                }
+                if (method_exists($request, 'setPage')) {
+                    $request->setPage($page);
+                }
+
+                $response = $sameday->getServices($request);
+
+                foreach ($response->getServices() as $service) {
+                    $serviceId = (int) $service->getId();
+                    if ($serviceId <= 0) {
+                        continue;
+                    }
+
+                    $name = trim((string) $service->getName());
+                    $code = method_exists($service, 'getCode') ? trim((string) $service->getCode()) : '';
+                    $isDefault = method_exists($service, 'isDefault') && $service->isDefault();
+
+                    $label = $name;
+                    if ($code !== '') {
+                        $label .= ' ['.$code.']';
+                    }
+                    if ($isDefault) {
+                        $label .= ' (default)';
+                    }
+                    $label = $label !== '' ? $label : "Service #{$serviceId}";
+
+                    $optionalTaxes = [];
+                    if (method_exists($service, 'getOptionalTaxes')) {
+                        foreach ($service->getOptionalTaxes() as $optionalTax) {
+                            $optionalTaxId = (int) $optionalTax->getId();
+                            if ($optionalTaxId <= 0) {
+                                continue;
+                            }
+
+                            $optionalTaxLabel = trim((string) $optionalTax->getName());
+                            if (method_exists($optionalTax, 'getCode') && $optionalTax->getCode() !== '') {
+                                $optionalTaxLabel .= ' ['.$optionalTax->getCode().']';
+                            }
+                            if (method_exists($optionalTax, 'getTax')) {
+                                $optionalTaxLabel .= ' - '.number_format((float) $optionalTax->getTax(), 2).' RON';
+                            }
+                            $optionalTaxLabel = $optionalTaxLabel !== '' ? $optionalTaxLabel : "Tax #{$optionalTaxId}";
+
+                            $optionalTaxes[] = [
+                                'id' => $optionalTaxId,
+                                'label' => $optionalTaxLabel,
+                            ];
+                        }
+                    }
+
+                    $deliveryIntervals = [];
+                    if ($supportsDeliveryIntervals && $code !== '') {
+                        $rawIntervals = $deliveryIntervalClass::getDeliveryIntervals($code);
+                        if (is_array($rawIntervals)) {
+                            foreach ($rawIntervals as $intervalId => $intervalData) {
+                                $intervalId = (int) $intervalId;
+                                if ($intervalId <= 0 || ! is_array($intervalData)) {
+                                    continue;
+                                }
+
+                                $startHour = (int) ($intervalData['startHour'] ?? 0);
+                                $endHour = (int) ($intervalData['endHour'] ?? 0);
+                                if ($startHour <= 0 || $endHour <= 0) {
+                                    continue;
+                                }
+
+                                $deliveryIntervals[$intervalId] = sprintf('%02d:00 - %02d:00', $startHour, $endHour);
+                            }
+                        }
+                    }
+
+                    $dataset[] = [
+                        'id' => $serviceId,
+                        'label' => $label,
+                        'is_default' => $isDefault,
+                        'optional_taxes' => $optionalTaxes,
+                        'delivery_intervals' => $deliveryIntervals,
+                    ];
+                }
+
+                $pages = method_exists($response, 'getPages') ? max(1, (int) $response->getPages()) : 1;
+                $page++;
+            } while ($page <= $pages);
+
+            return $dataset;
+        });
+    }
+
+    /**
+     * @template T
+     *
+     * @param  callable():T  $resolver
+     * @return T
+     */
+    private function rememberConnectionCache(IntegrationConnection $connection, string $suffix, callable $resolver): mixed
+    {
+        $cacheKey = $this->buildConnectionCacheKey($connection, $suffix);
+
+        return Cache::remember(
+            $cacheKey,
+            now()->addMinutes(self::OPTIONS_CACHE_TTL_MINUTES),
+            $resolver
+        );
+    }
+
+    private function buildConnectionCacheKey(IntegrationConnection $connection, string $suffix): string
+    {
+        $updatedAtTimestamp = $connection->updated_at?->getTimestamp() ?? 0;
+
+        return implode(':', [
+            'sameday',
+            'connection',
+            (string) $connection->id,
+            (string) $updatedAtTimestamp,
+            $suffix,
+        ]);
+    }
+
+    private function resolvePickupPointId(object $sameday, mixed $explicitPickupPointId, IntegrationConnection $connection): int
     {
         $explicitPickupPointId = (int) $explicitPickupPointId;
         if ($explicitPickupPointId > 0) {
             return $explicitPickupPointId;
+        }
+
+        $pickupPoints = $this->getPickupPointDataset($connection);
+        if ($pickupPoints !== []) {
+            foreach ($pickupPoints as $pickupPoint) {
+                $pickupPointId = (int) ($pickupPoint['id'] ?? 0);
+                if ($pickupPointId > 0 && (bool) ($pickupPoint['is_default'] ?? false)) {
+                    return $pickupPointId;
+                }
+            }
+
+            $firstPickupPointId = (int) ($pickupPoints[0]['id'] ?? 0);
+            if ($firstPickupPointId > 0) {
+                return $firstPickupPointId;
+            }
         }
 
         $requestClass = '\\Sameday\\Requests\\SamedayGetPickupPointsRequest';
@@ -680,11 +812,26 @@ class SamedayAwbService
         return (int) $pickupPoints[0]->getId();
     }
 
-    private function resolveServiceId(object $sameday, mixed $explicitServiceId): int
+    private function resolveServiceId(object $sameday, mixed $explicitServiceId, IntegrationConnection $connection): int
     {
         $explicitServiceId = (int) $explicitServiceId;
         if ($explicitServiceId > 0) {
             return $explicitServiceId;
+        }
+
+        $services = $this->getServiceDataset($connection);
+        if ($services !== []) {
+            foreach ($services as $service) {
+                $serviceId = (int) ($service['id'] ?? 0);
+                if ($serviceId > 0 && (bool) ($service['is_default'] ?? false)) {
+                    return $serviceId;
+                }
+            }
+
+            $firstServiceId = (int) ($services[0]['id'] ?? 0);
+            if ($firstServiceId > 0) {
+                return $firstServiceId;
+            }
         }
 
         $requestClass = '\\Sameday\\Requests\\SamedayGetServicesRequest';
