@@ -8,7 +8,7 @@ use Illuminate\Support\Carbon;
 class DailyStockMetricAggregator
 {
     /**
-     * @param  array<int, array{woo_product_id:int, quantity:float|int|null, sell_price:float|int|null}>  $snapshots
+     * @param  array<int, array{reference_product_id:string, woo_product_id?:int|null, quantity:float|int|null, sell_price:float|int|null}>  $snapshots
      */
     public function recordSnapshots(Carbon $snapshotAt, array $snapshots): int
     {
@@ -21,35 +21,36 @@ class DailyStockMetricAggregator
             ->setTimezone((string) config('app.timezone', 'UTC'))
             ->toDateString();
 
-        $snapshotsByProductId = $this->normalizeSnapshots($snapshots);
+        $snapshotsByReferenceId = $this->normalizeSnapshots($snapshots);
 
-        if ($snapshotsByProductId === []) {
+        if ($snapshotsByReferenceId === []) {
             return 0;
         }
 
         $processedProducts = 0;
 
-        foreach (array_chunk($snapshotsByProductId, 1000, true) as $snapshotChunk) {
-            $productIds = array_keys($snapshotChunk);
+        foreach (array_chunk($snapshotsByReferenceId, 1000, true) as $snapshotChunk) {
+            $referenceProductIds = array_keys($snapshotChunk);
             $existingRows = DailyStockMetric::query()
                 ->where('day', $day)
-                ->whereIn('woo_product_id', $productIds)
+                ->whereIn('reference_product_id', $referenceProductIds)
                 ->get()
-                ->keyBy('woo_product_id');
+                ->keyBy('reference_product_id');
 
             $upsertRows = [];
 
-            foreach ($snapshotChunk as $productId => $snapshot) {
+            foreach ($snapshotChunk as $referenceProductId => $snapshot) {
                 /** @var DailyStockMetric|null $existing */
-                $existing = $existingRows->get($productId);
+                $existing = $existingRows->get($referenceProductId);
                 $upsertRows[] = $this->buildMetricRow($day, $snapshotAt, $snapshot, $existing);
                 $processedProducts++;
             }
 
             DailyStockMetric::query()->upsert(
                 $upsertRows,
-                ['day', 'woo_product_id'],
+                ['day', 'reference_product_id'],
                 [
+                    'woo_product_id',
                     'opening_total_qty',
                     'closing_total_qty',
                     'opening_available_qty',
@@ -74,17 +75,18 @@ class DailyStockMetricAggregator
     }
 
     /**
-     * @param  array<int, array{woo_product_id:int, quantity:float|int|null, sell_price:float|int|null}>  $snapshots
-     * @return array<int, array{woo_product_id:int, quantity:float, sell_price:?float}>
+     * @param  array<int, array{reference_product_id:string, woo_product_id?:int|null, quantity:float|int|null, sell_price:float|int|null}>  $snapshots
+     * @return array<string, array{reference_product_id:string, woo_product_id:int, quantity:float, sell_price:?float}>
      */
     private function normalizeSnapshots(array $snapshots): array
     {
         $normalized = [];
 
         foreach ($snapshots as $snapshot) {
-            $productId = (int) ($snapshot['woo_product_id'] ?? 0);
+            $referenceProductId = trim((string) ($snapshot['reference_product_id'] ?? ''));
+            $wooProductId = (int) ($snapshot['woo_product_id'] ?? 0);
 
-            if ($productId <= 0) {
+            if ($referenceProductId === '' || $wooProductId <= 0) {
                 continue;
             }
 
@@ -93,8 +95,9 @@ class DailyStockMetricAggregator
             $sellPrice = is_numeric($sellPriceRaw) ? $this->normalizePrice((float) $sellPriceRaw) : null;
 
             // Last occurrence wins, matching ProductStock upsert behavior.
-            $normalized[$productId] = [
-                'woo_product_id' => $productId,
+            $normalized[$referenceProductId] = [
+                'reference_product_id' => $referenceProductId,
+                'woo_product_id' => $wooProductId,
                 'quantity' => $quantity,
                 'sell_price' => $sellPrice,
             ];
@@ -104,10 +107,11 @@ class DailyStockMetricAggregator
     }
 
     /**
-     * @param  array{woo_product_id:int, quantity:float, sell_price:?float}  $snapshot
+     * @param  array{reference_product_id:string, woo_product_id:int, quantity:float, sell_price:?float}  $snapshot
      */
     private function buildMetricRow(string $day, Carbon $snapshotAt, array $snapshot, ?DailyStockMetric $existing): array
     {
+        $wooProductId = (int) ($snapshot['woo_product_id'] ?? 0);
         $quantity = $snapshot['quantity'];
         // "available" currently mirrors total quantity until reservation logic exists.
         $availableQty = $quantity;
@@ -118,7 +122,8 @@ class DailyStockMetricAggregator
 
             return [
                 'day' => $day,
-                'woo_product_id' => $snapshot['woo_product_id'],
+                'reference_product_id' => $snapshot['reference_product_id'],
+                'woo_product_id' => $wooProductId,
                 'opening_total_qty' => $quantity,
                 'closing_total_qty' => $quantity,
                 'opening_available_qty' => $availableQty,
@@ -180,9 +185,14 @@ class DailyStockMetricAggregator
         $openingSalesValue = $this->calculateSalesValue($openingAvailableQty, $openingSellPrice);
         $closingSalesValue = $this->calculateSalesValue($closingAvailableQty, $closingSellPrice);
 
+        $resolvedWooProductId = $wooProductId > 0
+            ? $wooProductId
+            : (int) ($existing?->woo_product_id ?? 0);
+
         return [
             'day' => $day,
-            'woo_product_id' => $snapshot['woo_product_id'],
+            'reference_product_id' => $snapshot['reference_product_id'],
+            'woo_product_id' => $resolvedWooProductId,
             'opening_total_qty' => $openingTotalQty,
             'closing_total_qty' => $closingTotalQty,
             'opening_available_qty' => $openingAvailableQty,
