@@ -69,7 +69,6 @@
                     <tr>
                         <th style="width: 42px">#</th>
                         <th>Produs</th>
-                        <th style="width: 120px">SKU</th>
                         <th style="width: 80px; text-align: right">Cant.</th>
                         <th style="width: 120px; text-align: right">Pret unitar</th>
                         <th style="width: 90px; text-align: right">Disc. %</th>
@@ -88,7 +87,6 @@
                                     <span>{{ html_entity_decode((string) $item->product_name, ENT_QUOTES | ENT_HTML5, 'UTF-8') }}</span>
                                 </div>
                             </td>
-                            <td>{{ $item->sku ?: '-' }}</td>
                             <td style="text-align: right">{{ number_format((float) $item->quantity, 3, '.', '') }}</td>
                             <td style="text-align: right">{{ number_format((float) $item->unit_price, 2, '.', ',') }} {{ $offer->currency }}</td>
                             <td style="text-align: right">{{ number_format((float) $item->discount_percent, 2, '.', ',') }}%</td>
@@ -96,7 +94,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" style="text-align: center">Nu exista produse in oferta.</td>
+                            <td colspan="6" style="text-align: center">Nu exista produse in oferta.</td>
                         </tr>
                     @endforelse
                     </tbody>

@@ -148,8 +148,6 @@ class OfferResource extends Resource
                                 Header::make('woo_product_id')
                                     ->label('Produs')
                                     ->markAsRequired(),
-                                Header::make('sku')
-                                    ->label('SKU'),
                                 Header::make('quantity')
                                     ->label('Cant.')
                                     ->markAsRequired()
@@ -209,14 +207,6 @@ class OfferResource extends Resource
                                         }
                                     })
                                     ->columnSpan(5),
-                                TextInput::make('sku')
-                                    ->label('SKU')
-                                    ->hiddenLabel()
-                                    ->disabled()
-                                    ->dehydrated()
-                                    ->maxLength(255)
-                                    ->columnSpan(2)
-                                    ->extraInputAttributes(['class' => 'font-mono text-xs']),
                                 TextInput::make('quantity')
                                     ->label('Cantitate')
                                     ->hiddenLabel()
@@ -264,6 +254,7 @@ class OfferResource extends Resource
                                     ->content(fn (Get $get): string => static::linePreview($get))
                                     ->columnSpan(3)
                                     ->extraAttributes(['class' => 'text-right font-semibold']),
+                                Hidden::make('sku'),
                                 Hidden::make('product_name'),
                                 Hidden::make('position'),
                             ])
@@ -406,9 +397,6 @@ class OfferResource extends Resource
                                     ->label('Produs')
                                     ->formatStateUsing(fn ($state): string => html_entity_decode((string) $state, ENT_QUOTES | ENT_HTML5, 'UTF-8'))
                                     ->weight('medium'),
-                                TextEntry::make('sku')
-                                    ->label('SKU')
-                                    ->placeholder('-'),
                                 TextEntry::make('quantity')
                                     ->label('Cant.')
                                     ->formatStateUsing(fn ($state): string => number_format((float) $state, 3, '.', '')),
@@ -423,7 +411,7 @@ class OfferResource extends Resource
                                     ->formatStateUsing(fn ($state): string => static::formatCurrency((float) $state))
                                     ->weight('bold'),
                             ])
-                            ->columns(7),
+                            ->columns(6),
                     ]),
                 InfolistSection::make('Totaluri')
                     ->columns(3)
