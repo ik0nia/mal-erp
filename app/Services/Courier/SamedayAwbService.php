@@ -48,8 +48,8 @@ class SamedayAwbService
         $awbPaymentType = $this->resolveAwbPaymentType($input['awb_payment_type'] ?? null);
         $codCollectorType = $this->resolveCodCollectorType($input['cod_collector_type'] ?? null, $cashOnDelivery > 0);
         $recipientCompany = $this->resolveRecipientCompany($input);
-        $resolvedCounty = $this->resolveRecipientCounty($input);
-        $resolvedCity = $this->resolveRecipientCity($input);
+        $resolvedCounty = $this->resolveRecipientCounty($connection, $input);
+        $resolvedCity = $this->resolveRecipientCity($connection, $resolvedCounty['id'], $input);
         $resolvedAddress = $this->buildRecipientAddress($input);
 
         $recipientClass = '\\Sameday\\Objects\\PostAwb\\Request\\AwbRecipientEntityObject';
@@ -193,8 +193,8 @@ class SamedayAwbService
 
         $recipientName = $this->requireFilledString($input, 'recipient_name', 'Nume destinatar');
         $recipientPhone = $this->requireFilledString($input, 'recipient_phone', 'Telefon destinatar');
-        $resolvedCounty = $this->resolveRecipientCounty($input);
-        $resolvedCity = $this->resolveRecipientCity($input);
+        $resolvedCounty = $this->resolveRecipientCounty($connection, $input);
+        $resolvedCity = $this->resolveRecipientCity($connection, $resolvedCounty['id'], $input);
         $recipientAddress = $this->buildRecipientAddress($input);
         $recipientEmail = filled($input['recipient_email'] ?? null) ? trim((string) $input['recipient_email']) : '';
         $recipientPostalCode = filled($input['recipient_postal_code'] ?? null) ? trim((string) $input['recipient_postal_code']) : null;
@@ -1040,14 +1040,14 @@ class SamedayAwbService
      * @param  array<string, mixed>  $input
      * @return array{id: int|null, value: int|string, name: string}
      */
-    private function resolveRecipientCounty(array $input): array
+    private function resolveRecipientCounty(IntegrationConnection $connection, array $input): array
     {
         $countyId = $this->nullablePositiveInt($input['recipient_county_id'] ?? null);
         $countyName = trim((string) ($input['recipient_county'] ?? ''));
 
         if ($countyId !== null) {
             if ($countyName === '') {
-                $countyName = (string) $countyId;
+                $countyName = $this->getCountyOptions($connection)[$countyId] ?? (string) $countyId;
             }
 
             return [
@@ -1070,14 +1070,14 @@ class SamedayAwbService
      * @param  array<string, mixed>  $input
      * @return array{id: int|null, value: int|string, name: string}
      */
-    private function resolveRecipientCity(array $input): array
+    private function resolveRecipientCity(IntegrationConnection $connection, ?int $countyId, array $input): array
     {
         $cityId = $this->nullablePositiveInt($input['recipient_city_id'] ?? null);
         $cityName = trim((string) ($input['recipient_city'] ?? ''));
 
         if ($cityId !== null) {
             if ($cityName === '') {
-                $cityName = (string) $cityId;
+                $cityName = $this->getCityOptions($connection, $countyId)[$cityId] ?? (string) $cityId;
             }
 
             return [

@@ -212,51 +212,26 @@ class SamedayAwbResource extends Resource
                         TextInput::make('recipient_postal_code')
                             ->label('Cod poștal')
                             ->maxLength(32),
-                        Toggle::make('recipient_manual_locality')
-                            ->label('Introdu localitatea manual')
-                            ->helperText('Dezactivează pentru a selecta județ și oraș din nomenclatorul Sameday.')
-                            ->default(false)
-                            ->live()
-                            ->inline(false)
-                            ->columnSpanFull(),
                         Select::make('recipient_county_id')
                             ->label('Județ (Sameday)')
+                            ->helperText('Selectează județul din nomenclatorul Sameday.')
                             ->options(fn (): array => static::countyOptionsForCurrentUserLocation())
-                            ->visible(fn (Get $get): bool => ! (bool) $get('recipient_manual_locality'))
-                            ->required(fn (Get $get): bool => ! (bool) $get('recipient_manual_locality'))
+                            ->required()
                             ->searchable()
                             ->native(false)
                             ->live()
                             ->afterStateUpdated(function (Set $set, mixed $state): void {
-                                $countyId = (int) ($state ?? 0);
                                 $set('recipient_city_id', null);
-                                $set('recipient_county', static::countyNameForCurrentUserLocation($countyId) ?? '');
-                                $set('recipient_city', '');
                             }),
                         Select::make('recipient_city_id')
                             ->label('Oraș (Sameday)')
+                            ->helperText('Selectează orașul după ce alegi județul.')
                             ->options(fn (Get $get): array => static::cityOptionsForCurrentUserLocation((int) ($get('recipient_county_id') ?? 0)))
-                            ->visible(fn (Get $get): bool => ! (bool) $get('recipient_manual_locality'))
-                            ->required(fn (Get $get): bool => ! (bool) $get('recipient_manual_locality'))
+                            ->required()
                             ->disabled(fn (Get $get): bool => (int) ($get('recipient_county_id') ?? 0) <= 0)
                             ->searchable()
                             ->native(false)
-                            ->live()
-                            ->afterStateUpdated(function (Set $set, Get $get, mixed $state): void {
-                                $countyId = (int) ($get('recipient_county_id') ?? 0);
-                                $cityId = (int) ($state ?? 0);
-                                $set('recipient_city', static::cityNameForCurrentUserLocation($countyId, $cityId) ?? '');
-                            }),
-                        TextInput::make('recipient_county')
-                            ->label('Județ')
-                            ->required()
-                            ->readOnly(fn (Get $get): bool => ! (bool) $get('recipient_manual_locality'))
-                            ->maxLength(255),
-                        TextInput::make('recipient_city')
-                            ->label('Oraș')
-                            ->required()
-                            ->readOnly(fn (Get $get): bool => ! (bool) $get('recipient_manual_locality'))
-                            ->maxLength(255),
+                            ->live(),
                         TextInput::make('recipient_street')
                             ->label('Stradă')
                             ->required()
