@@ -124,6 +124,99 @@ class SamedayAwbService
     }
 
     /**
+     * Estimates AWB cost without creating shipment.
+     *
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    public function estimateAwbCost(IntegrationConnection $connection, array $input): array
+    {
+        if (! $connection->isSameday() || ! $connection->is_active) {
+            throw new RuntimeException('Conexiunea selectată nu este Sameday activă.');
+        }
+
+        $sameday = $this->newSamedayInstance($connection);
+        $pickupPointId = $this->resolvePickupPointId(
+            $sameday,
+            $input['pickup_point_id'] ?? data_get($connection->settings, 'pickup_point_id')
+        );
+        $serviceId = $this->resolveServiceId(
+            $sameday,
+            $input['service_id'] ?? data_get($connection->settings, 'default_service_id')
+        );
+
+        $packageCount = max(1, (int) ($input['package_count'] ?? 1));
+        $packageWeightKg = max(0.01, (float) ($input['package_weight_kg'] ?? 1));
+        $cashOnDelivery = max(0, (float) ($input['cod_amount'] ?? 0));
+        $insuredValue = max(0, (float) ($input['insured_value'] ?? 0));
+
+        $recipientName = $this->requireFilledString($input, 'recipient_name', 'Nume destinatar');
+        $recipientPhone = $this->requireFilledString($input, 'recipient_phone', 'Telefon destinatar');
+        $recipientCounty = $this->requireFilledString($input, 'recipient_county', 'Județ');
+        $recipientCity = $this->requireFilledString($input, 'recipient_city', 'Oraș');
+        $recipientAddress = $this->requireFilledString($input, 'recipient_address', 'Adresă');
+        $recipientEmail = filled($input['recipient_email'] ?? null) ? trim((string) $input['recipient_email']) : '';
+        $recipientPostalCode = filled($input['recipient_postal_code'] ?? null) ? trim((string) $input['recipient_postal_code']) : null;
+
+        $packageTypeClass = '\\Sameday\\Objects\\Types\\PackageType';
+        $awbPaymentTypeClass = '\\Sameday\\Objects\\Types\\AwbPaymentType';
+        $parcelDimensionsClass = '\\Sameday\\Objects\\ParcelDimensionsObject';
+        $recipientClass = '\\Sameday\\Objects\\PostAwb\\Request\\AwbRecipientEntityObject';
+        $estimateRequestClass = '\\Sameday\\Requests\\SamedayPostAwbEstimationRequest';
+
+        $packageType = new $packageTypeClass(constant($packageTypeClass.'::PARCEL'));
+        $awbPaymentType = new $awbPaymentTypeClass(constant($awbPaymentTypeClass.'::CLIENT'));
+
+        $parcels = [];
+        for ($index = 0; $index < $packageCount; $index++) {
+            $parcels[] = new $parcelDimensionsClass($packageWeightKg);
+        }
+
+        $recipient = new $recipientClass(
+            $recipientCity,
+            $recipientCounty,
+            $recipientAddress,
+            $recipientName,
+            $recipientPhone,
+            $recipientEmail,
+            null,
+            $recipientPostalCode
+        );
+
+        $request = new $estimateRequestClass(
+            $pickupPointId,
+            null,
+            $packageType,
+            $parcels,
+            $serviceId,
+            $awbPaymentType,
+            $recipient,
+            $insuredValue,
+            $cashOnDelivery,
+            null,
+            [],
+            'RON'
+        );
+
+        $response = $sameday->postAwbEstimation($request);
+        $estimatedCost = method_exists($response, 'getCost') ? (float) $response->getCost() : null;
+        $currency = method_exists($response, 'getCurrency') ? (string) $response->getCurrency() : 'RON';
+        $deliveryTimeSeconds = method_exists($response, 'getTime') ? (int) $response->getTime() : null;
+
+        if ($estimatedCost === null) {
+            throw new RuntimeException('Sameday nu a returnat un cost estimat.');
+        }
+
+        return [
+            'cost' => $estimatedCost,
+            'currency' => $currency !== '' ? $currency : 'RON',
+            'delivery_time_seconds' => $deliveryTimeSeconds,
+            'pickup_point_id' => $pickupPointId,
+            'service_id' => $serviceId,
+        ];
+    }
+
+    /**
      * @return array<int, string>
      */
     public function getPickupPointOptions(IntegrationConnection $connection): array
@@ -270,6 +363,7 @@ class SamedayAwbService
             '\\Sameday\\Requests\\SamedayGetPickupPointsRequest',
             '\\Sameday\\Requests\\SamedayGetServicesRequest',
             '\\Sameday\\Requests\\SamedayPostAwbRequest',
+            '\\Sameday\\Requests\\SamedayPostAwbEstimationRequest',
             '\\Sameday\\Objects\\ParcelDimensionsObject',
             '\\Sameday\\Objects\\Types\\PackageType',
             '\\Sameday\\Objects\\Types\\AwbPaymentType',
@@ -294,5 +388,19 @@ class SamedayAwbService
         );
 
         return new $samedayClass($client);
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    private function requireFilledString(array $input, string $key, string $label): string
+    {
+        $value = trim((string) ($input[$key] ?? ''));
+
+        if ($value === '') {
+            throw new RuntimeException("Completează câmpul „{$label}” pentru estimarea costului.");
+        }
+
+        return $value;
     }
 }

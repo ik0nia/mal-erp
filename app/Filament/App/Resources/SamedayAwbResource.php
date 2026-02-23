@@ -4,17 +4,15 @@ namespace App\Filament\App\Resources;
 
 use App\Filament\App\Resources\SamedayAwbResource\Pages;
 use App\Models\IntegrationConnection;
-use App\Models\Location;
 use App\Models\SamedayAwb;
 use App\Models\User;
 use App\Services\Courier\SamedayAwbService;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Form;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -76,36 +74,14 @@ class SamedayAwbResource extends Resource
                 Section::make('Expeditor')
                     ->columns(2)
                     ->schema([
-                        Select::make('location_id')
-                            ->label('Magazin')
-                            ->options(fn (): array => static::locationOptions())
+                        Hidden::make('location_id')
                             ->default(fn (): ?int => static::currentUser()?->location_id)
-                            ->required()
-                            ->disabled(fn (): bool => ! (static::currentUser()?->isSuperAdmin() ?? false))
-                            ->dehydrated()
-                            ->native(false)
-                            ->searchable()
-                            ->live()
-                            ->afterStateUpdated(function (Set $set, mixed $state): void {
-                                $locationId = (int) $state;
-                                if ($locationId <= 0) {
-                                    return;
-                                }
-
-                                $connection = static::resolveSamedayConnectionForLocation($locationId);
-                                if (! $connection) {
-                                    return;
-                                }
-
-                                $defaultWeight = (float) data_get($connection->settings, 'default_package_weight_kg', 1);
-                                $set('package_weight_kg', $defaultWeight > 0 ? $defaultWeight : 1);
-                            }),
+                            ->dehydrated(),
                         Select::make('pickup_point_id')
                             ->label('Pickup point Sameday')
-                            ->helperText('Dacă lași gol, se folosește pickup point-ul default din cont.')
-                            ->options(function (Get $get): array {
-                                return static::pickupPointOptionsForLocation((int) ($get('location_id') ?? 0));
-                            })
+                            ->helperText('Se selectează automat primul pickup point disponibil pentru locația ta.')
+                            ->options(fn (): array => static::pickupPointOptionsForCurrentUserLocation())
+                            ->default(fn (): ?int => static::defaultPickupPointForCurrentUserLocation())
                             ->searchable()
                             ->preload()
                             ->native(false)
@@ -113,9 +89,7 @@ class SamedayAwbResource extends Resource
                         Select::make('service_id')
                             ->label('Serviciu Sameday')
                             ->helperText('Dacă lași gol, se folosește serviciul default din cont.')
-                            ->options(function (Get $get): array {
-                                return static::serviceOptionsForLocation((int) ($get('location_id') ?? 0));
-                            })
+                            ->options(fn (): array => static::serviceOptionsForCurrentUserLocation())
                             ->searchable()
                             ->preload()
                             ->native(false)
@@ -166,7 +140,7 @@ class SamedayAwbResource extends Resource
                             ->label('Greutate / colet (kg)')
                             ->numeric()
                             ->required()
-                            ->default(fn (Get $get): float => static::defaultPackageWeightForLocation((int) ($get('location_id') ?? 0)))
+                            ->default(fn (): float => static::defaultPackageWeightForCurrentUserLocation())
                             ->minValue(0.01),
                         TextInput::make('cod_amount')
                             ->label('Ramburs (RON)')
@@ -309,29 +283,6 @@ class SamedayAwbResource extends Resource
         return $query->whereIn('location_id', $user->operationalLocationIds());
     }
 
-    /**
-     * @return array<int, string>
-     */
-    public static function locationOptions(): array
-    {
-        $query = Location::query()
-            ->where('type', Location::TYPE_STORE)
-            ->where('is_active', true)
-            ->whereHas('integrationConnections', function (Builder $connectionQuery): void {
-                $connectionQuery
-                    ->where('provider', IntegrationConnection::PROVIDER_SAMEDAY)
-                    ->where('is_active', true);
-            })
-            ->orderBy('name');
-
-        $user = static::currentUser();
-        if ($user && ! $user->isSuperAdmin()) {
-            $query->whereIn('id', $user->operationalLocationIds());
-        }
-
-        return $query->pluck('name', 'id')->all();
-    }
-
     public static function resolveSamedayConnectionForLocation(int $locationId): ?IntegrationConnection
     {
         if ($locationId <= 0) {
@@ -359,6 +310,16 @@ class SamedayAwbResource extends Resource
         return $configured > 0 ? $configured : 1.0;
     }
 
+    public static function currentUserLocationId(): int
+    {
+        return (int) (static::currentUser()?->location_id ?? 0);
+    }
+
+    public static function defaultPackageWeightForCurrentUserLocation(): float
+    {
+        return static::defaultPackageWeightForLocation(static::currentUserLocationId());
+    }
+
     /**
      * @return array<int, string>
      */
@@ -379,6 +340,31 @@ class SamedayAwbResource extends Resource
     /**
      * @return array<int, string>
      */
+    public static function pickupPointOptionsForCurrentUserLocation(): array
+    {
+        return static::pickupPointOptionsForLocation(static::currentUserLocationId());
+    }
+
+    public static function defaultPickupPointForCurrentUserLocation(): ?int
+    {
+        $options = static::pickupPointOptionsForCurrentUserLocation();
+        if ($options === []) {
+            return null;
+        }
+
+        $firstKey = array_key_first($options);
+        if (! is_int($firstKey) && ! is_string($firstKey)) {
+            return null;
+        }
+
+        $pickupPointId = (int) $firstKey;
+
+        return $pickupPointId > 0 ? $pickupPointId : null;
+    }
+
+    /**
+     * @return array<int, string>
+     */
     public static function serviceOptionsForLocation(int $locationId): array
     {
         $connection = static::resolveSamedayConnectionForLocation($locationId);
@@ -393,6 +379,14 @@ class SamedayAwbResource extends Resource
         }
     }
 
+    /**
+     * @return array<int, string>
+     */
+    public static function serviceOptionsForCurrentUserLocation(): array
+    {
+        return static::serviceOptionsForLocation(static::currentUserLocationId());
+    }
+
     private static function hasAnyAvailableSamedayConnection(): bool
     {
         $user = static::currentUser();
@@ -400,14 +394,15 @@ class SamedayAwbResource extends Resource
             return false;
         }
 
-        $query = IntegrationConnection::query()
-            ->where('provider', IntegrationConnection::PROVIDER_SAMEDAY)
-            ->where('is_active', true);
-
-        if (! $user->isSuperAdmin()) {
-            $query->whereIn('location_id', $user->operationalLocationIds());
+        $locationId = (int) ($user->location_id ?? 0);
+        if ($locationId <= 0) {
+            return false;
         }
 
-        return $query->exists();
+        return IntegrationConnection::query()
+            ->where('provider', IntegrationConnection::PROVIDER_SAMEDAY)
+            ->where('is_active', true)
+            ->where('location_id', $locationId)
+            ->exists();
     }
 }
