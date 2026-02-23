@@ -9,6 +9,7 @@ class DailyStockMetric extends Model
 {
     protected $fillable = [
         'day',
+        'reference_product_id',
         'woo_product_id',
         'opening_total_qty',
         'closing_total_qty',
@@ -31,6 +32,7 @@ class DailyStockMetric extends Model
     {
         return [
             'day' => 'date',
+            'reference_product_id' => 'string',
             'woo_product_id' => 'integer',
             'opening_total_qty' => 'decimal:3',
             'closing_total_qty' => 'decimal:3',

@@ -73,7 +73,7 @@ class WooProduct extends Model
 
     public function dailyStockMetrics(): HasMany
     {
-        return $this->hasMany(DailyStockMetric::class, 'woo_product_id');
+        return $this->hasMany(DailyStockMetric::class, 'reference_product_id', 'sku');
     }
 
     public function offerItems(): HasMany

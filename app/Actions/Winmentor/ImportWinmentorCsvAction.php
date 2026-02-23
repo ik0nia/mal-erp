@@ -333,7 +333,8 @@ class ImportWinmentorCsvAction
                 $priceUpdated = $this->isPriceUpdated($oldPrice, $price);
                 $quantityChanged = $this->numbersDiffer($oldQuantity, $newQuantity);
 
-                $dailySnapshots[$product->id] = [
+                $dailySnapshots[$sku] = [
+                    'reference_product_id' => $sku,
                     'woo_product_id' => (int) $product->id,
                     'quantity' => $newQuantity,
                     'sell_price' => $price,
