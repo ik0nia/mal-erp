@@ -108,4 +108,9 @@ class Location extends Model
     {
         return $this->hasMany(Customer::class);
     }
+
+    public function samedayAwbs(): HasMany
+    {
+        return $this->hasMany(SamedayAwb::class);
+    }
 }

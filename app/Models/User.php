@@ -101,6 +101,11 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(Offer::class);
     }
 
+    public function samedayAwbs(): HasMany
+    {
+        return $this->hasMany(SamedayAwb::class);
+    }
+
     public function isSuperAdmin(): bool
     {
         return (bool) $this->is_super_admin;
