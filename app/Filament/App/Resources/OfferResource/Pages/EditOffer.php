@@ -23,7 +23,10 @@ class EditOffer extends EditRecord
             Actions\Action::make('print')
                 ->label('Print ofertă')
                 ->icon('heroicon-o-printer')
-                ->url(fn (): string => OfferResource::getUrl('print', ['record' => $this->record]))
+                ->url(fn (): string => OfferResource::getUrl('print', [
+                    'record' => $this->record,
+                    'auto_print' => 1,
+                ]))
                 ->openUrlInNewTab(),
             Actions\DeleteAction::make(),
         ];

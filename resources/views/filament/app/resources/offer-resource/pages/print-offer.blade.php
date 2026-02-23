@@ -308,4 +308,19 @@
             }
         }
     </style>
+    @if(request()->boolean('auto_print'))
+        <script>
+            window.addEventListener('load', function () {
+                setTimeout(function () {
+                    window.print();
+                }, 180);
+
+                window.addEventListener('afterprint', function () {
+                    if (window.opener) {
+                        window.close();
+                    }
+                }, { once: true });
+            });
+        </script>
+    @endif
 </x-filament-panels::page>
