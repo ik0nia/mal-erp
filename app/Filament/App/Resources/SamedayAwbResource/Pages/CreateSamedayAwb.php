@@ -7,6 +7,8 @@ use App\Models\IntegrationConnection;
 use App\Models\SamedayAwb;
 use App\Models\User;
 use App\Services\Courier\SamedayAwbService;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
@@ -15,6 +17,79 @@ use Throwable;
 class CreateSamedayAwb extends CreateRecord
 {
     protected static string $resource = SamedayAwbResource::class;
+
+    /**
+     * @return array<int, Action>
+     */
+    protected function getFormActions(): array
+    {
+        return [
+            Action::make('estimate_cost')
+                ->label('Verifică cost')
+                ->icon('heroicon-o-calculator')
+                ->color('gray')
+                ->action(function (): void {
+                    $state = $this->form->getState();
+
+                    $user = auth()->user();
+                    if (! $user instanceof User) {
+                        Notification::make()
+                            ->warning()
+                            ->title('Estimare nereușită')
+                            ->body('Trebuie să fii autentificat pentru estimare.')
+                            ->send();
+
+                        return;
+                    }
+
+                    $locationId = (int) ($user->location_id ?? 0);
+                    if ($locationId <= 0) {
+                        Notification::make()
+                            ->warning()
+                            ->title('Estimare nereușită')
+                            ->body('Utilizatorul curent nu are locație asociată.')
+                            ->send();
+
+                        return;
+                    }
+
+                    $connection = SamedayAwbResource::resolveSamedayConnectionForLocation($locationId);
+                    if (! $connection instanceof IntegrationConnection) {
+                        Notification::make()
+                            ->warning()
+                            ->title('Estimare nereușită')
+                            ->body('Locația ta nu are conexiune Sameday activă.')
+                            ->send();
+
+                        return;
+                    }
+
+                    try {
+                        $estimate = app(SamedayAwbService::class)->estimateAwbCost($connection, $state);
+                        $amount = number_format((float) ($estimate['cost'] ?? 0), 2);
+                        $currency = (string) ($estimate['currency'] ?? 'RON');
+                        $timeText = '';
+                        $seconds = (int) ($estimate['delivery_time_seconds'] ?? 0);
+                        if ($seconds > 0) {
+                            $timeText = ' | Timp estimat: '.gmdate('H:i:s', $seconds);
+                        }
+
+                        Notification::make()
+                            ->success()
+                            ->title('Estimare cost Sameday')
+                            ->body("Cost estimat: {$amount} {$currency}{$timeText}")
+                            ->send();
+                    } catch (Throwable $exception) {
+                        Notification::make()
+                            ->warning()
+                            ->title('Estimare nereușită')
+                            ->body($exception->getMessage())
+                            ->send();
+                    }
+                }),
+            ...parent::getFormActions(),
+        ];
+    }
 
     /**
      * @param  array<string, mixed>  $data
@@ -26,25 +101,21 @@ class CreateSamedayAwb extends CreateRecord
         $user = auth()->user();
         if (! $user instanceof User) {
             throw ValidationException::withMessages([
-                'location_id' => 'Trebuie să fii autentificat pentru a crea un AWB.',
+                'recipient_name' => 'Trebuie să fii autentificat pentru a crea un AWB.',
             ]);
         }
 
-        $locationId = (int) ($data['location_id'] ?? 0);
-        if ($locationId <= 0) {
-            $locationId = (int) ($user->location_id ?? 0);
-        }
-
+        $locationId = (int) ($user->location_id ?? 0);
         if ($locationId <= 0) {
             throw ValidationException::withMessages([
-                'location_id' => 'Nu a fost selectată o locație validă.',
+                'recipient_name' => 'Utilizatorul curent nu are o locație validă.',
             ]);
         }
 
         $connection = SamedayAwbResource::resolveSamedayConnectionForLocation($locationId);
         if (! $connection instanceof IntegrationConnection) {
             throw ValidationException::withMessages([
-                'location_id' => 'Locația selectată nu are conexiune Sameday activă.',
+                'recipient_name' => 'Locația ta nu are conexiune Sameday activă.',
             ]);
         }
 
