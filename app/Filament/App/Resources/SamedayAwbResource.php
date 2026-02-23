@@ -88,10 +88,12 @@ class SamedayAwbResource extends Resource
                             ->options(fn (): array => static::pickupPointOptionsForCurrentUserLocation())
                             ->default(fn (): ?int => static::defaultPickupPointForCurrentUserLocation())
                             ->live()
-                            ->afterStateUpdated(fn (Set $set, mixed $state): void => $set(
-                                'contact_person_id',
-                                static::defaultContactPersonForCurrentUserLocation((int) ($state ?? 0))
-                            ))
+                            ->afterStateUpdated(function (Set $set, mixed $state): void {
+                                $set(
+                                    'contact_person_id',
+                                    static::defaultContactPersonForCurrentUserLocation((int) ($state ?? 0))
+                                );
+                            })
                             ->searchable()
                             ->preload()
                             ->native(false)

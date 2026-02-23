@@ -31,16 +31,24 @@ class ImportWinmentorCsvJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $connection = IntegrationConnection::query()->findOrFail($this->connectionId);
+        $connectionId = $this->safeConnectionId();
+        if (! $connectionId) {
+            Log::error('Winmentor import queue job missing connection id');
+
+            return;
+        }
+
+        $syncRunId = $this->safeSyncRunId();
+        $connection = IntegrationConnection::query()->findOrFail($connectionId);
         $run = null;
 
-        if ($this->syncRunId) {
-            $run = SyncRun::query()->find($this->syncRunId);
+        if ($syncRunId) {
+            $run = SyncRun::query()->find($syncRunId);
         }
 
         Log::info('Winmentor import queue job picked by worker', [
-            'connection_id' => $this->connectionId,
-            'sync_run_id' => $this->syncRunId,
+            'connection_id' => $connectionId,
+            'sync_run_id' => $syncRunId,
             'resolved_run_status' => $run?->status,
         ]);
 
@@ -49,17 +57,20 @@ class ImportWinmentorCsvJob implements ShouldQueue
 
     public function failed(Throwable $exception): void
     {
+        $connectionId = $this->safeConnectionId();
+        $syncRunId = $this->safeSyncRunId();
+
         Log::error('Winmentor import queue job failed', [
-            'connection_id' => $this->connectionId,
-            'sync_run_id' => $this->syncRunId,
+            'connection_id' => $connectionId,
+            'sync_run_id' => $syncRunId,
             'error' => $exception->getMessage(),
         ]);
 
-        if (! $this->syncRunId) {
+        if (! $syncRunId) {
             return;
         }
 
-        $run = SyncRun::query()->find($this->syncRunId);
+        $run = SyncRun::query()->find($syncRunId);
 
         if (! $run) {
             return;
@@ -83,5 +94,23 @@ class ImportWinmentorCsvJob implements ShouldQueue
             'stats' => $stats,
             'errors' => $errors,
         ]);
+    }
+
+    private function safeConnectionId(): ?int
+    {
+        if (! isset($this->connectionId)) {
+            return null;
+        }
+
+        return $this->connectionId > 0 ? $this->connectionId : null;
+    }
+
+    private function safeSyncRunId(): ?int
+    {
+        if (! isset($this->syncRunId)) {
+            return null;
+        }
+
+        return $this->syncRunId && $this->syncRunId > 0 ? $this->syncRunId : null;
     }
 }
