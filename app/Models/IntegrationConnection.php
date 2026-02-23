@@ -11,6 +11,7 @@ class IntegrationConnection extends Model
 {
     public const PROVIDER_WOOCOMMERCE = 'woocommerce';
     public const PROVIDER_WINMENTOR_CSV = 'winmentor_csv';
+    public const PROVIDER_SAMEDAY = 'sameday';
 
     protected $fillable = [
         'location_id',
@@ -101,9 +102,38 @@ class IntegrationConnection extends Model
         return $this->provider === self::PROVIDER_WINMENTOR_CSV;
     }
 
+    public function isSameday(): bool
+    {
+        return $this->provider === self::PROVIDER_SAMEDAY;
+    }
+
     public function csvUrl(): string
     {
         return trim((string) data_get($this->settings, 'csv_url', $this->base_url));
+    }
+
+    public function samedayUsername(): string
+    {
+        return trim((string) $this->consumer_key);
+    }
+
+    public function samedayPassword(): string
+    {
+        return trim((string) $this->consumer_secret);
+    }
+
+    public function samedayApiUrl(): string
+    {
+        $configured = trim((string) $this->base_url);
+
+        if ($configured !== '') {
+            return rtrim($configured, '/');
+        }
+
+        return match (strtolower((string) data_get($this->settings, 'environment', 'production'))) {
+            'demo' => 'https://sameday-api.demo.zitec.com',
+            default => 'https://api.sameday.ro',
+        };
     }
 
     public function shouldPushPriceToSite(bool $default = true): bool
@@ -135,6 +165,7 @@ class IntegrationConnection extends Model
         return [
             self::PROVIDER_WOOCOMMERCE => 'WooCommerce',
             self::PROVIDER_WINMENTOR_CSV => 'WinMentor CSV',
+            self::PROVIDER_SAMEDAY => 'Sameday Courier',
         ];
     }
 }

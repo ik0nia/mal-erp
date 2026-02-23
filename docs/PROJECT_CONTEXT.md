@@ -51,6 +51,7 @@ User access is driven by:
   - providers:
     - `woocommerce`
     - `winmentor_csv`
+    - `sameday`
   - provider-specific settings live in `settings` JSON
 - `sync_runs`
   - tracks every import execution
@@ -148,7 +149,7 @@ Key phase values in `sync_runs.stats.phase`:
 
 Admin panel:
 - `IntegrationConnectionResource`
-  - test connection (Woo and WinMentor CSV URL)
+  - test connection (Woo, WinMentor CSV, Sameday)
   - import actions:
     - Woo categories
     - Woo products
@@ -174,6 +175,9 @@ App panel:
 - `woo:import-products {connectionId}`
 - `stock:import-winmentor {connectionId}`
 - `stock:dispatch-scheduled-winmentor`
+
+Sameday SDK install (required for Sameday test connection):
+- `composer require sameday-courier/php-sdk`
 
 Scheduler behavior:
 - `routes/console.php` runs `stock:dispatch-scheduled-winmentor` every minute.

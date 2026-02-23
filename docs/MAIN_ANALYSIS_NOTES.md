@@ -8,6 +8,7 @@ Quick technical analysis of current main functionality, focused on integration r
 - Integrations are centered around `integration_connections` and `sync_runs`.
 - Woo imports and WinMentor imports are intentionally async-first and observable via `sync_runs`.
 - Sales workflow (customers + offers) is now a first-class module.
+- Courier APIs can be attached per location through `integration_connections` (starting with Sameday).
 
 ## Reliability hotspots (ordered by operational impact)
 

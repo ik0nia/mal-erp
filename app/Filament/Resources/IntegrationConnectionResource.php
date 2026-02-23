@@ -10,6 +10,7 @@ use App\Models\IntegrationConnection;
 use App\Models\Location;
 use App\Models\SyncRun;
 use App\Models\User;
+use App\Services\Courier\SamedayConnectionTester;
 use App\Services\WooCommerce\WooClient;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
@@ -104,26 +105,29 @@ class IntegrationConnectionResource extends Resource
                     ->required()
                     ->maxLength(255),
                 TextInput::make('base_url')
-                    ->label('Base URL')
-                    ->visible(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE)
+                    ->label(fn (Get $get): string => $get('provider') === IntegrationConnection::PROVIDER_SAMEDAY ? 'API URL' : 'Base URL')
+                    ->visible(fn (Get $get): bool => in_array($get('provider'), [IntegrationConnection::PROVIDER_WOOCOMMERCE, IntegrationConnection::PROVIDER_SAMEDAY], true))
                     ->required(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE)
                     ->url()
+                    ->helperText(fn (Get $get): ?string => $get('provider') === IntegrationConnection::PROVIDER_SAMEDAY
+                        ? 'Production: https://api.sameday.ro | Demo: https://sameday-api.demo.zitec.com'
+                        : null)
                     ->maxLength(255),
                 TextInput::make('consumer_key')
-                    ->label('Consumer Key')
+                    ->label(fn (Get $get): string => $get('provider') === IntegrationConnection::PROVIDER_SAMEDAY ? 'Sameday Username' : 'Consumer Key')
                     ->password()
                     ->revealable()
-                    ->visible(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE)
-                    ->required(fn (Get $get, string $operation): bool => $operation === 'create' && $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE)
-                    ->dehydrated(fn (Get $get, ?string $state): bool => $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE ? filled($state) : false)
+                    ->visible(fn (Get $get): bool => in_array($get('provider'), [IntegrationConnection::PROVIDER_WOOCOMMERCE, IntegrationConnection::PROVIDER_SAMEDAY], true))
+                    ->required(fn (Get $get, string $operation): bool => $operation === 'create' && in_array($get('provider'), [IntegrationConnection::PROVIDER_WOOCOMMERCE, IntegrationConnection::PROVIDER_SAMEDAY], true))
+                    ->dehydrated(fn (Get $get, ?string $state): bool => in_array($get('provider'), [IntegrationConnection::PROVIDER_WOOCOMMERCE, IntegrationConnection::PROVIDER_SAMEDAY], true) ? filled($state) : false)
                     ->maxLength(65535),
                 TextInput::make('consumer_secret')
-                    ->label('Consumer Secret')
+                    ->label(fn (Get $get): string => $get('provider') === IntegrationConnection::PROVIDER_SAMEDAY ? 'Sameday Password' : 'Consumer Secret')
                     ->password()
                     ->revealable()
-                    ->visible(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE)
-                    ->required(fn (Get $get, string $operation): bool => $operation === 'create' && $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE)
-                    ->dehydrated(fn (Get $get, ?string $state): bool => $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE ? filled($state) : false)
+                    ->visible(fn (Get $get): bool => in_array($get('provider'), [IntegrationConnection::PROVIDER_WOOCOMMERCE, IntegrationConnection::PROVIDER_SAMEDAY], true))
+                    ->required(fn (Get $get, string $operation): bool => $operation === 'create' && in_array($get('provider'), [IntegrationConnection::PROVIDER_WOOCOMMERCE, IntegrationConnection::PROVIDER_SAMEDAY], true))
+                    ->dehydrated(fn (Get $get, ?string $state): bool => in_array($get('provider'), [IntegrationConnection::PROVIDER_WOOCOMMERCE, IntegrationConnection::PROVIDER_SAMEDAY], true) ? filled($state) : false)
                     ->maxLength(65535),
                 Toggle::make('verify_ssl')
                     ->label('Verify SSL')
@@ -201,6 +205,33 @@ class IntegrationConnectionResource extends Resource
                             ->minValue(5),
                     ])
                     ->visible(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WINMENTOR_CSV)
+                    ->columns(2),
+                Section::make('Setări Sameday')
+                    ->schema([
+                        Select::make('settings.environment')
+                            ->label('Mediu API')
+                            ->options([
+                                'production' => 'Production',
+                                'demo' => 'Demo',
+                            ])
+                            ->default('production')
+                            ->native(false),
+                        TextInput::make('settings.pickup_point_id')
+                            ->label('Pickup point ID (optional)')
+                            ->numeric()
+                            ->minValue(1),
+                        TextInput::make('settings.default_package_weight_kg')
+                            ->label('Greutate implicită colet (kg)')
+                            ->numeric()
+                            ->default(1)
+                            ->minValue(0.01),
+                        TextInput::make('settings.timeout')
+                            ->label('Timeout (sec)')
+                            ->numeric()
+                            ->default(30)
+                            ->minValue(5),
+                    ])
+                    ->visible(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_SAMEDAY)
                     ->columns(2),
             ]);
     }
@@ -357,6 +388,8 @@ class IntegrationConnectionResource extends Resource
                                     ->get($csvUrl);
 
                                 $response->throw();
+                            } elseif ($record->isSameday()) {
+                                app(SamedayConnectionTester::class)->testConnection($record);
                             }
 
                             Notification::make()
