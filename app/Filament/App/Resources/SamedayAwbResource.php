@@ -7,6 +7,7 @@ use App\Models\IntegrationConnection;
 use App\Models\SamedayAwb;
 use App\Models\User;
 use App\Services\Courier\SamedayAwbService;
+use Filament\Notifications\Notification;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
@@ -177,6 +178,7 @@ class SamedayAwbResource extends Resource
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         SamedayAwb::STATUS_CREATED => 'success',
+                        SamedayAwb::STATUS_CANCELLED => 'gray',
                         SamedayAwb::STATUS_FAILED => 'danger',
                         default => 'gray',
                     }),
@@ -209,10 +211,63 @@ class SamedayAwbResource extends Resource
                     ->label('Status')
                     ->options([
                         SamedayAwb::STATUS_CREATED => 'created',
+                        SamedayAwb::STATUS_CANCELLED => 'cancelled',
                         SamedayAwb::STATUS_FAILED => 'failed',
                     ]),
             ])
             ->actions([
+                Tables\Actions\Action::make('cancel_awb')
+                    ->label('Anulează')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading('Anulează AWB')
+                    ->modalDescription('AWB-ul va fi anulat în Sameday. Operația nu poate fi inversată.')
+                    ->visible(fn (SamedayAwb $record): bool => $record->status === SamedayAwb::STATUS_CREATED && filled($record->awb_number))
+                    ->action(function (SamedayAwb $record): void {
+                        $connection = $record->connection;
+                        if (! $connection instanceof IntegrationConnection) {
+                            $connection = static::resolveSamedayConnectionForLocation((int) $record->location_id);
+                        }
+
+                        if (! $connection instanceof IntegrationConnection) {
+                            Notification::make()
+                                ->warning()
+                                ->title('Anulare nereușită')
+                                ->body('Nu există conexiune Sameday activă pentru această locație.')
+                                ->send();
+
+                            return;
+                        }
+
+                        try {
+                            $result = app(SamedayAwbService::class)->cancelAwb($connection, (string) $record->awb_number);
+
+                            $responsePayload = is_array($record->response_payload) ? $record->response_payload : [];
+                            $responsePayload['cancel_awb'] = [
+                                'cancelled_at' => now()->toIso8601String(),
+                                'response' => $result['response_payload'] ?? null,
+                            ];
+
+                            $record->forceFill([
+                                'status' => SamedayAwb::STATUS_CANCELLED,
+                                'response_payload' => $responsePayload,
+                                'error_message' => null,
+                            ])->save();
+
+                            Notification::make()
+                                ->success()
+                                ->title('AWB anulat')
+                                ->body("AWB {$record->awb_number} a fost anulat în Sameday.")
+                                ->send();
+                        } catch (Throwable $exception) {
+                            Notification::make()
+                                ->warning()
+                                ->title('Anulare nereușită')
+                                ->body($exception->getMessage())
+                                ->send();
+                        }
+                    }),
                 Tables\Actions\Action::make('details')
                     ->label('Detalii')
                     ->icon('heroicon-o-eye')

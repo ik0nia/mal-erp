@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class SamedayAwb extends Model
 {
     public const STATUS_CREATED = 'created';
+    public const STATUS_CANCELLED = 'cancelled';
     public const STATUS_FAILED = 'failed';
 
     protected $fillable = [
