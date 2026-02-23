@@ -220,6 +220,10 @@ class IntegrationConnectionResource extends Resource
                             ->label('Pickup point ID (optional)')
                             ->numeric()
                             ->minValue(1),
+                        TextInput::make('settings.default_service_id')
+                            ->label('Service ID implicit (optional)')
+                            ->numeric()
+                            ->minValue(1),
                         TextInput::make('settings.default_package_weight_kg')
                             ->label('Greutate implicită colet (kg)')
                             ->numeric()

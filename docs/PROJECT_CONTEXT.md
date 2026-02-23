@@ -71,6 +71,7 @@ User access is driven by:
 - `customer_delivery_addresses`
 - `offers`
 - `offer_items`
+- `sameday_awbs` (operational shipping/AWB records)
 
 ### D) Company data API
 - `company_api_settings` (OpenAPI provider)
@@ -167,6 +168,7 @@ App panel:
 - `WooProductResource`, `WooCategoryResource`
 - `OfferResource` (+ print/preview pages)
 - `CustomerResource`
+- `SamedayAwbResource` (Livrare / Creează AWB Sameday)
 
 ---
 
@@ -178,6 +180,11 @@ App panel:
 
 Sameday SDK install (required for Sameday test connection):
 - `composer require sameday-courier/php-sdk`
+
+Sameday connection settings can define defaults used by AWB form:
+- `settings.pickup_point_id`
+- `settings.default_service_id`
+- `settings.default_package_weight_kg`
 
 Scheduler behavior:
 - `routes/console.php` runs `stock:dispatch-scheduled-winmentor` every minute.
