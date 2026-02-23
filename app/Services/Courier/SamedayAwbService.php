@@ -217,6 +217,50 @@ class SamedayAwbService
     }
 
     /**
+     * Cancels an existing AWB in Sameday.
+     *
+     * @return array<string, mixed>
+     */
+    public function cancelAwb(IntegrationConnection $connection, string $awbNumber): array
+    {
+        if (! $connection->isSameday() || ! $connection->is_active) {
+            throw new RuntimeException('Conexiunea selectată nu este Sameday activă.');
+        }
+
+        $awbNumber = trim($awbNumber);
+        if ($awbNumber === '') {
+            throw new RuntimeException('Numărul AWB este obligatoriu pentru anulare.');
+        }
+
+        $deleteAwbRequestClass = '\\Sameday\\Requests\\SamedayDeleteAwbRequest';
+        if (! class_exists($deleteAwbRequestClass)) {
+            throw new RuntimeException('Sameday SDK lipsește. Rulează: composer require sameday-courier/php-sdk');
+        }
+
+        $sameday = $this->newSamedayInstance($connection);
+        $request = new $deleteAwbRequestClass($awbNumber);
+        $response = $sameday->deleteAwb($request);
+
+        $rawResponseBody = '';
+        if (is_object($response) && method_exists($response, 'getRawResponse')) {
+            $rawResponse = $response->getRawResponse();
+            if (is_object($rawResponse) && method_exists($rawResponse, 'getBody')) {
+                $rawResponseBody = (string) $rawResponse->getBody();
+            }
+        }
+
+        $decodedResponse = json_decode($rawResponseBody, true);
+        if (! is_array($decodedResponse)) {
+            $decodedResponse = ['raw_body' => $rawResponseBody];
+        }
+
+        return [
+            'awb_number' => $awbNumber,
+            'response_payload' => $decodedResponse,
+        ];
+    }
+
+    /**
      * @return array<int, string>
      */
     public function getPickupPointOptions(IntegrationConnection $connection): array
@@ -364,6 +408,7 @@ class SamedayAwbService
             '\\Sameday\\Requests\\SamedayGetServicesRequest',
             '\\Sameday\\Requests\\SamedayPostAwbRequest',
             '\\Sameday\\Requests\\SamedayPostAwbEstimationRequest',
+            '\\Sameday\\Requests\\SamedayDeleteAwbRequest',
             '\\Sameday\\Objects\\ParcelDimensionsObject',
             '\\Sameday\\Objects\\Types\\PackageType',
             '\\Sameday\\Objects\\Types\\AwbPaymentType',
