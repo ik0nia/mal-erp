@@ -111,6 +111,22 @@ class IntegrationConnection extends Model
         return (bool) data_get($this->settings, 'push_price_to_site', $default);
     }
 
+    public function shouldAutoScheduleWinmentorImport(bool $default = false): bool
+    {
+        if (! $this->isWinmentorCsv() || ! $this->is_active) {
+            return false;
+        }
+
+        return (bool) data_get($this->settings, 'auto_sync_enabled', $default);
+    }
+
+    public function resolveWinmentorSyncIntervalMinutes(int $default = 60): int
+    {
+        $value = (int) data_get($this->settings, 'sync_interval_minutes', $default);
+
+        return max(5, $value);
+    }
+
     /**
      * @return array<string, string>
      */

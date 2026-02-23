@@ -173,6 +173,13 @@ App panel:
 - `woo:import-categories {connectionId}`
 - `woo:import-products {connectionId}`
 - `stock:import-winmentor {connectionId}`
+- `stock:dispatch-scheduled-winmentor`
+
+Scheduler behavior:
+- `routes/console.php` runs `stock:dispatch-scheduled-winmentor` every minute.
+- Each active WinMentor connection can control its own schedule from settings:
+  - `settings.auto_sync_enabled` (on/off)
+  - `settings.sync_interval_minutes` (minimum 5 minutes)
 
 ---
 

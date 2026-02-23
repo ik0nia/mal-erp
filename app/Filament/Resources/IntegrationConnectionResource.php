@@ -183,6 +183,17 @@ class IntegrationConnectionResource extends Resource
                         Toggle::make('settings.push_price_to_site')
                             ->label('Trimite prețul către site (Woo)')
                             ->default(true),
+                        Toggle::make('settings.auto_sync_enabled')
+                            ->label('Rulează import automat (scheduler)')
+                            ->default(false)
+                            ->helperText('Când este activ, serverul pornește importul pe intervalul de mai jos.'),
+                        TextInput::make('settings.sync_interval_minutes')
+                            ->label('Interval import (minute)')
+                            ->numeric()
+                            ->default(60)
+                            ->minValue(5)
+                            ->required(fn (Get $get): bool => (bool) $get('settings.auto_sync_enabled'))
+                            ->helperText('Exemplu: 30 = import la fiecare 30 de minute.'),
                         TextInput::make('settings.timeout')
                             ->label('Timeout (sec)')
                             ->numeric()
