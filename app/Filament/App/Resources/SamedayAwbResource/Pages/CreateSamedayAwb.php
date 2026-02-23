@@ -119,6 +119,14 @@ class CreateSamedayAwb extends CreateRecord
             ]);
         }
 
+        $fallbackCounty = SamedayAwbResource::countyNameForCurrentUserLocation((int) ($data['recipient_county_id'] ?? 0))
+            ?? trim((string) ($data['recipient_county'] ?? ''));
+        $fallbackCity = SamedayAwbResource::cityNameForCurrentUserLocation(
+            (int) ($data['recipient_county_id'] ?? 0),
+            (int) ($data['recipient_city_id'] ?? 0)
+        ) ?? trim((string) ($data['recipient_city'] ?? ''));
+        $fallbackAddress = $this->composeAddressFromData($data);
+
         try {
             $result = app(SamedayAwbService::class)->createAwb($connection, $data);
             $resolvedPackageCount = max(
@@ -142,9 +150,9 @@ class CreateSamedayAwb extends CreateRecord
                 'recipient_name' => trim((string) ($data['recipient_name'] ?? '')),
                 'recipient_phone' => trim((string) ($data['recipient_phone'] ?? '')),
                 'recipient_email' => filled($data['recipient_email'] ?? null) ? trim((string) $data['recipient_email']) : null,
-                'recipient_county' => trim((string) data_get($result, 'request_payload.recipient_county', $data['recipient_county'] ?? '')),
-                'recipient_city' => trim((string) data_get($result, 'request_payload.recipient_city', $data['recipient_city'] ?? '')),
-                'recipient_address' => trim((string) data_get($result, 'request_payload.recipient_address', $data['recipient_address'] ?? '')),
+                'recipient_county' => trim((string) data_get($result, 'request_payload.recipient_county', $fallbackCounty)),
+                'recipient_city' => trim((string) data_get($result, 'request_payload.recipient_city', $fallbackCity)),
+                'recipient_address' => trim((string) data_get($result, 'request_payload.recipient_address', $fallbackAddress)),
                 'recipient_postal_code' => filled($data['recipient_postal_code'] ?? null) ? trim((string) $data['recipient_postal_code']) : null,
                 'package_count' => $resolvedPackageCount,
                 'package_weight_kg' => $resolvedPackageWeight,
@@ -170,9 +178,9 @@ class CreateSamedayAwb extends CreateRecord
                 'recipient_name' => trim((string) ($data['recipient_name'] ?? '')),
                 'recipient_phone' => trim((string) ($data['recipient_phone'] ?? '')),
                 'recipient_email' => filled($data['recipient_email'] ?? null) ? trim((string) $data['recipient_email']) : null,
-                'recipient_county' => trim((string) ($data['recipient_county'] ?? '')),
-                'recipient_city' => trim((string) ($data['recipient_city'] ?? '')),
-                'recipient_address' => trim((string) ($data['recipient_address'] ?? '')),
+                'recipient_county' => $fallbackCounty,
+                'recipient_city' => $fallbackCity,
+                'recipient_address' => $fallbackAddress,
                 'recipient_postal_code' => filled($data['recipient_postal_code'] ?? null) ? trim((string) $data['recipient_postal_code']) : null,
                 'package_count' => max(1, (int) ($data['package_count'] ?? 1)),
                 'package_weight_kg' => max(0.01, (float) ($data['package_weight_kg'] ?? 1)),
@@ -190,5 +198,38 @@ class CreateSamedayAwb extends CreateRecord
                 'recipient_name' => 'Nu s-a putut crea AWB: '.$exception->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function composeAddressFromData(array $data): string
+    {
+        $explicit = trim((string) ($data['recipient_address'] ?? ''));
+        if ($explicit !== '') {
+            return $explicit;
+        }
+
+        $street = trim((string) ($data['recipient_street'] ?? ''));
+        if ($street === '') {
+            return '';
+        }
+
+        $parts = ["Str. {$street}"];
+
+        foreach ([
+            'recipient_street_no' => 'Nr.',
+            'recipient_block' => 'Bl.',
+            'recipient_staircase' => 'Sc.',
+            'recipient_floor' => 'Et.',
+            'recipient_apartment' => 'Ap.',
+        ] as $field => $label) {
+            $value = trim((string) ($data[$field] ?? ''));
+            if ($value !== '') {
+                $parts[] = "{$label} {$value}";
+            }
+        }
+
+        return implode(', ', $parts);
     }
 }
