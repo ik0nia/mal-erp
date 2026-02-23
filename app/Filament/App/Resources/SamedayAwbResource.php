@@ -125,14 +125,12 @@ class SamedayAwbResource extends Resource
                             ->options(fn (Get $get): array => static::serviceTaxOptionsForCurrentUserLocation((int) ($get('service_id') ?? 0)))
                             ->multiple()
                             ->searchable()
-                            ->preload()
                             ->native(false),
                         Select::make('delivery_interval_id')
                             ->label('Interval livrare')
                             ->helperText('Disponibil doar pentru serviciile care permit intervale dedicate.')
                             ->options(fn (Get $get): array => static::deliveryIntervalOptionsForCurrentUserLocation((int) ($get('service_id') ?? 0)))
                             ->searchable()
-                            ->preload()
                             ->native(false)
                             ->nullable(),
                         Toggle::make('third_party_pickup')
@@ -227,7 +225,6 @@ class SamedayAwbResource extends Resource
                             ->visible(fn (Get $get): bool => ! (bool) $get('recipient_manual_locality'))
                             ->required(fn (Get $get): bool => ! (bool) $get('recipient_manual_locality'))
                             ->searchable()
-                            ->preload()
                             ->native(false)
                             ->live()
                             ->afterStateUpdated(function (Set $set, mixed $state): void {
@@ -243,7 +240,6 @@ class SamedayAwbResource extends Resource
                             ->required(fn (Get $get): bool => ! (bool) $get('recipient_manual_locality'))
                             ->disabled(fn (Get $get): bool => (int) ($get('recipient_county_id') ?? 0) <= 0)
                             ->searchable()
-                            ->preload()
                             ->native(false)
                             ->live()
                             ->afterStateUpdated(function (Set $set, Get $get, mixed $state): void {
