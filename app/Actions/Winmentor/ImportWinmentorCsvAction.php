@@ -8,6 +8,7 @@ use App\Models\ProductPriceLog;
 use App\Models\ProductStock;
 use App\Models\SyncRun;
 use App\Models\WooProduct;
+use App\Services\Winmentor\DailyStockMetricAggregator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -41,6 +42,8 @@ class ImportWinmentorCsvAction
             'site_price_push_queued' => 0,
             'site_price_push_processed' => 0,
             'created_placeholders' => 0,
+            'daily_metrics_products' => 0,
+            'daily_metrics_failed' => false,
             'local_started_at' => null,
             'local_finished_at' => null,
             'push_started_at' => null,
@@ -207,6 +210,7 @@ class ImportWinmentorCsvAction
             $priceLogsToInsert = [];
             $productUpdatesById = [];
             $sitePricePushesByConnection = [];
+            $dailySnapshots = [];
             $cancelled = false;
 
             foreach ($rows as $rowNumber => $row) {
@@ -329,6 +333,12 @@ class ImportWinmentorCsvAction
                 $priceUpdated = $this->isPriceUpdated($oldPrice, $price);
                 $quantityChanged = $this->numbersDiffer($oldQuantity, $newQuantity);
 
+                $dailySnapshots[$product->id] = [
+                    'woo_product_id' => (int) $product->id,
+                    'quantity' => $newQuantity,
+                    'sell_price' => $price,
+                ];
+
                 if ($isNew || $quantityChanged || $priceDifferent) {
                     if ($isNew) {
                         $stats['created']++;
@@ -448,6 +458,28 @@ class ImportWinmentorCsvAction
                         ['woo_product_id', 'location_id'],
                         ['quantity', 'price', 'source', 'sync_run_id', 'synced_at', 'updated_at']
                     );
+                }
+            }
+
+            if ($dailySnapshots !== []) {
+                try {
+                    $stats['daily_metrics_products'] = app(DailyStockMetricAggregator::class)->recordSnapshots(
+                        $batchTimestamp,
+                        array_values($dailySnapshots)
+                    );
+                    $stats['daily_metrics_failed'] = false;
+                    $stats['last_heartbeat_at'] = now()->toIso8601String();
+                } catch (Throwable $exception) {
+                    $stats['daily_metrics_failed'] = true;
+                    $this->appendError($errors, [
+                        'message' => 'Daily stock metrics update failed: '.$exception->getMessage(),
+                    ]);
+
+                    Log::warning('Daily stock metrics update failed during Winmentor import', [
+                        'sync_run_id' => $run->id,
+                        'processed_products' => count($dailySnapshots),
+                        'error' => $exception->getMessage(),
+                    ]);
                 }
             }
 
