@@ -121,6 +121,14 @@ class CreateSamedayAwb extends CreateRecord
 
         try {
             $result = app(SamedayAwbService::class)->createAwb($connection, $data);
+            $resolvedPackageCount = max(
+                1,
+                (int) data_get($result, 'request_payload.package_count', max(1, (int) ($data['package_count'] ?? 1)))
+            );
+            $resolvedPackageWeight = max(
+                0.01,
+                (float) data_get($result, 'request_payload.package_weight_kg', max(0.01, (float) ($data['package_weight_kg'] ?? 1)))
+            );
 
             return SamedayAwb::query()->create([
                 'location_id' => $locationId,
@@ -138,8 +146,8 @@ class CreateSamedayAwb extends CreateRecord
                 'recipient_city' => trim((string) ($data['recipient_city'] ?? '')),
                 'recipient_address' => trim((string) ($data['recipient_address'] ?? '')),
                 'recipient_postal_code' => filled($data['recipient_postal_code'] ?? null) ? trim((string) $data['recipient_postal_code']) : null,
-                'package_count' => max(1, (int) ($data['package_count'] ?? 1)),
-                'package_weight_kg' => max(0.01, (float) ($data['package_weight_kg'] ?? 1)),
+                'package_count' => $resolvedPackageCount,
+                'package_weight_kg' => $resolvedPackageWeight,
                 'cod_amount' => max(0, (float) ($data['cod_amount'] ?? 0)),
                 'insured_value' => max(0, (float) ($data['insured_value'] ?? 0)),
                 'shipping_cost' => isset($result['shipping_cost']) ? (float) $result['shipping_cost'] : null,

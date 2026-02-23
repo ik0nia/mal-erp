@@ -9,11 +9,15 @@ use App\Models\User;
 use App\Services\Courier\SamedayAwbService;
 use Filament\Notifications\Notification;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -83,6 +87,19 @@ class SamedayAwbResource extends Resource
                             ->helperText('Se selectează automat primul pickup point disponibil pentru locația ta.')
                             ->options(fn (): array => static::pickupPointOptionsForCurrentUserLocation())
                             ->default(fn (): ?int => static::defaultPickupPointForCurrentUserLocation())
+                            ->live()
+                            ->afterStateUpdated(fn (Set $set, mixed $state): void => $set(
+                                'contact_person_id',
+                                static::defaultContactPersonForCurrentUserLocation((int) ($state ?? 0))
+                            ))
+                            ->searchable()
+                            ->preload()
+                            ->native(false)
+                            ->nullable(),
+                        Select::make('contact_person_id')
+                            ->label('Persoană contact')
+                            ->options(fn (Get $get): array => static::contactPersonOptionsForCurrentUserLocation((int) ($get('pickup_point_id') ?? 0)))
+                            ->default(fn (Get $get): ?int => static::defaultContactPersonForCurrentUserLocation((int) ($get('pickup_point_id') ?? 0)))
                             ->searchable()
                             ->preload()
                             ->native(false)
@@ -90,15 +107,75 @@ class SamedayAwbResource extends Resource
                         Select::make('service_id')
                             ->label('Serviciu Sameday')
                             ->helperText('Dacă lași gol, se folosește serviciul default din cont.')
+                            ->default(fn (): ?int => static::defaultServiceForCurrentUserLocation())
                             ->options(fn (): array => static::serviceOptionsForCurrentUserLocation())
+                            ->live()
+                            ->afterStateUpdated(function (Set $set): void {
+                                $set('service_tax_ids', []);
+                                $set('delivery_interval_id', null);
+                            })
                             ->searchable()
                             ->preload()
                             ->native(false)
                             ->nullable(),
+                        Select::make('service_tax_ids')
+                            ->label('Servicii adiționale')
+                            ->options(fn (Get $get): array => static::serviceTaxOptionsForCurrentUserLocation((int) ($get('service_id') ?? 0)))
+                            ->multiple()
+                            ->searchable()
+                            ->preload()
+                            ->native(false),
+                        Select::make('delivery_interval_id')
+                            ->label('Interval livrare')
+                            ->helperText('Disponibil doar pentru serviciile care permit intervale dedicate.')
+                            ->options(fn (Get $get): array => static::deliveryIntervalOptionsForCurrentUserLocation((int) ($get('service_id') ?? 0)))
+                            ->searchable()
+                            ->preload()
+                            ->native(false)
+                            ->nullable(),
+                        Toggle::make('third_party_pickup')
+                            ->label('Ridicare de la terț')
+                            ->helperText('Activează dacă ridicarea se face de la altă adresă decât pickup point-ul selectat.')
+                            ->default(false)
+                            ->inline(false),
+                        TextInput::make('third_party_name')
+                            ->label('Nume terț ridicare')
+                            ->visible(fn (Get $get): bool => (bool) $get('third_party_pickup'))
+                            ->maxLength(255),
+                        TextInput::make('third_party_phone')
+                            ->label('Telefon terț ridicare')
+                            ->visible(fn (Get $get): bool => (bool) $get('third_party_pickup'))
+                            ->maxLength(64),
+                        TextInput::make('third_party_county')
+                            ->label('Județ terț ridicare')
+                            ->visible(fn (Get $get): bool => (bool) $get('third_party_pickup'))
+                            ->maxLength(255),
+                        TextInput::make('third_party_city')
+                            ->label('Oraș terț ridicare')
+                            ->visible(fn (Get $get): bool => (bool) $get('third_party_pickup'))
+                            ->maxLength(255),
+                        TextInput::make('third_party_postal_code')
+                            ->label('Cod poștal terț')
+                            ->visible(fn (Get $get): bool => (bool) $get('third_party_pickup'))
+                            ->maxLength(32),
+                        Textarea::make('third_party_address')
+                            ->label('Adresă terț ridicare')
+                            ->visible(fn (Get $get): bool => (bool) $get('third_party_pickup'))
+                            ->rows(2)
+                            ->columnSpanFull(),
                     ]),
                 Section::make('Destinatar')
                     ->columns(2)
                     ->schema([
+                        Select::make('recipient_type')
+                            ->label('Tip destinatar')
+                            ->options([
+                                'individual' => 'Persoană fizică',
+                                'company' => 'Persoană juridică',
+                            ])
+                            ->default('individual')
+                            ->live()
+                            ->native(false),
                         TextInput::make('recipient_name')
                             ->label('Nume destinatar')
                             ->required()
@@ -106,6 +183,27 @@ class SamedayAwbResource extends Resource
                         TextInput::make('recipient_phone')
                             ->label('Telefon destinatar')
                             ->required()
+                            ->maxLength(64),
+                        TextInput::make('recipient_company_name')
+                            ->label('Companie destinatar')
+                            ->visible(fn (Get $get): bool => $get('recipient_type') === 'company')
+                            ->required(fn (Get $get): bool => $get('recipient_type') === 'company')
+                            ->maxLength(255),
+                        TextInput::make('recipient_company_cui')
+                            ->label('CUI destinatar')
+                            ->visible(fn (Get $get): bool => $get('recipient_type') === 'company')
+                            ->maxLength(64),
+                        TextInput::make('recipient_company_onrc')
+                            ->label('Nr. ONRC destinatar')
+                            ->visible(fn (Get $get): bool => $get('recipient_type') === 'company')
+                            ->maxLength(128),
+                        TextInput::make('recipient_company_bank')
+                            ->label('Bancă destinatar')
+                            ->visible(fn (Get $get): bool => $get('recipient_type') === 'company')
+                            ->maxLength(128),
+                        TextInput::make('recipient_company_iban')
+                            ->label('IBAN destinatar')
+                            ->visible(fn (Get $get): bool => $get('recipient_type') === 'company')
                             ->maxLength(64),
                         TextInput::make('recipient_email')
                             ->label('Email destinatar')
@@ -131,6 +229,25 @@ class SamedayAwbResource extends Resource
                 Section::make('Colet și opțiuni')
                     ->columns(3)
                     ->schema([
+                        Select::make('package_type')
+                            ->label('Tip trimitere')
+                            ->options([
+                                0 => 'Colet',
+                                1 => 'Plic',
+                                2 => 'Pachet mare',
+                            ])
+                            ->default(0)
+                            ->native(false)
+                            ->required(),
+                        Select::make('awb_payment_type')
+                            ->label('Plata expedierii la')
+                            ->options([
+                                1 => 'Expeditor',
+                            ])
+                            ->default(1)
+                            ->native(false)
+                            ->disabled()
+                            ->dehydrated(),
                         TextInput::make('package_count')
                             ->label('Număr colete')
                             ->numeric()
@@ -156,9 +273,40 @@ class SamedayAwbResource extends Resource
                         TextInput::make('reference')
                             ->label('Referință internă')
                             ->maxLength(255),
+                        Textarea::make('price_observation')
+                            ->label('Observații cost')
+                            ->rows(2),
+                        Textarea::make('client_observation')
+                            ->label('Observații client')
+                            ->rows(2),
                         Textarea::make('observation')
                             ->label('Observații livrare')
                             ->rows(3)
+                            ->columnSpanFull(),
+                        Repeater::make('parcels')
+                            ->label('Detalii colete')
+                            ->helperText('Opțional. Dacă adaugi colete aici, acestea se folosesc cu greutate/dimensiuni per colet.')
+                            ->schema([
+                                TextInput::make('weight_kg')
+                                    ->label('Greutate (kg)')
+                                    ->numeric()
+                                    ->required()
+                                    ->minValue(0.01),
+                                TextInput::make('width_cm')
+                                    ->label('Lățime (cm)')
+                                    ->numeric()
+                                    ->minValue(1),
+                                TextInput::make('length_cm')
+                                    ->label('Lungime (cm)')
+                                    ->numeric()
+                                    ->minValue(1),
+                                TextInput::make('height_cm')
+                                    ->label('Înălțime (cm)')
+                                    ->numeric()
+                                    ->minValue(1),
+                            ])
+                            ->columns(4)
+                            ->addActionLabel('Adaugă colet')
                             ->columnSpanFull(),
                     ]),
             ]);
@@ -375,6 +523,11 @@ class SamedayAwbResource extends Resource
         return static::defaultPackageWeightForLocation(static::currentUserLocationId());
     }
 
+    public static function defaultServiceForCurrentUserLocation(): ?int
+    {
+        return static::firstPositiveIntKey(static::serviceOptionsForCurrentUserLocation());
+    }
+
     /**
      * @return array<int, string>
      */
@@ -402,19 +555,87 @@ class SamedayAwbResource extends Resource
 
     public static function defaultPickupPointForCurrentUserLocation(): ?int
     {
-        $options = static::pickupPointOptionsForCurrentUserLocation();
-        if ($options === []) {
-            return null;
+        return static::firstPositiveIntKey(static::pickupPointOptionsForCurrentUserLocation());
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function contactPersonOptionsForLocation(int $locationId, ?int $pickupPointId = null): array
+    {
+        $connection = static::resolveSamedayConnectionForLocation($locationId);
+        if (! $connection) {
+            return [];
         }
 
-        $firstKey = array_key_first($options);
-        if (! is_int($firstKey) && ! is_string($firstKey)) {
-            return null;
+        try {
+            return app(SamedayAwbService::class)->getContactPersonOptions($connection, $pickupPointId);
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function contactPersonOptionsForCurrentUserLocation(?int $pickupPointId = null): array
+    {
+        return static::contactPersonOptionsForLocation(static::currentUserLocationId(), $pickupPointId);
+    }
+
+    public static function defaultContactPersonForCurrentUserLocation(?int $pickupPointId = null): ?int
+    {
+        return static::firstPositiveIntKey(static::contactPersonOptionsForCurrentUserLocation($pickupPointId));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function serviceTaxOptionsForLocation(int $locationId, ?int $serviceId = null): array
+    {
+        $connection = static::resolveSamedayConnectionForLocation($locationId);
+        if (! $connection) {
+            return [];
         }
 
-        $pickupPointId = (int) $firstKey;
+        try {
+            return app(SamedayAwbService::class)->getServiceTaxOptions($connection, $serviceId);
+        } catch (Throwable) {
+            return [];
+        }
+    }
 
-        return $pickupPointId > 0 ? $pickupPointId : null;
+    /**
+     * @return array<int, string>
+     */
+    public static function serviceTaxOptionsForCurrentUserLocation(?int $serviceId = null): array
+    {
+        return static::serviceTaxOptionsForLocation(static::currentUserLocationId(), $serviceId);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function deliveryIntervalOptionsForLocation(int $locationId, ?int $serviceId = null): array
+    {
+        $connection = static::resolveSamedayConnectionForLocation($locationId);
+        if (! $connection) {
+            return [];
+        }
+
+        try {
+            return app(SamedayAwbService::class)->getDeliveryIntervalOptions($connection, $serviceId);
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function deliveryIntervalOptionsForCurrentUserLocation(?int $serviceId = null): array
+    {
+        return static::deliveryIntervalOptionsForLocation(static::currentUserLocationId(), $serviceId);
     }
 
     /**
@@ -440,6 +661,25 @@ class SamedayAwbResource extends Resource
     public static function serviceOptionsForCurrentUserLocation(): array
     {
         return static::serviceOptionsForLocation(static::currentUserLocationId());
+    }
+
+    /**
+     * @param  array<int|string, string>  $options
+     */
+    private static function firstPositiveIntKey(array $options): ?int
+    {
+        if ($options === []) {
+            return null;
+        }
+
+        $firstKey = array_key_first($options);
+        if (! is_int($firstKey) && ! is_string($firstKey)) {
+            return null;
+        }
+
+        $value = (int) $firstKey;
+
+        return $value > 0 ? $value : null;
     }
 
     private static function hasAnyAvailableSamedayConnection(): bool
