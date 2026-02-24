@@ -118,7 +118,10 @@ class WooCategoryResource extends Resource
         }
 
         return $query->whereHas('connection', function (Builder $connectionQuery) use ($user): void {
-            $connectionQuery->whereIn('location_id', $user->operationalLocationIds());
+            $connectionQuery->where(function (Builder $inner) use ($user): void {
+                $inner->whereIn('location_id', $user->operationalLocationIds())
+                    ->orWhereNull('location_id');
+            });
         });
     }
 }

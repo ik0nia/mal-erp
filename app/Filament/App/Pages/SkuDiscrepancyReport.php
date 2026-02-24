@@ -160,7 +160,10 @@ class SkuDiscrepancyReport extends Page implements HasTable
             ->where('provider', IntegrationConnection::PROVIDER_WOOCOMMERCE);
 
         if (! $user->isSuperAdmin()) {
-            $query->whereIn('location_id', $user->operationalLocationIds());
+            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($user): void {
+                $q->whereIn('location_id', $user->operationalLocationIds())
+                  ->orWhereNull('location_id');
+            });
         }
 
         return $query->pluck('id')->map(fn ($id) => (int) $id)->all();

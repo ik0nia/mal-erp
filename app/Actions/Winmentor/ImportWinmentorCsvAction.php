@@ -154,12 +154,15 @@ class ImportWinmentorCsvAction
 
             $wooConnectionIds = IntegrationConnection::query()
                 ->where('provider', IntegrationConnection::PROVIDER_WOOCOMMERCE)
-                ->where('location_id', $connection->location_id)
+                ->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($connection): void {
+                    $q->where('location_id', $connection->location_id)
+                      ->orWhereNull('location_id');
+                })
                 ->pluck('id')
                 ->all();
 
             if ($wooConnectionIds === []) {
-                throw new RuntimeException('No WooCommerce connection found for this location.');
+                throw new RuntimeException('No WooCommerce connection found for this location or globally.');
             }
 
             $wooConnectionsById = IntegrationConnection::query()
