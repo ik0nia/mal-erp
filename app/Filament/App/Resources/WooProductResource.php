@@ -126,10 +126,15 @@ class WooProductResource extends Resource
                 Tables\Filters\SelectFilter::make('category_id')
                     ->label('Categorie')
                     ->options(function (): array {
-                        $query = WooCategory::query()->orderBy('name');
                         $user = static::currentUser();
 
-                        if ($user && ! $user->isSuperAdmin()) {
+                        if (! $user) {
+                            return [];
+                        }
+
+                        $query = WooCategory::query()->orderBy('name');
+
+                        if (! $user->isSuperAdmin()) {
                             $query->whereHas('connection', function (Builder $connectionQuery) use ($user): void {
                                 $connectionQuery->whereIn('location_id', $user->operationalLocationIds());
                             });

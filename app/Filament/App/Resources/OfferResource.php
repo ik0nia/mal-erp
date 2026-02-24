@@ -52,11 +52,6 @@ class OfferResource extends Resource
 
     protected static ?int $navigationSort = 10;
 
-    private static function isSuperAdmin(): bool
-    {
-        return static::currentUser()?->isSuperAdmin() ?? false;
-    }
-
     public static function form(Form $form): Form
     {
         return $form
@@ -93,7 +88,7 @@ class OfferResource extends Resource
                             ->preload()
                             ->native(false)
                             ->default(fn (): ?int => static::currentUser()?->location_id)
-                            ->disabled(fn (): bool => ! static::isSuperAdmin())
+                            ->disabled(fn (): bool => ! (static::currentUser()?->isSuperAdmin() ?? false))
                             ->dehydrated()
                             ->live(),
                         Hidden::make('user_id')
