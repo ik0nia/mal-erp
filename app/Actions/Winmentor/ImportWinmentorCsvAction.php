@@ -390,7 +390,7 @@ class ImportWinmentorCsvAction
 
                     $stats['price_changes']++;
 
-                    if ($pushPriceToSite && ! $product->is_placeholder) {
+                    if ($pushPriceToSite && ! $product->is_placeholder && $newQuantity > 0) {
                         $wooConnection = $wooConnectionsById->get($product->connection_id);
 
                         if (! $wooConnection instanceof IntegrationConnection) {
@@ -415,6 +415,29 @@ class ImportWinmentorCsvAction
                                 'regular_price' => $this->formatPrice($price),
                             ];
                         }
+                    }
+                }
+
+                // Push price when first seen OR stock just became positive — even if price didn't change.
+                // This covers: new products on first import, and products restocked from zero.
+                if (
+                    $pushPriceToSite
+                    && ! $product->is_placeholder
+                    && ! $priceUpdated
+                    && $price !== null
+                    && $price > 0
+                    && $newQuantity > 0
+                    && ($isNew || ($quantityChanged && ($oldQuantity === null || $oldQuantity <= 0)))
+                ) {
+                    $wooConnection = $wooConnectionsById->get($product->connection_id);
+
+                    if ($wooConnection instanceof IntegrationConnection && $wooConnection->is_active) {
+                        $sitePricePushesByConnection[$wooConnection->id][$product->woo_id] = [
+                            'row' => $lineNumber,
+                            'sku' => $sku,
+                            'woo_id' => (int) $product->woo_id,
+                            'regular_price' => $this->formatPrice($price),
+                        ];
                     }
                 }
 
