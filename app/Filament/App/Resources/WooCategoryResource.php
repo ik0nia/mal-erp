@@ -2,8 +2,8 @@
 
 namespace App\Filament\App\Resources;
 
+use App\Filament\App\Concerns\EnforcesLocationScope;
 use App\Filament\App\Resources\WooCategoryResource\Pages;
-use App\Models\User;
 use App\Models\WooCategory;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -16,6 +16,8 @@ use Illuminate\Support\HtmlString;
 
 class WooCategoryResource extends Resource
 {
+    use EnforcesLocationScope;
+
     protected static ?string $model = WooCategory::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-tag';
@@ -29,13 +31,6 @@ class WooCategoryResource extends Resource
     protected static ?string $pluralModelLabel = 'Categorii';
 
     protected static ?int $navigationSort = 10;
-
-    protected static function currentUser(): ?User
-    {
-        $user = auth()->user();
-
-        return $user instanceof User ? $user : null;
-    }
 
     public static function canViewAny(): bool
     {

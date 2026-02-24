@@ -2,9 +2,9 @@
 
 namespace App\Filament\App\Resources;
 
+use App\Filament\App\Concerns\EnforcesLocationScope;
 use App\Filament\App\Resources\WooProductResource\Pages;
 use App\Models\DailyStockMetric;
-use App\Models\User;
 use App\Models\WooCategory;
 use App\Models\WooProduct;
 use Filament\Infolists\Components\ImageEntry;
@@ -25,6 +25,8 @@ use Illuminate\Support\HtmlString;
 
 class WooProductResource extends Resource
 {
+    use EnforcesLocationScope;
+
     protected static ?string $model = WooProduct::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';
@@ -38,13 +40,6 @@ class WooProductResource extends Resource
     protected static ?string $pluralModelLabel = 'Produse';
 
     protected static ?int $navigationSort = 20;
-
-    protected static function currentUser(): ?User
-    {
-        $user = auth()->user();
-
-        return $user instanceof User ? $user : null;
-    }
 
     public static function canViewAny(): bool
     {
