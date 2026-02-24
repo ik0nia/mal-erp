@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WooProduct extends Model
@@ -74,6 +75,12 @@ class WooProduct extends Model
     public function dailyStockMetrics(): HasMany
     {
         return $this->hasMany(DailyStockMetric::class, 'reference_product_id', 'sku');
+    }
+
+    public function latestDailyStockMetric(): HasOne
+    {
+        return $this->hasOne(DailyStockMetric::class, 'reference_product_id', 'sku')
+            ->ofMany('day', 'max');
     }
 
     public function offerItems(): HasMany
