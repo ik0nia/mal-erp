@@ -3,6 +3,7 @@
 namespace App\Filament\App\Resources;
 
 use App\Filament\App\Resources\WooProductResource\Pages;
+use App\Models\DailyStockMetric;
 use App\Models\User;
 use App\Models\WooCategory;
 use App\Models\WooProduct;
@@ -217,6 +218,35 @@ class WooProductResource extends Resource
     {
         return $infolist
             ->schema([
+                Section::make('Variație stoc')
+                    ->description('Ultima zi importată WinMentor (identificare pe SKU).')
+                    ->columns(3)
+                    ->schema([
+                        TextEntry::make('latestDailyStockMetric.day')
+                            ->label('Zi raportare')
+                            ->date('d.m.Y')
+                            ->placeholder('Fără date'),
+                        TextEntry::make('daily_qty_variation')
+                            ->label('Variație cantitate')
+                            ->state(fn (WooProduct $record): string => static::formatSignedMetric(
+                                static::latestDailyMetricFloat($record, 'daily_total_variation'),
+                                3,
+                                ' buc'
+                            ))
+                            ->color(fn (WooProduct $record): string => static::variationColor(
+                                static::latestDailyMetricFloat($record, 'daily_total_variation')
+                            ))
+                            ->badge(),
+                        TextEntry::make('daily_value_variation')
+                            ->label('Variație valoare')
+                            ->state(fn (WooProduct $record): string => static::formatSignedCurrency(
+                                static::latestDailyMetricFloat($record, 'daily_sales_value_variation')
+                            ))
+                            ->color(fn (WooProduct $record): string => static::variationColor(
+                                static::latestDailyMetricFloat($record, 'daily_sales_value_variation')
+                            ))
+                            ->badge(),
+                    ]),
                 Section::make('Produs')
                     ->columns(2)
                     ->schema([
@@ -269,5 +299,58 @@ class WooProductResource extends Resource
                             ->html(),
                     ]),
             ]);
+    }
+
+    private static function latestDailyMetric(WooProduct $record): ?DailyStockMetric
+    {
+        $metric = $record->latestDailyStockMetric;
+
+        return $metric instanceof DailyStockMetric ? $metric : null;
+    }
+
+    private static function latestDailyMetricFloat(WooProduct $record, string $field): ?float
+    {
+        $metric = static::latestDailyMetric($record);
+
+        if (! $metric instanceof DailyStockMetric) {
+            return null;
+        }
+
+        $value = data_get($metric, $field);
+
+        return is_numeric($value) ? (float) $value : null;
+    }
+
+    private static function formatSignedMetric(?float $value, int $decimals, string $suffix = ''): string
+    {
+        if ($value === null) {
+            return '-';
+        }
+
+        $formatted = number_format(abs($value), $decimals, '.', ',');
+        $sign = $value > 0 ? '+' : ($value < 0 ? '-' : '');
+
+        return trim("{$sign}{$formatted}{$suffix}");
+    }
+
+    private static function formatSignedCurrency(?float $value): string
+    {
+        if ($value === null) {
+            return '-';
+        }
+
+        $formatted = number_format(abs($value), 2, '.', ',');
+        $sign = $value > 0 ? '+' : ($value < 0 ? '-' : '');
+
+        return trim("{$sign}{$formatted} RON");
+    }
+
+    private static function variationColor(?float $value): string
+    {
+        if ($value === null || abs($value) < 0.00001) {
+            return 'gray';
+        }
+
+        return $value > 0 ? 'success' : 'danger';
     }
 }
