@@ -511,7 +511,10 @@ class OfferResource extends Resource
     {
         if ($locationId) {
             $query->whereHas('connection', function (Builder $connectionQuery) use ($locationId): void {
-                $connectionQuery->where('location_id', $locationId);
+                $connectionQuery->where(function (Builder $inner) use ($locationId): void {
+                    $inner->where('location_id', $locationId)
+                        ->orWhereNull('location_id');
+                });
             })->whereHas('stocks', function (Builder $stockQuery) use ($locationId): void {
                 $stockQuery
                     ->where('location_id', $locationId)
@@ -527,7 +530,10 @@ class OfferResource extends Resource
             $locationIds = $user->operationalLocationIds();
 
             $query->whereHas('connection', function (Builder $connectionQuery) use ($locationIds): void {
-                $connectionQuery->whereIn('location_id', $locationIds);
+                $connectionQuery->where(function (Builder $inner) use ($locationIds): void {
+                    $inner->whereIn('location_id', $locationIds)
+                        ->orWhereNull('location_id');
+                });
             })->whereHas('stocks', function (Builder $stockQuery) use ($locationIds): void {
                 $stockQuery
                     ->whereIn('location_id', $locationIds)

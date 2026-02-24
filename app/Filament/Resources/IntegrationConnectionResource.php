@@ -89,7 +89,13 @@ class IntegrationConnectionResource extends Resource
                             ->where('type', Location::TYPE_STORE)
                             ->where('is_active', true)
                     )
-                    ->required()
+                    ->required(fn (Get $get): bool => in_array($get('provider'), [
+                        IntegrationConnection::PROVIDER_WINMENTOR_CSV,
+                        IntegrationConnection::PROVIDER_SAMEDAY,
+                    ], true))
+                    ->helperText(fn (Get $get): ?string => $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE
+                        ? 'Opțional pentru WooCommerce — lasă gol pentru o conexiune globală (fără locație).'
+                        : null)
                     ->searchable()
                     ->preload()
                     ->native(false),
