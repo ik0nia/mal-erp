@@ -2,6 +2,7 @@
 
 namespace App\Filament\App\Resources;
 
+use App\Filament\App\Concerns\EnforcesLocationScope;
 use App\Filament\App\Resources\SamedayAwbResource\Pages;
 use App\Models\IntegrationConnection;
 use App\Models\SamedayAwb;
@@ -28,6 +29,8 @@ use Throwable;
 
 class SamedayAwbResource extends Resource
 {
+    use EnforcesLocationScope;
+
     protected static ?string $model = SamedayAwb::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-truck';
@@ -39,13 +42,6 @@ class SamedayAwbResource extends Resource
     protected static ?string $modelLabel = 'AWB Sameday';
 
     protected static ?string $pluralModelLabel = 'AWB-uri Sameday';
-
-    protected static function currentUser(): ?User
-    {
-        $user = auth()->user();
-
-        return $user instanceof User ? $user : null;
-    }
 
     public static function shouldRegisterNavigation(): bool
     {
@@ -529,18 +525,9 @@ class SamedayAwbResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery()->with(['location', 'connection']);
-        $user = static::currentUser();
-
-        if (! $user) {
-            return $query->whereRaw('1 = 0');
-        }
-
-        if ($user->isSuperAdmin()) {
-            return $query;
-        }
-
-        return $query->whereIn('location_id', $user->operationalLocationIds());
+        return static::applyLocationFilter(
+            parent::getEloquentQuery()->with(['location', 'connection'])
+        );
     }
 
     public static function resolveSamedayConnectionForLocation(int $locationId): ?IntegrationConnection
