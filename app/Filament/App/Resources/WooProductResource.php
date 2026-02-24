@@ -174,7 +174,11 @@ class WooProductResource extends Resource
 
         $user = static::currentUser();
 
-        if (! $user || $user->isSuperAdmin()) {
+        if (! $user) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        if ($user->isSuperAdmin()) {
             return $query;
         }
 
