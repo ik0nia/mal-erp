@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Concerns\HasLocationScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Offer extends Model
 {
+    use HasLocationScope;
+
     public const STATUS_DRAFT = 'draft';
     public const STATUS_SENT = 'sent';
     public const STATUS_ACCEPTED = 'accepted';

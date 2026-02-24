@@ -2,6 +2,7 @@
 
 namespace App\Filament\App\Resources;
 
+use App\Filament\App\Concerns\EnforcesLocationScope;
 use App\Filament\App\Resources\OfferResource\Pages;
 use App\Models\Location;
 use App\Models\Offer;
@@ -35,6 +36,8 @@ use Illuminate\Support\HtmlString;
 
 class OfferResource extends Resource
 {
+    use EnforcesLocationScope;
+
     protected static ?string $model = Offer::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
@@ -48,13 +51,6 @@ class OfferResource extends Resource
     protected static ?string $pluralModelLabel = 'Oferte';
 
     protected static ?int $navigationSort = 10;
-
-    protected static function currentUser(): ?User
-    {
-        $user = auth()->user();
-
-        return $user instanceof User ? $user : null;
-    }
 
     private static function isSuperAdmin(): bool
     {
@@ -462,29 +458,9 @@ class OfferResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery()->with(['location', 'items']);
-        $user = static::currentUser();
-
-        if (! $user || $user->isSuperAdmin()) {
-            return $query;
-        }
-
-        return $query->whereIn('location_id', $user->operationalLocationIds());
-    }
-
-    private static function canAccessRecord(Model $record): bool
-    {
-        $user = static::currentUser();
-
-        if (! $user) {
-            return false;
-        }
-
-        if ($user->isSuperAdmin()) {
-            return true;
-        }
-
-        return $record instanceof Offer && in_array((int) $record->location_id, $user->operationalLocationIds(), true);
+        return static::applyLocationFilter(
+            parent::getEloquentQuery()->with(['location', 'items'])
+        );
     }
 
     private static function getProductSearchResults(string $search, Get $get): array

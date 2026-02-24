@@ -2,9 +2,9 @@
 
 namespace App\Filament\App\Resources;
 
+use App\Filament\App\Concerns\EnforcesLocationScope;
 use App\Filament\App\Resources\CustomerResource\Pages;
 use App\Models\Customer;
-use App\Models\User;
 use App\Services\CompanyData\OpenApiCompanyLookupService;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -20,6 +20,8 @@ use Throwable;
 
 class CustomerResource extends Resource
 {
+    use EnforcesLocationScope;
+
     protected static ?string $model = Customer::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
@@ -33,13 +35,6 @@ class CustomerResource extends Resource
     protected static ?string $pluralModelLabel = 'Clienți';
 
     protected static ?int $navigationSort = 5;
-
-    protected static function currentUser(): ?User
-    {
-        $user = auth()->user();
-
-        return $user instanceof User ? $user : null;
-    }
 
     public static function canViewAny(): bool
     {
@@ -315,33 +310,7 @@ class CustomerResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
-        $user = static::currentUser();
-
-        if (! $user) {
-            return $query->whereRaw('1 = 0');
-        }
-
-        if (! $user->location_id) {
-            return $query->whereRaw('1 = 0');
-        }
-
-        return $query->where('location_id', (int) $user->location_id);
-    }
-
-    private static function canAccessRecord(Model $record): bool
-    {
-        $user = static::currentUser();
-
-        if (! $user) {
-            return false;
-        }
-
-        if (! $user->location_id) {
-            return false;
-        }
-
-        return $record instanceof Customer && (int) $record->location_id === (int) $user->location_id;
+        return static::applyLocationFilter(parent::getEloquentQuery());
     }
 
     public static function getPages(): array

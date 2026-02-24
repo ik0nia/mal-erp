@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\HasLocationScope;
 use App\Services\CompanyData\OpenApiCompanyLookupService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Customer extends Model
 {
+    use HasLocationScope;
+
     public const TYPE_INDIVIDUAL = 'individual';
     public const TYPE_COMPANY = 'company';
 

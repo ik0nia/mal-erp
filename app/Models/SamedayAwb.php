@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Concerns\HasLocationScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SamedayAwb extends Model
 {
+    use HasLocationScope;
+
     public const STATUS_CREATED = 'created';
     public const STATUS_CANCELLED = 'cancelled';
     public const STATUS_FAILED = 'failed';
