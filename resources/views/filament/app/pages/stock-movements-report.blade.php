@@ -17,10 +17,10 @@
     </div>
 
     {{-- Charts --}}
-    <x-filament-widgets::widgets
-        :widgets="$this->getHeaderWidgets()"
-        :columns="$this->getHeaderWidgetsColumns()"
-    />
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        @livewire(\App\Filament\App\Widgets\StockMovementChartWidget::class)
+        @livewire(\App\Filament\App\Widgets\PriceMovementChartWidget::class)
+    </div>
 
     {{-- Top movers table --}}
     <div>
