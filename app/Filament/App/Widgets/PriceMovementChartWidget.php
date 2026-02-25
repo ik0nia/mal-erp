@@ -14,6 +14,8 @@ class PriceMovementChartWidget extends ChartWidget
 
     protected static ?string $maxHeight = '300px';
 
+    protected static ?string $pollingInterval = null;
+
     public ?string $filter = '7';
 
     #[On('stockMovementsSetDays')]
