@@ -13,6 +13,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
 class StockMovementsReport extends Page implements HasTable
@@ -40,6 +41,11 @@ class StockMovementsReport extends Page implements HasTable
     protected static string $view = 'filament.app.pages.stock-movements-report';
 
     public int $days = 7;
+
+    public function getTableRecordKey(Model $record): string
+    {
+        return (string) $record->woo_product_id;
+    }
 
     public function setDays(int $days): void
     {
