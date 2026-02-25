@@ -5,8 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class WooProduct extends Model
 {
@@ -33,6 +33,12 @@ class WooProduct extends Model
         'data',
         'source',
         'is_placeholder',
+        'unit',
+        'weight',
+        'dim_length',
+        'dim_width',
+        'dim_height',
+        'erp_notes',
     ];
 
     protected function casts(): array
@@ -81,6 +87,22 @@ class WooProduct extends Model
     {
         return $this->hasOne(DailyStockMetric::class, 'reference_product_id', 'sku')
             ->ofMany('day', 'max');
+    }
+
+    public function suppliers(): BelongsToMany
+    {
+        return $this->belongsToMany(Supplier::class, 'product_suppliers', 'woo_product_id', 'supplier_id')
+            ->using(ProductSupplier::class)
+            ->withPivot([
+                'supplier_sku',
+                'purchase_price',
+                'currency',
+                'lead_days',
+                'min_order_qty',
+                'is_preferred',
+                'notes',
+            ])
+            ->withTimestamps();
     }
 
     public function offerItems(): HasMany

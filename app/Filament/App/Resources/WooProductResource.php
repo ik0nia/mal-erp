@@ -5,8 +5,11 @@ namespace App\Filament\App\Resources;
 use App\Filament\App\Concerns\EnforcesLocationScope;
 use App\Filament\App\Resources\WooProductResource\Pages;
 use App\Models\DailyStockMetric;
+use App\Models\Supplier;
 use App\Models\WooCategory;
 use App\Models\WooProduct;
+use Filament\Forms;
+use Filament\Forms\Form;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
@@ -58,12 +61,118 @@ class WooProductResource extends Resource
 
     public static function canEdit(Model $record): bool
     {
-        return false;
+        $user = static::currentUser();
+
+        return $user !== null && ($user->isSuperAdmin() || $user->role === \App\Models\User::ROLE_MANAGER);
     }
 
     public static function canDelete(Model $record): bool
     {
         return false;
+    }
+
+    public static function form(Form $form): Form
+    {
+        return $form->schema([
+            Forms\Components\Section::make('Informații produs')
+                ->columns(2)
+                ->schema([
+                    Forms\Components\TextInput::make('name')
+                        ->label('Denumire')
+                        ->required()
+                        ->maxLength(255)
+                        ->columnSpanFull(),
+                    Forms\Components\Select::make('unit')
+                        ->label('Unitate de măsură')
+                        ->options([
+                            'buc' => 'buc',
+                            'kg'  => 'kg',
+                            'g'   => 'g',
+                            'm'   => 'm',
+                            'm2'  => 'm²',
+                            'm3'  => 'm³',
+                            'l'   => 'l',
+                            'ml'  => 'ml',
+                            'set' => 'set',
+                            'pac' => 'pac',
+                            'role' => 'role',
+                        ])
+                        ->searchable()
+                        ->native(false),
+                    Forms\Components\TextInput::make('weight')
+                        ->label('Greutate (kg)')
+                        ->maxLength(20),
+                    Forms\Components\TextInput::make('dim_length')
+                        ->label('Lungime (cm)')
+                        ->maxLength(20),
+                    Forms\Components\TextInput::make('dim_width')
+                        ->label('Lățime (cm)')
+                        ->maxLength(20),
+                    Forms\Components\TextInput::make('dim_height')
+                        ->label('Înălțime (cm)')
+                        ->maxLength(20),
+                    Forms\Components\Textarea::make('erp_notes')
+                        ->label('Notițe interne ERP')
+                        ->rows(3)
+                        ->columnSpanFull(),
+                ]),
+
+            Forms\Components\Section::make('Categorii')
+                ->schema([
+                    Forms\Components\Select::make('categories')
+                        ->label('Categorii')
+                        ->relationship('categories', 'name')
+                        ->multiple()
+                        ->searchable()
+                        ->preload()
+                        ->native(false),
+                ]),
+
+            Forms\Components\Section::make('Furnizori')
+                ->schema([
+                    Forms\Components\Repeater::make('suppliers_data')
+                        ->label('')
+                        ->addActionLabel('Adaugă furnizor')
+                        ->columns(3)
+                        ->default([])
+                        ->schema([
+                            Forms\Components\Select::make('supplier_id')
+                                ->label('Furnizor')
+                                ->options(Supplier::query()->where('is_active', true)->orderBy('name')->pluck('name', 'id'))
+                                ->required()
+                                ->searchable()
+                                ->native(false)
+                                ->columnSpanFull(),
+                            Forms\Components\TextInput::make('supplier_sku')
+                                ->label('SKU furnizor')
+                                ->maxLength(100),
+                            Forms\Components\TextInput::make('purchase_price')
+                                ->label('Preț achiziție')
+                                ->numeric()
+                                ->step(0.0001),
+                            Forms\Components\Select::make('currency')
+                                ->label('Monedă')
+                                ->options(['RON' => 'RON', 'EUR' => 'EUR', 'USD' => 'USD'])
+                                ->default('RON')
+                                ->native(false),
+                            Forms\Components\TextInput::make('lead_days')
+                                ->label('Zile livrare')
+                                ->numeric()
+                                ->minValue(0),
+                            Forms\Components\TextInput::make('min_order_qty')
+                                ->label('Cant. minimă')
+                                ->numeric()
+                                ->minValue(0),
+                            Forms\Components\Toggle::make('is_preferred')
+                                ->label('Furnizor preferat')
+                                ->default(false),
+                            Forms\Components\Textarea::make('notes')
+                                ->label('Notițe')
+                                ->rows(2)
+                                ->columnSpanFull(),
+                        ]),
+                ]),
+        ]);
     }
 
     public static function table(Table $table): Table
@@ -169,7 +278,8 @@ class WooProductResource extends Resource
     {
         return [
             'index' => Pages\ListWooProducts::route('/'),
-            'view' => Pages\ViewWooProduct::route('/{record}'),
+            'view'  => Pages\ViewWooProduct::route('/{record}'),
+            'edit'  => Pages\EditWooProduct::route('/{record}/edit'),
         ];
     }
 

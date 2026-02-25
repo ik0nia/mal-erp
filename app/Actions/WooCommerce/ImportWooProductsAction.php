@@ -130,6 +130,11 @@ class ImportWooProductsAction
                         'data' => $productPayload,
                         'source' => WooProduct::SOURCE_WOOCOMMERCE,
                         'is_placeholder' => false,
+                        'unit' => $this->extractUnit($productPayload),
+                        'weight' => $this->extractWeight($productPayload),
+                        'dim_length' => $this->nullableString($productPayload['dimensions']['length'] ?? null),
+                        'dim_width' => $this->nullableString($productPayload['dimensions']['width'] ?? null),
+                        'dim_height' => $this->nullableString($productPayload['dimensions']['height'] ?? null),
                     ]);
                     $product->save();
 
@@ -189,6 +194,32 @@ class ImportWooProductsAction
         }
 
         return $run;
+    }
+
+    /**
+     * @param  array<string, mixed>  $product
+     */
+    private function extractUnit(array $product): ?string
+    {
+        foreach ($product['meta_data'] ?? [] as $meta) {
+            if (($meta['key'] ?? '') === 'woodmart_price_unit_of_measure') {
+                $val = trim((string) ($meta['value'] ?? ''));
+
+                return $val !== '' ? $val : null;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $product
+     */
+    private function extractWeight(array $product): ?string
+    {
+        $raw = trim((string) ($product['weight'] ?? ''));
+
+        return ($raw !== '' && $raw !== '0') ? $raw : null;
     }
 
     /**
