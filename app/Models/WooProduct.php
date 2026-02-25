@@ -34,6 +34,7 @@ class WooProduct extends Model
         'source',
         'is_placeholder',
         'unit',
+        'brand',
         'weight',
         'dim_length',
         'dim_width',
