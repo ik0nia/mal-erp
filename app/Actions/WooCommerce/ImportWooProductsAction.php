@@ -131,6 +131,7 @@ class ImportWooProductsAction
                         'source' => WooProduct::SOURCE_WOOCOMMERCE,
                         'is_placeholder' => false,
                         'unit' => $this->extractUnit($productPayload),
+                        'brand' => $this->extractBrand($productPayload),
                         'weight' => $this->extractWeight($productPayload),
                         'dim_length' => $this->nullableString($productPayload['dimensions']['length'] ?? null),
                         'dim_width' => $this->nullableString($productPayload['dimensions']['width'] ?? null),
@@ -203,6 +204,33 @@ class ImportWooProductsAction
     {
         foreach ($product['meta_data'] ?? [] as $meta) {
             if (($meta['key'] ?? '') === 'woodmart_price_unit_of_measure') {
+                $val = trim((string) ($meta['value'] ?? ''));
+
+                return $val !== '' ? $val : null;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $product
+     */
+    private function extractBrand(array $product): ?string
+    {
+        // 1. Din atributele produsului
+        foreach ($product['attributes'] ?? [] as $attr) {
+            if (strcasecmp(trim((string) ($attr['name'] ?? '')), 'Brand') === 0) {
+                $opts = $attr['options'] ?? [];
+                if (! empty($opts[0])) {
+                    return trim((string) $opts[0]);
+                }
+            }
+        }
+
+        // 2. Fallback: fb_brand din meta_data
+        foreach ($product['meta_data'] ?? [] as $meta) {
+            if (($meta['key'] ?? '') === 'fb_brand') {
                 $val = trim((string) ($meta['value'] ?? ''));
 
                 return $val !== '' ? $val : null;

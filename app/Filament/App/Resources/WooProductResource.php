@@ -82,6 +82,9 @@ class WooProductResource extends Resource
                         ->required()
                         ->maxLength(255)
                         ->columnSpanFull(),
+                    Forms\Components\TextInput::make('brand')
+                        ->label('Brand / Producător')
+                        ->maxLength(255),
                     Forms\Components\Select::make('unit')
                         ->label('Unitate de măsură')
                         ->options([
