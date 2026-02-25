@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Filament\Resources;
+namespace App\Filament\App\Resources;
 
-use App\Filament\Resources\SupplierResource\Pages;
+use App\Filament\App\Resources\SupplierResource\Pages;
 use App\Models\Supplier;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -16,7 +16,7 @@ class SupplierResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-truck';
 
-    protected static ?string $navigationGroup = 'Setări';
+    protected static ?string $navigationGroup = 'Furnizori';
 
     protected static ?string $navigationLabel = 'Furnizori';
 
@@ -24,7 +24,7 @@ class SupplierResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Furnizori';
 
-    protected static ?int $navigationSort = 20;
+    protected static ?int $navigationSort = 1;
 
     public static function form(Form $form): Form
     {
@@ -139,9 +139,9 @@ class SupplierResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListSuppliers::route('/'),
+            'index'  => Pages\ListSuppliers::route('/'),
             'create' => Pages\CreateSupplier::route('/create'),
-            'edit' => Pages\EditSupplier::route('/{record}/edit'),
+            'edit'   => Pages\EditSupplier::route('/{record}/edit'),
         ];
     }
 }
