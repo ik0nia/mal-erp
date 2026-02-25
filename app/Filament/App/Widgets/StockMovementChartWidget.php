@@ -42,7 +42,7 @@ class StockMovementChartWidget extends ChartWidget
             ->groupBy('day')
             ->orderBy('day')
             ->get()
-            ->keyBy('day');
+            ->keyBy(fn ($row): string => Carbon::parse($row->day)->toDateString());
 
         // Fill all days in range (including days with no data)
         $labels = [];
