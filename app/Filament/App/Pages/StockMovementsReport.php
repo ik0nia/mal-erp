@@ -4,8 +4,6 @@ namespace App\Filament\App\Pages;
 
 use App\Filament\App\Concerns\EnforcesLocationScope;
 use App\Filament\App\Resources\WooProductResource;
-use App\Filament\App\Widgets\PriceMovementChartWidget;
-use App\Filament\App\Widgets\StockMovementChartWidget;
 use App\Models\DailyStockMetric;
 use App\Models\User;
 use Filament\Pages\Page;
@@ -54,19 +52,6 @@ class StockMovementsReport extends Page implements HasTable
         $this->resetTable();
     }
 
-    protected function getHeaderWidgets(): array
-    {
-        return [
-            StockMovementChartWidget::class,
-            PriceMovementChartWidget::class,
-        ];
-    }
-
-    public function getHeaderWidgetsColumns(): int | array
-    {
-        return 2;
-    }
-
     public function table(Table $table): Table
     {
         $days = $this->days;
@@ -99,21 +84,21 @@ class StockMovementsReport extends Page implements HasTable
                     ->placeholder('-'),
                 TextColumn::make('total_movement')
                     ->label('Mișcare totală')
-                    ->formatStateUsing(fn (DailyStockMetric $record): string => number_format((float) $record->total_movement, 0, '.', ''))
+                    ->formatStateUsing(fn (DailyStockMetric $record): string => number_format((float) $record->total_movement, 0, '.', '').' buc')
                     ->description('intrări + ieșiri'),
                 TextColumn::make('net_change')
                     ->label('Variație netă')
                     ->formatStateUsing(fn (DailyStockMetric $record): string => (
                         (float) $record->net_change >= 0 ? '+' : ''
-                    ).number_format((float) $record->net_change, 0, '.', ''))
+                    ).number_format((float) $record->net_change, 0, '.', '').' buc')
                     ->color(fn (DailyStockMetric $record): string => (float) $record->net_change >= 0 ? 'success' : 'danger'),
                 TextColumn::make('last_qty')
                     ->label('Stoc curent')
-                    ->formatStateUsing(fn (DailyStockMetric $record): string => number_format((float) $record->last_qty, 0, '.', '')),
+                    ->formatStateUsing(fn (DailyStockMetric $record): string => number_format((float) $record->last_qty, 0, '.', '').' buc'),
                 TextColumn::make('last_price')
                     ->label('Preț actual')
                     ->formatStateUsing(fn (DailyStockMetric $record): string => $record->last_price
-                        ? number_format((float) $record->last_price, 2, '.', '').' RON'
+                        ? number_format((float) $record->last_price, 2, ',', '.').' lei'
                         : '-')
                     ->placeholder('-'),
             ])
