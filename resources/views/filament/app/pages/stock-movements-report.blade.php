@@ -16,10 +16,10 @@
         @endforeach
     </div>
 
-    {{-- Chart --}}
+    {{-- Charts --}}
     <x-filament-widgets::widgets
         :widgets="$this->getHeaderWidgets()"
-        :columns="1"
+        :columns="$this->getHeaderWidgetsColumns()"
     />
 
     {{-- Top movers table --}}

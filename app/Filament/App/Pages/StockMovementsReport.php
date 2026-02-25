@@ -2,9 +2,12 @@
 
 namespace App\Filament\App\Pages;
 
+use App\Filament\App\Concerns\EnforcesLocationScope;
 use App\Filament\App\Resources\WooProductResource;
+use App\Filament\App\Widgets\PriceMovementChartWidget;
 use App\Filament\App\Widgets\StockMovementChartWidget;
 use App\Models\DailyStockMetric;
+use App\Models\User;
 use Filament\Pages\Page;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
@@ -15,14 +18,24 @@ use Illuminate\Support\Facades\DB;
 class StockMovementsReport extends Page implements HasTable
 {
     use InteractsWithTable;
+    use EnforcesLocationScope;
+
+    public static function canAccess(): bool
+    {
+        $user = static::currentUser();
+
+        return $user !== null && (
+            $user->isSuperAdmin() || $user->role === User::ROLE_MANAGER
+        );
+    }
 
     protected static ?string $navigationIcon = 'heroicon-o-arrow-trending-up';
 
-    protected static ?string $navigationGroup = 'Magazin Online';
+    protected static ?string $navigationGroup = 'Rapoarte';
 
-    protected static ?string $navigationLabel = 'Mișcări stoc';
+    protected static ?string $navigationLabel = 'Mișcări stocuri';
 
-    protected static ?int $navigationSort = 35;
+    protected static ?int $navigationSort = 10;
 
     protected static string $view = 'filament.app.pages.stock-movements-report';
 
@@ -39,7 +52,13 @@ class StockMovementsReport extends Page implements HasTable
     {
         return [
             StockMovementChartWidget::class,
+            PriceMovementChartWidget::class,
         ];
+    }
+
+    public function getHeaderWidgetsColumns(): int | array
+    {
+        return 2;
     }
 
     public function table(Table $table): Table
