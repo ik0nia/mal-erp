@@ -17,7 +17,7 @@
     </div>
 
     {{-- Stat cards --}}
-    <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem;">
 
         <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
             <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Intrări stoc</div>
