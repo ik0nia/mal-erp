@@ -260,6 +260,15 @@ class WooProductResource extends Resource
                         'outofstock' => 'Fără stoc',
                         'onbackorder' => 'Precomandă',
                     ]),
+                Tables\Filters\TernaryFilter::make('web_enriched')
+                    ->label('Îmbogățit web')
+                    ->placeholder('Toate')
+                    ->trueLabel('Da (EAN lookup)')
+                    ->falseLabel('Nu')
+                    ->queries(
+                        true:  fn (Builder $query) => $query->where('erp_notes', 'like', '%[web-enriched]%'),
+                        false: fn (Builder $query) => $query->where(fn (Builder $q) => $q->whereNull('erp_notes')->orWhere('erp_notes', 'not like', '%[web-enriched]%')),
+                    ),
                 Tables\Filters\TernaryFilter::make('has_image')
                     ->label('Imagine')
                     ->placeholder('Toate produsele')
@@ -303,7 +312,7 @@ class WooProductResource extends Resource
                         });
                     }),
             ], layout: FiltersLayout::AboveContent)
-            ->filtersFormColumns(4)
+            ->filtersFormColumns(5)
             ->persistFiltersInSession()
             ->recordUrl(fn (WooProduct $record): string => static::getUrl('view', ['record' => $record]))
             ->searchPlaceholder('Caută după nume, SKU, slug sau categorie...')

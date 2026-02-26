@@ -294,9 +294,11 @@ class ImportWinmentorCsvAction
 
                 if ($product->is_placeholder && $product->source === WooProduct::SOURCE_WINMENTOR_CSV) {
                     $normalizedMentorName = $this->resolvePlaceholderName($sku, $row['name'] ?? null);
-                    $alreadyReformatted   = str_contains((string) ($product->erp_notes ?? ''), '[titlu-reformat]');
+                    $notes              = (string) ($product->erp_notes ?? '');
+                    $alreadyReformatted = str_contains($notes, '[titlu-reformat]');
+                    $alreadyNormalized  = str_contains($notes, 'Denumire originală WinMentor:');
 
-                    if (! $alreadyReformatted && $normalizedMentorName !== '' && $product->name !== $normalizedMentorName) {
+                    if (! $alreadyReformatted && ! $alreadyNormalized && $normalizedMentorName !== '' && $product->name !== $normalizedMentorName) {
                         $data = is_array($product->data) ? $product->data : [];
                         $data['csv_name'] = $normalizedMentorName;
 
