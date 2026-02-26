@@ -11,6 +11,7 @@ use App\Models\WooProduct;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Infolists\Components\ImageEntry;
+use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
@@ -131,6 +132,30 @@ class WooProductResource extends Resource
                         ->native(false),
                 ]),
 
+            Forms\Components\Section::make('Atribute tehnice')
+                ->description('Atribute vizibile pe fișa produsului în magazinul online.')
+                ->schema([
+                    Forms\Components\Repeater::make('attributesRelation')
+                        ->label('')
+                        ->relationship('attributes')
+                        ->addActionLabel('Adaugă atribut')
+                        ->reorderable('position')
+                        ->columns(2)
+                        ->schema([
+                            Forms\Components\TextInput::make('name')
+                                ->label('Atribut')
+                                ->required()
+                                ->placeholder('ex: Material, Putere (W), Dulie')
+                                ->datalist(\App\Console\Commands\GenerateProductAttributesCommand::KNOWN_ATTRIBUTES)
+                                ->maxLength(100),
+                            Forms\Components\TextInput::make('value')
+                                ->label('Valoare')
+                                ->required()
+                                ->placeholder('ex: Cupru, 4.5, E14')
+                                ->maxLength(255),
+                        ]),
+                ]),
+
             Forms\Components\Section::make('Furnizori')
                 ->schema([
                     Forms\Components\Repeater::make('suppliers_data')
@@ -235,6 +260,15 @@ class WooProductResource extends Resource
                         'outofstock' => 'Fără stoc',
                         'onbackorder' => 'Precomandă',
                     ]),
+                Tables\Filters\TernaryFilter::make('has_image')
+                    ->label('Imagine')
+                    ->placeholder('Toate produsele')
+                    ->trueLabel('Cu imagine')
+                    ->falseLabel('Fără imagine')
+                    ->queries(
+                        true: fn (Builder $query) => $query->whereNotNull('main_image_url')->where('main_image_url', '!=', ''),
+                        false: fn (Builder $query) => $query->where(fn (Builder $q) => $q->whereNull('main_image_url')->orWhere('main_image_url', '')),
+                    ),
                 Tables\Filters\SelectFilter::make('category_id')
                     ->label('Categorie')
                     ->options(function (): array {
@@ -269,7 +303,7 @@ class WooProductResource extends Resource
                         });
                     }),
             ], layout: FiltersLayout::AboveContent)
-            ->filtersFormColumns(3)
+            ->filtersFormColumns(4)
             ->persistFiltersInSession()
             ->recordUrl(fn (WooProduct $record): string => static::getUrl('view', ['record' => $record]))
             ->searchPlaceholder('Caută după nume, SKU, slug sau categorie...')
@@ -384,6 +418,14 @@ class WooProductResource extends Resource
                             ->label('Description')
                             ->html()
                             ->columnSpanFull(),
+                    ]),
+                Section::make('Atribute tehnice')
+                    ->description('Atribute generate automat din denumirea produsului.')
+                    ->schema([
+                        TextEntry::make('attributes_table')
+                            ->label('')
+                            ->state(fn (WooProduct $record): HtmlString => static::renderAttributesTable($record))
+                            ->html(),
                     ]),
                 Section::make('Istoric variație stoc')
                     ->description('Afișează 10 poziții vizibile și până la 30 poziții cu scroll.')
@@ -608,6 +650,63 @@ class WooProductResource extends Resource
         }
 
         return $value > 0 ? '#16a34a' : '#dc2626';
+    }
+
+    private static function renderAttributesTable(WooProduct $record): HtmlString
+    {
+        $attrs = $record->attributes;
+
+        // Fallback: atribute din data JSON (pentru produsele WooCommerce reale)
+        if ($attrs->isEmpty() && $record->data) {
+            $data     = is_array($record->data) ? $record->data : json_decode((string) $record->data, true);
+            $wooAttrs = $data['attributes'] ?? [];
+
+            if (! empty($wooAttrs)) {
+                $rows = '';
+                foreach ($wooAttrs as $attr) {
+                    $name  = e($attr['name'] ?? '');
+                    $value = e(implode(', ', $attr['options'] ?? []));
+                    $rows .= "<tr>
+                        <td style='padding:0.45rem 0.75rem;border-bottom:1px solid #f3f4f6;font-weight:500;color:#374151;width:40%;'>{$name}</td>
+                        <td style='padding:0.45rem 0.75rem;border-bottom:1px solid #f3f4f6;color:#6b7280;'>{$value}</td>
+                    </tr>";
+                }
+
+                return new HtmlString(
+                    '<div style="border:1px solid #e5e7eb;border-radius:0.75rem;overflow:hidden;background:#fff;">'
+                    .'<table style="width:100%;border-collapse:collapse;font-size:0.875rem;">'
+                    .'<tbody>'.$rows.'</tbody></table></div>'
+                    .'<p style="margin-top:0.5rem;font-size:0.75rem;color:#9ca3af;">Sursa: WooCommerce API</p>'
+                );
+            }
+        }
+
+        if ($attrs->isEmpty()) {
+            return new HtmlString(
+                '<div style="border:1px solid #e5e7eb;border-radius:0.75rem;padding:0.85rem;color:#6b7280;font-size:0.875rem;">'
+                .'Niciun atribut generat încă pentru acest produs.'
+                .'</div>'
+            );
+        }
+
+        $rows = '';
+        foreach ($attrs as $attr) {
+            $name  = e($attr->name);
+            $value = e($attr->value);
+            $badge = $attr->source === 'generated'
+                ? '<span style="font-size:0.7rem;background:#f0fdf4;color:#16a34a;padding:0.1rem 0.4rem;border-radius:9999px;margin-left:0.4rem;">auto</span>'
+                : '';
+            $rows .= "<tr>
+                <td style='padding:0.45rem 0.75rem;border-bottom:1px solid #f3f4f6;font-weight:500;color:#374151;width:40%;'>{$name}{$badge}</td>
+                <td style='padding:0.45rem 0.75rem;border-bottom:1px solid #f3f4f6;color:#6b7280;'>{$value}</td>
+            </tr>";
+        }
+
+        return new HtmlString(
+            '<div style="border:1px solid #e5e7eb;border-radius:0.75rem;overflow:hidden;background:#fff;">'
+            .'<table style="width:100%;border-collapse:collapse;font-size:0.875rem;">'
+            .'<tbody>'.$rows.'</tbody></table></div>'
+        );
     }
 
     private static function formatMetricDay(mixed $day): string
