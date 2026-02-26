@@ -104,14 +104,41 @@ class ProductEnrichmentProgress extends Page
         ];
     }
 
+    public function getLocalImageStats(): array
+    {
+        $totalWithImage = DB::table('woo_products')
+            ->where('is_placeholder', true)
+            ->where('source', 'winmentor_csv')
+            ->whereNotNull('main_image_url')
+            ->where('main_image_url', '!=', '')
+            ->count();
+
+        $local = DB::table('woo_products')
+            ->where('is_placeholder', true)
+            ->where('source', 'winmentor_csv')
+            ->where('main_image_url', 'LIKE', '%erp.malinco.ro%')
+            ->count();
+
+        $external = $totalWithImage - $local;
+
+        return [
+            'total_with_image' => $totalWithImage,
+            'local'            => $local,
+            'external'         => $external,
+            'local_pct'        => $totalWithImage > 0 ? round($local / $totalWithImage * 100) : 0,
+        ];
+    }
+
     public function getRecentlyApproved(): \Illuminate\Support\Collection
     {
         return DB::table('product_image_candidates as pic')
             ->join('woo_products as wp', 'wp.id', '=', 'pic.woo_product_id')
             ->where('pic.status', 'approved')
+            ->whereNotNull('wp.main_image_url')
+            ->where('wp.main_image_url', '!=', '')
             ->orderByDesc('pic.updated_at')
             ->limit(6)
-            ->select('wp.name', 'pic.image_url', 'pic.updated_at')
+            ->select('wp.name', 'wp.main_image_url as image_url', 'pic.updated_at')
             ->get();
     }
 
@@ -193,6 +220,139 @@ class ProductEnrichmentProgress extends Page
             'norm_pct'    => $total > 0 ? round($normalized / $total * 100) : 0,
             'reformat_pct' => $total > 0 ? round($reformatted / $total * 100) : 0,
         ];
+    }
+
+    public function getWebEnrichStats(): array
+    {
+        $total = DB::table('woo_products')
+            ->where('is_placeholder', true)
+            ->where('source', 'winmentor_csv')
+            ->whereRaw("sku NOT LIKE '9%'")
+            ->whereNotNull('sku')
+            ->where('sku', '!=', '')
+            ->count();
+
+        $enriched = DB::table('woo_products')
+            ->where('is_placeholder', true)
+            ->where('source', 'winmentor_csv')
+            ->where('erp_notes', 'like', '%[web-enriched]%')
+            ->count();
+
+        return [
+            'total'    => $total,
+            'enriched' => $enriched,
+            'pct'      => $total > 0 ? round($enriched / $total * 100) : 0,
+        ];
+    }
+
+    public function getRecentlyWebEnriched(): \Illuminate\Support\Collection
+    {
+        return DB::table('woo_products')
+            ->where('is_placeholder', true)
+            ->where('source', 'winmentor_csv')
+            ->where('erp_notes', 'like', '%[web-enriched]%')
+            ->orderByDesc('updated_at')
+            ->limit(8)
+            ->select('id', 'name', 'description', 'updated_at')
+            ->get()
+            ->map(function ($p) {
+                $p->attr_count = DB::table('woo_product_attributes')
+                    ->where('woo_product_id', $p->id)
+                    ->count();
+                return $p;
+            });
+    }
+
+    public function getWooContentStats(): array
+    {
+        $total = DB::table('woo_products')
+            ->where('is_placeholder', false)
+            ->count();
+
+        $withShort = DB::table('woo_products')
+            ->where('is_placeholder', false)
+            ->whereNotNull('short_description')
+            ->where('short_description', '!=', '')
+            ->count();
+
+        $withDesc = DB::table('woo_products')
+            ->where('is_placeholder', false)
+            ->whereNotNull('description')
+            ->where('description', '!=', '')
+            ->whereRaw('LENGTH(description) >= 200')
+            ->where('description', 'not like', '%data-start%')
+            ->count();
+
+        $needsAttention = DB::table('woo_products')
+            ->where('is_placeholder', false)
+            ->where(function ($q) {
+                $q->whereNull('short_description')
+                  ->orWhere('short_description', '')
+                  ->orWhereNull('description')
+                  ->orWhere('description', '')
+                  ->orWhereRaw('LENGTH(description) < 200')
+                  ->orWhere('description', 'like', '%data-start%');
+            })
+            ->count();
+
+        // Atribute
+        $withAttrWoo = DB::table('woo_products as wp')
+            ->where('is_placeholder', false)
+            ->whereExists(fn($q) => $q->from('woo_product_attributes')
+                ->whereColumn('woo_product_id', 'wp.id')
+                ->where('source', 'woocommerce'))
+            ->count();
+
+        $withAttrGen = DB::table('woo_products as wp')
+            ->where('is_placeholder', false)
+            ->whereExists(fn($q) => $q->from('woo_product_attributes')
+                ->whereColumn('woo_product_id', 'wp.id')
+                ->where('source', 'generated'))
+            ->count();
+
+        $withAnyAttr = DB::table('woo_products as wp')
+            ->where('is_placeholder', false)
+            ->whereExists(fn($q) => $q->from('woo_product_attributes')
+                ->whereColumn('woo_product_id', 'wp.id'))
+            ->count();
+
+        $totalAttrWoo = DB::table('woo_product_attributes')->where('source', 'woocommerce')->count();
+        $totalAttrGen = DB::table('woo_product_attributes')->where('source', 'generated')->count();
+
+        return [
+            'total'           => $total,
+            'with_short'      => $withShort,
+            'with_desc'       => $withDesc,
+            'needs_attention' => $needsAttention,
+            'done'            => $total - $needsAttention,
+            'short_pct'       => $total > 0 ? round($withShort   / $total * 100) : 0,
+            'desc_pct'        => $total > 0 ? round($withDesc     / $total * 100) : 0,
+            'done_pct'        => $total > 0 ? round(($total - $needsAttention) / $total * 100) : 0,
+            'with_attr_woo'   => $withAttrWoo,
+            'with_attr_gen'   => $withAttrGen,
+            'with_any_attr'   => $withAnyAttr,
+            'total_attr_woo'  => $totalAttrWoo,
+            'total_attr_gen'  => $totalAttrGen,
+            'attr_pct'        => $total > 0 ? round($withAnyAttr / $total * 100) : 0,
+        ];
+    }
+
+    public function getRecentlyEvaluatedWoo(): \Illuminate\Support\Collection
+    {
+        return DB::table('woo_products')
+            ->where('is_placeholder', false)
+            ->whereNotNull('short_description')
+            ->where('short_description', '!=', '')
+            ->orderByDesc('updated_at')
+            ->limit(6)
+            ->select('id', 'name', 'sku', 'short_description', 'updated_at')
+            ->get()
+            ->map(function ($p) {
+                $p->attr_count = DB::table('woo_product_attributes')
+                    ->where('woo_product_id', $p->id)
+                    ->count();
+                return $p;
+            });
     }
 
     public function getTopAttributes(): \Illuminate\Support\Collection
