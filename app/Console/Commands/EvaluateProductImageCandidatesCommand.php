@@ -20,8 +20,10 @@ use Illuminate\Support\Facades\Log;
 class EvaluateProductImageCandidatesCommand extends Command
 {
     protected $signature = 'images:evaluate-candidates
-                            {--limit= : Max number of products to evaluate (default: all)}
-                            {--re-evaluate : Re-evaluate products that already have an approved image}';
+                            {--limit=      : Max number of products to evaluate (default: all)}
+                            {--re-evaluate : Re-evaluate products that already have an approved image}
+                            {--worker=1    : Worker index (1-based)}
+                            {--workers=1   : Total number of parallel workers}';
 
     protected $description = 'Use Claude Vision to evaluate and approve the best image candidate per product';
 
@@ -41,10 +43,12 @@ class EvaluateProductImageCandidatesCommand extends Command
         $this->claude = new AnthropicClient(apiKey: $apiKey);
         $this->model  = config('services.anthropic.model', 'claude-haiku-4-5-20251001');
 
-        $limit       = $this->option('limit') ? (int) $this->option('limit') : null;
-        $reEvaluate  = (bool) $this->option('re-evaluate');
+        $limit      = $this->option('limit') ? (int) $this->option('limit') : null;
+        $reEvaluate = (bool) $this->option('re-evaluate');
+        $worker     = max(1, (int) $this->option('worker'));
+        $workers    = max(1, (int) $this->option('workers'));
 
-        $this->info("Claude Vision image evaluator — model: {$this->model}");
+        $this->info("Claude Vision image evaluator — model: {$this->model}" . ($workers > 1 ? ", worker: {$worker}/{$workers}" : ''));
 
         // Group pending candidates by product
         $subQuery = DB::table('product_image_candidates')
@@ -60,6 +64,10 @@ class EvaluateProductImageCandidatesCommand extends Command
                     ->whereColumn('approved.woo_product_id', 'product_image_candidates.woo_product_id')
                     ->where('approved.status', 'approved');
             });
+        }
+
+        if ($workers > 1) {
+            $subQuery->whereRaw('(woo_product_id % ?) = ?', [$workers, $worker - 1]);
         }
 
         if ($limit !== null) {
@@ -170,7 +178,8 @@ class EvaluateProductImageCandidatesCommand extends Command
         ];
 
         foreach ($candidates as $i => $candidate) {
-            $imageData = $this->fetchImageAsBase64($candidate->thumbnail_url ?: $candidate->image_url);
+            $referer   = $candidate->source_page_url ?? '';
+            $imageData = $this->fetchImageAsBase64($candidate->thumbnail_url ?: $candidate->image_url, $referer);
 
             if ($imageData === null) {
                 $this->line("    Candidate #{$candidate->id}: could not download image — skipping.");
@@ -218,17 +227,20 @@ class EvaluateProductImageCandidatesCommand extends Command
         $noun = $count === 1 ? 'image' : "{$count} images";
 
         return <<<PROMPT
-You are evaluating product photos for an online hardware/electrical store.
+You are evaluating product photos for a Romanian hardware, construction & building materials store.
+Products include: adhesives, paints, grouts, profiles, panels, tools, batteries, chemicals, insulation, etc.
 
 Product name: "{$productName}"
 
 I will show you {$noun}. For each image evaluate:
-1. RELEVANCE (1-10): Does this image actually show the product or a very similar product?
-2. WATERMARK: Does the image have a visible watermark, text overlay, or copyright stamp?
-3. QUALITY: Is it a clean product photo (not a diagram, screenshot, or blurry photo)?
+1. RELEVANCE (1-10): Does this image show the correct product?
+   - BRAND: If the product name includes a brand (e.g. Baumit, Sika, Ceresit, Bison, Henkel, Hardy), the image MUST show that exact brand. A Ceresit photo for a Baumit product scores 1.
+   - TYPE: The product category must match (grout is not paint, cleaner is not foam, battery is not a car battery).
+   - SIZE/COLOR variants of the same brand+type are acceptable (e.g. 2KG vs 5KG, grey vs white).
+2. WATERMARK: Only reject stock-photo watermarks (Shutterstock, Getty, etc.). Product labels and store branding are fine.
+3. QUALITY: Packaging shots, catalog photos, and store product pages are all acceptable.
 
-Then tell me which image number is the BEST choice.
-If NO image is suitable (wrong product, all watermarked, poor quality), say "NONE".
+Pick the BEST image. Return null only if ALL images show the wrong brand, wrong product type, or have stock-photo watermarks.
 
 Reply ONLY in this JSON format (no extra text):
 {"best": 1, "scores": [{"index": 1, "relevance": 8, "watermark": false, "quality": "good"}]}
@@ -242,10 +254,19 @@ PROMPT;
      *
      * @return array{type: 'base64', media_type: string, data: string}|null
      */
-    private function fetchImageAsBase64(string $url): ?array
+    private function fetchImageAsBase64(string $url, string $referer = ''): ?array
     {
         if (empty($url)) {
             return null;
+        }
+
+        $headers = [
+            'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept: image/webp,image/apng,image/*,*/*;q=0.8',
+        ];
+
+        if (! empty($referer)) {
+            $headers[] = 'Referer: ' . $referer;
         }
 
         $ch = curl_init();
@@ -255,10 +276,7 @@ PROMPT;
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_MAXREDIRS      => 3,
             CURLOPT_TIMEOUT        => 15,
-            CURLOPT_HTTPHEADER     => [
-                'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept: image/webp,image/apng,image/*,*/*;q=0.8',
-            ],
+            CURLOPT_HTTPHEADER     => $headers,
             CURLOPT_SSL_VERIFYPEER => true,
         ]);
 

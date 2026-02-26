@@ -129,6 +129,28 @@ class WooClient
     }
 
     /**
+     * Set the product image to the given URL.
+     * WooCommerce will sideload (download + store) the image and return its new media URL.
+     *
+     * @return string  The new image URL after sideloading (typically on the WooCommerce domain).
+     */
+    public function sideloadProductImage(int $wooProductId, string $imageUrl): string
+    {
+        $response = $this->http->put(
+            $this->apiBase.'/products/'.max(1, $wooProductId),
+            [
+                'images' => [['src' => $imageUrl]],
+            ],
+        );
+        $response->throw();
+
+        $payload = $response->json();
+        $newSrc  = data_get($payload, 'images.0.src', '');
+
+        return is_string($newSrc) ? $newSrc : '';
+    }
+
+    /**
      * @param  array<string, mixed>  $query
      * @return array<int, array<string, mixed>>
      */
