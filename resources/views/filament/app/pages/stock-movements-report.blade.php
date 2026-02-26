@@ -43,6 +43,19 @@
             @endif
         </div>
 
+        {{-- Category filter chip (vizibil doar când e selectată o categorie) --}}
+        @if($this->categoryId)
+        <span class="text-gray-300 dark:text-gray-600">|</span>
+        <div class="flex items-center gap-1.5">
+            <span class="text-sm text-gray-500 dark:text-gray-400">Categorie:</span>
+            <span class="rounded-full bg-primary-100 dark:bg-primary-900/40 px-3 py-1 text-sm font-medium text-primary-700 dark:text-primary-300">
+                {{ $this->categoryName }}
+            </span>
+            <button wire:click="setCategory(null)"
+                class="text-xs text-gray-400 hover:text-danger-500 transition" title="Șterge filtrul">✕</button>
+        </div>
+        @endif
+
     </div>
 
     {{-- Stat cards —— global --}}
@@ -131,12 +144,37 @@
     </div>
     @endif
 
+    {{-- Category cards --}}
+    @if(count($this->categoryStats) > 0)
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        @foreach($this->categoryStats as $cat)
+        <button
+            wire:click="setCategory({{ $this->categoryId === $cat['id'] ? 'null' : $cat['id'] }})"
+            class="rounded-xl border p-3 text-left transition focus:outline-none
+                {{ $this->categoryId === $cat['id']
+                    ? 'border-primary-400 bg-primary-50 dark:border-primary-500 dark:bg-primary-900/30 ring-1 ring-primary-400'
+                    : 'border-gray-200 bg-white hover:border-primary-300 hover:bg-primary-50/50 dark:border-white/10 dark:bg-gray-900 dark:hover:bg-primary-900/10' }}"
+        >
+            <div class="truncate text-xs font-semibold text-gray-700 dark:text-gray-200">{{ $cat['name'] }}</div>
+            <div class="mt-1 text-lg font-bold text-gray-800 dark:text-gray-100">
+                {{ number_format($cat['value'], 0, ',', '.') }}
+                <span class="text-xs font-normal text-gray-400">lei</span>
+            </div>
+            <div class="mt-0.5 text-xs text-gray-400">{{ number_format($cat['products']) }} produse</div>
+        </button>
+        @endforeach
+    </div>
+    @endif
+
     {{-- Top movers table --}}
     <div>
         <p class="mb-2 text-sm text-gray-500 dark:text-gray-400">
             Produse cu cele mai mari mișcări de stoc în ultimele <strong>{{ $this->days }}</strong> zile
             @if($this->supplierId && isset($this->supplierOptions[$this->supplierId]))
                 — furnizor: <strong>{{ $this->supplierOptions[$this->supplierId] }}</strong>
+            @endif
+            @if($this->categoryId && $this->categoryName)
+                — categorie: <strong>{{ $this->categoryName }}</strong>
             @endif.
             Click pe produs pentru detalii.
         </p>

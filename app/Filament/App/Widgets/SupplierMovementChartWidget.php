@@ -19,6 +19,8 @@ class SupplierMovementChartWidget extends ChartWidget
 
     public ?int $supplierId = null;
 
+    public ?int $categoryId = null;
+
     public ?string $filter = 'value';
 
     #[On('stockMovementsSetDays')]
@@ -31,6 +33,12 @@ class SupplierMovementChartWidget extends ChartWidget
     public function syncSupplier(?int $supplierId): void
     {
         $this->supplierId = $supplierId;
+    }
+
+    #[On('stockMovementsSetCategory')]
+    public function syncCategory(?int $categoryId): void
+    {
+        $this->categoryId = $categoryId;
     }
 
     protected function getFilters(): ?array
@@ -66,6 +74,16 @@ class SupplierMovementChartWidget extends ChartWidget
 
         if ($this->supplierId) {
             $query->where('s.id', $this->supplierId);
+        }
+
+        if ($this->categoryId) {
+            $ids = DB::table('woo_product_category as wpc')
+                ->join('woo_categories as wc', 'wc.id', '=', 'wpc.woo_category_id')
+                ->leftJoin('woo_categories as p', 'p.id', '=', 'wc.parent_id')
+                ->leftJoin('woo_categories as gp', 'gp.id', '=', 'p.parent_id')
+                ->whereRaw('COALESCE(gp.id, p.id, wc.id) = ?', [$this->categoryId])
+                ->pluck('wpc.woo_product_id');
+            $query->whereIn('dsm.woo_product_id', $ids);
         }
 
         $rows = $query->get();
