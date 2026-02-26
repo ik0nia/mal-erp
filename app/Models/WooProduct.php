@@ -59,6 +59,11 @@ class WooProduct extends Model
         return $this->belongsTo(IntegrationConnection::class, 'connection_id');
     }
 
+    public function attributes(): HasMany
+    {
+        return $this->hasMany(WooProductAttribute::class, 'woo_product_id')->orderBy('position');
+    }
+
     public function categories(): BelongsToMany
     {
         return $this->belongsToMany(
