@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Concerns\HasLocationScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SamedayAwb extends Model
 {
@@ -18,6 +19,7 @@ class SamedayAwb extends Model
         'location_id',
         'user_id',
         'integration_connection_id',
+        'woo_order_id',
         'provider',
         'status',
         'awb_number',
@@ -73,5 +75,10 @@ class SamedayAwb extends Model
     public function connection(): BelongsTo
     {
         return $this->belongsTo(IntegrationConnection::class, 'integration_connection_id');
+    }
+
+    public function wooOrder(): BelongsTo
+    {
+        return $this->belongsTo(WooOrder::class, 'woo_order_id');
     }
 }

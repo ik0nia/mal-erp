@@ -6,7 +6,9 @@ use App\Filament\App\Resources\SamedayAwbResource;
 use App\Models\IntegrationConnection;
 use App\Models\SamedayAwb;
 use App\Models\User;
+use App\Models\WooOrder;
 use App\Services\Courier\SamedayAwbService;
+use App\Services\WooCommerce\WooClient;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
@@ -17,6 +19,30 @@ use Throwable;
 class CreateSamedayAwb extends CreateRecord
 {
     protected static string $resource = SamedayAwbResource::class;
+
+    /** @var int|null Woo order ID passed via query string */
+    protected ?int $wooOrderId = null;
+
+    public function mount(): void
+    {
+        parent::mount();
+
+        $this->wooOrderId = request()->integer('woo_order_id') ?: null;
+
+        $prefill = array_filter([
+            'recipient_name'        => request()->string('recipient_name')->toString(),
+            'recipient_phone'       => request()->string('recipient_phone')->toString(),
+            'recipient_email'       => request()->string('recipient_email')->toString(),
+            'recipient_address'     => request()->string('recipient_address')->toString(),
+            'recipient_postal_code' => request()->string('recipient_postal_code')->toString(),
+            'cod_amount'            => request()->string('cod_amount')->toString() ?: null,
+            'reference'             => request()->string('reference')->toString(),
+        ]);
+
+        if (! empty($prefill)) {
+            $this->form->fill($prefill);
+        }
+    }
 
     /**
      * @return array<int, Action>
@@ -142,6 +168,7 @@ class CreateSamedayAwb extends CreateRecord
                 'location_id' => $locationId,
                 'user_id' => (int) $user->id,
                 'integration_connection_id' => (int) $connection->id,
+                'woo_order_id' => $this->wooOrderId,
                 'provider' => IntegrationConnection::PROVIDER_SAMEDAY,
                 'status' => SamedayAwb::STATUS_CREATED,
                 'awb_number' => (string) ($result['awb_number'] ?? ''),
@@ -197,6 +224,29 @@ class CreateSamedayAwb extends CreateRecord
             throw ValidationException::withMessages([
                 'recipient_name' => 'Nu s-a putut crea AWB: '.$exception->getMessage(),
             ]);
+        }
+    }
+
+    protected function afterCreate(): void
+    {
+        /** @var SamedayAwb $awb */
+        $awb = $this->record;
+
+        if (! $this->wooOrderId || ! filled($awb->awb_number)) {
+            return;
+        }
+
+        $order = WooOrder::find($this->wooOrderId);
+        if (! $order instanceof WooOrder || ! $order->connection) {
+            return;
+        }
+
+        try {
+            $client = new WooClient($order->connection);
+            $client->addOrderNote((int) $order->woo_id, 'AWB Sameday: '.$awb->awb_number);
+            $client->updateOrderMeta((int) $order->woo_id, '_sameday_awb_number', (string) $awb->awb_number);
+        } catch (Throwable) {
+            // Non-critical: don't block AWB creation if WooCommerce push fails
         }
     }
 

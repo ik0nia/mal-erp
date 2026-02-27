@@ -151,6 +151,130 @@ class WooClient
     }
 
     /**
+     * Create products in bulk via the WooCommerce batch API.
+     * Returns the list of created product objects (each contains 'id', 'sku', etc.).
+     *
+     * @param  array<int, array<string, mixed>>  $products
+     * @return array<int, array<string, mixed>>
+     */
+    /**
+     * Create products in bulk via the WooCommerce batch API.
+     * Returns ['created' => [...], 'errors' => [...]] where errors are per-item failures.
+     *
+     * @param  array<int, array<string, mixed>>  $products
+     * @return array{created: array<int, array<string, mixed>>, errors: array<int, array<string, mixed>>}
+     */
+    public function createProductsBatch(array $products): array
+    {
+        if ($products === []) {
+            return ['created' => [], 'errors' => []];
+        }
+
+        $response = $this->http->post(
+            $this->apiBase.'/products/batch',
+            ['create' => $products],
+        );
+        $response->throw();
+
+        $payload = $response->json();
+
+        $created = [];
+        $errors  = [];
+
+        foreach ($payload['create'] ?? [] as $item) {
+            if (isset($item['error']) || isset($item['code'])) {
+                $errors[] = $item;
+            } elseif (isset($item['id']) && (int) $item['id'] > 0) {
+                $created[] = $item;
+            } else {
+                $errors[] = $item;
+            }
+        }
+
+        return ['created' => $created, 'errors' => $errors];
+    }
+
+    /**
+     * @param  array<string, mixed>  $params
+     * @return array<int, array<string, mixed>>
+     */
+    public function getOrders(int $page, int $perPage = 100, array $params = []): array
+    {
+        return $this->get('orders', array_merge([
+            'page'     => $page,
+            'per_page' => max(1, min(100, $perPage)),
+            'orderby'  => 'date',
+            'order'    => 'desc',
+        ], $params));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function getOrder(int $orderId): array
+    {
+        $response = $this->http->get($this->apiBase.'/orders/'.max(1, $orderId));
+        $response->throw();
+
+        $payload = $response->json();
+
+        return is_array($payload) ? $payload : [];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function updateOrderStatus(int $orderId, string $status): array
+    {
+        $response = $this->http->put(
+            $this->apiBase.'/orders/'.max(1, $orderId),
+            ['status' => $status],
+        );
+        $response->throw();
+
+        $payload = $response->json();
+
+        return is_array($payload) ? $payload : [];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function addOrderNote(int $orderId, string $note, bool $customerNote = false): array
+    {
+        $response = $this->http->post(
+            $this->apiBase.'/orders/'.max(1, $orderId).'/notes',
+            [
+                'note'             => $note,
+                'customer_note'    => $customerNote,
+            ],
+        );
+        $response->throw();
+
+        $payload = $response->json();
+
+        return is_array($payload) ? $payload : [];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function updateOrderMeta(int $orderId, string $key, string $value): array
+    {
+        $response = $this->http->put(
+            $this->apiBase.'/orders/'.max(1, $orderId),
+            [
+                'meta_data' => [['key' => $key, 'value' => $value]],
+            ],
+        );
+        $response->throw();
+
+        $payload = $response->json();
+
+        return is_array($payload) ? $payload : [];
+    }
+
+    /**
      * @param  array<string, mixed>  $query
      * @return array<int, array<string, mixed>>
      */
