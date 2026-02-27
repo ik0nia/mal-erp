@@ -21,7 +21,9 @@ class EnrichProductsFromWebCommand extends Command
                             {--limit=      : Max produse de procesat}
                             {--batch-size=5 : Produse per apel Claude (1-10)}
                             {--regenerate  : Re-procesează și produsele deja îmbogățite}
-                            {--sku=        : Procesează un singur SKU (pentru test)}';
+                            {--sku=        : Procesează un singur SKU (pentru test)}
+                            {--worker=1    : Worker index (1-based)}
+                            {--workers=1   : Total number of parallel workers}';
 
     protected $description = 'Îmbogățește produsele WinMentor cu informații căutate pe internet (EAN lookup via web search)';
 
@@ -42,8 +44,11 @@ class EnrichProductsFromWebCommand extends Command
         $batchSize       = max(1, min(10, (int) $this->option('batch-size')));
         $regenerate      = (bool) $this->option('regenerate');
         $singleSku       = $this->option('sku');
+        $worker          = max(1, (int) $this->option('worker'));
+        $workers         = max(1, (int) $this->option('workers'));
 
-        $this->info('Îmbogățire produse din web — model: ' . $this->model . ($dryRun ? ' [DRY RUN]' : ''));
+        $workerNote = $workers > 1 ? ", worker: {$worker}/{$workers}" : '';
+        $this->info('Îmbogățire produse din web — model: ' . $this->model . ($dryRun ? ' [DRY RUN]' : '') . $workerNote);
 
         $query = DB::table('woo_products')
             ->where('is_placeholder', true)
@@ -61,6 +66,10 @@ class EnrichProductsFromWebCommand extends Command
                 ->whereNull('erp_notes')
                 ->orWhereRaw("erp_notes NOT LIKE '%[web-enriched]%'")
             );
+        }
+
+        if ($workers > 1) {
+            $query->whereRaw('(id % ?) = ?', [$workers, $worker - 1]);
         }
 
         if ($limit !== null) {

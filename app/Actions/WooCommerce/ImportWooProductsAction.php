@@ -13,8 +13,17 @@ use Throwable;
 
 class ImportWooProductsAction
 {
+    public function __construct(private readonly ImportWooCategoriesAction $importCategories) {}
+
     public function execute(IntegrationConnection $connection): SyncRun
     {
+        // Sincronizăm categoriile înainte de produse — garantăm că asocierile funcționează corect
+        try {
+            $this->importCategories->execute($connection);
+        } catch (Throwable) {
+            // Dacă importul de categorii eșuează, continuăm cu produsele — nu blocăm
+        }
+
         DB::connection()->disableQueryLog();
 
         $run = SyncRun::query()->create([

@@ -4,7 +4,10 @@ namespace App\Filament\App\Resources;
 
 use App\Filament\App\Concerns\EnforcesLocationScope;
 use App\Filament\App\Resources\WooOrderResource\Pages;
+use App\Models\ProductStock;
 use App\Models\WooOrder;
+use App\Models\WooProduct;
+use Filament\Infolists\Components\Actions\Action as InfolistAction;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
@@ -15,6 +18,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\HtmlString;
 
 class WooOrderResource extends Resource
 {
@@ -244,6 +248,43 @@ class WooOrderResource extends Resource
                                 TextEntry::make('name')->label('Produs'),
                                 TextEntry::make('sku')->label('SKU')->placeholder('-'),
                                 TextEntry::make('quantity')->label('Cant.')->numeric(),
+                                TextEntry::make('erp_stock')
+                                    ->label('Stoc ERP')
+                                    ->getStateUsing(function (\App\Models\WooOrderItem $record): string {
+                                        if (! $record->woo_product_id) {
+                                            return '–';
+                                        }
+                                        $locationId = (int) $record->order->location_id;
+                                        $localId    = WooProduct::where('woo_id', $record->woo_product_id)->value('id');
+                                        if (! $localId) {
+                                            return '–';
+                                        }
+                                        $qty = ProductStock::where('woo_product_id', $localId)
+                                            ->when($locationId > 0, fn ($q) => $q->where('location_id', $locationId))
+                                            ->value('quantity');
+
+                                        return $qty !== null ? number_format((float) $qty, 0) : '–';
+                                    })
+                                    ->badge()
+                                    ->color(function (\App\Models\WooOrderItem $record): string {
+                                        if (! $record->woo_product_id) {
+                                            return 'gray';
+                                        }
+                                        $locationId = (int) $record->order->location_id;
+                                        $localId    = WooProduct::where('woo_id', $record->woo_product_id)->value('id');
+                                        if (! $localId) {
+                                            return 'gray';
+                                        }
+                                        $qty = ProductStock::where('woo_product_id', $localId)
+                                            ->when($locationId > 0, fn ($q) => $q->where('location_id', $locationId))
+                                            ->value('quantity');
+
+                                        if ($qty === null) {
+                                            return 'gray';
+                                        }
+
+                                        return (float) $qty >= (int) $record->quantity ? 'success' : 'danger';
+                                    }),
                                 TextEntry::make('price')
                                     ->label('Preț')
                                     ->formatStateUsing(fn (mixed $state): string => number_format((float) $state, 2)),
@@ -251,7 +292,7 @@ class WooOrderResource extends Resource
                                     ->label('Total')
                                     ->formatStateUsing(fn (mixed $state): string => number_format((float) $state, 2)),
                             ])
-                            ->columns(5),
+                            ->columns(6),
                     ]),
 
                 Section::make('Totale')
@@ -314,7 +355,7 @@ class WooOrderResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return static::applyLocationFilter(
-            parent::getEloquentQuery()->with(['items', 'samedayAwbs', 'connection'])
+            parent::getEloquentQuery()->with(['items.order', 'samedayAwbs', 'connection'])
         );
     }
 }

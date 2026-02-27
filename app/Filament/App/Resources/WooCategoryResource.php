@@ -22,7 +22,7 @@ class WooCategoryResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-tag';
 
-    protected static ?string $navigationGroup = 'Magazin Online';
+    protected static ?string $navigationGroup = 'Administrare magazin';
 
     protected static ?string $navigationLabel = 'Categorii';
 

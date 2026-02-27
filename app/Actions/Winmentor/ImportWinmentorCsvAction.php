@@ -7,8 +7,10 @@ use App\Models\IntegrationConnection;
 use App\Models\ProductPriceLog;
 use App\Models\ProductStock;
 use App\Models\SyncRun;
+use App\Models\User;
 use App\Models\WooProduct;
 use App\Services\Winmentor\DailyStockMetricAggregator;
+use Filament\Notifications\Notification;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -568,6 +570,8 @@ class ImportWinmentorCsvAction
                     'elapsed_seconds' => round(microtime(true) - $startedAt, 2),
                 ]);
 
+                $this->notifyNewPlaceholders($stats);
+
                 return $run;
             }
 
@@ -601,6 +605,8 @@ class ImportWinmentorCsvAction
                 'stats' => $stats,
                 'errors' => $errors,
             ]);
+
+            $this->notifyNewPlaceholders($stats);
 
             Log::info('Winmentor import completed without deferred pushes', [
                 'sync_run_id' => $run->id,
@@ -900,5 +906,36 @@ class ImportWinmentorCsvAction
             ->whereKey($runId)
             ->where('status', SyncRun::STATUS_CANCELLED)
             ->exists();
+    }
+
+    /**
+     * @param  array<string, mixed>  $stats
+     */
+    private function notifyNewPlaceholders(array $stats): void
+    {
+        $count = (int) ($stats['created_placeholders'] ?? 0);
+
+        if ($count === 0) {
+            return;
+        }
+
+        $recipients = User::query()->where('is_admin', true)->get();
+
+        if ($recipients->isEmpty()) {
+            return;
+        }
+
+        Notification::make()
+            ->title('Produse noi din WinMentor')
+            ->body("{$count} " . ($count === 1 ? 'produs nou necesită' : 'produse noi necesită') . ' pregătire pentru site.')
+            ->icon('heroicon-o-sparkles')
+            ->warning()
+            ->actions([
+                \Filament\Notifications\Actions\Action::make('vezi')
+                    ->label('Vezi produsele')
+                    ->url(\App\Filament\App\Pages\NewWinmentorProducts::getUrl())
+                    ->button(),
+            ])
+            ->sendToDatabase($recipients);
     }
 }

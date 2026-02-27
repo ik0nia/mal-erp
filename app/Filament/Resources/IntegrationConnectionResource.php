@@ -243,6 +243,28 @@ class IntegrationConnectionResource extends Resource
                     ])
                     ->visible(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_SAMEDAY)
                     ->columns(2),
+                Section::make('Webhook WooCommerce')
+                    ->description('Configurează în WooCommerce → Settings → Advanced → Webhooks un webhook de tip "Product updated" cu URL-ul și secretul de mai jos.')
+                    ->schema([
+                        TextInput::make('webhook_url_display')
+                            ->label('URL Webhook')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->default(fn (?IntegrationConnection $record): string => $record?->exists ? $record->webhookUrl() : '— salvează conexiunea mai întâi —')
+                            ->suffixAction(
+                                Forms\Components\Actions\Action::make('copy_webhook_url')
+                                    ->icon('heroicon-o-clipboard-document')
+                                    ->action(fn () => null)
+                                    ->extraAttributes(['x-on:click' => 'navigator.clipboard.writeText($el.closest(".fi-input-wrp").querySelector("input").value)'])
+                            ),
+                        TextInput::make('webhook_secret')
+                            ->label('Secret Webhook')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->default(fn (?IntegrationConnection $record): string => $record?->webhook_secret ?? '— generează din tabel —'),
+                    ])
+                    ->visible(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE)
+                    ->columns(2),
             ]);
     }
 
@@ -566,6 +588,41 @@ class IntegrationConnectionResource extends Resource
                             'connection_id' => ['value' => (string) $record->id],
                         ],
                     ])),
+                Tables\Actions\Action::make('webhook')
+                    ->label('Webhook')
+                    ->icon('heroicon-o-bolt')
+                    ->color('gray')
+                    ->visible(fn (IntegrationConnection $record): bool => $record->isWooCommerce())
+                    ->modalHeading(fn (IntegrationConnection $record): string => "Webhook — {$record->name}")
+                    ->modalSubmitActionLabel('Regenerează secret')
+                    ->modalCancelActionLabel('Închide')
+                    ->modalContent(fn (IntegrationConnection $record): HtmlString => new HtmlString(
+                        '<div class="space-y-4 text-sm">'
+                        . '<div>'
+                        . '<p class="font-medium text-gray-700 dark:text-gray-300 mb-1">URL Webhook</p>'
+                        . '<div class="flex items-center gap-2">'
+                        . '<code class="flex-1 rounded bg-gray-100 dark:bg-gray-800 px-3 py-2 font-mono text-xs break-all">' . e($record->webhookUrl()) . '</code>'
+                        . '</div>'
+                        . '<p class="mt-1 text-xs text-gray-500">Topic: <strong>Product updated</strong> &nbsp;|&nbsp; Delivery URL: URL-ul de mai sus</p>'
+                        . '</div>'
+                        . '<div>'
+                        . '<p class="font-medium text-gray-700 dark:text-gray-300 mb-1">Secret</p>'
+                        . '<code class="block rounded bg-gray-100 dark:bg-gray-800 px-3 py-2 font-mono text-xs break-all">'
+                        . ($record->webhook_secret ? e($record->webhook_secret) : '<span class="text-warning-600">Secret negenereat — apasă Regenerează</span>')
+                        . '</code>'
+                        . '</div>'
+                        . '<p class="text-xs text-gray-500 dark:text-gray-400">Copiază URL-ul și secretul în <strong>WooCommerce → Settings → Advanced → Webhooks</strong>. Selectează topic <em>Product updated</em> și API version <em>WP REST API Integration v3</em>.</p>'
+                        . '</div>'
+                    ))
+                    ->action(function (IntegrationConnection $record): void {
+                        $record->update(['webhook_secret' => IntegrationConnection::generateWebhookSecret()]);
+
+                        Notification::make()
+                            ->success()
+                            ->title('Secret regenerat')
+                            ->body('Noul secret a fost salvat. Actualizează-l și în WooCommerce.')
+                            ->send();
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

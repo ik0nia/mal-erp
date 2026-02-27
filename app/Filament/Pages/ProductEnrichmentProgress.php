@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\App\Pages;
+namespace App\Filament\Pages;
 
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\DB;
@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 class ProductEnrichmentProgress extends Page
 {
     protected static ?string $navigationIcon  = 'heroicon-o-chart-bar';
-    protected static ?string $navigationGroup = 'Magazin Online';
+    protected static ?string $navigationGroup = 'Integrări';
     protected static ?string $navigationLabel = 'Progres îmbogățire produse';
     protected static ?int    $navigationSort  = 99;
 
@@ -16,12 +16,6 @@ class ProductEnrichmentProgress extends Page
 
     /** Auto-refresh every 8 seconds. */
     protected ?string $pollingInterval = '8s';
-
-    public static function canAccess(): bool
-    {
-        $user = auth()->user();
-        return $user && ($user->isSuperAdmin() || $user->role === \App\Models\User::ROLE_MANAGER);
-    }
 
     // -------------------------------------------------------------------------
     // Data helpers called from the Blade view
@@ -79,7 +73,6 @@ class ProductEnrichmentProgress extends Page
 
         $uncategorized = $total - $categorized;
 
-        // Top-level breakdown
         $breakdown = DB::table('woo_product_category as pc')
             ->join('woo_products as wp', 'wp.id', '=', 'pc.woo_product_id')
             ->join('woo_categories as wc', 'wc.id', '=', 'pc.woo_category_id')
@@ -211,13 +204,13 @@ class ProductEnrichmentProgress extends Page
             ->count();
 
         return [
-            'total'       => $total,
-            'with_attrs'  => $withAttrs,
-            'total_attrs' => $totalAttrs,
-            'normalized'  => $normalized,
-            'reformatted' => $reformatted,
-            'attr_pct'    => $total > 0 ? round($withAttrs / $total * 100) : 0,
-            'norm_pct'    => $total > 0 ? round($normalized / $total * 100) : 0,
+            'total'        => $total,
+            'with_attrs'   => $withAttrs,
+            'total_attrs'  => $totalAttrs,
+            'normalized'   => $normalized,
+            'reformatted'  => $reformatted,
+            'attr_pct'     => $total > 0 ? round($withAttrs / $total * 100) : 0,
+            'norm_pct'     => $total > 0 ? round($normalized / $total * 100) : 0,
             'reformat_pct' => $total > 0 ? round($reformatted / $total * 100) : 0,
         ];
     }
@@ -295,29 +288,28 @@ class ProductEnrichmentProgress extends Page
             })
             ->count();
 
-        // Atribute
         $withAttrWoo = DB::table('woo_products as wp')
             ->where('is_placeholder', false)
-            ->whereExists(fn($q) => $q->from('woo_product_attributes')
+            ->whereExists(fn ($q) => $q->from('woo_product_attributes')
                 ->whereColumn('woo_product_id', 'wp.id')
                 ->where('source', 'woocommerce'))
             ->count();
 
         $withAttrGen = DB::table('woo_products as wp')
             ->where('is_placeholder', false)
-            ->whereExists(fn($q) => $q->from('woo_product_attributes')
+            ->whereExists(fn ($q) => $q->from('woo_product_attributes')
                 ->whereColumn('woo_product_id', 'wp.id')
                 ->where('source', 'generated'))
             ->count();
 
         $withAnyAttr = DB::table('woo_products as wp')
             ->where('is_placeholder', false)
-            ->whereExists(fn($q) => $q->from('woo_product_attributes')
+            ->whereExists(fn ($q) => $q->from('woo_product_attributes')
                 ->whereColumn('woo_product_id', 'wp.id'))
             ->count();
 
         $totalAttrWoo = DB::table('woo_product_attributes')->where('source', 'woocommerce')->count();
-        $totalAttrGen = DB::table('woo_product_attributes')->where('source', 'generated')->count();
+        $totalAttrGen = DB::table('woo_product_attributes')->where('source', 'generated')->where('name', '!=', '_evaluated')->count();
 
         return [
             'total'           => $total,
@@ -325,8 +317,8 @@ class ProductEnrichmentProgress extends Page
             'with_desc'       => $withDesc,
             'needs_attention' => $needsAttention,
             'done'            => $total - $needsAttention,
-            'short_pct'       => $total > 0 ? round($withShort   / $total * 100) : 0,
-            'desc_pct'        => $total > 0 ? round($withDesc     / $total * 100) : 0,
+            'short_pct'       => $total > 0 ? round($withShort / $total * 100) : 0,
+            'desc_pct'        => $total > 0 ? round($withDesc / $total * 100) : 0,
             'done_pct'        => $total > 0 ? round(($total - $needsAttention) / $total * 100) : 0,
             'with_attr_woo'   => $withAttrWoo,
             'with_attr_gen'   => $withAttrGen,

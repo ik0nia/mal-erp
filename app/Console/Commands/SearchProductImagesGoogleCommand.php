@@ -19,7 +19,9 @@ class SearchProductImagesGoogleCommand extends Command
                             {--limit=      : Max produse de procesat}
                             {--restart     : Reprocesează și produsele care au deja candidați Google}
                             {--only-empty  : Procesează doar produsele fără nicio imagine aprobată}
-                            {--results=5   : Număr rezultate per căutare (max 10)}';
+                            {--results=5   : Număr rezultate per căutare (max 10)}
+                            {--worker=1    : Worker index (1-based)}
+                            {--workers=1   : Total number of parallel workers}';
 
     protected $description = 'Caută imagini via Google Custom Search API și salvează candidați';
 
@@ -64,8 +66,10 @@ class SearchProductImagesGoogleCommand extends Command
         $restart    = (bool) $this->option('restart');
         $onlyEmpty  = (bool) $this->option('only-empty');
         $numResults = max(1, min(10, (int) $this->option('results')));
+        $worker     = max(1, (int) $this->option('worker'));
+        $workers    = max(1, (int) $this->option('workers'));
 
-        $this->info("Google Custom Search — imagini produse (cx: {$cx}, results: {$numResults}/căutare)");
+        $this->info("Google Custom Search — imagini produse (cx: {$cx}, results: {$numResults}/căutare)" . ($workers > 1 ? ", worker: {$worker}/{$workers}" : ''));
 
         $query = DB::table('woo_products')
             ->where('is_placeholder', true)
@@ -85,6 +89,10 @@ class SearchProductImagesGoogleCommand extends Command
                 ->whereColumn('product_image_candidates.woo_product_id', 'woo_products.id')
                 ->where('source', 'google')
             );
+        }
+
+        if ($workers > 1) {
+            $query->whereRaw('(id % ?) = ?', [$workers, $worker - 1]);
         }
 
         if ($limit !== null) {

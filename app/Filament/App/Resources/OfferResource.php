@@ -4,10 +4,12 @@ namespace App\Filament\App\Resources;
 
 use App\Filament\App\Concerns\EnforcesLocationScope;
 use App\Filament\App\Resources\OfferResource\Pages;
+use App\Models\Customer;
 use App\Models\Location;
 use App\Models\Offer;
 use App\Models\User;
 use App\Models\WooProduct;
+use App\Services\CompanyData\OpenApiCompanyLookupService;
 use Awcodes\TableRepeater\Components\TableRepeater;
 use Awcodes\TableRepeater\Header;
 use Filament\Forms\Components\Actions\Action as FormAction;
@@ -18,9 +20,12 @@ use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
+use Filament\Notifications\Notification;
+use Throwable;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\Section as InfolistSection;
@@ -93,8 +98,202 @@ class OfferResource extends Resource
                             ->live(),
                         Hidden::make('user_id')
                             ->default(fn (): ?int => auth()->id()),
+                        Select::make('_customer_lookup')
+                            ->label('Caută client existent')
+                            ->placeholder('Scrie un nume, telefon sau email...')
+                            ->searchable()
+                            ->live()
+                            ->dehydrated(false)
+                            ->columnSpan(2)
+                            ->getSearchResultsUsing(fn (string $search, Get $get): array => static::getCustomerSearchResults($search, $get))
+                            ->getOptionLabelUsing(fn ($value): ?string => static::getCustomerOptionLabel($value))
+                            ->afterStateUpdated(function ($state, Set $set): void {
+                                if (! $state) {
+                                    return;
+                                }
+
+                                $customer = Customer::find((int) $state);
+
+                                if (! $customer) {
+                                    return;
+                                }
+
+                                if ($customer->isCompany()) {
+                                    $set('client_name', $customer->representative_name ?: $customer->name);
+                                    $set('client_company', $customer->name);
+                                } else {
+                                    $set('client_name', $customer->name);
+                                    $set('client_company', null);
+                                }
+
+                                $set('client_email', $customer->email);
+                                $set('client_phone', $customer->phone);
+                            })
+                            ->suffixAction(
+                                FormAction::make('create_customer')
+                                    ->label('Client nou')
+                                    ->icon('heroicon-o-user-plus')
+                                    ->color('danger')
+                                    ->button()
+                                    ->modalHeading('Adaugă client nou')
+                                    ->modalWidth('7xl')
+                                    ->form([
+                                        Section::make('Date de contact')
+                                            ->columns(3)
+                                            ->schema([
+                                                Select::make('type')
+                                                    ->label('Tip client')
+                                                    ->options(Customer::typeOptions())
+                                                    ->default(Customer::TYPE_INDIVIDUAL)
+                                                    ->native(false)
+                                                    ->required()
+                                                    ->live()
+                                                    ->afterStateUpdated(function (Set $set, ?string $state): void {
+                                                        if ($state !== Customer::TYPE_COMPANY) {
+                                                            $set('cui', null);
+                                                            $set('is_vat_payer', false);
+                                                            $set('registration_number', null);
+                                                            $set('representative_name', null);
+                                                        }
+                                                    }),
+                                                TextInput::make('name')
+                                                    ->label('Denumire / Nume')
+                                                    ->required()
+                                                    ->maxLength(255)
+                                                    ->columnSpan(2),
+                                                TextInput::make('phone')
+                                                    ->label('Telefon')
+                                                    ->tel()
+                                                    ->maxLength(64),
+                                                TextInput::make('email')
+                                                    ->label('Email')
+                                                    ->email()
+                                                    ->maxLength(255)
+                                                    ->columnSpan(2),
+                                            ]),
+                                        Section::make('Date firmă')
+                                            ->columns(4)
+                                            ->visible(function (Get $get): bool {
+                                                try {
+                                                    return $get('type') === Customer::TYPE_COMPANY;
+                                                } catch (Throwable) {
+                                                    return true;
+                                                }
+                                            })
+                                            ->schema([
+                                                TextInput::make('cui')
+                                                    ->label('CUI')
+                                                    ->helperText('Ieși din câmp pentru a prelua automat datele firmei.')
+                                                    ->inputMode('numeric')
+                                                    ->maxLength(64)
+                                                    ->live(onBlur: true)
+                                                    ->afterStateUpdated(function (Get $get, Set $set, ?string $state): void {
+                                                        if ($get('type') !== Customer::TYPE_COMPANY || blank($state)) {
+                                                            return;
+                                                        }
+
+                                                        $normalized = OpenApiCompanyLookupService::normalizeCui($state);
+
+                                                        if ($normalized === '') {
+                                                            return;
+                                                        }
+
+                                                        if ($normalized !== $state) {
+                                                            $set('cui', $normalized);
+                                                        }
+
+                                                        try {
+                                                            $data = app(OpenApiCompanyLookupService::class)->lookupByCui($normalized);
+
+                                                            $fieldMap = [
+                                                                'name'                => 'company_name',
+                                                                'registration_number' => 'company_registration_number',
+                                                                'postal_code'         => 'company_postal_code',
+                                                                'phone'               => 'company_phone',
+                                                                'address'             => 'address',
+                                                                'city'                => 'city',
+                                                                'county'              => 'county',
+                                                            ];
+
+                                                            foreach ($fieldMap as $target => $source) {
+                                                                $val = trim((string) ($data[$source] ?? ''));
+                                                                if ($val !== '') {
+                                                                    $set($target, $val);
+                                                                }
+                                                            }
+
+                                                            if (array_key_exists('company_is_vat_payer', $data)) {
+                                                                $set('is_vat_payer', (bool) $data['company_is_vat_payer']);
+                                                            }
+
+                                                            Notification::make()->success()->title('Date firmă preluate din OpenAPI')->send();
+                                                        } catch (Throwable $e) {
+                                                            Notification::make()->warning()->title('Nu am putut prelua datele firmei')->body($e->getMessage())->send();
+                                                        }
+                                                    }),
+                                                TextInput::make('registration_number')
+                                                    ->label('Nr. Reg. Com.')
+                                                    ->maxLength(255),
+                                                Toggle::make('is_vat_payer')
+                                                    ->label('Plătitor TVA')
+                                                    ->inline(false),
+                                                TextInput::make('representative_name')
+                                                    ->label('Persoană de contact')
+                                                    ->maxLength(255),
+                                            ]),
+                                        Section::make('Adresă')
+                                            ->columns(4)
+                                            ->schema([
+                                                TextInput::make('address')
+                                                    ->label('Adresă')
+                                                    ->maxLength(255)
+                                                    ->columnSpan(2),
+                                                TextInput::make('city')
+                                                    ->label('Oraș')
+                                                    ->maxLength(255),
+                                                TextInput::make('county')
+                                                    ->label('Județ')
+                                                    ->maxLength(255),
+                                                TextInput::make('postal_code')
+                                                    ->label('Cod poștal')
+                                                    ->maxLength(32),
+                                                Textarea::make('notes')
+                                                    ->label('Observații')
+                                                    ->rows(2)
+                                                    ->columnSpan(3),
+                                            ]),
+                                    ])
+                                    ->action(function (array $data, Set $set, $livewire): void {
+                                        $locationId = is_numeric($livewire->data['location_id'] ?? null)
+                                            ? (int) $livewire->data['location_id']
+                                            : null;
+
+                                        $customer = Customer::create(array_merge($data, [
+                                            'location_id' => $locationId,
+                                            'is_active'   => true,
+                                        ]));
+
+                                        $set('_customer_lookup', $customer->id);
+
+                                        if ($customer->isCompany()) {
+                                            $set('client_name', $customer->representative_name ?: $customer->name);
+                                            $set('client_company', $customer->name);
+                                        } else {
+                                            $set('client_name', $customer->name);
+                                            $set('client_company', null);
+                                        }
+
+                                        $set('client_email', $customer->email);
+                                        $set('client_phone', $customer->phone);
+
+                                        \Filament\Notifications\Notification::make()
+                                            ->title('Client adăugat cu succes')
+                                            ->success()
+                                            ->send();
+                                    })
+                            ),
                         TextInput::make('client_name')
-                            ->label('Client')
+                            ->label('Nume client')
                             ->required()
                             ->maxLength(255)
                             ->columnSpan(2),
@@ -456,6 +655,69 @@ class OfferResource extends Resource
         return static::applyLocationFilter(
             parent::getEloquentQuery()->with(['location', 'items'])
         );
+    }
+
+    private static function getCustomerSearchResults(string $search, Get $get): array
+    {
+        $locationId = is_numeric($get('location_id')) ? (int) $get('location_id') : null;
+
+        $query = Customer::query()
+            ->select(['id', 'name', 'type', 'representative_name', 'phone', 'email'])
+            ->where('is_active', true);
+
+        if ($locationId) {
+            $query->where('location_id', $locationId);
+        } else {
+            $user = static::currentUser();
+
+            if ($user && ! $user->isSuperAdmin()) {
+                $query->whereIn('location_id', $user->operationalLocationIds());
+            }
+        }
+
+        if (filled($search)) {
+            $like = '%'.str_replace(['%', '_'], ['\\%', '\\_'], trim($search)).'%';
+            $query->where(function (Builder $q) use ($like): void {
+                $q->where('name', 'like', $like)
+                    ->orWhere('phone', 'like', $like)
+                    ->orWhere('email', 'like', $like)
+                    ->orWhere('representative_name', 'like', $like);
+            });
+        }
+
+        return $query
+            ->orderBy('name')
+            ->limit(30)
+            ->get()
+            ->mapWithKeys(fn (Customer $c): array => [$c->id => static::formatCustomerOption($c)])
+            ->all();
+    }
+
+    private static function getCustomerOptionLabel(mixed $value): ?string
+    {
+        if (blank($value)) {
+            return null;
+        }
+
+        $customer = Customer::select(['id', 'name', 'type', 'representative_name', 'phone', 'email'])
+            ->find((int) $value);
+
+        return $customer ? static::formatCustomerOption($customer) : null;
+    }
+
+    private static function formatCustomerOption(Customer $customer): string
+    {
+        $label = $customer->name;
+
+        if ($customer->isCompany() && $customer->representative_name) {
+            $label .= ' ('.$customer->representative_name.')';
+        }
+
+        if ($customer->phone) {
+            $label .= ' — '.$customer->phone;
+        }
+
+        return $label;
     }
 
     private static function getProductSearchResults(string $search, Get $get): array

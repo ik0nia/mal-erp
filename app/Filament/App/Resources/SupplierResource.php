@@ -3,6 +3,7 @@
 namespace App\Filament\App\Resources;
 
 use App\Filament\App\Resources\SupplierResource\Pages;
+use App\Filament\App\Resources\SupplierResource\RelationManagers\ContactsRelationManager;
 use App\Models\Supplier;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -16,7 +17,7 @@ class SupplierResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-truck';
 
-    protected static ?string $navigationGroup = 'Furnizori';
+    protected static ?string $navigationGroup = 'Achiziții';
 
     protected static ?string $navigationLabel = 'Furnizori';
 
@@ -37,21 +38,30 @@ class SupplierResource extends Resource
                         ->required()
                         ->maxLength(255)
                         ->columnSpanFull(),
-                    Forms\Components\TextInput::make('contact_person')
-                        ->label('Persoană de contact')
-                        ->maxLength(255),
-                    Forms\Components\TextInput::make('email')
-                        ->label('Email')
-                        ->email()
-                        ->maxLength(255),
-                    Forms\Components\TextInput::make('phone')
-                        ->label('Telefon')
-                        ->tel()
-                        ->maxLength(50),
+
+                    Forms\Components\FileUpload::make('logo_url')
+                        ->label('Logo furnizor')
+                        ->image()
+                        ->disk('public')
+                        ->directory('suppliers/logos')
+                        ->imageResizeMode('contain')
+                        ->imageCropAspectRatio('1:1')
+                        ->imageResizeTargetWidth(200)
+                        ->imageResizeTargetHeight(200)
+                        ->columnSpanFull(),
+
+                    Forms\Components\TextInput::make('website_url')
+                        ->label('Website')
+                        ->url()
+                        ->maxLength(255)
+                        ->prefix('https://')
+                        ->columnSpanFull(),
+
                     Forms\Components\Textarea::make('address')
                         ->label('Adresă')
                         ->rows(2)
                         ->columnSpanFull(),
+
                     Forms\Components\Toggle::make('is_active')
                         ->label('Activ')
                         ->default(true)
@@ -92,29 +102,46 @@ class SupplierResource extends Resource
                     ->label('Furnizor')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('contact_person')
-                    ->label('Contact')
+
+                Tables\Columns\ImageColumn::make('brands.logo_url')
+                    ->label('Branduri')
+                    ->disk('public')
+                    ->stacked()
+                    ->limit(6)
+                    ->size(36)
+                    ->extraImgAttributes(['style' => 'object-fit: contain; background: white; border-radius: 4px;'])
                     ->placeholder('-')
                     ->toggleable(),
-                Tables\Columns\TextColumn::make('email')
-                    ->label('Email')
+
+                Tables\Columns\TextColumn::make('contacts.name')
+                    ->label('Contact principal')
+                    ->listWithLineBreaks()
+                    ->limitList(1)
                     ->placeholder('-')
                     ->toggleable(),
-                Tables\Columns\TextColumn::make('phone')
+
+                Tables\Columns\TextColumn::make('contacts.phone')
                     ->label('Telefon')
+                    ->listWithLineBreaks()
+                    ->limitList(1)
                     ->placeholder('-')
+                    ->copyable()
                     ->toggleable(),
+
                 Tables\Columns\TextColumn::make('vat_number')
                     ->label('CUI')
                     ->placeholder('-')
                     ->toggleable(),
+
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Activ')
                     ->boolean(),
+
                 Tables\Columns\TextColumn::make('products_count')
                     ->label('Produse')
                     ->counts('products')
                     ->sortable(),
+
                 Tables\Columns\TextColumn::make('updated_at')
                     ->label('Modificat')
                     ->dateTime('d.m.Y')
@@ -134,6 +161,13 @@ class SupplierResource extends Resource
                 ]),
             ])
             ->defaultSort('name');
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            ContactsRelationManager::class,
+        ];
     }
 
     public static function getPages(): array
