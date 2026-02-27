@@ -4,11 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Supplier extends Model
 {
     protected $fillable = [
         'name',
+        'logo_url',
+        'website_url',
         'contact_person',
         'email',
         'phone',
@@ -26,6 +29,16 @@ class Supplier extends Model
         return [
             'is_active' => 'boolean',
         ];
+    }
+
+    public function contacts(): HasMany
+    {
+        return $this->hasMany(SupplierContact::class)->orderByDesc('is_primary')->orderBy('name');
+    }
+
+    public function brands(): BelongsToMany
+    {
+        return $this->belongsToMany(Brand::class)->withTimestamps();
     }
 
     public function products(): BelongsToMany

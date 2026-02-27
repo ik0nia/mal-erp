@@ -57,18 +57,24 @@ class User extends Authenticatable implements FilamentUser
         ];
     }
 
-    public const ROLE_MANAGER = 'manager';
-    public const ROLE_ACCOUNTANT = 'accountant';
-    public const ROLE_SUPERVISOR = 'supervisor';
-    public const ROLE_OPERATOR = 'operator';
+    public const ROLE_MANAGER             = 'manager';
+    public const ROLE_DIRECTOR_FINANCIAR  = 'director_financiar';
+    public const ROLE_SUPORT_FINANCIAR    = 'suport_financiar';
+    public const ROLE_DIRECTOR_ECONOMIC   = 'director_economic';
+    public const ROLE_DIRECTOR_VANZARI    = 'director_vanzari';
+    public const ROLE_MANAGER_ACHIZITII   = 'manager_achizitii';
+    public const ROLE_CONSULTANT_VANZARI  = 'consultant_vanzari';
 
     public static function roleOptions(): array
     {
         return [
-            self::ROLE_MANAGER => 'Manager',
-            self::ROLE_ACCOUNTANT => 'Contabil',
-            self::ROLE_SUPERVISOR => 'Supervizor',
-            self::ROLE_OPERATOR => 'Operator',
+            self::ROLE_MANAGER            => 'Manager',
+            self::ROLE_DIRECTOR_FINANCIAR => 'Director Financiar',
+            self::ROLE_SUPORT_FINANCIAR   => 'Suport Financiar',
+            self::ROLE_DIRECTOR_ECONOMIC  => 'Director Economic',
+            self::ROLE_DIRECTOR_VANZARI   => 'Director Vânzări',
+            self::ROLE_MANAGER_ACHIZITII  => 'Manager Achiziții',
+            self::ROLE_CONSULTANT_VANZARI => 'Consultant Vânzări',
         ];
     }
 

@@ -12,13 +12,13 @@ class WooOrder extends Model
     use HasLocationScope;
 
     public const STATUS_LABELS = [
-        'pending'    => 'În așteptare',
+        'pending'    => 'În așteptare plată',
         'processing' => 'În procesare',
-        'on-hold'    => 'În hold',
-        'completed'  => 'Finalizat',
-        'cancelled'  => 'Anulat',
-        'refunded'   => 'Rambursat',
-        'failed'     => 'Eșuat',
+        'on-hold'    => 'În așteptare',
+        'completed'  => 'Finalizate',
+        'cancelled'  => 'Anulate',
+        'refunded'   => 'Rambursate',
+        'failed'     => 'Eșuate',
     ];
 
     public const STATUS_COLORS = [

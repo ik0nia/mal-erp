@@ -23,6 +23,7 @@ class IntegrationConnection extends Model
         'verify_ssl',
         'is_active',
         'settings',
+        'webhook_secret',
     ];
 
     protected function casts(): array
@@ -160,6 +161,16 @@ class IntegrationConnection extends Model
         $value = (int) data_get($this->settings, 'sync_interval_minutes', $default);
 
         return max(5, $value);
+    }
+
+    public function webhookUrl(): string
+    {
+        return secure_url('/webhooks/woo/' . $this->id);
+    }
+
+    public static function generateWebhookSecret(): string
+    {
+        return bin2hex(random_bytes(32));
     }
 
     /**

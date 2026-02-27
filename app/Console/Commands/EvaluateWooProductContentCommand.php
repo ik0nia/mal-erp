@@ -115,7 +115,8 @@ class EvaluateWooProductContentCommand extends Command
                   ->orWhere('description', 'like', '%data-start%')
                   ->orWhereNotExists(fn($sub) => $sub
                       ->from('woo_product_attributes')
-                      ->whereColumn('woo_product_id', 'woo_products.id'));
+                      ->whereColumn('woo_product_id', 'woo_products.id')
+                      ->where('source', 'generated'));
             });
         }
 
@@ -482,26 +483,41 @@ PROMPT;
     {
         if (empty($attrs)) return 0;
 
-        // Atributele existente din WooCommerce — nu le suprascriem
-        $existingNames = DB::table('woo_product_attributes')
+        // Atributele existente din WooCommerce nativ (source='woocommerce') — nu le suprascriem
+        $wooNativeNames = DB::table('woo_product_attributes')
             ->where('woo_product_id', $productId)
+            ->where('source', 'woocommerce')
             ->pluck('name')
             ->map(fn($n) => mb_strtolower($n, 'UTF-8'))
             ->toArray();
 
-        // Filtrăm atributele generate care ar duplica cele existente
+        // Filtrăm doar duplicatele față de atributele NATIVE WooCommerce (nu față de cele generate anterior)
         $attrs = array_filter($attrs, fn($name) =>
-            ! in_array(mb_strtolower($name, 'UTF-8'), $existingNames, true),
+            ! in_array(mb_strtolower($name, 'UTF-8'), $wooNativeNames, true),
             ARRAY_FILTER_USE_KEY
         );
 
-        if (empty($attrs)) return 0;
-
-        // Șterge doar atributele generate anterior (nu cele din WooCommerce)
+        // Șterge atributele generate anterior (le înlocuim cu cele noi)
         DB::table('woo_product_attributes')
             ->where('woo_product_id', $productId)
             ->where('source', 'generated')
             ->delete();
+
+        // Dacă nu mai avem nimic de adăugat (native acoperă tot), inserăm un marker
+        // ca produsul să apară în statistica "Generate de Claude"
+        if (empty($attrs)) {
+            DB::table('woo_product_attributes')->insert([
+                'woo_product_id' => $productId,
+                'name'           => '_evaluated',
+                'value'          => 'ok',
+                'position'       => 99,
+                'is_visible'     => false,
+                'source'         => 'generated',
+                'created_at'     => now(),
+                'updated_at'     => now(),
+            ]);
+            return 0; // 0 atribute reale adăugate
+        }
 
         $now      = now();
         $position = 0;

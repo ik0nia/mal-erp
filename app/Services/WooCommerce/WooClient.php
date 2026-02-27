@@ -42,6 +42,14 @@ class WooClient
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    public function getCategory(int $id): array
+    {
+        return $this->get("products/categories/{$id}");
+    }
+
+    /**
      * @return array<int, array<string, mixed>>
      */
     public function getProducts(int $page, int $perPage = 100): array

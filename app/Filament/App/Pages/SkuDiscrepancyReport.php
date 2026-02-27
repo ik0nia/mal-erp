@@ -19,7 +19,7 @@ class SkuDiscrepancyReport extends Page implements HasTable
 
     protected static ?string $navigationIcon = 'heroicon-o-exclamation-triangle';
 
-    protected static ?string $navigationGroup = 'Magazin Online';
+    protected static ?string $navigationGroup = 'Administrare magazin';
 
     protected static ?string $navigationLabel = 'Discrepanțe SKU';
 
