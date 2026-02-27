@@ -3,7 +3,9 @@
 namespace App\Filament\App\Resources\WooOrderResource\Pages;
 
 use App\Filament\App\Resources\WooOrderResource;
+use App\Models\ProductStock;
 use App\Models\SamedayAwb;
+use App\Models\WooProduct;
 use App\Models\WooOrder;
 use App\Services\WooCommerce\WooClient;
 use Filament\Actions\Action;
@@ -12,6 +14,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
+use Illuminate\Support\HtmlString;
 use Throwable;
 
 class ViewWooOrder extends ViewRecord
@@ -137,6 +140,87 @@ class ViewWooOrder extends ViewRecord
                     } catch (Throwable $e) {
                         Notification::make()->danger()->title('Eroare resync')->body($e->getMessage())->send();
                     }
+                }),
+
+            Action::make('check_stock')
+                ->label('Verificare stoc')
+                ->icon('heroicon-o-cube')
+                ->color('primary')
+                ->modalHeading(fn (): string => 'Stoc curent – Comanda #'.($this->record->number ?? ''))
+                ->modalSubmitAction(false)
+                ->modalCancelActionLabel('Închide')
+                ->modalContent(function (): HtmlString {
+                    /** @var WooOrder $order */
+                    $order = $this->record;
+
+                    $locationId = (int) $order->location_id;
+                    $items      = $order->items()->get();
+
+                    if ($items->isEmpty()) {
+                        return new HtmlString('<p class="text-sm text-gray-500">Nu există produse pe această comandă.</p>');
+                    }
+
+                    // woo_order_items.woo_product_id = WooCommerce woo_id
+                    // product_stocks.woo_product_id  = local woo_products.id
+                    // So we need to map woo_id → local id first
+                    $wooIds = $items->pluck('woo_product_id')->filter()->unique()->values();
+
+                    // woo_id → local id map
+                    $localIdByWooId = WooProduct::query()
+                        ->whereIn('woo_id', $wooIds)
+                        ->pluck('id', 'woo_id');  // [woo_id => local_id]
+
+                    $localIds = $localIdByWooId->values();
+
+                    $stocks = ProductStock::query()
+                        ->whereIn('woo_product_id', $localIds)
+                        ->when($locationId > 0, fn ($q) => $q->where('location_id', $locationId))
+                        ->get()
+                        ->keyBy('woo_product_id');  // keyed by local_id
+
+                    // Remap: woo_id → stock record
+                    $stockByWooId = $wooIds->mapWithKeys(function (int $wooId) use ($localIdByWooId, $stocks) {
+                        $localId = $localIdByWooId->get($wooId);
+                        return [$wooId => $localId ? $stocks->get($localId) : null];
+                    });
+
+                    $rows = '';
+                    foreach ($items as $item) {
+                        $stock = $stockByWooId->get((int) $item->woo_product_id);
+                        $stockQty = $stock ? (float) $stock->quantity : null;
+
+                        $stockLabel = $stockQty === null
+                            ? '<span class="text-gray-400">–</span>'
+                            : (string) number_format($stockQty, 0);
+
+                        $ordered = (int) $item->quantity;
+
+                        $color = 'text-gray-700';
+                        if ($stockQty !== null) {
+                            $color = $stockQty >= $ordered ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold';
+                        }
+
+                        $rows .= '<tr class="border-b last:border-0">'
+                            .'<td class="py-2 pr-4 text-sm">'.\Illuminate\Support\Str::limit((string) $item->name, 50).'</td>'
+                            .'<td class="py-2 pr-4 text-sm text-gray-500">'.e((string) ($item->sku ?? '–')).'</td>'
+                            .'<td class="py-2 pr-4 text-sm text-center">'.$ordered.'</td>'
+                            .'<td class="py-2 text-sm text-center '.$color.'">'.$stockLabel.'</td>'
+                            .'</tr>';
+                    }
+
+                    return new HtmlString('
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b text-xs text-gray-400 uppercase">
+                                    <th class="pb-2 pr-4 text-left font-medium">Produs</th>
+                                    <th class="pb-2 pr-4 text-left font-medium">SKU</th>
+                                    <th class="pb-2 pr-4 text-center font-medium">Comandat</th>
+                                    <th class="pb-2 text-center font-medium">Stoc curent</th>
+                                </tr>
+                            </thead>
+                            <tbody>'.$rows.'</tbody>
+                        </table>
+                    ');
                 }),
 
             Action::make('create_awb')
