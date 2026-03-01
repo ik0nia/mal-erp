@@ -19,6 +19,7 @@ class ProductSupplier extends Pivot
         'currency',
         'lead_days',
         'min_order_qty',
+        'po_max_qty',
         'is_preferred',
         'notes',
     ];
@@ -31,6 +32,7 @@ class ProductSupplier extends Pivot
             'purchase_price'  => 'decimal:4',
             'lead_days'       => 'integer',
             'min_order_qty'   => 'decimal:3',
+            'po_max_qty'      => 'decimal:3',
             'is_preferred'    => 'boolean',
         ];
     }

@@ -72,7 +72,7 @@ class User extends Authenticatable implements FilamentUser
             self::ROLE_DIRECTOR_FINANCIAR => 'Director Financiar',
             self::ROLE_SUPORT_FINANCIAR   => 'Suport Financiar',
             self::ROLE_DIRECTOR_ECONOMIC  => 'Director Economic',
-            self::ROLE_DIRECTOR_VANZARI   => 'Director Vânzări',
+            self::ROLE_DIRECTOR_VANZARI   => 'Director Magazin',
             self::ROLE_MANAGER_ACHIZITII  => 'Manager Achiziții',
             self::ROLE_CONSULTANT_VANZARI => 'Consultant Vânzări',
         ];
@@ -110,6 +110,16 @@ class User extends Authenticatable implements FilamentUser
     public function samedayAwbs(): HasMany
     {
         return $this->hasMany(SamedayAwb::class);
+    }
+
+    public function managedSuppliers(): HasMany
+    {
+        return $this->hasMany(Supplier::class, 'buyer_id');
+    }
+
+    public function isBuyer(): bool
+    {
+        return $this->role === self::ROLE_MANAGER_ACHIZITII;
     }
 
     public function isSuperAdmin(): bool

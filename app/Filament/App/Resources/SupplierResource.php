@@ -5,6 +5,7 @@ namespace App\Filament\App\Resources;
 use App\Filament\App\Resources\SupplierResource\Pages;
 use App\Filament\App\Resources\SupplierResource\RelationManagers\ContactsRelationManager;
 use App\Models\Supplier;
+use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -85,6 +86,29 @@ class SupplierResource extends Resource
                         ->maxLength(255),
                 ]),
 
+            Forms\Components\Section::make('Configurare achiziții')
+                ->columns(2)
+                ->schema([
+                    Forms\Components\Select::make('buyer_id')
+                        ->label('Responsabil achiziții (Buyer)')
+                        ->options(fn (): array => User::query()
+                            ->where('role', User::ROLE_MANAGER_ACHIZITII)
+                            ->orderBy('name')
+                            ->pluck('name', 'id')
+                            ->all()
+                        )
+                        ->searchable()
+                        ->nullable()
+                        ->placeholder('Neasignat'),
+
+                    Forms\Components\TextInput::make('po_approval_threshold')
+                        ->label('Plafon maxim PO fără aprobare (RON)')
+                        ->numeric()
+                        ->minValue(0)
+                        ->nullable()
+                        ->placeholder('Fără plafon (aprobat automat)'),
+                ]),
+
             Forms\Components\Section::make('Notițe')
                 ->schema([
                     Forms\Components\Textarea::make('notes')
@@ -131,6 +155,11 @@ class SupplierResource extends Resource
                 Tables\Columns\TextColumn::make('vat_number')
                     ->label('CUI')
                     ->placeholder('-')
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('buyer.name')
+                    ->label('Buyer')
+                    ->placeholder('—')
                     ->toggleable(),
 
                 Tables\Columns\IconColumn::make('is_active')

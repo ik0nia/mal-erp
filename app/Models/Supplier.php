@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -22,13 +23,27 @@ class Supplier extends Model
         'bank_name',
         'notes',
         'is_active',
+        'buyer_id',
+        'po_approval_threshold',
     ];
 
     protected function casts(): array
     {
         return [
-            'is_active' => 'boolean',
+            'is_active'             => 'boolean',
+            'buyer_id'              => 'integer',
+            'po_approval_threshold' => 'decimal:2',
         ];
+    }
+
+    public function buyer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'buyer_id');
+    }
+
+    public function purchaseOrders(): HasMany
+    {
+        return $this->hasMany(PurchaseOrder::class);
     }
 
     public function contacts(): HasMany
@@ -51,6 +66,7 @@ class Supplier extends Model
                 'currency',
                 'lead_days',
                 'min_order_qty',
+                'po_max_qty',
                 'is_preferred',
                 'notes',
             ])
