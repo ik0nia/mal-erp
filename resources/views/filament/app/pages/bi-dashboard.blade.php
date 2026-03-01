@@ -41,21 +41,21 @@
 
     {{-- P0 --}}
     <div class="rounded-xl border border-red-100 dark:border-red-900/40 bg-red-50 dark:bg-red-950/30 px-5 py-4">
-      <div class="text-xs font-semibold uppercase tracking-wide text-red-400">P0 Critice</div>
+      <div class="text-xs font-semibold uppercase tracking-wide text-red-400">Critice (P0)</div>
       <div class="mt-1 text-2xl font-bold text-red-700 dark:text-red-400">{{ number_format($this->countP0) }}</div>
       <div class="mt-1 text-xs text-red-400">stoc 0 sau &lt; 7 zile</div>
     </div>
 
     {{-- P1 --}}
     <div class="rounded-xl border border-orange-100 dark:border-orange-900/40 bg-orange-50 dark:bg-orange-950/30 px-5 py-4">
-      <div class="text-xs font-semibold uppercase tracking-wide text-orange-400">P1 Moderate</div>
+      <div class="text-xs font-semibold uppercase tracking-wide text-orange-400">Moderate (P1)</div>
       <div class="mt-1 text-2xl font-bold text-orange-700 dark:text-orange-400">{{ number_format($this->countP1) }}</div>
       <div class="mt-1 text-xs text-orange-400">7–14 zile rămase</div>
     </div>
 
     {{-- P2 --}}
     <div class="rounded-xl border border-yellow-100 dark:border-yellow-900/40 bg-yellow-50 dark:bg-yellow-950/20 px-5 py-4">
-      <div class="text-xs font-semibold uppercase tracking-wide text-yellow-600 dark:text-yellow-400">P2 Dead stock</div>
+      <div class="text-xs font-semibold uppercase tracking-wide text-yellow-600 dark:text-yellow-400">Capital Blocat — Dead Stock (P2)</div>
       <div class="mt-1 text-2xl font-bold text-yellow-700 dark:text-yellow-400">{{ number_format($this->countP2) }}</div>
       <div class="mt-1 text-xs text-yellow-600 dark:text-yellow-500">capital blocat ≥ 300 RON</div>
     </div>
@@ -64,6 +64,127 @@
 
   {{-- ── Chart trend stoc ──────────────────────────────────────────────────── --}}
   @livewire(\App\Filament\App\Widgets\BiStockTrendChartWidget::class)
+
+  {{-- ── Velocity ────────────────────────────────────────────────────────────── --}}
+  <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 overflow-hidden">
+
+    {{-- Header --}}
+    <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-gray-800/60 flex-wrap gap-3">
+      <div>
+        <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Velocity produse</h2>
+        <p class="text-xs text-gray-400 mt-0.5">Ritm de ieșire din stoc bazat pe ultimele 30/90 zile</p>
+      </div>
+
+      {{-- Tab pills --}}
+      <div class="flex items-center gap-2">
+        @foreach([
+          'fast' => ['label' => 'Rapid mișcătoare', 'icon' => '↑', 'active' => 'bg-blue-600 text-white', 'inactive' => 'border border-blue-200 text-blue-600 dark:border-blue-800 dark:text-blue-400 bg-white dark:bg-gray-900'],
+          'slow' => ['label' => 'Fără mișcare ≥30 zile', 'icon' => '↓', 'active' => 'bg-gray-600 text-white', 'inactive' => 'border border-gray-200 text-gray-600 dark:border-gray-700 dark:text-gray-400 bg-white dark:bg-gray-900'],
+        ] as $vTab => $cfg)
+          <button
+            wire:click="setVelocityTab('{{ $vTab }}')"
+            @class([
+              'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition focus:outline-none',
+              $cfg['active']   => $this->velocityTab === $vTab,
+              $cfg['inactive'] => $this->velocityTab !== $vTab,
+            ])
+          >
+            <span>{{ $cfg['icon'] }}</span>
+            {{ $cfg['label'] }}
+          </button>
+        @endforeach
+      </div>
+    </div>
+
+    {{-- Tabel velocity --}}
+    @if(count($this->velocityRows) === 0)
+      <div class="flex items-center justify-center py-12 text-gray-400 text-sm">
+        Nicio dată velocity. Rulează <code class="font-mono ml-1">bi:compute-velocity</code>.
+      </div>
+    @else
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-100 dark:border-white/5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+              <th class="px-4 py-2.5 text-left">SKU</th>
+              <th class="px-4 py-2.5 text-left">Produs</th>
+              @if($this->velocityTab === 'fast')
+                <th class="px-4 py-2.5 text-right">Avg/zi 7d</th>
+                <th class="px-4 py-2.5 text-right">Avg/zi 30d</th>
+                <th class="px-4 py-2.5 text-right">Avg/zi 90d</th>
+                <th class="px-4 py-2.5 text-right">Total ieșit 30d</th>
+              @else
+                <th class="px-4 py-2.5 text-right">Ultima mișcare</th>
+                <th class="px-4 py-2.5 text-right">Zile fără mișcare</th>
+                <th class="px-4 py-2.5 text-right">Total ieșit 30d</th>
+                <th class="px-4 py-2.5 text-right">Total ieșit 90d</th>
+              @endif
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50 dark:divide-white/5">
+            @foreach($this->velocityRows as $idx => $row)
+              @php
+                $avg30 = (float) $row['avg_out_qty_30d'];
+                $daysNoMove = $row['days_since_last_movement'];
+                $daysColor = match(true) {
+                  $daysNoMove === null              => 'text-gray-400',
+                  $daysNoMove >= 90                 => 'text-red-600 dark:text-red-400 font-bold',
+                  $daysNoMove >= 60                 => 'text-orange-600 dark:text-orange-400 font-semibold',
+                  default                           => 'text-gray-700 dark:text-gray-300',
+                };
+                $rankColor = match(true) {
+                  $idx < 5  => 'text-blue-600 dark:text-blue-400 font-bold',
+                  $idx < 15 => 'text-blue-500 dark:text-blue-400',
+                  default   => 'text-gray-400',
+                };
+              @endphp
+              <tr class="hover:bg-gray-50 dark:hover:bg-white/5 transition">
+                <td class="px-4 py-2.5">
+                  <span class="font-mono text-xs text-gray-600 dark:text-gray-400">{{ $row['sku'] }}</span>
+                </td>
+                <td class="px-4 py-2.5 max-w-[300px]">
+                  <span class="block truncate text-gray-800 dark:text-gray-200" title="{{ $row['product_name'] ?? $row['sku'] }}">
+                    {{ $row['product_name'] ?? '—' }}
+                  </span>
+                </td>
+                @if($this->velocityTab === 'fast')
+                  <td class="px-4 py-2.5 text-right tabular-nums text-gray-600 dark:text-gray-400">
+                    {{ (float)$row['avg_out_qty_7d'] > 0 ? number_format($row['avg_out_qty_7d'], 3, ',', '.') : '—' }}
+                  </td>
+                  <td class="px-4 py-2.5 text-right tabular-nums {{ $rankColor }}">
+                    {{ $avg30 > 0 ? number_format($avg30, 3, ',', '.') : '—' }}
+                  </td>
+                  <td class="px-4 py-2.5 text-right tabular-nums text-gray-500 dark:text-gray-400">
+                    {{ (float)$row['avg_out_qty_90d'] > 0 ? number_format($row['avg_out_qty_90d'], 3, ',', '.') : '—' }}
+                  </td>
+                  <td class="px-4 py-2.5 text-right tabular-nums text-gray-700 dark:text-gray-300">
+                    {{ (float)$row['out_qty_30d'] > 0 ? number_format($row['out_qty_30d'], 0, ',', '.') : '0' }}
+                  </td>
+                @else
+                  <td class="px-4 py-2.5 text-right tabular-nums text-gray-500 dark:text-gray-400">
+                    {{ $row['last_movement_day'] ?? 'niciodată' }}
+                  </td>
+                  <td class="px-4 py-2.5 text-right tabular-nums {{ $daysColor }}">
+                    {{ $daysNoMove !== null ? number_format($daysNoMove).' zile' : '—' }}
+                  </td>
+                  <td class="px-4 py-2.5 text-right tabular-nums text-gray-600 dark:text-gray-400">
+                    {{ (float)$row['out_qty_30d'] > 0 ? number_format($row['out_qty_30d'], 0, ',', '.') : '0' }}
+                  </td>
+                  <td class="px-4 py-2.5 text-right tabular-nums text-gray-500 dark:text-gray-400">
+                    {{ (float)$row['out_qty_90d'] > 0 ? number_format($row['out_qty_90d'], 0, ',', '.') : '0' }}
+                  </td>
+                @endif
+              </tr>
+            @endforeach
+          </tbody>
+        </table>
+      </div>
+      <div class="px-5 py-2 text-xs text-gray-400 border-t border-gray-100 dark:border-white/5">
+        Afișate primele 50 de produse · calculat pentru {{ $this->velocityRows[0]['calculated_for_day'] ?? '—' }}
+      </div>
+    @endif
+
+  </div>
 
   {{-- ── Tabel alerte ──────────────────────────────────────────────────────── --}}
   <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 overflow-hidden">
@@ -79,9 +200,9 @@
       {{-- Tab pills --}}
       <div class="flex items-center gap-2">
         @foreach([
-          'P0' => ['label' => 'P0 Critice',    'count' => $this->countP0, 'active' => 'bg-red-600 text-white',    'inactive' => 'border border-red-200 text-red-600 dark:border-red-800 dark:text-red-400'],
-          'P1' => ['label' => 'P1 Moderate',   'count' => $this->countP1, 'active' => 'bg-orange-500 text-white', 'inactive' => 'border border-orange-200 text-orange-600 dark:border-orange-800 dark:text-orange-400'],
-          'P2' => ['label' => 'P2 Dead Stock', 'count' => $this->countP2, 'active' => 'bg-yellow-500 text-white', 'inactive' => 'border border-yellow-200 text-yellow-700 dark:border-yellow-800 dark:text-yellow-400'],
+          'P0' => ['label' => 'Critice (P0)',             'count' => $this->countP0, 'active' => 'bg-red-600 text-white',    'inactive' => 'border border-red-200 text-red-600 dark:border-red-800 dark:text-red-400'],
+          'P1' => ['label' => 'Moderate (P1)',            'count' => $this->countP1, 'active' => 'bg-orange-500 text-white', 'inactive' => 'border border-orange-200 text-orange-600 dark:border-orange-800 dark:text-orange-400'],
+          'P2' => ['label' => 'Capital Blocat (P2)',      'count' => $this->countP2, 'active' => 'bg-yellow-500 text-white', 'inactive' => 'border border-yellow-200 text-yellow-700 dark:border-yellow-800 dark:text-yellow-400'],
         ] as $level => $cfg)
           <button
             wire:click="setTab('{{ $level }}')"

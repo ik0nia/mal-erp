@@ -50,3 +50,32 @@ Schedule::command('bi:generate-monthly-report')
     ->withoutOverlapping()
     ->runInBackground();
 
+// Raport trimestrial BI — 1 ian, 1 apr, 1 iul, 1 oct la 06:00 (Europe/Bucharest).
+// Acoperă ultimele 90 de zile, grupat săptămânal.
+// Context: rapoartele lunare + săptămânale din perioadă.
+Schedule::command('bi:generate-period-report --type=quarterly')
+    ->monthlyOn(1, '06:00')
+    ->timezone('Europe/Bucharest')
+    ->when(fn () => in_array(now()->setTimezone('Europe/Bucharest')->month, [1, 4, 7, 10]))
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// Raport semestrial BI — 1 ian și 1 iul la 08:00 (Europe/Bucharest).
+// Acoperă ultimele 180 de zile, grupat lunar.
+// Context: rapoartele trimestriale + lunare din perioadă.
+Schedule::command('bi:generate-period-report --type=semiannual')
+    ->monthlyOn(1, '08:00')
+    ->timezone('Europe/Bucharest')
+    ->when(fn () => in_array(now()->setTimezone('Europe/Bucharest')->month, [1, 7]))
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// Raport anual BI — 1 ianuarie la 10:00 (Europe/Bucharest).
+// Acoperă ultimele 365 de zile, grupat lunar (12 rânduri KPI).
+// Context: rapoartele semestriale + trimestriale + lunare din an.
+Schedule::command('bi:generate-period-report --type=annual')
+    ->yearlyOn(1, 1, '10:00')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping()
+    ->runInBackground();
+

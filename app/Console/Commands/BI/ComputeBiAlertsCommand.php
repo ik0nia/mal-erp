@@ -20,8 +20,12 @@ class ComputeBiAlertsCommand extends Command
         $day = $this->resolveDay();
         $this->line("Alerts → <info>{$day}</info>");
 
-        // Sanity check sursă
-        $sourceCount = DB::table('daily_stock_metrics')->where('day', $day)->count();
+        // Sanity check sursă (doar produse shop)
+        $sourceCount = DB::table('daily_stock_metrics as dsm')
+            ->where('dsm.day', $day)
+            ->leftJoin('woo_products as wp', 'wp.sku', '=', 'dsm.reference_product_id')
+            ->whereRaw("COALESCE(wp.product_type, 'shop') = 'shop'")
+            ->count();
         if ($sourceCount === 0) {
             $this->warn("  Nicio dată în daily_stock_metrics pentru {$day}. Skip.");
             return self::SUCCESS;
@@ -40,9 +44,10 @@ class ComputeBiAlertsCommand extends Command
         $p0Days    = (int)   config('bi.alert_p0_days_left',         7);
         $p1Days    = (int)   config('bi.alert_p1_days_left',         14);
 
-        // Încarcă toate produsele zilei + velocity + denumire Woo
+        // Încarcă produsele zilei de tip 'shop' + velocity + denumire Woo
         // LEFT JOIN velocity (poate lipsi dacă e prima rulare)
-        // LEFT JOIN woo_products pe sku = reference_product_id (denumire opțională)
+        // JOIN woo_products pe sku = reference_product_id — filtrăm strict pe product_type = 'shop'
+        // (excludem producție internă și garanție palet din alerting)
         $products = DB::table('daily_stock_metrics as dsm')
             ->where('dsm.day', $day)
             ->leftJoin(
@@ -50,6 +55,7 @@ class ComputeBiAlertsCommand extends Command
                 'v.reference_product_id', '=', 'dsm.reference_product_id'
             )
             ->leftJoin('woo_products as wp', 'wp.sku', '=', 'dsm.reference_product_id')
+            ->whereRaw("COALESCE(wp.product_type, 'shop') = 'shop'")
             ->select([
                 'dsm.reference_product_id',
                 'dsm.closing_available_qty',

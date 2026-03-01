@@ -18,6 +18,12 @@ class BiDashboardPage extends Page
     // ── Filtru tab alerte ─────────────────────────────────────────────────────
     public string $tab = 'P0';
 
+    // ── Filtru tab velocity ────────────────────────────────────────────────────
+    public string $velocityTab = 'fast';
+
+    /** @var array<int, array<string, mixed>> */
+    public array $velocityRows = [];
+
     // ── KPI stoc ─────────────────────────────────────────────────────────────
     public string $kpiDay        = '—';
     public float  $stockValue    = 0.0;
@@ -46,12 +52,19 @@ class BiDashboardPage extends Page
     {
         $this->loadKpi();
         $this->loadAlerts();
+        $this->loadVelocityRows();
     }
 
     public function setTab(string $tab): void
     {
         $this->tab = $tab;
         $this->loadAlertRows();
+    }
+
+    public function setVelocityTab(string $tab): void
+    {
+        $this->velocityTab = $tab;
+        $this->loadVelocityRows();
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
@@ -107,6 +120,45 @@ class BiDashboardPage extends Page
         $this->countP2 = (int) ($counts->get('P2')?->cnt ?? 0);
 
         $this->loadAlertRows();
+    }
+
+    private function loadVelocityRows(): void
+    {
+        $baseQuery = DB::table('bi_product_velocity_current as v')
+            ->leftJoin('woo_products as p', 'p.sku', '=', 'v.reference_product_id')
+            ->select(
+                'v.reference_product_id as sku',
+                'p.name as product_name',
+                'v.avg_out_qty_7d',
+                'v.avg_out_qty_30d',
+                'v.avg_out_qty_90d',
+                'v.out_qty_30d',
+                'v.out_qty_90d',
+                'v.last_movement_day',
+                'v.days_since_last_movement',
+            );
+
+        if ($this->velocityTab === 'fast') {
+            $this->velocityRows = $baseQuery
+                ->where('v.avg_out_qty_30d', '>', 0)
+                ->orderByDesc('v.avg_out_qty_30d')
+                ->limit(50)
+                ->get()
+                ->map(fn ($r) => (array) $r)
+                ->toArray();
+        } else {
+            // Lente: nu au avut mișcare în ultimele 30+ zile (sau deloc) și nu sunt în "fast"
+            $this->velocityRows = $baseQuery
+                ->where(function ($q) {
+                    $q->where('v.days_since_last_movement', '>=', 30)
+                      ->orWhereNull('v.days_since_last_movement');
+                })
+                ->orderByRaw('COALESCE(v.days_since_last_movement, 9999) DESC')
+                ->limit(50)
+                ->get()
+                ->map(fn ($r) => (array) $r)
+                ->toArray();
+        }
     }
 
     private function loadAlertRows(): void

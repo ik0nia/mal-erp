@@ -45,18 +45,14 @@ class GenerateBiAnalysisJob implements ShouldQueue
 
             $metrics = $this->gatherMetrics();
 
-            $pastAnalyses = BiAnalysis::where('id', '!=', $this->analysisId)
-                ->where('status', 'done')
-                ->latest('generated_at')
-                ->limit(3)
-                ->get();
+            $pastAnalyses = $this->fetchPastAnalyses();
 
             $prompt = $this->buildPrompt($metrics, $pastAnalyses);
 
             $claude = new AnthropicClient(apiKey: $apiKey);
 
             $message = $claude->messages->create(
-                maxTokens: 4000,
+                maxTokens: 12000,
                 messages:  [['role' => 'user', 'content' => $prompt]],
                 model:     'claude-sonnet-4-6',
             );
@@ -134,35 +130,40 @@ class GenerateBiAnalysisJob implements ShouldQueue
         if ($includeStock) {
             $days = max(1, $from->diffInDays($to));
 
+            // Toate query-urile de stoc filtrează strict pe produse de tip 'shop'
+            // (exclud producție internă și garanție palet din rapoarte)
             if ($days <= 30) {
                 // Perioadă scurtă: totul zilnic
-                $stockDaily = DailyStockMetric::whereBetween('day', [$metricsFrom, $metricsTo])
-                    ->selectRaw('day as period, SUM(closing_available_qty * closing_sell_price) as stock_value, SUM(closing_available_qty) as total_qty')
-                    ->groupBy('day')->orderBy('day')->get();
+                $stockDaily = DailyStockMetric::from('daily_stock_metrics')
+                    ->whereBetween('daily_stock_metrics.day', [$metricsFrom, $metricsTo])
+                    ->leftJoin('woo_products as wp_f', 'wp_f.sku', '=', 'daily_stock_metrics.reference_product_id')
+                    ->whereRaw("COALESCE(wp_f.product_type, 'shop') = 'shop'")
+                    ->selectRaw('daily_stock_metrics.day as period, SUM(daily_stock_metrics.closing_available_qty * daily_stock_metrics.closing_sell_price) as stock_value, SUM(daily_stock_metrics.closing_available_qty) as total_qty')
+                    ->groupBy('daily_stock_metrics.day')->orderBy('daily_stock_metrics.day')->get();
                 $stockTrend       = collect();
                 $stockGranularity = 'zilnic';
+            } elseif ($days <= 180) {
+                // 31–180 zile: tot săptămânal uniform.
+                $stockDaily = DailyStockMetric::from('daily_stock_metrics')
+                    ->whereBetween('daily_stock_metrics.day', [$metricsFrom, $metricsTo])
+                    ->leftJoin('woo_products as wp_f', 'wp_f.sku', '=', 'daily_stock_metrics.reference_product_id')
+                    ->whereRaw("COALESCE(wp_f.product_type, 'shop') = 'shop'")
+                    ->selectRaw('DATE_FORMAT(MIN(daily_stock_metrics.day), "%Y-%m (săpt. %u)") as period, SUM(daily_stock_metrics.closing_available_qty * daily_stock_metrics.closing_sell_price) / COUNT(DISTINCT daily_stock_metrics.day) as stock_value, SUM(daily_stock_metrics.closing_available_qty) / COUNT(DISTINCT daily_stock_metrics.day) as total_qty')
+                    ->groupByRaw('YEARWEEK(daily_stock_metrics.day, 1)')->orderByRaw('MIN(daily_stock_metrics.day)')->get();
+                $stockGranularity = 'săptămânal (medie zilnică)';
+                $stockTrend       = collect();
+                $trendGranularity = '';
             } else {
-                // Perioadă lungă: ultimele 30 zile zilnic + restul agregat săptămânal/lunar
-                $recentFrom = Carbon::parse($metricsTo)->subDays(29)->toDateString();
-
-                $stockDaily = DailyStockMetric::whereBetween('day', [$recentFrom, $metricsTo])
-                    ->selectRaw('day as period, SUM(closing_available_qty * closing_sell_price) as stock_value, SUM(closing_available_qty) as total_qty')
-                    ->groupBy('day')->orderBy('day')->get();
-                $stockGranularity = 'zilnic (ultimele 30 zile)';
-
-                // Perioada mai veche — săptămânal sau lunar
-                $trendTo = Carbon::parse($recentFrom)->subDay()->toDateString();
-                if ($days <= 180) {
-                    $stockTrend = DailyStockMetric::whereBetween('day', [$metricsFrom, $trendTo])
-                        ->selectRaw('DATE_FORMAT(MIN(day), "%Y-%m (săpt. %u)") as period, SUM(closing_available_qty * closing_sell_price) / COUNT(DISTINCT day) as stock_value, SUM(closing_available_qty) / COUNT(DISTINCT day) as total_qty')
-                        ->groupByRaw('YEARWEEK(day, 1)')->orderByRaw('MIN(day)')->get();
-                    $trendGranularity = 'săptămânal (medie zilnică)';
-                } else {
-                    $stockTrend = DailyStockMetric::whereBetween('day', [$metricsFrom, $trendTo])
-                        ->selectRaw('DATE_FORMAT(MIN(day), "%Y-%m") as period, SUM(closing_available_qty * closing_sell_price) / COUNT(DISTINCT day) as stock_value, SUM(closing_available_qty) / COUNT(DISTINCT day) as total_qty')
-                        ->groupByRaw('YEAR(day), MONTH(day)')->orderByRaw('MIN(day)')->get();
-                    $trendGranularity = 'lunar (medie zilnică)';
-                }
+                // > 180 zile: tot lunar uniform.
+                $stockDaily = DailyStockMetric::from('daily_stock_metrics')
+                    ->whereBetween('daily_stock_metrics.day', [$metricsFrom, $metricsTo])
+                    ->leftJoin('woo_products as wp_f', 'wp_f.sku', '=', 'daily_stock_metrics.reference_product_id')
+                    ->whereRaw("COALESCE(wp_f.product_type, 'shop') = 'shop'")
+                    ->selectRaw('DATE_FORMAT(MIN(daily_stock_metrics.day), "%Y-%m") as period, SUM(daily_stock_metrics.closing_available_qty * daily_stock_metrics.closing_sell_price) / COUNT(DISTINCT daily_stock_metrics.day) as stock_value, SUM(daily_stock_metrics.closing_available_qty) / COUNT(DISTINCT daily_stock_metrics.day) as total_qty')
+                    ->groupByRaw('YEAR(daily_stock_metrics.day), MONTH(daily_stock_metrics.day)')->orderByRaw('MIN(daily_stock_metrics.day)')->get();
+                $stockGranularity = 'lunar (medie zilnică)';
+                $stockTrend       = collect();
+                $trendGranularity = '';
             }
 
             // Context precedent pentru o zi anume: ultimele 30 de zile înainte de ziua selectată
@@ -170,28 +171,32 @@ class GenerateBiAnalysisJob implements ShouldQueue
             if ($isSingleDay) {
                 $ctxFrom = $from->copy()->subDays(30)->toDateString();
                 $ctxTo   = $from->copy()->subDay()->toDateString();
-                $stockContext = DailyStockMetric::whereBetween('day', [$ctxFrom, $ctxTo])
-                    ->selectRaw('day as period, SUM(closing_available_qty * closing_sell_price) as stock_value, SUM(closing_available_qty) as total_qty')
-                    ->groupBy('day')
-                    ->orderBy('day')
+                $stockContext = DailyStockMetric::from('daily_stock_metrics')
+                    ->whereBetween('daily_stock_metrics.day', [$ctxFrom, $ctxTo])
+                    ->leftJoin('woo_products as wp_f', 'wp_f.sku', '=', 'daily_stock_metrics.reference_product_id')
+                    ->whereRaw("COALESCE(wp_f.product_type, 'shop') = 'shop'")
+                    ->selectRaw('daily_stock_metrics.day as period, SUM(daily_stock_metrics.closing_available_qty * daily_stock_metrics.closing_sell_price) as stock_value, SUM(daily_stock_metrics.closing_available_qty) as total_qty')
+                    ->groupBy('daily_stock_metrics.day')
+                    ->orderBy('daily_stock_metrics.day')
                     ->get();
             }
 
             $stockDroppers = DailyStockMetric::whereBetween('daily_stock_metrics.day', [$metricsFrom, $metricsTo])
                 ->leftJoin('woo_products', 'woo_products.sku', '=', 'daily_stock_metrics.reference_product_id')
+                ->whereRaw("COALESCE(woo_products.product_type, 'shop') = 'shop'")
                 ->selectRaw('daily_stock_metrics.reference_product_id, woo_products.name as product_name, SUM(daily_stock_metrics.daily_available_variation) as total_variation, MIN(daily_stock_metrics.closing_available_qty) as min_qty, MAX(daily_stock_metrics.closing_available_qty) as max_qty')
                 ->groupBy('daily_stock_metrics.reference_product_id', 'woo_products.name')
                 ->orderBy('total_variation')
                 ->limit(15)
                 ->get();
 
-            $inStockCount    = WooProduct::where('stock_status', 'instock')->count();
-            $outOfStockCount = WooProduct::where('stock_status', 'outofstock')->count();
-            $totalProducts   = WooProduct::count();
-            $activeProducts  = WooProduct::where('status', 'publish')->count();
+            $inStockCount    = WooProduct::where('stock_status', 'instock')->where('product_type', WooProduct::TYPE_SHOP)->count();
+            $outOfStockCount = WooProduct::where('stock_status', 'outofstock')->where('product_type', WooProduct::TYPE_SHOP)->count();
+            $totalProducts   = WooProduct::where('product_type', WooProduct::TYPE_SHOP)->count();
+            $activeProducts  = WooProduct::where('status', 'publish')->where('product_type', WooProduct::TYPE_SHOP)->count();
 
-            // Prețuri: același granularity ca stocul
-            if ($days <= 45) {
+            // Prețuri: aceeași granularitate ca stocul (prag 30, nu 45)
+            if ($days <= 30) {
                 $priceChanges = ProductPriceLog::whereBetween('changed_at', [$from, $to])
                     ->selectRaw('DATE(changed_at) as period, COUNT(*) as cnt, SUM(CASE WHEN new_price > old_price THEN 1 ELSE 0 END) as up, SUM(CASE WHEN new_price < old_price THEN 1 ELSE 0 END) as dn')
                     ->groupByRaw('DATE(changed_at)')
@@ -247,30 +252,28 @@ class GenerateBiAnalysisJob implements ShouldQueue
                 $ordersByDay      = $ordersRaw->groupBy('period')->map(fn ($r) => ['count' => $r->sum('cnt'), 'value' => round($r->sum('value'), 2)]);
                 $ordersTrend      = collect();
                 $ordersGranularity = 'zilnic';
-            } else {
-                // Ultimele 30 zile zilnic
-                $recentOrdersFrom = $to->copy()->subDays(30);
-                $ordersRaw = WooOrder::whereBetween('order_date', [$recentOrdersFrom, $to])
-                    ->selectRaw('DATE(order_date) as period, status, COUNT(*) as cnt, SUM(total) as value')
-                    ->groupByRaw('DATE(order_date), status')
-                    ->orderByRaw('DATE(order_date)')
+            } elseif ($days <= 180) {
+                // 31–180 zile: tot săptămânal uniform
+                $ordersRaw = WooOrder::whereBetween('order_date', [$from, $to])
+                    ->selectRaw('DATE_FORMAT(MIN(order_date), "%Y-%m (săpt. %u)") as period, status, COUNT(*) as cnt, SUM(total) as value')
+                    ->groupByRaw('YEARWEEK(order_date, 1), status')
+                    ->orderByRaw('MIN(order_date)')
                     ->get();
-                $ordersByDay      = $ordersRaw->groupBy('period')->map(fn ($r) => ['count' => $r->sum('cnt'), 'value' => round($r->sum('value'), 2)]);
-                $ordersGranularity = 'zilnic (ultimele 30 zile)';
-
-                // Restul perioadei agregat
-                if ($days <= 180) {
-                    $trendRaw = WooOrder::whereBetween('order_date', [$from, $recentOrdersFrom->copy()->subSecond()])
-                        ->selectRaw('DATE_FORMAT(MIN(order_date), "%Y-%m (săpt. %u)") as period, COUNT(*) as cnt, SUM(total) as value')
-                        ->groupByRaw('YEARWEEK(order_date, 1)')->orderByRaw('MIN(order_date)')->get();
-                    $ordersTrendGranularity = 'săptămânal';
-                } else {
-                    $trendRaw = WooOrder::whereBetween('order_date', [$from, $recentOrdersFrom->copy()->subSecond()])
-                        ->selectRaw('DATE_FORMAT(MIN(order_date), "%Y-%m") as period, COUNT(*) as cnt, SUM(total) as value')
-                        ->groupByRaw('YEAR(order_date), MONTH(order_date)')->orderByRaw('MIN(order_date)')->get();
-                    $ordersTrendGranularity = 'lunar';
-                }
-                $ordersTrend = $trendRaw;
+                $ordersByDay       = $ordersRaw->groupBy('period')->map(fn ($r) => ['count' => $r->sum('cnt'), 'value' => round($r->sum('value'), 2)]);
+                $ordersGranularity = 'săptămânal';
+                $ordersTrend       = collect();
+                $ordersTrendGranularity = '';
+            } else {
+                // > 180 zile: tot lunar uniform
+                $ordersRaw = WooOrder::whereBetween('order_date', [$from, $to])
+                    ->selectRaw('DATE_FORMAT(MIN(order_date), "%Y-%m") as period, status, COUNT(*) as cnt, SUM(total) as value')
+                    ->groupByRaw('YEAR(order_date), MONTH(order_date), status')
+                    ->orderByRaw('MIN(order_date)')
+                    ->get();
+                $ordersByDay       = $ordersRaw->groupBy('period')->map(fn ($r) => ['count' => $r->sum('cnt'), 'value' => round($r->sum('value'), 2)]);
+                $ordersGranularity = 'lunar';
+                $ordersTrend       = collect();
+                $ordersTrendGranularity = '';
             }
 
             $ordersTotal     = $ordersRaw->sum('cnt');
@@ -303,6 +306,52 @@ class GenerateBiAnalysisJob implements ShouldQueue
         );
     }
 
+    // ── Context rapoarte anterioare ───────────────────────────────────────────
+
+    private function fetchPastAnalyses(): Collection
+    {
+        $from = $this->dateFrom->copy()->startOfDay();
+        $to   = $this->dateTo->copy()->endOfDay();
+        $excludeId = $this->analysisId;
+
+        // Strategie pe tip — prioritizăm rapoartele automate comprehensive:
+        //   lunar  (type=monthly) → max 2, rezumat 30 zile, 3000 chars fiecare
+        //   săptămânal (type=weekly) → max 4 cele mai recente, 2500 chars fiecare
+        //   manual (type=manual)  → max 2 cele mai recente, 1500 chars fiecare
+        // Ordinea finală: cronologic (cel mai vechi → cel mai nou) pentru context coeziv.
+
+        $monthly = BiAnalysis::where('status', 'done')
+            ->where('type', 'monthly')
+            ->where('id', '!=', $excludeId)
+            ->whereBetween('generated_at', [$from, $to])
+            ->latest('generated_at')
+            ->limit(2)
+            ->get()
+            ->map(fn ($a) => $a->setAttribute('_chars', 3000));
+
+        $weekly = BiAnalysis::where('status', 'done')
+            ->where('type', 'weekly')
+            ->where('id', '!=', $excludeId)
+            ->whereBetween('generated_at', [$from, $to])
+            ->latest('generated_at')
+            ->limit(4)
+            ->get()
+            ->map(fn ($a) => $a->setAttribute('_chars', 2500));
+
+        $manual = BiAnalysis::where('status', 'done')
+            ->where('type', 'manual')
+            ->where('id', '!=', $excludeId)
+            ->whereBetween('generated_at', [$from, $to])
+            ->latest('generated_at')
+            ->limit(2)
+            ->get()
+            ->map(fn ($a) => $a->setAttribute('_chars', 1500));
+
+        return $monthly->concat($weekly)->concat($manual)
+            ->sortBy('generated_at')
+            ->values();
+    }
+
     // ── Prompt builder ────────────────────────────────────────────────────────
 
     private function buildPrompt(array $m, Collection $pastAnalyses): string
@@ -313,11 +362,17 @@ class GenerateBiAnalysisJob implements ShouldQueue
         // ── Context analize anterioare ────────────────────────────────────────
         $pastContext = '';
         if ($pastAnalyses->isNotEmpty()) {
-            $pastContext = "\n---\n\n## ANALIZELE TALE ANTERIOARE (context)\n\n";
+            $pastContext = "\n---\n\n## RAPOARTE BI DIN PERIOADA ANALIZATĂ (context)\n\n";
             $pastContext .= "Folosește-le ca referință pentru evoluție și pentru a evita să repeți concluzii deja cunoscute.\n\n";
             foreach ($pastAnalyses as $analysis) {
-                $pastContext .= "### {$analysis->title}\n";
-                $pastContext .= Str::limit($analysis->content, 1500) . "\n\n";
+                $chars = $analysis->_chars ?? 2000;
+                $typeLabel = match($analysis->type) {
+                    'monthly' => '[LUNAR]',
+                    'weekly'  => '[SĂPTĂMÂNAL]',
+                    default   => '[MANUAL]',
+                };
+                $pastContext .= "### {$typeLabel} {$analysis->title} ({$analysis->generated_at->format('d.m.Y')})\n";
+                $pastContext .= Str::limit($analysis->content, $chars) . "\n\n";
             }
         }
 

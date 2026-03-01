@@ -20,28 +20,35 @@ class ComputeBiKpiCommand extends Command
         $this->line("KPI → <info>{$day}</info>");
 
         // Sanity check: există date sursă?
-        $sourceCount = DB::table('daily_stock_metrics')->where('day', $day)->count();
+        $sourceCount = DB::table('daily_stock_metrics')
+            ->where('day', $day)
+            ->leftJoin('woo_products as wp', 'wp.sku', '=', 'daily_stock_metrics.reference_product_id')
+            ->whereRaw("COALESCE(wp.product_type, 'shop') = 'shop'")
+            ->count();
         if ($sourceCount === 0) {
             $this->warn("  Nicio dată în daily_stock_metrics pentru {$day}. Skip.");
             Log::warning('bi:compute-kpi: no source data', ['day' => $day]);
             return self::SUCCESS;
         }
 
-        $row = DB::table('daily_stock_metrics')
-            ->where('day', $day)
+        // Filtrăm doar produsele de tip 'shop' (excludem producție internă și garanție palet)
+        $row = DB::table('daily_stock_metrics as dsm')
+            ->where('dsm.day', $day)
+            ->leftJoin('woo_products as wp', 'wp.sku', '=', 'dsm.reference_product_id')
+            ->whereRaw("COALESCE(wp.product_type, 'shop') = 'shop'")
             ->selectRaw('
-                day,
-                COUNT(*)                                                                       AS products_total,
-                SUM(CASE WHEN closing_available_qty > 0  THEN 1 ELSE 0 END)                   AS products_in_stock,
-                SUM(CASE WHEN closing_available_qty <= 0 THEN 1 ELSE 0 END)                   AS products_out_of_stock,
-                ROUND(SUM(closing_available_qty), 3)                                           AS inventory_qty_closing_total,
-                ROUND(SUM(opening_available_qty * COALESCE(opening_sell_price, 0)), 2)         AS inventory_value_opening_total,
-                ROUND(SUM(closing_available_qty * COALESCE(closing_sell_price, 0)), 2)         AS inventory_value_closing_total,
-                ROUND(SUM(daily_sales_value_variation), 2)                                     AS inventory_value_variation_total,
-                SUM(snapshots_count)                                                           AS snapshots_total,
-                TIMESTAMPDIFF(MINUTE, MIN(first_snapshot_at), MAX(last_snapshot_at))           AS imports_span_minutes
+                dsm.day,
+                COUNT(*)                                                                              AS products_total,
+                SUM(CASE WHEN dsm.closing_available_qty > 0  THEN 1 ELSE 0 END)                      AS products_in_stock,
+                SUM(CASE WHEN dsm.closing_available_qty <= 0 THEN 1 ELSE 0 END)                      AS products_out_of_stock,
+                ROUND(SUM(dsm.closing_available_qty), 3)                                              AS inventory_qty_closing_total,
+                ROUND(SUM(dsm.opening_available_qty * COALESCE(dsm.opening_sell_price, 0)), 2)        AS inventory_value_opening_total,
+                ROUND(SUM(dsm.closing_available_qty * COALESCE(dsm.closing_sell_price, 0)), 2)        AS inventory_value_closing_total,
+                ROUND(SUM(dsm.daily_sales_value_variation), 2)                                        AS inventory_value_variation_total,
+                SUM(dsm.snapshots_count)                                                              AS snapshots_total,
+                TIMESTAMPDIFF(MINUTE, MIN(dsm.first_snapshot_at), MAX(dsm.last_snapshot_at))          AS imports_span_minutes
             ')
-            ->groupBy('day')
+            ->groupBy('dsm.day')
             ->first();
 
         if (! $row) {

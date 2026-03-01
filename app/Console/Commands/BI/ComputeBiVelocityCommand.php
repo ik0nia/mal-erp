@@ -21,8 +21,10 @@ class ComputeBiVelocityCommand extends Command
 
         $this->line("Velocity → <info>{$day}</info> (fereastră {$windowStart} → {$day})");
 
-        $sourceCount = DB::table('daily_stock_metrics')
-            ->whereBetween('day', [$windowStart, $day])
+        $sourceCount = DB::table('daily_stock_metrics as dsm')
+            ->whereBetween('dsm.day', [$windowStart, $day])
+            ->leftJoin('woo_products as wp', 'wp.sku', '=', 'dsm.reference_product_id')
+            ->whereRaw("COALESCE(wp.product_type, 'shop') = 'shop'")
             ->count();
 
         if ($sourceCount === 0) {
@@ -32,21 +34,24 @@ class ComputeBiVelocityCommand extends Command
         }
 
         // Query single-pass cu conditional SUM pe ferestre 7/30/90 zile.
+        // Filtrăm doar produse tip 'shop' (excludem producție internă și garanție palet).
         // Ieșiri = GREATEST(0, -daily_available_variation) (scăderile de stoc disponibil).
         // avg_out_qty_Xd = out_qty_Xd / X — chiar dacă există mai puțin de X zile de istoric,
         // se divide tot la X pentru a nu supraevalua ritmul; semnalul este că out_qty_Xd e mic.
-        $rows = DB::table('daily_stock_metrics')
-            ->whereBetween('day', [$windowStart, $day])
+        $rows = DB::table('daily_stock_metrics as dsm')
+            ->whereBetween('dsm.day', [$windowStart, $day])
+            ->leftJoin('woo_products as wp', 'wp.sku', '=', 'dsm.reference_product_id')
+            ->whereRaw("COALESCE(wp.product_type, 'shop') = 'shop'")
             ->selectRaw('
-                reference_product_id,
-                SUM(CASE WHEN `day` >= DATE_SUB(?, INTERVAL  6 DAY)
-                         THEN GREATEST(0, -daily_available_variation) ELSE 0 END) AS out_qty_7d,
-                SUM(CASE WHEN `day` >= DATE_SUB(?, INTERVAL 29 DAY)
-                         THEN GREATEST(0, -daily_available_variation) ELSE 0 END) AS out_qty_30d,
-                SUM(GREATEST(0, -daily_available_variation))                       AS out_qty_90d,
-                MAX(CASE WHEN daily_available_variation <> 0 THEN `day` END)       AS last_movement_day
+                dsm.reference_product_id,
+                SUM(CASE WHEN dsm.`day` >= DATE_SUB(?, INTERVAL  6 DAY)
+                         THEN GREATEST(0, -dsm.daily_available_variation) ELSE 0 END) AS out_qty_7d,
+                SUM(CASE WHEN dsm.`day` >= DATE_SUB(?, INTERVAL 29 DAY)
+                         THEN GREATEST(0, -dsm.daily_available_variation) ELSE 0 END) AS out_qty_30d,
+                SUM(GREATEST(0, -dsm.daily_available_variation))                       AS out_qty_90d,
+                MAX(CASE WHEN dsm.daily_available_variation <> 0 THEN dsm.`day` END)   AS last_movement_day
             ', [$day, $day])
-            ->groupBy('reference_product_id')
+            ->groupBy('dsm.reference_product_id')
             ->get();
 
         $this->line("  {$rows->count()} produse procesate...");

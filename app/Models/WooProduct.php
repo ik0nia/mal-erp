@@ -13,6 +13,28 @@ class WooProduct extends Model
     public const SOURCE_WOOCOMMERCE = 'woocommerce';
     public const SOURCE_WINMENTOR_CSV = 'winmentor_csv';
 
+    public const TYPE_SHOP       = 'shop';
+    public const TYPE_PRODUCTION = 'production';
+    public const TYPE_PALLET_FEE = 'pallet_fee';
+
+    public static function productTypeOptions(): array
+    {
+        return [
+            self::TYPE_SHOP       => 'Comercializare',
+            self::TYPE_PRODUCTION => 'Producție (intern)',
+            self::TYPE_PALLET_FEE => 'Garanție palet',
+        ];
+    }
+
+    public static function productTypeBadgeColor(string $type): string
+    {
+        return match ($type) {
+            self::TYPE_PRODUCTION => 'warning',
+            self::TYPE_PALLET_FEE => 'info',
+            default               => 'success',
+        };
+    }
+
     protected $fillable = [
         'connection_id',
         'woo_id',
@@ -40,6 +62,7 @@ class WooProduct extends Model
         'dim_width',
         'dim_height',
         'erp_notes',
+        'product_type',
     ];
 
     protected function casts(): array
@@ -105,6 +128,7 @@ class WooProduct extends Model
                 'currency',
                 'lead_days',
                 'min_order_qty',
+                'po_max_qty',
                 'is_preferred',
                 'notes',
             ])

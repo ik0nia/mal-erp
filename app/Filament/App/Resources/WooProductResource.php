@@ -122,6 +122,12 @@ class WooProductResource extends Resource
                     Forms\Components\TextInput::make('dim_height')
                         ->label('Înălțime (cm)')
                         ->maxLength(20),
+                    Forms\Components\Select::make('product_type')
+                        ->label('Tip produs (BI)')
+                        ->options(WooProduct::productTypeOptions())
+                        ->default(WooProduct::TYPE_SHOP)
+                        ->native(false)
+                        ->helperText('Clasificare folosită de modulul BI. Producție și Garanție palet sunt excluse din rapoarte.'),
                     Forms\Components\Textarea::make('erp_notes')
                         ->label('Notițe interne ERP')
                         ->rows(3)
@@ -198,6 +204,10 @@ class WooProductResource extends Resource
                                 ->label('Cant. minimă')
                                 ->numeric()
                                 ->minValue(0),
+                            Forms\Components\TextInput::make('po_max_qty')
+                                ->label('Cant. max PO (fără aprobare)')
+                                ->numeric()
+                                ->minValue(0),
                             Forms\Components\Toggle::make('is_preferred')
                                 ->label('Furnizor preferat')
                                 ->default(false),
@@ -248,12 +258,19 @@ class WooProductResource extends Resource
                     ->state(fn (WooProduct $record): string => $record->categories->pluck('name')->implode(', '))
                     ->placeholder('-')
                     ->toggleable(),
+                Tables\Columns\SelectColumn::make('product_type')
+                    ->label('Tip produs')
+                    ->options(WooProduct::productTypeOptions())
+                    ->toggleable(),
                 TextColumn::make('updated_at')
                     ->label('Actualizat')
                     ->dateTime('d.m.Y H:i:s')
                     ->sortable(),
             ])
             ->filters([
+                Tables\Filters\SelectFilter::make('product_type')
+                    ->label('Tip produs')
+                    ->options(WooProduct::productTypeOptions()),
                 Tables\Filters\SelectFilter::make('source')
                     ->label('Sursă')
                     ->options([
