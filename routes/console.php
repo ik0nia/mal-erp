@@ -13,6 +13,25 @@ Schedule::command('stock:dispatch-scheduled-winmentor')
     ->everyMinute()
     ->withoutOverlapping();
 
+// Fetch emailuri IMAP — la fiecare 5 minute, read-only (peek mode).
+Schedule::job(new \App\Jobs\FetchEmailsJob())
+    ->everyFiveMinutes()
+    ->withoutOverlapping();
+
+// Procesare AI emailuri neprocesate — la fiecare 30 minute, batch de 100.
+// Necesită cheia Anthropic API configurată în Setări aplicație.
+Schedule::command('email:process-ai --limit=100')
+    ->everyThirtyMinutes()
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// Redescoperire contacte furnizori — zilnic la 03:00.
+// Actualizează statistici și descoperă contacte noi din emailurile importate.
+Schedule::command('supplier:discover-contacts')
+    ->dailyAt('03:00')
+    ->withoutOverlapping()
+    ->runInBackground();
+
 // Fallback sync comenzi — prinde orice a ratat webhook-ul.
 Schedule::command('woo:sync-orders')
     ->everyFifteenMinutes()

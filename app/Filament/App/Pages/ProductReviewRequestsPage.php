@@ -10,12 +10,15 @@ use Filament\Actions\Action;
 use Filament\Pages\Page;
 use Filament\Tables\Actions\Action as TableAction;
 use Filament\Tables\Columns\BadgeColumn;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\HtmlString;
 
 class ProductReviewRequestsPage extends Page implements HasTable
 {
@@ -103,6 +106,21 @@ class ProductReviewRequestsPage extends Page implements HasTable
                     ->default('pending'),
             ])
             ->actions([
+                TableAction::make('view_photo')
+                    ->label('Vezi poza')
+                    ->icon('heroicon-o-photo')
+                    ->color('gray')
+                    ->visible(fn (ProductReviewRequest $record): bool => filled($record->photo_path))
+                    ->modalHeading('Poza atașată')
+                    ->modalContent(fn (ProductReviewRequest $record): HtmlString => new HtmlString(
+                        '<div style="text-align:center;padding:0.5rem;">'
+                        . '<img src="' . e(Storage::disk('public')->url($record->photo_path)) . '" '
+                        . 'style="max-width:100%;max-height:70vh;border-radius:8px;object-fit:contain;" />'
+                        . '</div>'
+                    ))
+                    ->modalSubmitAction(false)
+                    ->modalCancelAction(fn (\Filament\Actions\StaticAction $action) => $action->label('Închide')),
+
                 TableAction::make('resolve')
                     ->label('Marchează rezolvat')
                     ->icon('heroicon-o-check-circle')

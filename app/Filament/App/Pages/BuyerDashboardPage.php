@@ -17,11 +17,11 @@ class BuyerDashboardPage extends Page
 
     protected static string $view = 'filament.app.pages.buyer-dashboard';
 
-    protected static ?string $navigationLabel = 'Tablou comenzi';
+    protected static ?string $navigationLabel = 'Generează comandă';
     protected static ?string $navigationGroup = 'Achiziții';
     protected static ?string $navigationIcon  = 'heroicon-o-squares-2x2';
     protected static ?int    $navigationSort  = 2;
-    protected static ?string $title           = 'Tablou comenzi achiziții';
+    protected static ?string $title           = 'Generează comandă';
 
     public ?int  $filterSupplierId  = null;
     public bool  $showUrgentOnly    = false;

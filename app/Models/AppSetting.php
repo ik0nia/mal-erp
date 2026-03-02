@@ -20,6 +20,36 @@ class AppSetting extends Model
     const KEY_OFFER_SERIES       = 'offer_series';
     const KEY_OFFER_START_NUMBER = 'offer_start_number';
 
+    // IMAP — inbox read-only
+    const KEY_IMAP_HOST          = 'imap_host';
+    const KEY_IMAP_PORT          = 'imap_port';
+    const KEY_IMAP_ENCRYPTION    = 'imap_encryption';
+    const KEY_IMAP_USERNAME      = 'imap_username';
+    const KEY_IMAP_PASSWORD      = 'imap_password'; // stocat criptat
+
+    // AI — procesare emailuri
+    const KEY_ANTHROPIC_API_KEY  = 'anthropic_api_key'; // stocat criptat
+
+    public static function getEncrypted(string $key): ?string
+    {
+        $value = static::get($key);
+        if (blank($value)) {
+            // Fallback la variabilă de mediu (ex: anthropic_api_key → ANTHROPIC_API_KEY)
+            $envValue = env(strtoupper($key));
+            return filled($envValue) ? (string) $envValue : null;
+        }
+        try {
+            return decrypt($value);
+        } catch (\Throwable) {
+            return $value; // fallback dacă nu e criptat
+        }
+    }
+
+    public static function setEncrypted(string $key, ?string $value): void
+    {
+        static::set($key, filled($value) ? encrypt($value) : null);
+    }
+
     // Grupuri navigare App panel — cheie AppSetting => [label exact din resurse, sort implicit]
     const NAV_GROUPS = [
         'nav_group_sort_administrare_magazin' => ['label' => 'Administrare magazin', 'default' => 1],
@@ -29,6 +59,7 @@ class AppSetting extends Model
         'nav_group_sort_livrare'              => ['label' => 'Livrare',              'default' => 5],
         'nav_group_sort_rapoarte'             => ['label' => 'Rapoarte',             'default' => 6],
         'nav_group_sort_produse'              => ['label' => 'Produse',              'default' => 7],
+        'nav_group_sort_comunicare'           => ['label' => 'Comunicare',           'default' => 8],
     ];
 
     // Iteme navigare — cheie AppSetting => [label, grup, sort implicit]
@@ -63,6 +94,9 @@ class AppSetting extends Model
         // Produse
         'nav_item_sort_App_Filament_App_Pages_NewWinmentorProducts'              => ['label' => 'Produse noi WinMentor', 'group' => 'Produse',              'default' => 25],
         'nav_item_sort_App_Filament_App_Pages_ProductReviewRequestsPage'         => ['label' => 'Reverificări produse',  'group' => 'Produse',              'default' => 30],
+        // Comunicare
+        'nav_item_sort_App_Filament_App_Pages_EmailInboxPage'                    => ['label' => 'Inbox Email',           'group' => 'Comunicare',           'default' => 1],
+        'nav_item_sort_App_Filament_App_Pages_EmailCommunicationStatsPage'       => ['label' => 'Statistici',            'group' => 'Comunicare',           'default' => 2],
     ];
 
     public static function get(string $key, ?string $default = null): ?string

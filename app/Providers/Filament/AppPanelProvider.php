@@ -30,7 +30,7 @@ class AppPanelProvider extends PanelProvider
             ->id('app')
             ->path('')
             ->homeUrl('/')
-            ->login()
+            ->login(\App\Filament\App\Pages\Auth\Login::class)
             ->maxContentWidth(MaxWidth::Full)
             ->globalSearch(AppGlobalSearchProvider::class)
             ->globalSearchKeyBindings(['mod+k'])
@@ -172,6 +172,39 @@ class AppPanelProvider extends PanelProvider
     background-color: rgba(255,255,255,0.08) !important;
     color: #ffffff !important;
 }
+/* ── Butoane infolist mai mari pe mobil ── */
+@media (max-width: 767px) {
+    .fi-in-actions .fi-btn {
+        padding-top: 0.625rem !important;
+        padding-bottom: 0.625rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        font-size: 0.875rem !important;
+        min-height: 2.75rem !important;
+        gap: 0.4rem !important;
+    }
+    .fi-in-actions .fi-btn-icon {
+        width: 1.1rem !important;
+        height: 1.1rem !important;
+    }
+    .fi-in-actions {
+        gap: 0.5rem !important;
+        flex-wrap: wrap !important;
+    }
+    /* Reverificare + Asociează furnizor — jumătate ecran fiecare */
+    .erp-main-actions .fi-in-actions {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 0.5rem !important;
+        width: 100% !important;
+    }
+    .erp-main-actions .fi-btn {
+        width: 100% !important;
+        justify-content: center !important;
+        min-height: 3rem !important;
+        font-size: 0.9rem !important;
+    }
+}
 </style>'),
             )
             ->renderHook(
@@ -186,7 +219,8 @@ class AppPanelProvider extends PanelProvider
                 \Filament\View\PanelsRenderHook::HEAD_END,
                 fn () => new \Illuminate\Support\HtmlString(
                     '<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.18.6/umd/index.min.js" defer></script>'
-                    . '<style>@media(max-width:767px){.fi-header{display:none!important;}}</style>'
+                    . '<style>@media(max-width:767px){.fi-header-heading,.fi-breadcrumbs{display:none!important;}}</style>'
+                    . '<script>if(window.innerWidth<1024){document.querySelectorAll("[x-data]").forEach(function(el){if(el.__x&&el.__x.$data&&"sidebarOpen" in el.__x.$data){el.__x.$data.sidebarOpen=false;}});try{localStorage.setItem("sidebarOpen","false");}catch(e){}}</script>'
                 ),
             )
             ->renderHook(

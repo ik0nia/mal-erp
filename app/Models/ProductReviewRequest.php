@@ -11,6 +11,7 @@ class ProductReviewRequest extends Model
         'woo_product_id',
         'user_id',
         'message',
+        'photo_path',
         'status',
         'resolved_by_user_id',
         'resolved_at',

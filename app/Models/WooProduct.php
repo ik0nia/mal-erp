@@ -42,6 +42,7 @@ class WooProduct extends Model
         'status',
         'sku',
         'name',
+        'winmentor_name',
         'slug',
         'short_description',
         'description',

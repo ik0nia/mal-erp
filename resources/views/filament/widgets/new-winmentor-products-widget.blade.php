@@ -1,12 +1,17 @@
 @php $data = $this->getData(); @endphp
 
 @if($data['total'] > 0)
+<style>
+.wm-stats { display:flex; flex-wrap:wrap; gap:0.75rem; }
+.wm-stat  { flex:1 1 calc(50% - 0.375rem); min-width:0; }
+@@media(min-width:768px){ .wm-stat { flex:1 1 0; } }
+</style>
 <x-filament-widgets::widget>
     <x-filament::section>
-        <div class="flex gap-4 overflow-x-auto">
+        <div class="wm-stats">
             @foreach($data['stats'] as $stat)
             <a href="{{ $data['pageUrl'] }}"
-               class="flex-1 min-w-0 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 px-4 py-3 shadow-sm hover:shadow-md transition-shadow">
+               class="wm-stat rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 px-4 py-3 shadow-sm hover:shadow-md transition-shadow">
                 <div class="flex items-center gap-2 mb-1">
                     <x-filament::icon
                         :icon="$stat['icon']"

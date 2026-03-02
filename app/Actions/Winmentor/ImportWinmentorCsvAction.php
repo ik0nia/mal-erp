@@ -294,6 +294,16 @@ class ImportWinmentorCsvAction
 
                 $stats['matched_products']++;
 
+                // Setează winmentor_name din CSV pentru orice produs matched
+                $csvName = isset($row['name']) ? $this->sanitizeMentorName((string) $row['name']) : null;
+                if ($csvName !== null && $csvName !== '' && (string) $product->winmentor_name !== $csvName) {
+                    $productUpdatesById[$product->id] = array_merge(
+                        $productUpdatesById[$product->id] ?? [],
+                        ['winmentor_name' => $csvName, 'updated_at' => $batchTimestamp],
+                    );
+                    $product->winmentor_name = $csvName;
+                }
+
                 if ($product->is_placeholder && $product->source === WooProduct::SOURCE_WINMENTOR_CSV) {
                     $normalizedMentorName = $this->resolvePlaceholderName($sku, $row['name'] ?? null);
                     $notes              = (string) ($product->erp_notes ?? '');

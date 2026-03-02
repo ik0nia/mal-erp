@@ -46,6 +46,9 @@ class ViewPurchaseRequest extends ViewRecord
                     $this->record->refresh();
                     $this->fillForm();
                 }),
+
+            Actions\DeleteAction::make()
+                ->visible(fn (): bool => PurchaseRequestResource::canDelete($this->record)),
         ];
     }
 }

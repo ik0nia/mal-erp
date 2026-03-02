@@ -9,6 +9,7 @@ use App\Filament\App\Resources\PurchaseRequestResource;
 use App\Filament\App\Resources\WooProductResource\Pages;
 use App\Models\DailyStockMetric;
 use App\Models\ProductReviewRequest;
+use App\Models\ProductSupplierLog;
 use App\Models\PurchaseRequest;
 use App\Models\PurchaseRequestItem;
 use App\Models\Supplier;
@@ -98,6 +99,12 @@ class WooProductResource extends Resource
                         ->label('Denumire')
                         ->required()
                         ->maxLength(255)
+                        ->columnSpanFull(),
+                    Forms\Components\TextInput::make('winmentor_name')
+                        ->label('Denumire WinMentor')
+                        ->disabled()
+                        ->dehydrated(false)
+                        ->placeholder('(completat automat din import)')
                         ->columnSpanFull(),
                     Forms\Components\TextInput::make('brand')
                         ->label('Brand / Producător')
@@ -248,6 +255,14 @@ class WooProductResource extends Resource
                     })
                     ->sortable()
                     ->wrap(),
+                TextColumn::make('winmentor_name')
+                    ->label('Denumire WinMentor')
+                    ->placeholder('-')
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return static::applyOptimizedSearch($query, $search);
+                    })
+                    ->wrap()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('source')
                     ->label('Sursă')
                     ->badge()
@@ -456,6 +471,7 @@ class WooProductResource extends Resource
                 $searchQuery->where(function (Builder $termQuery) use ($like): void {
                     $termQuery
                         ->where('woo_products.name', 'like', $like)
+                        ->orWhere('woo_products.winmentor_name', 'like', $like)
                         ->orWhere('woo_products.sku', 'like', $like)
                         ->orWhere('woo_products.slug', 'like', $like)
                         ->orWhereHas('categories', function (Builder $categoryQuery) use ($like): void {
@@ -480,65 +496,15 @@ class WooProductResource extends Resource
                     ]),
 
                 // ── Acțiuni (edit, reverificare, stoc, contact) ─────────────
+                // ── Acțiuni utilitare (edit, contact) ──────────────────────
                 Actions::make([
                     InfolistAction::make('edit')
                         ->label('Editează')
                         ->icon('heroicon-o-pencil')
                         ->color('gray')
                         ->size(\Filament\Support\Enums\ActionSize::Small)
+                        ->visible(fn (WooProduct $record): bool => WooProductResource::canEdit($record))
                         ->url(fn (WooProduct $record) => WooProductResource::getUrl('edit', ['record' => $record->id], panel: 'app')),
-                    InfolistAction::make('review_request')
-                        ->label('Reverificare')
-                        ->icon('heroicon-o-exclamation-triangle')
-                        ->color('gray')
-                        ->size(\Filament\Support\Enums\ActionSize::Small)
-                        ->modalHeading('Solicitare reverificare produs')
-                        ->modalDescription('Descrie ce anume trebuie verificat sau modificat la acest produs.')
-                        ->modalWidth('lg')
-                        ->form([
-                            \Filament\Forms\Components\Textarea::make('message')
-                                ->label('Mesaj')
-                                ->placeholder('Ex: Imaginea principală e greșită, descrierea lipsește, prețul pare incorect...')
-                                ->required()
-                                ->rows(4)
-                                ->maxLength(2000),
-                        ])
-                        ->action(function (WooProduct $record, array $data): void {
-                            ProductReviewRequest::create([
-                                'woo_product_id' => $record->id,
-                                'user_id'        => auth()->id(),
-                                'message'        => $data['message'],
-                                'status'         => ProductReviewRequest::STATUS_PENDING,
-                            ]);
-
-                            \Filament\Notifications\Notification::make()
-                                ->title('Solicitare trimisă')
-                                ->body('Echipa de produs a fost notificată.')
-                                ->success()
-                                ->send();
-                        })
-                        ->modalSubmitActionLabel('Trimite solicitarea')
-                        ->modalCancelActionLabel('Anulează'),
-                    InfolistAction::make('refresh_stock')
-                        ->label('Verifică stoc')
-                        ->icon('heroicon-o-arrow-path')
-                        ->color('gray')
-                        ->size(\Filament\Support\Enums\ActionSize::Small)
-                        ->action(function (WooProduct $record): void {
-                            $record->loadMissing('stocks');
-                            $qty      = number_format((float) $record->stocks->sum('quantity'), 0, ',', '.');
-                            $syncedAt = $record->stocks->max('synced_at');
-                            $date     = $syncedAt
-                                ? \Illuminate\Support\Carbon::parse($syncedAt)->format('d.m.Y H:i')
-                                : 'necunoscut';
-
-                            \Filament\Notifications\Notification::make()
-                                ->title('Stoc WinMentor: ' . $qty . ' buc')
-                                ->body('Ultima actualizare: ' . $date)
-                                ->icon('heroicon-o-cube')
-                                ->iconColor('info')
-                                ->send();
-                        }),
                     InfolistAction::make('contact_supplier')
                         ->label('Contact furnizor')
                         ->icon('heroicon-o-phone')
@@ -553,6 +519,136 @@ class WooProductResource extends Resource
                         ->modalSubmitAction(false)
                         ->modalCancelAction(fn (\Filament\Actions\StaticAction $action) => $action->label('Închide')),
                 ]),
+
+                // ── Acțiuni principale (Reverificare + Asociează furnizor) ───
+                Actions::make([
+                    InfolistAction::make('review_request')
+                        ->label('Reverificare')
+                        ->icon('heroicon-o-exclamation-triangle')
+                        ->color('warning')
+                        ->size(\Filament\Support\Enums\ActionSize::Small)
+                        ->modalHeading(fn (WooProduct $record) => 'Reverificare: '.($record->decoded_name ?? $record->name))
+                        ->modalDescription('Descrie ce anume trebuie verificat sau modificat la acest produs.')
+                        ->modalWidth('lg')
+                        ->modalSubmitActionLabel('Trimite solicitarea')
+                        ->modalCancelActionLabel('Anulează')
+                        ->form([
+                            \Filament\Forms\Components\Textarea::make('message')
+                                ->label('Mesaj')
+                                ->placeholder('Ex: Imaginea principală e greșită, descrierea lipsește, prețul pare incorect...')
+                                ->required()
+                                ->rows(4)
+                                ->maxLength(2000),
+                            \Filament\Forms\Components\FileUpload::make('photo_path')
+                                ->label('Poză (opțional)')
+                                ->helperText('Pe telefon poți face o poză direct sau alege din galerie.')
+                                ->image()
+                                ->disk('public')
+                                ->directory('review-photos')
+                                ->maxSize(20480)
+                                ->extraInputAttributes(['accept' => 'image/*']),
+                        ])
+                        ->action(function (WooProduct $record, array $data): void {
+                            \App\Models\ProductReviewRequest::create([
+                                'woo_product_id' => $record->id,
+                                'user_id'        => auth()->id(),
+                                'message'        => $data['message'],
+                                'photo_path'     => $data['photo_path'] ?? null,
+                                'status'         => \App\Models\ProductReviewRequest::STATUS_PENDING,
+                            ]);
+
+                            Notification::make()
+                                ->success()
+                                ->title('Solicitare trimisă')
+                                ->body('Echipa de produs a fost notificată.')
+                                ->send();
+                        }),
+
+                    InfolistAction::make('associate_supplier')
+                        ->label('Asociază furnizor')
+                        ->icon('heroicon-o-link')
+                        ->color('success')
+                        ->size(\Filament\Support\Enums\ActionSize::Small)
+                        ->visible(function (WooProduct $record): bool {
+                            $record->loadMissing('suppliers');
+                            return $record->suppliers->isEmpty();
+                        })
+                        ->modalHeading('Asociează furnizor')
+                        ->modalWidth('lg')
+                        ->modalSubmitActionLabel('Asociează')
+                        ->modalCancelActionLabel('Anulează')
+                        ->form([
+                            \Filament\Forms\Components\Select::make('supplier_id')
+                                ->label('Caută furnizor')
+                                ->placeholder('Scrie cel puțin 2 caractere...')
+                                ->searchable()
+                                ->native(false)
+                                ->required()
+                                ->noSearchResultsMessage('Niciun furnizor găsit. Folosește butonul + pentru a crea unul nou.')
+                                ->searchPrompt('Caută după nume...')
+                                ->getSearchResultsUsing(fn (string $search): array =>
+                                    Supplier::where('is_active', true)
+                                        ->where('name', 'like', '%' . $search . '%')
+                                        ->orderBy('name')
+                                        ->limit(20)
+                                        ->pluck('name', 'id')
+                                        ->toArray()
+                                )
+                                ->getOptionLabelUsing(fn (mixed $value): ?string =>
+                                    Supplier::find($value)?->name
+                                )
+                                ->createOptionForm([
+                                    \Filament\Forms\Components\TextInput::make('name')
+                                        ->label('Nume furnizor')
+                                        ->required()
+                                        ->maxLength(255),
+                                ])
+                                ->createOptionAction(fn (\Filament\Forms\Components\Actions\Action $action) =>
+                                    $action
+                                        ->modalHeading('Furnizor nou')
+                                        ->modalSubmitActionLabel('Creează')
+                                        ->modalCancelActionLabel('Anulează')
+                                )
+                                ->createOptionUsing(function (array $data): int {
+                                    return Supplier::create([
+                                        'name'      => trim($data['name']),
+                                        'is_active' => true,
+                                    ])->id;
+                                }),
+                        ])
+                        ->action(function (WooProduct $record, array $data): void {
+                            $supplier  = Supplier::findOrFail((int) $data['supplier_id']);
+                            $logAction = $supplier->created_at->gt(now()->subSeconds(30))
+                                ? 'created_and_associated'
+                                : 'associated';
+
+                            if (! $record->suppliers()->where('supplier_id', $supplier->id)->exists()) {
+                                $record->suppliers()->attach($supplier->id);
+                            }
+
+                            \App\Models\ProductSupplierLog::create([
+                                'woo_product_id' => $record->id,
+                                'supplier_id'    => $supplier->id,
+                                'user_id'        => auth()->id(),
+                                'action'         => $logAction,
+                            ]);
+
+                            Notification::make()
+                                ->success()
+                                ->title('Furnizor asociat')
+                                ->body('Produsul a fost asociat furnizorului „' . $supplier->name . '".')
+                                ->send();
+                        }),
+                ])->extraAttributes(['class' => 'erp-main-actions']),
+
+                // ── Denumire WinMentor ───────────────────────────────────────
+                Section::make('Denumire WinMentor')
+                    ->schema([
+                        TextEntry::make('winmentor_name')
+                            ->label('')
+                            ->columnSpanFull(),
+                    ])
+                    ->hidden(fn (WooProduct $record): bool => blank($record->winmentor_name)),
 
                 // ── Descriere ────────────────────────────────────────────────
                 Section::make('Descriere')

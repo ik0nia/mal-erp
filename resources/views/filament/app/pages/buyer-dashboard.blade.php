@@ -29,20 +29,20 @@
     </div>
 
     {{-- Stat cards --}}
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+    <div style="display:flex; flex-wrap:wrap; gap:1rem; margin-bottom:2rem;">
+        <div style="flex:1 1 calc(50% - 0.5rem); min-width:120px;" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
             <p class="text-sm text-gray-500 dark:text-gray-400">Total în așteptare</p>
             <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ $totalPending }}</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-danger-200 dark:border-danger-800 p-4 shadow-sm">
+        <div style="flex:1 1 calc(50% - 0.5rem); min-width:120px;" class="bg-white dark:bg-gray-800 rounded-xl border border-danger-200 dark:border-danger-800 p-4 shadow-sm">
             <p class="text-sm text-danger-600 dark:text-danger-400">Urgente</p>
             <p class="text-3xl font-bold text-danger-600 dark:text-danger-400 mt-1">{{ $totalUrgent }}</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-warning-200 dark:border-warning-700 p-4 shadow-sm">
+        <div style="flex:1 1 calc(50% - 0.5rem); min-width:120px;" class="bg-white dark:bg-gray-800 rounded-xl border border-warning-200 dark:border-warning-700 p-4 shadow-sm">
             <p class="text-sm text-warning-600 dark:text-warning-400">Rezervate</p>
             <p class="text-3xl font-bold text-warning-600 dark:text-warning-400 mt-1">{{ $totalReserved }}</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+        <div style="flex:1 1 calc(50% - 0.5rem); min-width:120px;" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
             <p class="text-sm text-gray-500 dark:text-gray-400">Furnizori afectați</p>
             <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ $totalSuppliers }}</p>
         </div>

@@ -22,6 +22,9 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
+use App\Models\PurchaseRequestItem;
+use Filament\Infolists\Components\Actions;
+use Filament\Infolists\Components\Actions\Action as InfolistAction;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\Section as InfolistSection;
@@ -335,6 +338,27 @@ class PurchaseRequestResource extends Resource
                                     default     => $state,
                                 }),
                             TextEntry::make('notes')->label('Notițe')->placeholder('—'),
+                            Actions::make([
+                                InfolistAction::make('cancel_item')
+                                    ->label('Anulează item')
+                                    ->icon('heroicon-o-x-circle')
+                                    ->color('danger')
+                                    ->size(\Filament\Support\Enums\ActionSize::Small)
+                                    ->visible(fn (PurchaseRequestItem $record): bool =>
+                                        $record->status === PurchaseRequestItem::STATUS_PENDING
+                                    )
+                                    ->requiresConfirmation()
+                                    ->modalHeading('Anulezi acest produs din necesar?')
+                                    ->modalDescription(fn (PurchaseRequestItem $record): string =>
+                                        'Produsul "' . $record->product_name . '" va fi marcat ca anulat.'
+                                    )
+                                    ->modalSubmitActionLabel('Da, anulează')
+                                    ->action(function (PurchaseRequestItem $record): void {
+                                        $record->update(['status' => PurchaseRequestItem::STATUS_CANCELLED]);
+                                        $record->purchaseRequest->recalculateStatus();
+                                        Notification::make()->success()->title('Produsul a fost anulat din necesar.')->send();
+                                    }),
+                            ]),
                         ]),
                 ]),
         ]);
@@ -370,7 +394,15 @@ class PurchaseRequestResource extends Resource
 
     public static function canDelete(Model $record): bool
     {
-        return static::canEdit($record);
+        $user = static::currentUser();
+        if (! $user) return false;
+
+        // Admin și super_admin pot șterge orice necesar (indiferent de status)
+        if ($user->isSuperAdmin() || $user->isAdmin()) return true;
+
+        // Ceilalți doar draft-urile proprii
+        return $record->status === PurchaseRequest::STATUS_DRAFT
+            && $record->user_id === $user->id;
     }
 
     public static function getPages(): array
