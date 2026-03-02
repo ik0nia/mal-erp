@@ -33,7 +33,7 @@ class AppPanelProvider extends PanelProvider
             ->login()
             ->maxContentWidth(MaxWidth::Full)
             ->globalSearch(AppGlobalSearchProvider::class)
-            ->globalSearchKeyBindings(['ctrl+k', 'cmd+k'])
+            ->globalSearchKeyBindings(['mod+k'])
             ->globalSearchDebounce('300ms')
             ->colors([
                 'primary' => Color::Red,
@@ -44,15 +44,17 @@ class AppPanelProvider extends PanelProvider
                 return $path ? \Illuminate\Support\Facades\Storage::disk('public')->url($path) : null;
             })
             ->brandLogoHeight('40px')
-            ->navigationGroups([
-                NavigationGroup::make('Comenzi'),
-                NavigationGroup::make('Vânzări'),
-                NavigationGroup::make('Achiziții'),
-                NavigationGroup::make('Administrare magazin'),
-                NavigationGroup::make('Rapoarte'),
-                NavigationGroup::make('Livrare'),
-                NavigationGroup::make('Produse'),
-            ])
+            ->navigationGroups(
+                collect(AppSetting::NAV_GROUPS)
+                    ->map(fn ($meta, $key) => [
+                        'label' => $meta['label'],
+                        'sort'  => (int) AppSetting::get($key, (string) $meta['default']),
+                    ])
+                    ->sortBy('sort')
+                    ->map(fn ($item) => NavigationGroup::make($item['label']))
+                    ->values()
+                    ->all()
+            )
             ->discoverResources(in: app_path('Filament/App/Resources'), for: 'App\\Filament\\App\\Resources')
             ->discoverPages(in: app_path('Filament/App/Pages'), for: 'App\\Filament\\App\\Pages')
             ->pages([])
@@ -103,9 +105,11 @@ class AppPanelProvider extends PanelProvider
 }
 .erp-user-info {
     margin-left: auto !important;
+    text-align: right !important;
+    align-items: flex-end !important;
 }
 .fi-topbar .fi-user-menu {
-    margin-left: 0 !important;
+    margin-left: 0.5rem !important;
 }
 /* ── Sidebar negru ── */
 .fi-sidebar {
@@ -184,6 +188,10 @@ class AppPanelProvider extends PanelProvider
                     '<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.18.6/umd/index.min.js" defer></script>'
                     . '<style>@media(max-width:767px){.fi-header{display:none!important;}}</style>'
                 ),
+            )
+            ->renderHook(
+                \Filament\View\PanelsRenderHook::CONTENT_START,
+                fn () => view('filament.components.necesar-draft-reminder'),
             )
             ->middleware([
                 EncryptCookies::class,

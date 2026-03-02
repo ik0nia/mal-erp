@@ -119,8 +119,24 @@ class Offer extends Model
 
     private static function generateNumber(): string
     {
+        $series   = strtoupper(trim((string) AppSetting::get(AppSetting::KEY_OFFER_SERIES, 'OFF')));
+        $startNum = max(1, (int) AppSetting::get(AppSetting::KEY_OFFER_START_NUMBER, '1'));
+        $prefix   = $series . '-';
+
+        $maxExisting = self::query()
+            ->where('number', 'like', $prefix . '%')
+            ->get(['number'])
+            ->map(function ($r) use ($prefix): int {
+                $part = substr($r->number, strlen($prefix));
+                return is_numeric($part) ? (int) $part : 0;
+            })
+            ->max() ?? 0;
+
+        $nextNum = max($startNum, $maxExisting + 1);
+
         do {
-            $number = 'OFF-'.now()->format('Ymd').'-'.str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT);
+            $number  = $prefix . str_pad((string) $nextNum, 4, '0', STR_PAD_LEFT);
+            $nextNum++;
         } while (self::query()->where('number', $number)->exists());
 
         return $number;

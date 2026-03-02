@@ -3,6 +3,8 @@
 namespace App\Filament\App\Resources;
 
 use App\Filament\App\Concerns\EnforcesLocationScope;
+use App\Filament\App\Concerns\ChecksRolePermissions;
+use App\Filament\App\Concerns\HasDynamicNavSort;
 use App\Filament\App\Resources\WooCategoryResource\Pages;
 use App\Models\WooCategory;
 use Filament\Resources\Resource;
@@ -16,7 +18,9 @@ use Illuminate\Support\HtmlString;
 
 class WooCategoryResource extends Resource
 {
-    use EnforcesLocationScope;
+    use HasDynamicNavSort;
+
+    use EnforcesLocationScope, ChecksRolePermissions;
 
     protected static ?string $model = WooCategory::class;
 

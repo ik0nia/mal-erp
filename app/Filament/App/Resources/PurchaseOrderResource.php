@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Filament\App\Resources;
+use App\Filament\App\Concerns\ChecksRolePermissions;
+use App\Filament\App\Concerns\HasDynamicNavSort;
 
 use App\Filament\App\Resources\PurchaseOrderResource\Pages;
 use App\Models\ProductSupplier;
@@ -32,6 +34,7 @@ use Illuminate\Support\HtmlString;
 
 class PurchaseOrderResource extends Resource
 {
+    use ChecksRolePermissions, HasDynamicNavSort;
     protected static ?string $model = PurchaseOrder::class;
 
     protected static ?string $navigationIcon   = 'heroicon-o-shopping-bag';
@@ -39,7 +42,7 @@ class PurchaseOrderResource extends Resource
     protected static ?string $navigationLabel  = 'Comenzi furnizori';
     protected static ?string $modelLabel       = 'Comandă furnizor';
     protected static ?string $pluralModelLabel = 'Comenzi furnizori';
-    protected static ?int    $navigationSort   = 30;
+    protected static ?int    $navigationSort   = 3;
 
     public static function form(Form $form): Form
     {

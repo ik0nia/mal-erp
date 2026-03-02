@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Filament\App\Pages;
+use App\Models\RolePermission;
+use App\Filament\App\Concerns\HasDynamicNavSort;
 
 use App\Filament\App\Concerns\EnforcesLocationScope;
 use App\Models\IntegrationConnection;
@@ -11,14 +13,21 @@ use Livewire\Attributes\Url;
 
 class NecesarMarfa extends Page
 {
+    use HasDynamicNavSort;
+
     use EnforcesLocationScope;
 
     protected static ?string $navigationIcon  = 'heroicon-o-shopping-cart';
-    protected static ?string $navigationGroup = 'Achiziții';
+    protected static ?string $navigationGroup = 'Rapoarte';
     protected static ?string $navigationLabel = 'Necesar de marfă';
     protected static ?int    $navigationSort  = 0;
 
     protected static string $view = 'filament.app.pages.necesar-marfa';
+
+    public static function canAccess(): bool
+    {
+        return RolePermission::check(static::class, 'can_access');
+    }
 
     #[Url]
     public int $threshold = 5;
@@ -113,5 +122,12 @@ class NecesarMarfa extends Page
             });
         }
         return $query->pluck('id')->map(fn ($id) => (int) $id)->all();
+    }
+
+    public function bootGuardAccess(): void
+    {
+        if (! static::canAccess()) {
+            abort(403);
+        }
     }
 }

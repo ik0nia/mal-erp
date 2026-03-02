@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Filament\App\Pages;
+use App\Models\RolePermission;
+use App\Filament\App\Concerns\HasDynamicNavSort;
 
 use App\Jobs\GenerateBiAnalysisJob;
 use App\Models\BiAnalysis;
@@ -13,6 +15,8 @@ use Illuminate\Support\Facades\Auth;
 
 class BiAnalysisPage extends Page
 {
+    use HasDynamicNavSort;
+
     protected static string $view = 'filament.app.pages.bi-analysis';
 
     protected static ?string $navigationLabel = 'Analiză BI';
@@ -214,5 +218,12 @@ class BiAnalysisPage extends Page
     public function getSelectedAnalysis(): ?BiAnalysis
     {
         return $this->selectedId ? BiAnalysis::find($this->selectedId) : null;
+    }
+
+    public function bootGuardAccess(): void
+    {
+        if (! static::canAccess()) {
+            abort(403);
+        }
     }
 }

@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Filament\App\Pages;
+use App\Models\RolePermission;
+use App\Filament\App\Concerns\HasDynamicNavSort;
 
 use App\Filament\App\Concerns\EnforcesLocationScope;
 use App\Models\IntegrationConnection;
@@ -14,7 +16,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class SkuDiscrepancyReport extends Page implements HasTable
 {
-    use InteractsWithTable;
+    use HasDynamicNavSort, InteractsWithTable;
     use EnforcesLocationScope;
 
     protected static ?string $navigationIcon = 'heroicon-o-exclamation-triangle';
@@ -26,6 +28,11 @@ class SkuDiscrepancyReport extends Page implements HasTable
     protected static ?int $navigationSort = 30;
 
     protected static string $view = 'filament.app.pages.sku-discrepancy-report';
+
+    public static function canAccess(): bool
+    {
+        return RolePermission::check(static::class, 'can_access');
+    }
 
     public string $activeTab = 'placeholder';
 
@@ -167,5 +174,12 @@ class SkuDiscrepancyReport extends Page implements HasTable
         }
 
         return $query->pluck('id')->map(fn ($id) => (int) $id)->all();
+    }
+
+    public function bootGuardAccess(): void
+    {
+        if (! static::canAccess()) {
+            abort(403);
+        }
     }
 }

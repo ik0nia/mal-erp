@@ -2,6 +2,8 @@
 
 namespace App\Filament\App\Resources;
 
+use App\Filament\App\Concerns\HasDynamicNavSort;
+
 use App\Filament\App\Resources\ProductPriceLogResource\Pages;
 use App\Models\ProductPriceLog;
 use Filament\Resources\Resource;
@@ -10,6 +12,8 @@ use Filament\Tables\Table;
 
 class ProductPriceLogResource extends Resource
 {
+    use HasDynamicNavSort;
+
     protected static ?string $model = ProductPriceLog::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-currency-dollar';

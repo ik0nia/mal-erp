@@ -3,6 +3,8 @@
 namespace App\Filament\App\Resources;
 
 use App\Filament\App\Concerns\EnforcesLocationScope;
+use App\Filament\App\Concerns\ChecksRolePermissions;
+use App\Filament\App\Concerns\HasDynamicNavSort;
 use App\Filament\App\Resources\CustomerResource\Pages;
 use App\Models\Customer;
 use App\Services\CompanyData\OpenApiCompanyLookupService;
@@ -20,7 +22,9 @@ use Throwable;
 
 class CustomerResource extends Resource
 {
-    use EnforcesLocationScope;
+    use HasDynamicNavSort;
+
+    use EnforcesLocationScope, ChecksRolePermissions;
 
     protected static ?string $model = Customer::class;
 

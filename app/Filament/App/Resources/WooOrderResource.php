@@ -3,6 +3,8 @@
 namespace App\Filament\App\Resources;
 
 use App\Filament\App\Concerns\EnforcesLocationScope;
+use App\Filament\App\Concerns\ChecksRolePermissions;
+use App\Filament\App\Concerns\HasDynamicNavSort;
 use App\Filament\App\Resources\WooOrderResource\Pages;
 use App\Models\ProductStock;
 use App\Models\WooOrder;
@@ -22,7 +24,9 @@ use Illuminate\Support\HtmlString;
 
 class WooOrderResource extends Resource
 {
-    use EnforcesLocationScope;
+    use HasDynamicNavSort;
+
+    use EnforcesLocationScope, ChecksRolePermissions;
 
     protected static ?string $model = WooOrder::class;
 

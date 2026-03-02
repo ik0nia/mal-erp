@@ -20,5 +20,31 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->renderable(function (
+            \Symfony\Component\HttpKernel\Exception\HttpException $e,
+            \Illuminate\Http\Request $request
+        ) {
+            $code = $e->getStatusCode();
+
+            if (! in_array($code, [403, 404])) {
+                return null;
+            }
+
+            // Doar pentru browsere (nu XHR/API), utilizatori autentificați
+            if ($request->expectsJson() || $request->isXmlHttpRequest()) {
+                return null;
+            }
+
+            if (! auth()->check()) {
+                return null;
+            }
+
+            // Redirecționează în panelul App (nu admin)
+            if (str_starts_with($request->path(), 'admin')) {
+                return null;
+            }
+
+            $url = route('filament.app.pages.error-page', ['code' => $code]);
+            return new \Illuminate\Http\RedirectResponse($url);
+        });
     })->create();

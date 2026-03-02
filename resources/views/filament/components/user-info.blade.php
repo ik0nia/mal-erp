@@ -11,9 +11,9 @@
     }
 @endphp
 
-<div class="hidden md:flex flex-col items-end justify-center leading-tight mr-1 erp-user-info">
-    <span class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ $user->name }}</span>
+<div class="hidden md:flex flex-col items-end justify-center leading-tight mr-2 erp-user-info" style="text-align: right;">
+    <span class="text-sm font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">{{ $user->name }}</span>
     @if($roleLabel)
-        <span class="text-xs text-gray-400 dark:text-gray-500">{{ $roleLabel }}</span>
+        <span class="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">{{ $roleLabel }}</span>
     @endif
 </div>

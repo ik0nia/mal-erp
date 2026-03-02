@@ -3,12 +3,19 @@
 namespace App\Filament\App\Resources;
 
 use App\Filament\App\Concerns\EnforcesLocationScope;
+use App\Filament\App\Concerns\ChecksRolePermissions;
+use App\Filament\App\Concerns\HasDynamicNavSort;
+use App\Filament\App\Resources\PurchaseRequestResource;
 use App\Filament\App\Resources\WooProductResource\Pages;
 use App\Models\DailyStockMetric;
 use App\Models\ProductReviewRequest;
+use App\Models\PurchaseRequest;
+use App\Models\PurchaseRequestItem;
 use App\Models\Supplier;
+use App\Models\User;
 use App\Models\WooCategory;
 use App\Models\WooProduct;
+use Filament\Notifications\Notification;
 use Filament\Forms;
 use Filament\Forms\Form;
 use App\Models\Brand;
@@ -34,7 +41,9 @@ use Illuminate\Support\HtmlString;
 
 class WooProductResource extends Resource
 {
-    use EnforcesLocationScope;
+    use HasDynamicNavSort;
+
+    use EnforcesLocationScope, ChecksRolePermissions;
 
     protected static ?string $model = WooProduct::class;
 
@@ -226,9 +235,11 @@ class WooProductResource extends Resource
             ->columns([
                 ImageColumn::make('main_image_url')
                     ->label('Imagine')
-                    ->size(96)
+                    ->size(56)
                     ->square()
-                    ->defaultImageUrl('https://placehold.co/96x96?text=No+Img'),
+                    ->defaultImageUrl('https://placehold.co/96x96?text=No+Img')
+                    ->extraHeaderAttributes(['class' => 'hidden sm:table-cell'])
+                    ->extraAttributes(['class' => 'hidden sm:table-cell']),
                 TextColumn::make('name')
                     ->label('Produs')
                     ->formatStateUsing(fn (WooProduct $record): string => $record->decoded_name)
@@ -242,6 +253,8 @@ class WooProductResource extends Resource
                     ->badge()
                     ->formatStateUsing(fn (WooProduct $record): string => $record->is_placeholder ? 'ERP (contabilitate)' : 'WooCommerce')
                     ->color(fn (WooProduct $record): string => $record->is_placeholder ? 'warning' : 'success')
+                    ->extraHeaderAttributes(['class' => 'hidden md:table-cell'])
+                    ->extraAttributes(['class' => 'hidden md:table-cell'])
                     ->toggleable(),
                 TextColumn::make('sku')
                     ->label('SKU')
@@ -257,15 +270,21 @@ class WooProductResource extends Resource
                     ->label('Categorii')
                     ->state(fn (WooProduct $record): string => $record->categories->pluck('name')->implode(', '))
                     ->placeholder('-')
+                    ->extraHeaderAttributes(['class' => 'hidden lg:table-cell'])
+                    ->extraAttributes(['class' => 'hidden lg:table-cell'])
                     ->toggleable(),
                 Tables\Columns\SelectColumn::make('product_type')
                     ->label('Tip produs')
                     ->options(WooProduct::productTypeOptions())
+                    ->extraHeaderAttributes(['class' => 'hidden lg:table-cell'])
+                    ->extraAttributes(['class' => 'hidden lg:table-cell'])
                     ->toggleable(),
                 TextColumn::make('updated_at')
                     ->label('Actualizat')
                     ->dateTime('d.m.Y H:i:s')
-                    ->sortable(),
+                    ->sortable()
+                    ->extraHeaderAttributes(['class' => 'hidden md:table-cell'])
+                    ->extraAttributes(['class' => 'hidden md:table-cell']),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('product_type')
@@ -336,12 +355,52 @@ class WooProductResource extends Resource
                         });
                     }),
             ], layout: FiltersLayout::AboveContent)
-            ->filtersFormColumns(5)
+            ->filtersFormColumns(['default' => 2, 'sm' => 3, 'lg' => 5])
             ->persistFiltersInSession()
             ->recordUrl(fn (WooProduct $record): string => static::getUrl('view', ['record' => $record]))
             ->searchPlaceholder('Caută după nume, SKU, slug sau categorie...')
             ->searchDebounce('800ms')
-            ->defaultSort('name');
+            ->defaultSort('name')
+            ->actionsPosition(\Filament\Tables\Enums\ActionsPosition::BeforeColumns)
+            ->actions([
+                Tables\Actions\Action::make('add_to_necesar')
+                    ->label('+ Necesar')
+                    ->icon('heroicon-o-shopping-cart')
+                    ->color('warning')
+                    ->modalHeading(fn (WooProduct $record) => 'Adaugă la necesar: '.($record->decoded_name ?? $record->name))
+                    ->modalSubmitActionLabel('Adaugă')
+                    ->form(static::necesarModalForm())
+                    ->action(function (WooProduct $record, array $data): void {
+                        $user = auth()->user();
+                        if (! $user instanceof User) {
+                            return;
+                        }
+
+                        $draft    = PurchaseRequest::getOrCreateDraft($user);
+                        $existing = $draft->items()->where('woo_product_id', $record->id)->first();
+
+                        if ($existing) {
+                            $existing->update(['quantity' => (float) $existing->quantity + (float) $data['quantity']]);
+                        } else {
+                            $draft->items()->create([
+                                'woo_product_id' => $record->id,
+                                'quantity'       => $data['quantity'],
+                                'is_urgent'      => $data['is_urgent'] ?? false,
+                                'notes'          => $data['notes'] ?? null,
+                            ]);
+                        }
+
+                        Notification::make()
+                            ->success()
+                            ->title('Produs adăugat la necesar')
+                            ->actions([
+                                \Filament\Notifications\Actions\Action::make('open_cart')
+                                    ->label('Deschide coșul →')
+                                    ->url(PurchaseRequestResource::getUrl('edit', ['record' => $draft->id])),
+                            ])
+                            ->send();
+                    }),
+            ]);
     }
 
     public static function getPages(): array
@@ -425,12 +484,14 @@ class WooProductResource extends Resource
                     InfolistAction::make('edit')
                         ->label('Editează')
                         ->icon('heroicon-o-pencil')
-                        ->color('primary')
+                        ->color('gray')
+                        ->size(\Filament\Support\Enums\ActionSize::Small)
                         ->url(fn (WooProduct $record) => WooProductResource::getUrl('edit', ['record' => $record->id], panel: 'app')),
                     InfolistAction::make('review_request')
-                        ->label('Reverificare produs')
+                        ->label('Reverificare')
                         ->icon('heroicon-o-exclamation-triangle')
-                        ->color('warning')
+                        ->color('gray')
+                        ->size(\Filament\Support\Enums\ActionSize::Small)
                         ->modalHeading('Solicitare reverificare produs')
                         ->modalDescription('Descrie ce anume trebuie verificat sau modificat la acest produs.')
                         ->modalWidth('lg')
@@ -462,6 +523,7 @@ class WooProductResource extends Resource
                         ->label('Verifică stoc')
                         ->icon('heroicon-o-arrow-path')
                         ->color('gray')
+                        ->size(\Filament\Support\Enums\ActionSize::Small)
                         ->action(function (WooProduct $record): void {
                             $record->loadMissing('stocks');
                             $qty      = number_format((float) $record->stocks->sum('quantity'), 0, ',', '.');
@@ -481,6 +543,7 @@ class WooProductResource extends Resource
                         ->label('Contact furnizor')
                         ->icon('heroicon-o-phone')
                         ->color('gray')
+                        ->size(\Filament\Support\Enums\ActionSize::Small)
                         ->visible(function (WooProduct $record): bool {
                             $record->loadMissing('suppliers');
                             return $record->suppliers->isNotEmpty();
@@ -499,7 +562,10 @@ class WooProductResource extends Resource
                             ->html()
                             ->columnSpanFull(),
                     ])
-                    ->hidden(fn (WooProduct $record): bool => blank($record->description)),
+                    ->hidden(fn (WooProduct $record): bool =>
+                        blank($record->description)
+                        || ! \App\Models\RolePermission::check('woo_product_section_descriere')
+                    ),
 
                 // ── Atribute tehnice ─────────────────────────────────────────
                 Section::make('Atribute tehnice')
@@ -509,7 +575,9 @@ class WooProductResource extends Resource
                             ->label('')
                             ->state(fn (WooProduct $record): HtmlString => static::renderAttributesTable($record))
                             ->html(),
-                    ]),
+                    ])
+                    ->visible(fn (): bool => \App\Models\RolePermission::check('woo_product_section_atribute_tehnice')),
+
                 Section::make('Istoric variație stoc')
                     ->description('Afișează 10 poziții vizibile și până la 30 poziții cu scroll.')
                     ->schema([
@@ -517,7 +585,8 @@ class WooProductResource extends Resource
                             ->label('')
                             ->state(fn (WooProduct $record): HtmlString => static::renderDailyVariationHistory($record))
                             ->html(),
-                    ]),
+                    ])
+                    ->visible(fn (): bool => \App\Models\RolePermission::check('woo_product_section_istoric_stoc')),
                 Section::make('Rezumat variații')
                     ->columns(2)
                     ->schema([
@@ -529,7 +598,9 @@ class WooProductResource extends Resource
                             ->label('')
                             ->state(fn (WooProduct $record): HtmlString => static::renderValueVariationCard($record))
                             ->html(),
-                    ]),
+                    ])
+                    ->visible(fn (): bool => \App\Models\RolePermission::check('woo_product_section_rezumat_variatii')),
+
                 Section::make('Payload brut (Woo)')
                     ->collapsible()
                     ->collapsed()
@@ -540,7 +611,8 @@ class WooProductResource extends Resource
                                 '<pre style="white-space: pre-wrap;">'.e(json_encode($record->data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)).'</pre>'
                             ))
                             ->html(),
-                    ]),
+                    ])
+                    ->visible(fn (): bool => \App\Models\RolePermission::check('woo_product_section_payload_brut')),
             ]);
     }
 
@@ -583,12 +655,12 @@ class WooProductResource extends Resource
         $regPriceFloat = (float) ($record->regular_price ?? 0);
         $isOnSale      = $regPriceFloat > 0 && $priceFloat > 0 && $priceFloat < $regPriceFloat;
 
-        $priceBlockHtml = '<div style="text-align:right;flex-shrink:0;min-width:130px;">';
+        $priceBlockHtml = '<div class="ph-price-block">';
         if ($isOnSale) {
             $priceBlockHtml .= '<div style="font-size:1.1rem;color:#dc2626;text-decoration:line-through;line-height:1.2;opacity:0.6;">'
                 . $regPrice . '</div>';
         }
-        $priceBlockHtml .= '<div style="font-size:2rem;font-weight:800;color:#dc2626;line-height:1.1;white-space:nowrap;">'
+        $priceBlockHtml .= '<div class="ph-price-main">'
             . $price . '</div>';
         $priceBlockHtml .= '</div>';
 
@@ -608,6 +680,19 @@ class WooProductResource extends Resource
         // Cod de bare
         $barcodeHtml = static::renderBarcodeHtml($record->sku ?? '');
 
+        // Buton Adaugă la necesar
+        $addToNecesarBtn = '<button'
+            . ' x-on:click="$wire.mountAction(\'add_to_necesar\')"'
+            . ' type="button"'
+            . ' style="margin-top:10px;background:#dc2626;color:#fff;border:none;cursor:pointer;'
+            . 'border-radius:8px;padding:11px 18px;font-size:0.97rem;font-weight:700;'
+            . 'display:flex;align-items:center;gap:9px;width:100%;justify-content:center;">'
+            . '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:20px;height:20px;flex-shrink:0;">'
+            . '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />'
+            . '</svg>'
+            . 'Adaugă la necesar'
+            . '</button>';
+
         // Descriere scurtă
         $shortDesc = filled($record->short_description)
             ? '<div style="margin-top:14px;padding-top:12px;border-top:1px solid #f3f4f6;font-size:0.875rem;color:#374151;line-height:1.6;">'
@@ -615,7 +700,20 @@ class WooProductResource extends Resource
               . '</div>'
             : '';
 
-        $html = '<div style="display:flex;flex-wrap:wrap;gap:24px;align-items:start;width:100%;">'
+        $style = '<style>'
+            . '.ph-name-price-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;}'
+            . '.ph-price-block{text-align:right;flex-shrink:0;min-width:130px;}'
+            . '.ph-price-main{font-size:2rem;font-weight:800;color:#dc2626;line-height:1.1;white-space:nowrap;}'
+            . '.ph-name{font-size:1.4rem;font-weight:700;color:#111827;line-height:1.35;}'
+            . '@media(max-width:640px){'
+            . '.ph-name-price-row{flex-direction:column !important;gap:4px;}'
+            . '.ph-price-block{text-align:left !important;min-width:unset !important;}'
+            . '.ph-price-main{font-size:1.5rem !important;white-space:normal;}'
+            . '.ph-name{font-size:1.15rem !important;}'
+            . '}'
+            . '</style>';
+
+        $html = $style . '<div style="display:flex;flex-wrap:wrap;gap:24px;align-items:start;width:100%;">'
 
             // Poza produs — responsivă
             . '<div style="flex:0 0 auto;width:min(340px,100%);">'
@@ -630,8 +728,8 @@ class WooProductResource extends Resource
             . ($brandHtml ? '<div>' . $brandHtml . '</div>' : '')
 
             // Denumire produs + preț pe același rând
-            . '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">'
-            . '<div style="font-size:1.4rem;font-weight:700;color:#111827;line-height:1.35;">' . $name . '</div>'
+            . '<div class="ph-name-price-row">'
+            . '<div class="ph-name">' . $name . '</div>'
             . $priceBlockHtml
             . '</div>'
 
@@ -650,6 +748,9 @@ class WooProductResource extends Resource
             // Cod de bare
             . $barcodeHtml
 
+            // Buton Adaugă la necesar (după barcode pe desktop; pe mobil barcode e hidden → apare după stoc)
+            . $addToNecesarBtn
+
             // Descriere scurtă
             . $shortDesc
 
@@ -657,6 +758,45 @@ class WooProductResource extends Resource
             . '</div>'; // end wrapper
 
         return new HtmlString($html);
+    }
+
+    public static function necesarModalForm(): array
+    {
+        return [
+            \Filament\Forms\Components\TextInput::make('quantity')
+                ->label('Cantitate')
+                ->numeric()
+                ->minValue(0.001)
+                ->default(1)
+                ->required()
+                ->live(onBlur: true)
+                ->extraInputAttributes([
+                    'style'     => 'text-align:center;font-size:1.5rem;font-weight:700;width:80px;',
+                    'autofocus' => 'autofocus',
+                ])
+                ->prefixAction(
+                    \Filament\Forms\Components\Actions\Action::make('qty_decrease')
+                        ->icon('heroicon-o-minus')
+                        ->extraAttributes(['tabindex' => '-1'])
+                        ->action(fn (\Filament\Forms\Get $get, \Filament\Forms\Set $set) =>
+                            $set('quantity', max(1, (int) $get('quantity') - 1))
+                        )
+                )
+                ->suffixAction(
+                    \Filament\Forms\Components\Actions\Action::make('qty_increase')
+                        ->icon('heroicon-o-plus')
+                        ->extraAttributes(['tabindex' => '-1'])
+                        ->action(fn (\Filament\Forms\Get $get, \Filament\Forms\Set $set) =>
+                            $set('quantity', (int) $get('quantity') + 1)
+                        )
+                ),
+            \Filament\Forms\Components\Toggle::make('is_urgent')
+                ->label('Urgent')
+                ->default(false),
+            \Filament\Forms\Components\TextInput::make('notes')
+                ->label('Notițe')
+                ->nullable(),
+        ];
     }
 
     private static function renderSupplierContactModal(WooProduct $record): HtmlString

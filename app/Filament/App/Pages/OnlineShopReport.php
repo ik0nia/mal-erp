@@ -1,12 +1,16 @@
 <?php
 
 namespace App\Filament\App\Pages;
+use App\Models\RolePermission;
+use App\Filament\App\Concerns\HasDynamicNavSort;
 
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\DB;
 
 class OnlineShopReport extends Page
 {
+    use HasDynamicNavSort;
+
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
 
     protected static ?string $navigationGroup = 'Rapoarte';
@@ -16,6 +20,11 @@ class OnlineShopReport extends Page
     protected static ?int $navigationSort = 20;
 
     protected static string $view = 'filament.app.pages.online-shop-report';
+
+    public static function canAccess(): bool
+    {
+        return RolePermission::check(static::class, 'can_access');
+    }
 
     public int $year;
 
@@ -199,5 +208,12 @@ class OnlineShopReport extends Page
                 'orders'  => (int) $r->orders,
             ])
             ->toArray();
+    }
+
+    public function bootGuardAccess(): void
+    {
+        if (! static::canAccess()) {
+            abort(403);
+        }
     }
 }

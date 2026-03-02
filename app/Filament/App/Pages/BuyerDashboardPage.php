@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Filament\App\Pages;
+use App\Models\RolePermission;
+use App\Filament\App\Concerns\HasDynamicNavSort;
 
 use App\Filament\App\Resources\PurchaseOrderResource;
 use App\Models\PurchaseRequestItem;
@@ -11,12 +13,14 @@ use Illuminate\Support\Collection;
 
 class BuyerDashboardPage extends Page
 {
+    use HasDynamicNavSort;
+
     protected static string $view = 'filament.app.pages.buyer-dashboard';
 
     protected static ?string $navigationLabel = 'Tablou comenzi';
     protected static ?string $navigationGroup = 'Achiziții';
     protected static ?string $navigationIcon  = 'heroicon-o-squares-2x2';
-    protected static ?int    $navigationSort  = 20;
+    protected static ?int    $navigationSort  = 2;
     protected static ?string $title           = 'Tablou comenzi achiziții';
 
     public ?int  $filterSupplierId  = null;
@@ -184,5 +188,12 @@ class BuyerDashboardPage extends Page
                 'supplier_id' => $supplierId,
             ])
         );
+    }
+
+    public function bootGuardAccess(): void
+    {
+        if (! static::canAccess()) {
+            abort(403);
+        }
     }
 }

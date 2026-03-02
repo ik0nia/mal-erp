@@ -103,4 +103,10 @@ class OrderStatusChartWidget extends ChartWidget
     {
         return 'doughnut';
     }
+
+    public static function canView(): bool
+    {
+        return \App\Models\RolePermission::check(static::class, 'can_access');
+    }
+
 }

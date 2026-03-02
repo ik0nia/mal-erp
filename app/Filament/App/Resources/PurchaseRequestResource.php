@@ -3,6 +3,8 @@
 namespace App\Filament\App\Resources;
 
 use App\Filament\App\Concerns\EnforcesLocationScope;
+use App\Filament\App\Concerns\ChecksRolePermissions;
+use App\Filament\App\Concerns\HasDynamicNavSort;
 use App\Filament\App\Resources\PurchaseRequestResource\Pages;
 use App\Models\Location;
 use App\Models\ProductSupplier;
@@ -10,10 +12,8 @@ use App\Models\PurchaseRequest;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Models\WooProduct;
-use Awcodes\TableRepeater\Components\TableRepeater;
-use Awcodes\TableRepeater\Header;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -22,7 +22,6 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
-use Illuminate\Support\HtmlString;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\Section as InfolistSection;
@@ -37,7 +36,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class PurchaseRequestResource extends Resource
 {
-    use EnforcesLocationScope;
+    use HasDynamicNavSort;
+
+    use EnforcesLocationScope, ChecksRolePermissions;
 
     protected static ?string $model = PurchaseRequest::class;
 
@@ -46,7 +47,7 @@ class PurchaseRequestResource extends Resource
     protected static ?string $navigationLabel  = 'Necesare';
     protected static ?string $modelLabel       = 'Necesar';
     protected static ?string $pluralModelLabel = 'Necesare';
-    protected static ?int    $navigationSort   = 10;
+    protected static ?int    $navigationSort   = 1;
 
     public static function getNavigationBadge(): ?string
     {
@@ -106,30 +107,15 @@ class PurchaseRequestResource extends Resource
 
             Section::make('Produse solicitate')
                 ->schema([
-                    TableRepeater::make('items')
+                    Repeater::make('items')
                         ->label('')
                         ->relationship('items')
-                        ->headers([
-                            Header::make('thumbnail')->label('')->width('48px'),
-                            Header::make('product')->label('Produs')->width('250px'),
-                            Header::make('supplier_id')->label('Furnizor')->width('180px'),
-                            Header::make('quantity')->label('Cantitate')->width('100px'),
-                            Header::make('needed_by')->label('Necesar până la')->width('150px'),
-                            Header::make('is_urgent')->label('Urgent')->width('80px'),
-                            Header::make('is_reserved')->label('Rezervat')->width('80px'),
-                            Header::make('client_reference')->label('Ref. client')->width('150px'),
-                            Header::make('notes')->label('Notițe')->width('150px'),
-                        ])
+                        ->columns(['default' => 1, 'sm' => 2])
                         ->schema([
-                            Placeholder::make('thumbnail')
-                                ->label('Imagine')
-                                ->hiddenLabel()
-                                ->content(fn (Get $get): HtmlString => static::productThumbnail($get('woo_product_id')))
-                                ->extraAttributes(['class' => 'w-12']),
-
                             Select::make('woo_product_id')
                                 ->label('Produs')
                                 ->searchable()
+                                ->columnSpanFull()
                                 ->getSearchResultsUsing(function (string $search): array {
                                     return WooProduct::query()
                                         ->where(function (Builder $q) use ($search): void {
@@ -151,7 +137,6 @@ class PurchaseRequestResource extends Resource
                                 ->afterStateUpdated(function ($state, Set $set): void {
                                     if (! $state) return;
 
-                                    // Auto-fill furnizor: preferred mai întâi, altfel primul disponibil
                                     $ps = ProductSupplier::where('woo_product_id', $state)
                                         ->orderByDesc('is_preferred')
                                         ->first();
@@ -169,6 +154,7 @@ class PurchaseRequestResource extends Resource
                                     ->pluck('name', 'id')
                                     ->all()
                                 )
+                                ->columnSpanFull()
                                 ->searchable()
                                 ->nullable(),
 
@@ -193,18 +179,38 @@ class PurchaseRequestResource extends Resource
                                 ->live()
                                 ->default(false),
 
-                            TextInput::make('client_reference')
-                                ->label('Ref. client')
+                            Select::make('customer_id')
+                                ->label('Client rezervare')
+                                ->searchable()
+                                ->columnSpanFull()
+                                ->getSearchResultsUsing(fn (string $search): array => \App\Models\Customer::query()
+                                    ->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search): void {
+                                        $q->where('name', 'like', "%{$search}%")
+                                            ->orWhere('phone', 'like', "%{$search}%")
+                                            ->orWhere('email', 'like', "%{$search}%");
+                                    })
+                                    ->limit(30)
+                                    ->pluck('name', 'id')
+                                    ->all()
+                                )
+                                ->getOptionLabelUsing(fn ($value): ?string => \App\Models\Customer::query()->find($value)?->name)
                                 ->disabled(fn (Get $get): bool => ! (bool) $get('is_reserved'))
-                                ->placeholder(fn (Get $get): string => $get('is_reserved') ? '' : '—')
                                 ->nullable(),
 
                             TextInput::make('notes')
                                 ->label('Notițe')
                                 ->nullable(),
                         ])
+                        ->itemLabel(function (array $state): string {
+                            if (empty($state['woo_product_id'])) {
+                                return 'Produs nou';
+                            }
+                            $p = WooProduct::query()->whereKey($state['woo_product_id'])->first(['name', 'sku']);
+                            return $p ? ($p->sku ? "[{$p->sku}] " : '') . ($p->decoded_name ?? $p->name) : 'Produs';
+                        })
+                        ->collapsible()
                         ->defaultItems(1)
-                        ->addActionLabel('Adaugă produs'),
+                        ->addActionLabel('+ Adaugă produs'),
                 ]),
         ]);
     }
@@ -246,7 +252,7 @@ class PurchaseRequestResource extends Resource
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Data')
-                    ->dateTime('d.m.Y H:i')
+                    ->date('d.m.Y')
                     ->sortable(),
             ])
             ->defaultSort('created_at', 'desc')
@@ -312,7 +318,7 @@ class PurchaseRequestResource extends Resource
                             TextEntry::make('needed_by')->label('Necesar până la')->date('d.m.Y')->placeholder('—'),
                             IconEntry::make('is_urgent')->label('Urgent')->boolean(),
                             IconEntry::make('is_reserved')->label('Rezervat')->boolean(),
-                            TextEntry::make('client_reference')->label('Referință client')->placeholder('—'),
+                            TextEntry::make('customer.name')->label('Client rezervare')->placeholder('—'),
                             TextEntry::make('status')
                                 ->label('Status')
                                 ->badge()
@@ -336,9 +342,15 @@ class PurchaseRequestResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return static::applyLocationFilter(
+        $query = static::applyLocationFilter(
             parent::getEloquentQuery()->with(['user', 'location', 'items'])
         );
+
+        if (auth()->user()?->role === \App\Models\User::ROLE_CONSULTANT_VANZARI) {
+            $query->where('user_id', auth()->id());
+        }
+
+        return $query;
     }
 
     public static function canCreate(): bool
@@ -359,31 +371,6 @@ class PurchaseRequestResource extends Resource
     public static function canDelete(Model $record): bool
     {
         return static::canEdit($record);
-    }
-
-    private static function productThumbnail(?int $productId): HtmlString
-    {
-        static $cache = [];
-
-        if (! $productId) {
-            return new HtmlString('<span class="inline-flex h-8 w-8 items-center justify-center rounded bg-gray-100 text-[9px] text-gray-400">—</span>');
-        }
-
-        if (! array_key_exists($productId, $cache)) {
-            $cache[$productId] = WooProduct::query()->whereKey($productId)->value('main_image_url');
-        }
-
-        $url = filled($cache[$productId])
-            ? e((string) $cache[$productId])
-            : null;
-
-        if (! $url) {
-            return new HtmlString('<span class="inline-flex h-8 w-8 items-center justify-center rounded bg-gray-100 text-[9px] text-gray-400">—</span>');
-        }
-
-        return new HtmlString(
-            '<img src="'.$url.'" alt="" class="h-8 w-8 rounded object-cover ring-1 ring-gray-200/70" loading="lazy" />'
-        );
     }
 
     public static function getPages(): array

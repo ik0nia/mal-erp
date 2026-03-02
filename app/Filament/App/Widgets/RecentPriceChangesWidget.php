@@ -27,17 +27,21 @@ class RecentPriceChangesWidget extends BaseWidget
     public function table(Table $table): Table
     {
         return $table
+            ->heading(false)
             ->query(
                 ProductPriceLog::query()
                     ->with(['product', 'location'])
                     ->latest('changed_at')
                     ->limit(50)
             )
+            ->recordUrl(fn (ProductPriceLog $record): ?string => $record->woo_product_id
+                ? route('filament.app.resources.woo-products.view', ['record' => $record->woo_product_id])
+                : null
+            )
             ->columns([
                 Tables\Columns\TextColumn::make('changed_at')
                     ->label('Data')
                     ->dateTime('d.m.Y H:i')
-                    ->since()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('product.sku')
                     ->label('SKU')
@@ -64,4 +68,10 @@ class RecentPriceChangesWidget extends BaseWidget
             ])
             ->paginated(false);
     }
+
+    public static function canView(): bool
+    {
+        return \App\Models\RolePermission::check(static::class, 'can_access');
+    }
+
 }

@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Filament\App\Resources;
+use App\Filament\App\Concerns\ChecksRolePermissions;
+use App\Filament\App\Concerns\HasDynamicNavSort;
 
 use App\Filament\App\Resources\EanAssociationRequestResource\Pages;
 use App\Models\EanAssociationRequest;
@@ -14,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 
 class EanAssociationRequestResource extends Resource
 {
+    use ChecksRolePermissions, HasDynamicNavSort;
     protected static ?string $model = EanAssociationRequest::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-qr-code';

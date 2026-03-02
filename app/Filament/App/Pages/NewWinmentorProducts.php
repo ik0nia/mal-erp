@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Filament\App\Pages;
+use App\Models\RolePermission;
+use App\Filament\App\Concerns\HasDynamicNavSort;
 
 use App\Models\WooProduct;
 use Filament\Pages\Page;
@@ -14,13 +16,18 @@ use Illuminate\Database\Eloquent\Builder;
 
 class NewWinmentorProducts extends Page implements HasTable
 {
-    use InteractsWithTable;
+    use HasDynamicNavSort, InteractsWithTable;
 
     protected static ?string $navigationIcon  = 'heroicon-o-sparkles';
     protected static ?string $navigationGroup = 'Produse';
     protected static ?string $navigationLabel = 'Produse noi WinMentor';
     protected static ?int    $navigationSort  = 25;
     protected static string  $view            = 'filament.app.pages.new-winmentor-products';
+
+    public static function canAccess(): bool
+    {
+        return RolePermission::check(static::class, 'can_access');
+    }
 
     public static function getNavigationBadge(): ?string
     {
@@ -150,5 +157,12 @@ class NewWinmentorProducts extends Page implements HasTable
             ->defaultSort('created_at', 'desc')
             ->striped()
             ->paginated([25, 50, 100]);
+    }
+
+    public function bootGuardAccess(): void
+    {
+        if (! static::canAccess()) {
+            abort(403);
+        }
     }
 }

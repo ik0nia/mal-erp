@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Filament\App\Resources;
+use App\Filament\App\Concerns\ChecksRolePermissions;
+use App\Filament\App\Concerns\HasDynamicNavSort;
 
 use App\Filament\App\Resources\SupplierResource\Pages;
 use App\Filament\App\Resources\SupplierResource\RelationManagers\ContactsRelationManager;
@@ -14,6 +16,7 @@ use Filament\Tables\Table;
 
 class SupplierResource extends Resource
 {
+    use ChecksRolePermissions, HasDynamicNavSort;
     protected static ?string $model = Supplier::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-truck';
@@ -26,7 +29,7 @@ class SupplierResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Furnizori';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 4;
 
     public static function form(Form $form): Form
     {

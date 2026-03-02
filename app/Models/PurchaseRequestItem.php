@@ -21,6 +21,7 @@ class PurchaseRequestItem extends Model
         'needed_by',
         'is_urgent',
         'is_reserved',
+        'customer_id',
         'client_reference',
         'notes',
         'status',
@@ -37,6 +38,7 @@ class PurchaseRequestItem extends Model
             'needed_by'             => 'date',
             'is_urgent'             => 'boolean',
             'is_reserved'           => 'boolean',
+            'customer_id'           => 'integer',
             'purchase_order_item_id' => 'integer',
         ];
     }
@@ -84,6 +86,11 @@ class PurchaseRequestItem extends Model
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 
     public function purchaseOrderItem(): BelongsTo

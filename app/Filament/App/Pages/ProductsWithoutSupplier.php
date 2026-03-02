@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Filament\App\Pages;
+use App\Models\RolePermission;
+use App\Filament\App\Concerns\HasDynamicNavSort;
 
 use App\Filament\App\Concerns\EnforcesLocationScope;
 use App\Models\IntegrationConnection;
@@ -15,15 +17,20 @@ use Filament\Tables\Table;
 
 class ProductsWithoutSupplier extends Page implements HasTable
 {
-    use InteractsWithTable;
+    use HasDynamicNavSort, InteractsWithTable;
     use EnforcesLocationScope;
 
     protected static ?string $navigationIcon  = 'heroicon-o-link-slash';
     protected static ?string $navigationGroup = 'Achiziții';
     protected static ?string $navigationLabel = 'Fără furnizor';
-    protected static ?int    $navigationSort  = 3;
+    protected static ?int    $navigationSort  = 6;
 
     protected static string $view = 'filament.app.pages.products-without-supplier';
+
+    public static function canAccess(): bool
+    {
+        return RolePermission::check(static::class, 'can_access');
+    }
 
     public int $statTotal       = 0;
     public int $statPlaceholder = 0;
@@ -151,5 +158,12 @@ class ProductsWithoutSupplier extends Page implements HasTable
         }
 
         return $query->pluck('id')->map(fn ($id) => (int) $id)->all();
+    }
+
+    public function bootGuardAccess(): void
+    {
+        if (! static::canAccess()) {
+            abort(403);
+        }
     }
 }

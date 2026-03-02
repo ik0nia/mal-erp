@@ -1,12 +1,16 @@
 <?php
 
 namespace App\Filament\App\Pages;
+use App\Models\RolePermission;
+use App\Filament\App\Concerns\HasDynamicNavSort;
 
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\DB;
 
 class BiDashboardPage extends Page
 {
+    use HasDynamicNavSort;
+
     protected static string $view = 'filament.app.pages.bi-dashboard';
 
     protected static ?string $navigationLabel = 'Dashboard BI';
@@ -185,5 +189,12 @@ class BiDashboardPage extends Page
                 'reason_flags'     => json_decode($r->reason_flags ?? '[]', true) ?? [],
             ])
             ->toArray();
+    }
+
+    public function bootGuardAccess(): void
+    {
+        if (! static::canAccess()) {
+            abort(403);
+        }
     }
 }

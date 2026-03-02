@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Filament\App\Resources;
+use App\Filament\App\Concerns\ChecksRolePermissions;
+use App\Filament\App\Concerns\HasDynamicNavSort;
 
 use App\Filament\App\Resources\BrandResource\Pages;
 use App\Models\Brand;
@@ -14,6 +16,7 @@ use Illuminate\Support\Str;
 
 class BrandResource extends Resource
 {
+    use ChecksRolePermissions, HasDynamicNavSort;
     protected static ?string $model = Brand::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-tag';
@@ -26,7 +29,7 @@ class BrandResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Branduri';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 5;
 
     public static function form(Form $form): Form
     {

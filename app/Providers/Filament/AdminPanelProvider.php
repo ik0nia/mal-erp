@@ -28,8 +28,69 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => Color::Red,
             ])
+            ->renderHook(
+                \Filament\View\PanelsRenderHook::HEAD_END,
+                fn () => new \Illuminate\Support\HtmlString('<style>
+/* ── Sidebar negru ── */
+.fi-sidebar {
+    background-color: #111827 !important;
+    border-right-color: #1f2937 !important;
+}
+.fi-sidebar-header {
+    background-color: #ffffff !important;
+    border-bottom-color: #e5e7eb !important;
+}
+.fi-sidebar-header *,
+.fi-sidebar-header a,
+.fi-sidebar-header span,
+.fi-sidebar-header p,
+.fi-sidebar-header div {
+    color: #111827 !important;
+}
+.fi-sidebar-group-label {
+    color: rgba(255,255,255,0.45) !important;
+}
+.fi-sidebar-item-label {
+    color: rgba(255,255,255,0.85) !important;
+}
+.fi-sidebar-item-icon {
+    color: rgba(255,255,255,0.6) !important;
+}
+.fi-sidebar-item-button:hover {
+    background-color: rgba(255,255,255,0.18) !important;
+}
+.fi-sidebar-item-button:hover .fi-sidebar-item-label,
+.fi-sidebar-item-button:hover .fi-sidebar-item-icon {
+    color: #ffffff !important;
+}
+.fi-sidebar-item.fi-active .fi-sidebar-item-button,
+.fi-sidebar-item.fi-active .fi-sidebar-item-button:hover {
+    background-color: #ffffff !important;
+}
+.fi-sidebar-item.fi-active .fi-sidebar-item-label,
+.fi-sidebar-item.fi-active .fi-sidebar-item-button:hover .fi-sidebar-item-label {
+    color: #111827 !important;
+    font-weight: 600;
+}
+.fi-sidebar-item.fi-active .fi-sidebar-item-icon,
+.fi-sidebar-item.fi-active .fi-sidebar-item-button:hover .fi-sidebar-item-icon {
+    color: #111827 !important;
+}
+.fi-sidebar-item-badge {
+    background-color: #dc2626 !important;
+    color: #ffffff !important;
+}
+.fi-sidebar-group-collapse-button {
+    color: rgba(255,255,255,0.4) !important;
+}
+.fi-sidebar-group-collapse-button:hover {
+    background-color: rgba(255,255,255,0.08) !important;
+    color: #ffffff !important;
+}
+</style>'),
+            )
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([

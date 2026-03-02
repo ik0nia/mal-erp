@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Filament\App\Pages;
+use App\Models\RolePermission;
+use App\Filament\App\Concerns\HasDynamicNavSort;
 
 use App\Filament\App\Concerns\EnforcesLocationScope;
 use App\Filament\App\Resources\WooProductResource;
@@ -17,7 +19,7 @@ use Illuminate\Support\Facades\DB;
 
 class StockMovementsReport extends Page implements HasTable
 {
-    use InteractsWithTable;
+    use HasDynamicNavSort, InteractsWithTable;
     use EnforcesLocationScope;
 
     public static function canAccess(): bool
@@ -311,5 +313,12 @@ class StockMovementsReport extends Page implements HasTable
             ->whereRaw('COALESCE(gp.id, p.id, wc.id) = ?', [$categoryId])
             ->pluck('wpc.woo_product_id')
             ->toArray();
+    }
+
+    public function bootGuardAccess(): void
+    {
+        if (! static::canAccess()) {
+            abort(403);
+        }
     }
 }

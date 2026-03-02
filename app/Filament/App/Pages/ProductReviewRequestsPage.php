@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Filament\App\Pages;
+use App\Models\RolePermission;
+use App\Filament\App\Concerns\HasDynamicNavSort;
 
 use App\Models\ProductReviewRequest;
 use App\Models\WooProduct;
@@ -17,13 +19,18 @@ use Illuminate\Support\Carbon;
 
 class ProductReviewRequestsPage extends Page implements HasTable
 {
-    use InteractsWithTable;
+    use HasDynamicNavSort, InteractsWithTable;
 
     protected static ?string $navigationIcon  = 'heroicon-o-exclamation-triangle';
     protected static ?string $navigationGroup = 'Produse';
     protected static ?string $navigationLabel = 'Reverificări produse';
     protected static ?int    $navigationSort  = 30;
     protected static string  $view            = 'filament.app.pages.product-review-requests';
+
+    public static function canAccess(): bool
+    {
+        return RolePermission::check(static::class, 'can_access');
+    }
 
     public static function getNavigationBadge(): ?string
     {
@@ -113,5 +120,12 @@ class ProductReviewRequestsPage extends Page implements HasTable
             ->defaultSort('created_at', 'desc')
             ->striped()
             ->paginated([25, 50, 100]);
+    }
+
+    public function bootGuardAccess(): void
+    {
+        if (! static::canAccess()) {
+            abort(403);
+        }
     }
 }

@@ -3,6 +3,8 @@
 namespace App\Filament\App\Resources;
 
 use App\Filament\App\Concerns\EnforcesLocationScope;
+use App\Filament\App\Concerns\ChecksRolePermissions;
+use App\Filament\App\Concerns\HasDynamicNavSort;
 use App\Filament\App\Resources\SamedayAwbResource\Pages;
 use App\Models\IntegrationConnection;
 use App\Models\SamedayAwb;
@@ -29,7 +31,9 @@ use Throwable;
 
 class SamedayAwbResource extends Resource
 {
-    use EnforcesLocationScope;
+    use HasDynamicNavSort;
+
+    use EnforcesLocationScope, ChecksRolePermissions;
 
     protected static ?string $model = SamedayAwb::class;
 
