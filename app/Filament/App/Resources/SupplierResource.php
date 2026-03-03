@@ -6,6 +6,7 @@ use App\Filament\App\Concerns\HasDynamicNavSort;
 
 use App\Filament\App\Resources\SupplierResource\Pages;
 use App\Filament\App\Resources\SupplierResource\RelationManagers\ContactsRelationManager;
+use App\Filament\App\Resources\SupplierResource\RelationManagers\EmailsRelationManager;
 use App\Models\Supplier;
 use App\Models\User;
 use Filament\Forms;
@@ -199,6 +200,7 @@ class SupplierResource extends Resource
     {
         return [
             ContactsRelationManager::class,
+            EmailsRelationManager::class,
         ];
     }
 

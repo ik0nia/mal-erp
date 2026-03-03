@@ -14,6 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Support\Facades\Route::middleware([
                 \Illuminate\Routing\Middleware\SubstituteBindings::class,
             ])->group(base_path('routes/webhooks.php'));
+
+            // Chat routes — publice, cu throttle, fără CSRF/auth
+            \Illuminate\Support\Facades\Route::middleware([
+                'throttle:30,1',
+                \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            ])->group(base_path('routes/chat.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {

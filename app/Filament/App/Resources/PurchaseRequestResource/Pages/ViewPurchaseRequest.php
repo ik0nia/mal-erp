@@ -3,8 +3,12 @@
 namespace App\Filament\App\Resources\PurchaseRequestResource\Pages;
 
 use App\Filament\App\Resources\PurchaseRequestResource;
+use App\Models\EmailMessage;
 use App\Models\PurchaseRequest;
 use Filament\Actions;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\ViewEntry;
+use Filament\Infolists\Infolist;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 
@@ -50,5 +54,28 @@ class ViewPurchaseRequest extends ViewRecord
             Actions\DeleteAction::make()
                 ->visible(fn (): bool => PurchaseRequestResource::canDelete($this->record)),
         ];
+    }
+
+    /**
+     * Returnează ultimele emailuri de la furnizorii din acest necesitar.
+     */
+    public function getSupplierEmails(): \Illuminate\Support\Collection
+    {
+        $supplierIds = $this->record->items()
+            ->whereNotNull('supplier_id')
+            ->pluck('supplier_id')
+            ->unique()
+            ->values();
+
+        if ($supplierIds->isEmpty()) {
+            return collect();
+        }
+
+        return EmailMessage::with('supplier')
+            ->whereIn('supplier_id', $supplierIds)
+            ->whereIn('imap_folder', ['INBOX', 'INBOX.Sent'])
+            ->orderByDesc('sent_at')
+            ->limit(8)
+            ->get();
     }
 }

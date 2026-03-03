@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Malinco Chat Widget</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 80px auto; padding: 20px; background: #f5f5f5; }
+    h1 { color: #e65100; }
+    code { background: #eee; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+    .info { background: #fff; border-radius: 8px; padding: 20px; margin-top: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    pre { background: #263238; color: #eee; padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <h1>Test Malinco Chat Widget</h1>
+  <div class="info">
+    <p>Widgetul de chat este activ în colțul din dreapta jos. Testați:</p>
+    <ul style="margin-top:10px;line-height:1.8">
+      <li>„Aveți caramidă?"</li>
+      <li>„Aveti 50 saci de ciment?"</li>
+      <li>„Care e programul magazinului?"</li>
+      <li>„Cum fac o retur?"</li>
+      <li>„Vreau sa verific comanda mea"</li>
+      <li>„Cum se face livrarea?"</li>
+    </ul>
+  </div>
+  <div class="info" style="margin-top:16px">
+    <p><strong>Snippet de embed pentru WooCommerce (footer):</strong></p>
+    <pre>&lt;script&gt;
+  window.MalincoChat = { apiUrl: 'https://erp.malinco.ro' };
+&lt;/script&gt;
+&lt;script src="https://erp.malinco.ro/chat/widget.js" defer&gt;&lt;/script&gt;</pre>
+  </div>
+
+  <script>
+    window.MalincoChat = { apiUrl: window.location.origin };
+  </script>
+  <script src="widget.js"></script>
+</body>
+</html>

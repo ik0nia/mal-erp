@@ -156,7 +156,7 @@ Returnează JSON cu structura exactă:
     {"name": "...", "sku": null, "quantity": null, "unit": null}
   ],
   "prices_mentioned": [
-    {"product": "...", "price": 0.00, "currency": "RON", "unit": null, "min_qty": null}
+    {"product": "...", "sku": null, "price": 0.00, "currency": "RON", "unit": null, "min_qty": null}
   ],
   "invoice_number": null,
   "delivery_date": null,
@@ -168,9 +168,11 @@ Returnează JSON cu structura exactă:
 
 Reguli:
 - "type" = automated dacă e newsletter, notificare automată, spam, sau nu e de la o persoană reală
-- "prices_mentioned" = listă DOAR cu prețuri explicite din text (nu estimări)
+- "prices_mentioned" = NUMAI prețuri unitare pentru produse/materiale fizice concrete (ex: "Cărămidă NF 25 lei/buc", "Parchet 8mm 43 lei/mp")
+- NU include în prices_mentioned: totaluri de factură/comandă, costuri transport, avansuri, solduri, bonusuri, excursii, servicii, comisioane
+- "sku" în prices_mentioned = codul de produs/SKU dacă e explicit menționat în email (ex: "TP435B", "EL2733"), altfel null
 - "delivery_date" = data în format ISO "YYYY-MM-DD" sau null
-- Dacă nu există informații pentru un câmp, pune null sau []
+- Dacă nu există prețuri unitare de produse fizice, pune "prices_mentioned": []
 PROMPT;
 
         try {
@@ -304,7 +306,7 @@ PROMPT;
             }
 
             // Încearcă să potrivim produsul cu catalogul WooCommerce
-            $productId = $this->matchProduct($price['product']);
+            $productId = $this->matchProduct($price['product'], $price['sku'] ?? null);
 
             SupplierPriceQuote::create([
                 'supplier_id'      => $email->supplier_id,
@@ -321,31 +323,132 @@ PROMPT;
 
     /**
      * Încearcă să potrivească un nume de produs (din email) cu un produs din catalog.
-     * Returnează woo_product_id sau null dacă nu găsește.
+     *
+     * Strategii în ordine:
+     * 1. Potrivire după SKU explicit (dacă AI a extras codul)
+     * 2. Potrivire exactă după numele produsului
+     * 3. Potrivire cu scor: cele mai multe cuvinte semnificative (≥3 litere) găsite în titlu
+     *
+     * Returnează woo_product_id sau null dacă nu există potrivire suficientă.
      */
-    private function matchProduct(string $rawName): ?int
+    public static function matchProduct(string $rawName, ?string $sku = null): ?int
     {
+        $rawName = trim($rawName);
+
         if (strlen($rawName) < 4) {
             return null;
         }
 
-        // Căutare simplă după cuvinte cheie (primele 2-3 cuvinte)
-        $words = array_filter(explode(' ', preg_replace('/[^\w\s]/u', ' ', $rawName)));
-        $significantWords = array_slice($words, 0, 3);
-
-        if (empty($significantWords)) {
-            return null;
-        }
-
-        $query = WooProduct::query();
-        foreach ($significantWords as $word) {
-            if (strlen($word) >= 3) {
-                $query->where('name', 'like', "%{$word}%");
+        // 1. Potrivire după SKU explicit (prioritate maximă)
+        if ($sku && strlen($sku) >= 4) {
+            $bySkу = WooProduct::where('sku', $sku)->first();
+            if ($bySkу) {
+                return $bySkу->id;
             }
         }
 
-        $product = $query->first();
+        // 2. Potrivire exactă după nume
+        $exact = WooProduct::whereRaw('LOWER(name) = ?', [mb_strtolower($rawName)])->first();
+        if ($exact) {
+            return $exact->id;
+        }
 
-        return $product?->id;
+        // 3. Scoring prin cuvinte distinctive
+        // Excludem: cuvinte < 4 litere, stopwords comune, și cuvinte pur numerice
+        $stopwords = [
+            'din', 'sau', 'pentru', 'este', 'care', 'mai', 'buc', 'set', 'pcs',
+            'the', 'and', 'for', 'per', 'clasa', 'class', 'type', 'tip',
+            'universal', 'standard', 'other', 'alta', 'alte',
+        ];
+
+        $allWords = array_filter(
+            explode(' ', preg_replace('/[^\w\s]/u', ' ', $rawName)),
+            function ($w) use ($stopwords) {
+                // Minim 4 litere
+                if (strlen($w) < 4) {
+                    return false;
+                }
+                // Nu stopwords
+                if (in_array(mb_strtolower($w), $stopwords)) {
+                    return false;
+                }
+                // Nu pur numeric (ex: "140", "160", "435")
+                if (is_numeric($w)) {
+                    return false;
+                }
+
+                return true;
+            }
+        );
+
+        $words = array_values(array_unique($allWords));
+
+        // Fără cuvinte distinctive = nu putem face matching de calitate
+        if (count($words) === 0) {
+            return null;
+        }
+
+        // Caută candidați care conțin cel puțin un cuvânt distinctiv
+        $candidates = WooProduct::where(function ($q) use ($words) {
+            foreach ($words as $word) {
+                $q->orWhere('name', 'like', "%{$word}%");
+            }
+        })->get(['id', 'name']);
+
+        if ($candidates->isEmpty()) {
+            return null;
+        }
+
+        // Scorăm: câte cuvinte distinctive din rawName apar în titlul candidatului
+        $nameLower = mb_strtolower($rawName);
+        $best      = null;
+        $bestScore = 0;
+
+        foreach ($candidates as $candidate) {
+            $candidateLower = mb_strtolower($candidate->name);
+            $score          = 0;
+
+            foreach ($words as $word) {
+                if (str_contains($candidateLower, mb_strtolower($word))) {
+                    $score++;
+                }
+            }
+
+            // Bonus mare dacă titlul candidatului conține toată fraza originală
+            if (str_contains($candidateLower, $nameLower)) {
+                $score += 10;
+            }
+
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $best      = $candidate;
+            }
+        }
+
+        // Praguri de acceptare:
+        // - Dacă avem 1 singur cuvânt distinctiv: trebuie să fie cel puțin 70% din titlu candidatului
+        // - Altfel: minim 60% din cuvintele distinctive trebuie să se regăsească
+        if (count($words) === 1) {
+            // Un singur cuvânt distinctiv → verificăm că e chiar specific (cuvântul constituie ≥2 token-uri din titlu)
+            $candidateWords = array_filter(
+                explode(' ', preg_replace('/[^\w\s]/u', ' ', $best?->name ?? '')),
+                fn ($w) => strlen($w) >= 4
+            );
+            $totalCandidateWords = max(1, count($candidateWords));
+
+            // Dacă titlul candidat are ≥4 cuvinte semnificative, un singur hit e prea slab
+            if ($totalCandidateWords >= 4 && $bestScore < 11) {
+                return null;
+            }
+        }
+
+        $minScore = max(2, (int) ceil(count($words) * 0.6));
+
+        // Dacă avem un bonus de potrivire completă (score ≥11), acceptăm indiferent
+        if ($bestScore >= 11) {
+            return $best?->id;
+        }
+
+        return ($bestScore >= $minScore) ? $best?->id : null;
     }
 }

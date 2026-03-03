@@ -46,6 +46,16 @@ class Supplier extends Model
         return $this->hasMany(PurchaseOrder::class);
     }
 
+    public function emails(): HasMany
+    {
+        return $this->hasMany(EmailMessage::class)->orderByDesc('sent_at');
+    }
+
+    public function priceQuotes(): HasMany
+    {
+        return $this->hasMany(SupplierPriceQuote::class)->orderByDesc('quoted_at');
+    }
+
     public function contacts(): HasMany
     {
         return $this->hasMany(SupplierContact::class)->orderByDesc('is_primary')->orderBy('name');

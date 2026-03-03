@@ -30,10 +30,13 @@ class EmailInboxPage extends Page
         return auth()->user()?->isSuperAdmin() ?? false;
     }
 
-    public ?int    $selectedId   = null;
-    public string  $filterRead   = 'all';  // all | unread | read
-    public string  $filterFolder = '';     // '' = toate folderele
-    public string  $search       = '';
+    public ?int    $selectedId      = null;
+    public string  $filterRead      = 'all';  // all | unread | read
+    public string  $filterFolder    = '';     // '' = toate folderele
+    public string  $search          = '';
+    public string  $filterType      = '';     // '' | offer | invoice | order_confirmation | ...
+    public string  $filterUrgency   = '';     // '' | high | medium | low
+    public bool    $filterNeedsReply = false;
 
     public function mount(): void
     {
@@ -46,6 +49,9 @@ class EmailInboxPage extends Page
             ->when($this->filterRead === 'unread', fn ($q) => $q->where('is_read', false))
             ->when($this->filterRead === 'read',   fn ($q) => $q->where('is_read', true))
             ->when($this->filterFolder !== '',     fn ($q) => $q->where('imap_folder', $this->filterFolder))
+            ->when($this->filterType !== '',       fn ($q) => $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(agent_actions, '$.type')) = ?", [$this->filterType]))
+            ->when($this->filterUrgency !== '',    fn ($q) => $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(agent_actions, '$.urgency')) = ?", [$this->filterUrgency]))
+            ->when($this->filterNeedsReply,        fn ($q) => $q->whereRaw("JSON_EXTRACT(agent_actions, '$.needs_reply') = true"))
             ->when($this->search, fn ($q) => $q->where(function ($q) {
                 $q->where('subject',    'like', "%{$this->search}%")
                   ->orWhere('from_email', 'like', "%{$this->search}%")
@@ -55,6 +61,37 @@ class EmailInboxPage extends Page
             ->orderByDesc('sent_at')
             ->limit(300)
             ->get();
+    }
+
+    public function setFilterType(string $value): void
+    {
+        $this->filterType = $this->filterType === $value ? '' : $value;
+        $this->selectedId = null;
+    }
+
+    public function setFilterUrgency(string $value): void
+    {
+        $this->filterUrgency = $this->filterUrgency === $value ? '' : $value;
+        $this->selectedId = null;
+    }
+
+    public function toggleNeedsReply(): void
+    {
+        $this->filterNeedsReply = ! $this->filterNeedsReply;
+        $this->selectedId = null;
+    }
+
+    public function getAiFilterCounts(): array
+    {
+        $base = EmailMessage::whereNotNull('agent_processed_at');
+
+        return [
+            'needs_reply' => (clone $base)->whereRaw("JSON_EXTRACT(agent_actions, '$.needs_reply') = true")->count(),
+            'high'        => (clone $base)->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(agent_actions, '$.urgency')) = 'high'")->count(),
+            'offer'       => (clone $base)->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(agent_actions, '$.type')) = 'offer'")->count(),
+            'invoice'     => (clone $base)->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(agent_actions, '$.type')) = 'invoice'")->count(),
+            'price_list'  => (clone $base)->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(agent_actions, '$.type')) = 'price_list'")->count(),
+        ];
     }
 
     public function getSelectedEmail(): ?EmailMessage

@@ -44,16 +44,57 @@
     style="height: calc(100vh - 10rem); min-height: 500px;"
 >
 
-    {{-- Search --}}
-    <div class="flex items-center gap-2 mb-3 flex-shrink-0">
+    {{-- Search + filtre AI --}}
+    <div class="flex flex-col gap-2 mb-3 flex-shrink-0">
         <input
             wire:model.live.debounce.300ms="search"
             type="text"
             placeholder="Caută subiect, expeditor..."
-            class="flex-1 px-3 py-1.5 rounded-lg border border-gray-300 text-sm
+            class="w-full px-3 py-1.5 rounded-lg border border-gray-300 text-sm
                    dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200
                    focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
+        @php $aiCounts = $this->getAiFilterCounts(); @endphp
+        <div class="flex flex-wrap gap-1.5 items-center">
+            <span class="text-xs text-gray-400 mr-1">AI:</span>
+
+            <button wire:click="toggleNeedsReply"
+                class="text-xs px-2.5 py-1 rounded-full border transition
+                    {{ $filterNeedsReply
+                        ? 'bg-red-500 border-red-500 text-white'
+                        : 'border-gray-300 text-gray-600 hover:border-red-400 hover:text-red-600 dark:border-gray-600 dark:text-gray-400' }}">
+                Necesită răspuns @if($aiCounts['needs_reply'] > 0)<span class="ml-1 opacity-75">{{ $aiCounts['needs_reply'] }}</span>@endif
+            </button>
+
+            <button wire:click="setFilterUrgency('high')"
+                class="text-xs px-2.5 py-1 rounded-full border transition
+                    {{ $filterUrgency === 'high'
+                        ? 'bg-orange-500 border-orange-500 text-white'
+                        : 'border-gray-300 text-gray-600 hover:border-orange-400 hover:text-orange-600 dark:border-gray-600 dark:text-gray-400' }}">
+                🔴 Urgent @if($aiCounts['high'] > 0)<span class="ml-1 opacity-75">{{ $aiCounts['high'] }}</span>@endif
+            </button>
+
+            @php
+            $typeFilters = [
+                'offer'      => ['label' => 'Oferte',       'on' => 'bg-green-500 border-green-500 text-white',  'off' => 'border-gray-300 text-gray-600 hover:border-green-400 dark:border-gray-600 dark:text-gray-400'],
+                'invoice'    => ['label' => 'Facturi',      'on' => 'bg-yellow-500 border-yellow-500 text-white','off' => 'border-gray-300 text-gray-600 hover:border-yellow-400 dark:border-gray-600 dark:text-gray-400'],
+                'price_list' => ['label' => 'Liste prețuri','on' => 'bg-purple-500 border-purple-500 text-white','off' => 'border-gray-300 text-gray-600 hover:border-purple-400 dark:border-gray-600 dark:text-gray-400'],
+            ];
+            @endphp
+            @foreach($typeFilters as $type => $cfg)
+            <button wire:click="setFilterType('{{ $type }}')"
+                class="text-xs px-2.5 py-1 rounded-full border transition {{ $filterType === $type ? $cfg['on'] : $cfg['off'] }}">
+                {{ $cfg['label'] }} @if(($aiCounts[$type] ?? 0) > 0)<span class="ml-1 opacity-75">{{ $aiCounts[$type] }}</span>@endif
+            </button>
+            @endforeach
+
+            @if($filterType || $filterUrgency || $filterNeedsReply)
+            <button wire:click="$set('filterType', ''); $set('filterUrgency', ''); $set('filterNeedsReply', false)"
+                class="text-xs px-2 py-1 rounded-full text-gray-400 hover:text-gray-600 transition">
+                ✕ Resetează
+            </button>
+            @endif
+        </div>
     </div>
 
     {{-- Layout 3 coloane --}}
@@ -158,9 +199,35 @@
                                 </span>
                             @endif
                             @if($email->supplier)
-                                <span class="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded px-1.5 truncate">
+                                <span class="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded px-1.5 truncate max-w-[80px]">
                                     {{ $email->supplier->name }}
                                 </span>
+                            @endif
+                            @if($email->agent_actions)
+                                @php
+                                    $t = $email->agent_actions['type'] ?? null;
+                                    $u = $email->agent_actions['urgency'] ?? null;
+                                    $nr = !empty($email->agent_actions['needs_reply']);
+                                    $typeBadge = match($t) {
+                                        'offer'                 => ['Ofertă',  'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'],
+                                        'invoice'               => ['Fact.',   'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400'],
+                                        'price_list'            => ['Prețuri', 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400'],
+                                        'order_confirmation'    => ['Conf.',   'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'],
+                                        'delivery_notification' => ['Livrare', 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-400'],
+                                        default => null,
+                                    };
+                                @endphp
+                                @if($typeBadge)
+                                    <span class="text-xs {{ $typeBadge[1] }} rounded px-1.5">
+                                        {{ $typeBadge[0] }}
+                                    </span>
+                                @endif
+                                @if($u === 'high')
+                                    <span class="text-xs text-red-500" title="Urgent">🔴</span>
+                                @endif
+                                @if($nr)
+                                    <span class="text-xs text-orange-500" title="Necesită răspuns">↩</span>
+                                @endif
                             @endif
                             @if($email->hasAttachments())
                                 <span class="text-xs text-gray-400">📎</span>
@@ -241,6 +308,102 @@
                             </button>
                         </div>
                     </div>
+                @endif
+
+                {{-- Panou AI analiză --}}
+                @if($email && $email->agent_actions)
+                @php
+                    $ai = $email->agent_actions;
+                    $typeInfo = match($ai['type'] ?? '') {
+                        'offer'                 => ['label' => 'Ofertă',            'cls' => 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'],
+                        'invoice'               => ['label' => 'Factură',           'cls' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300'],
+                        'order_confirmation'    => ['label' => 'Confirmare comandă','cls' => 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'],
+                        'delivery_notification' => ['label' => 'Notif. livrare',    'cls' => 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300'],
+                        'price_list'            => ['label' => 'Listă prețuri',     'cls' => 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'],
+                        'payment'               => ['label' => 'Plată',             'cls' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'],
+                        'complaint'             => ['label' => 'Reclamație',        'cls' => 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'],
+                        'inquiry'               => ['label' => 'Informare',         'cls' => 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'],
+                        'automated'             => ['label' => 'Automat',           'cls' => 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'],
+                        default                 => ['label' => $ai['type'] ?? '?',  'cls' => 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'],
+                    };
+                    $urgency = $ai['urgency'] ?? 'low';
+                    $urgCls  = ['high' => 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+                                'medium' => 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300'];
+                    $urgLabel = ['high' => 'Urgent', 'medium' => 'Mediu'];
+                @endphp
+                <div class="flex-shrink-0 px-5 py-3 bg-primary-50 dark:bg-primary-950/30 border-b border-primary-100 dark:border-primary-900">
+                    <div class="flex items-start gap-2 flex-wrap mb-2">
+                        {{-- Tip --}}
+                        <span class="text-xs px-2 py-0.5 rounded-full font-medium {{ $typeInfo['cls'] }}">
+                            {{ $typeInfo['label'] }}
+                        </span>
+                        {{-- Urgență --}}
+                        @if(isset($urgCls[$urgency]))
+                        <span class="text-xs px-2 py-0.5 rounded-full font-medium {{ $urgCls[$urgency] }}">
+                            {{ $urgLabel[$urgency] }}
+                        </span>
+                        @endif
+                        {{-- Needs reply --}}
+                        @if(!empty($ai['needs_reply']))
+                        <span class="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
+                            ↩ Necesită răspuns
+                        </span>
+                        @endif
+                        {{-- Sentiment --}}
+                        @if(!empty($ai['sentiment']) && $ai['sentiment'] !== 'neutral')
+                        <span class="text-xs px-2 py-0.5 rounded-full
+                            {{ $ai['sentiment'] === 'positive' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600' }}">
+                            {{ $ai['sentiment'] === 'positive' ? '😊 Pozitiv' : '😟 Negativ' }}
+                        </span>
+                        @endif
+                    </div>
+
+                    {{-- Summary --}}
+                    @if(!empty($ai['summary']))
+                    <p class="text-xs text-gray-700 dark:text-gray-300 leading-relaxed mb-2">
+                        {{ $ai['summary'] }}
+                    </p>
+                    @endif
+
+                    <div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+                        @if(!empty($ai['invoice_number']))
+                            <span>📄 Factură: <span class="font-medium text-gray-700 dark:text-gray-200">{{ $ai['invoice_number'] }}</span></span>
+                        @endif
+                        @if(!empty($ai['delivery_date']))
+                            <span>🚚 Livrare: <span class="font-medium text-gray-700 dark:text-gray-200">{{ $ai['delivery_date'] }}</span></span>
+                        @endif
+                        @if(!empty($ai['payment_terms']))
+                            <span>💳 Plată: <span class="font-medium text-gray-700 dark:text-gray-200">{{ $ai['payment_terms'] }}</span></span>
+                        @endif
+                        @if(!empty($ai['discount_mentioned']))
+                            <span>🏷️ Reducere: <span class="font-medium text-gray-700 dark:text-gray-200">{{ $ai['discount_mentioned'] }}</span></span>
+                        @endif
+                        @if(!empty($ai['key_info']))
+                            <span>🔑 <span class="text-gray-700 dark:text-gray-200">{{ $ai['key_info'] }}</span></span>
+                        @endif
+                    </div>
+
+                    @if(!empty($ai['prices_mentioned']))
+                    <div class="mt-2 flex flex-wrap gap-1.5">
+                        @foreach(array_slice($ai['prices_mentioned'], 0, 4) as $price)
+                        <span class="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 text-gray-700 dark:text-gray-300">
+                            {{ $price['product'] ?? '?' }}: <span class="font-semibold">{{ $price['price'] }} {{ $price['currency'] ?? 'RON' }}</span>
+                        </span>
+                        @endforeach
+                        @if(count($ai['prices_mentioned']) > 4)
+                            <span class="text-xs text-gray-400">+{{ count($ai['prices_mentioned']) - 4 }} prețuri</span>
+                        @endif
+                    </div>
+                    @endif
+
+                    @if(!empty($ai['action_items']))
+                    <div class="mt-2">
+                        @foreach(array_slice($ai['action_items'], 0, 3) as $item)
+                        <p class="text-xs text-primary-700 dark:text-primary-400">→ {{ $item }}</p>
+                        @endforeach
+                    </div>
+                    @endif
+                </div>
                 @endif
 
                 <div class="flex-1 min-h-0 relative">

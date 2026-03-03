@@ -30,6 +30,17 @@ class AppSetting extends Model
     // AI — procesare emailuri
     const KEY_ANTHROPIC_API_KEY  = 'anthropic_api_key'; // stocat criptat
 
+    // Chat widget public
+    const KEY_CHAT_PRIMARY_COLOR = 'chat_primary_color';
+    const KEY_CHAT_BOT_NAME      = 'chat_bot_name';
+    const KEY_CHAT_SUBTITLE      = 'chat_subtitle';
+    const KEY_CHAT_WELCOME_MSG   = 'chat_welcome_message';
+    const KEY_CHAT_ENABLED       = 'chat_enabled';
+
+    // Telegram notificări lead-uri
+    const KEY_TELEGRAM_BOT_TOKEN = 'telegram_bot_token'; // stocat criptat
+    const KEY_TELEGRAM_CHAT_ID   = 'telegram_chat_id';
+
     public static function getEncrypted(string $key): ?string
     {
         $value = static::get($key);

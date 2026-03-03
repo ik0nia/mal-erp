@@ -29,6 +29,7 @@ use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\Section as InfolistSection;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\ViewEntry;
 use Filament\Infolists\Infolist;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -307,6 +308,14 @@ class PurchaseRequestResource extends Resource
                     TextEntry::make('user.name')->label('Creat de'),
                     TextEntry::make('created_at')->label('Data')->dateTime('d.m.Y H:i'),
                     TextEntry::make('notes')->label('Observații')->placeholder('—')->columnSpanFull(),
+                ]),
+
+            InfolistSection::make('Comunicare furnizori')
+                ->collapsed()
+                ->schema([
+                    ViewEntry::make('supplier_emails_context')
+                        ->label('')
+                        ->view('filament.app.infolist.purchase-request-emails'),
                 ]),
 
             InfolistSection::make('Produse solicitate')
