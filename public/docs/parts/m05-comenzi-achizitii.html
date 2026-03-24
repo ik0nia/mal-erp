@@ -1,0 +1,748 @@
+<article id="m05-comenzi-achizitii">
+
+  <h2>Modulul 5 — Comenzi de Achiziție (Purchase Orders)</h2>
+
+  <p>
+    Comenzile de Achiziție (abreviat <strong>PO</strong>, de la <em>Purchase Order</em>) reprezintă
+    documentul formal prin care Malinco comunică unui furnizor intenția de a cumpăra o anumită cantitate
+    de produse la un anumit preț. Modulul de PO-uri este strâns integrat cu modulul de Necesare
+    (Purchase Requests) și formează a doua jumătate a ciclului de achiziție.
+  </p>
+
+  <p>
+    Numerotarea PO-urilor se face automat, în formatul <code>PO-YYYYMMDD-XXXX</code> (ex:
+    <code>PO-20260315-0001</code>), unde secvența zilnică crește incrementat pe baza maximului existent.
+    Fiecare PO are asociat un singur furnizor și poate acoperi una sau mai multe linii de produse.
+  </p>
+
+  <hr>
+
+  <h3>1. Relația dintre Necesare și Comenzile de Achiziție</h3>
+
+  <p>
+    Înainte de a putea crea un PO, trebuie să existe cel puțin un Necesar (PNR) în starea
+    <em>Trimis</em> sau <em>Parțial comandat</em>, care să conțină iteme cu furnizor alocat și
+    cantitate rămasă de comandat.
+  </p>
+
+  <p>
+    Legătura concretă dintre un item din Necesar și linia corespunzătoare din PO se păstrează în
+    câmpul <code>sources_json</code> al fiecărui <code>PurchaseOrderItem</code>. Acest câmp JSON
+    conține o listă de surse — fiecare sursă referind un <code>PurchaseRequestItem</code> și
+    specificând cantitatea alocată (<code>allocated_qty</code>), numărul necesarului de origine,
+    consultantul care a creat necesarul, locația, dacă itemul este urgent și data la care produsul
+    este necesar.
+  </p>
+
+  <p>
+    Mecanismul de alocare este <strong>FIFO cu prioritizare urgentă</strong>: itemele marcate ca
+    urgente sunt acoperite primele, iar pentru cele neurgente se respectă ordinea crescătoare a
+    datei <em>necesar până la</em>. Dacă cantitatea comandată în PO este mai mică decât suma
+    tuturor necesarelor, alocarea este parțială — itemele acoperite complet trec în starea
+    <em>Comandat</em>, cele acoperite parțial rămân <em>În așteptare</em> cu câmpul
+    <code>ordered_quantity</code> actualizat.
+  </p>
+
+  <p>
+    La rândul său, fiecare Necesar (PurchaseRequest) îți recalculează automat statusul după
+    orice modificare a itemelor sale:
+  </p>
+  <ul>
+    <li>Dacă toate itemele sunt comandate → <strong>Complet comandat</strong></li>
+    <li>Dacă cel puțin un item este comandat → <strong>Parțial comandat</strong></li>
+    <li>Dacă niciun item nu este comandat (după anulare/respingere PO) → revine la <strong>Trimis</strong></li>
+    <li>Dacă toate itemele sunt anulate → <strong>Anulat</strong></li>
+  </ul>
+
+  <hr>
+
+  <h3>2. Dashboard Buyer — pagina „Generează comandă"</h3>
+
+  <p>
+    Pagina <strong>Generează comandă</strong> (grupul de navigare <em>Achiziții</em>, poziția 3)
+    este interfața principală de lucru pentru responsabilul de achiziții. Accesul este restricționat
+    la utilizatorii cu rolurile: <em>super admin</em>, <em>admin</em>, <em>Manager Achiziții</em>
+    sau <em>Manager</em>.
+  </p>
+
+  <p>
+    Pagina afișează în bara de navigare un badge roșu cu numărul total de iteme pendinte din necesare
+    aprobate — un indicator vizual permanent care indică dacă există muncă de făcut.
+  </p>
+
+  <h4>Statistici sumare</h4>
+  <p>
+    În partea de sus a paginii sunt afișate patru carduri cu statistici calculate dinamic:
+  </p>
+  <ul>
+    <li><strong>Total iteme pendinte</strong> — numărul total de linii de produs din necesare aprobate care nu au fost încă complet comandate</li>
+    <li><strong>Urgente</strong> — iteme marcate cu flag urgent</li>
+    <li><strong>Rezervate</strong> — iteme cu flag de rezervare pentru un client specific</li>
+    <li><strong>Furnizori activi</strong> — numărul de furnizori distincți cu iteme pendinte</li>
+  </ul>
+
+  <h4>Filtre disponibile</h4>
+  <p>
+    Buyer-ul poate filtra itemele afișate după:
+  </p>
+  <ul>
+    <li><strong>Furnizor</strong> — afișează cardurile doar pentru furnizorul selectat</li>
+    <li><strong>Locație</strong> — filtrează după depozitul/locația care a generat necesarul</li>
+    <li><strong>Consultant</strong> — filtrează după utilizatorul care a creat necesarul</li>
+    <li><strong>Necesar până la (de la / până la)</strong> — interval de date pentru câmpul <em>needed_by</em></li>
+    <li><strong>Doar urgente</strong> — toggle pentru a vedea exclusiv itemele urgente</li>
+    <li><strong>Doar rezervate</strong> — toggle pentru a vedea exclusiv itemele rezervate</li>
+  </ul>
+  <p>
+    Un buton <em>Resetează filtre</em> readuce toți parametrii la valorile implicite.
+  </p>
+
+  <h4>Carduri pe furnizor</h4>
+  <p>
+    Itemele pendinte sunt grupate automat pe furnizor. Pentru fiecare furnizor se afișează un card
+    care conține:
+  </p>
+  <ul>
+    <li>Numele furnizorului</li>
+    <li>Numărul total de iteme pendinte la acel furnizor, cu evidențierea celor urgente</li>
+    <li>Lista detaliată a produselor: denumire, SKU intern, cantitate rămasă de comandat, data
+    la care este necesar, flaguri urgent/rezervat, referința clientului, consultantul și locația
+    de origine, numărul necesarului sursă</li>
+    <li>Butonul <strong>Creează PO</strong> — declanșează crearea unui PO pre-populat pentru
+    furnizorul respectiv</li>
+  </ul>
+
+  <p>
+    Buyer-ul vede implicit toți furnizorii activi dacă are rol de admin sau super admin. Dacă are
+    rol de Manager Achiziții, vede doar furnizorii care îi sunt asignați (câmpul
+    <code>buyer_id</code> de pe tabelul furnizorilor).
+  </p>
+
+  <p>
+    De asemenea, pagina afișează o secțiune separată cu <strong>Comenzile WooCommerce care au
+    generat necesare automate</strong> (produse „la comandă") — acestea sunt necesare cu sursa
+    <code>woo_order</code> în stare trimisă sau parțial comandată. Această secțiune ajută buyer-ul
+    să coreleze comenzile online cu necesarele de aprovizionat.
+  </p>
+
+  <hr>
+
+  <h3>3. Pagina „Alocare furnizori" — iteme fără furnizor</h3>
+
+  <p>
+    Pagina <strong>Alocare furnizori</strong> (grupul <em>Achiziții</em>, poziția 2) gestionează
+    itemele din necesare aprobate care nu au încă un furnizor alocat. Accesul este permis pentru
+    <em>super admin</em>, <em>admin</em>, <em>Director Vânzări</em> și <em>Manager</em>.
+  </p>
+
+  <p>
+    Bara de navigare afișează un badge galben cu numărul de iteme fără furnizor. Aceasta este o
+    pagină de lucru intermediară — produsele care nu au furnizor nu apar în Dashboard-ul Buyer și
+    nu pot fi incluse în niciun PO.
+  </p>
+
+  <h4>Funcționalitate</h4>
+  <p>
+    Pagina listează toate itemele pendinte fără furnizor, sortate descrescător după urgență și
+    crescător după data necesarului. Pentru fiecare item se afișează:
+  </p>
+  <ul>
+    <li>Denumirea produsului și SKU-ul intern</li>
+    <li>Cantitatea rămasă de comandat</li>
+    <li>Data necesarului, flaguri urgent/rezervat, referința clientului</li>
+    <li>Consultantul și locația de origine, numărul necesarului</li>
+    <li><strong>Sugestii de furnizori</strong> — bazate pe relațiile existente în tabelul
+    <code>product_suppliers</code>; furnizorul preferat este pre-selectat automat</li>
+  </ul>
+
+  <p>
+    Fiecare item are un selector de furnizor și un buton <em>Salvează</em> individual. Există și
+    un buton global <em>Salvează toate</em> care alocă simultan toți itemii care au un furnizor
+    selectat. Odată alocat un furnizor, itemul dispare din această pagină și apare în Dashboard-ul
+    Buyer, în cardul furnizorului respectiv.
+  </p>
+
+  <hr>
+
+  <h3>4. Crearea unui PO din Dashboard (buton pe card furnizor)</h3>
+
+  <p>
+    Metoda recomandată și cea mai rapidă de a crea un PO este prin butonul
+    <strong>Creează PO</strong> din cardul unui furnizor în pagina „Generează comandă".
+    La apăsarea butonului, utilizatorul este redirecționat către formularul de creare PO, cu
+    parametrul <code>?supplier_id=X</code> în URL.
+  </p>
+
+  <h4>Pre-populare automată a formularului</h4>
+  <p>
+    Când formularul detectează parametrul <code>supplier_id</code> în URL, execută automat
+    logica de pre-populare (<code>buildItemsForSupplier()</code>):
+  </p>
+  <ol>
+    <li>Se interogă toate itemele pendinte din necesare în starea <em>Trimis</em> sau
+    <em>Parțial comandat</em>, cu furnizorul specificat și cu cantitate rămasă (<code>quantity &gt;
+    ordered_quantity</code>), excluzând produsele discontinue</li>
+    <li>Itemele sunt sortate: urgente primele, apoi după data necesarului crescător</li>
+    <li>Itemele sunt grupate pe produs (după <code>woo_product_id</code> sau după denumire dacă
+    nu există produs asociat)</li>
+    <li>Pentru fiecare grup de produs, se calculează cantitatea totală rămasă (suma cantităților
+    neacoperite din toate necesarele)</li>
+    <li>Se verifică dacă există o relație <code>ProductSupplier</code> pentru produs și furnizor;
+    dacă da, se pre-completează automat SKU-ul furnizorului și prețul de achiziție</li>
+    <li>Se construiește câmpul <code>sources_json</code> cu toate sursele (necesarele) care
+    contribuie la această linie de PO, incluzând detalii de alocare (<code>allocated_qty = 0.0</code>
+    inițial, se completează la salvare)</li>
+  </ol>
+
+  <p>
+    Rezultatul este un formular complet pre-completat, cu toate produsele necesare de la furnizorul
+    respectiv, cantitățile corecte și prețurile din baza de date. Buyer-ul trebuie doar să verifice,
+    ajusteze dacă este necesar, și să salveze.
+  </p>
+
+  <h4>Ce se întâmplă la salvarea PO-ului creat din Dashboard</h4>
+  <p>
+    La finalizarea creării (<code>afterCreate()</code>), sistemul execută alocarea FIFO în cadrul
+    unei tranzacții de bază de date cu pessimistic locking (pentru a preveni race conditions dacă
+    doi buyeri creează PO-uri simultan pentru același furnizor):
+  </p>
+  <ul>
+    <li>Fiecare linie de PO parcurge sursele din <code>sources_json</code> în ordinea priorităților
+    (urgente primele, restul după dată)</li>
+    <li>Câmpul <code>ordered_quantity</code> al fiecărui item din necesar este incrementat cu
+    cantitatea alocată</li>
+    <li>Itemele complet acoperite primesc starea <em>Comandat</em></li>
+    <li>Itemele parțial acoperite rămân <em>În așteptare</em> cu <code>ordered_quantity</code>
+    actualizat</li>
+    <li>Fiecare Necesar afectat își recalculează statusul global</li>
+  </ul>
+
+  <hr>
+
+  <h3>5. Crearea manuală a unui PO</h3>
+
+  <p>
+    Un PO poate fi creat și manual, fără a porni din Dashboard-ul Buyer. Se accesează secțiunea
+    <strong>Comenzi furnizori</strong> din grupul <em>Achiziții</em> și se apasă butonul
+    <em>Creează</em>. Accesul la creare este permis pentru: <em>super admin</em>, <em>admin</em>,
+    <em>Manager Achiziții</em> și <em>Manager</em>.
+  </p>
+
+  <p>
+    La crearea manuală, formularul se deschide gol. Utilizatorul trebuie să selecteze furnizorul
+    și să adauge manual liniile de produse. Câmpul <em>Furnizor</em> este obligatoriu și nu poate
+    fi modificat după salvare (este dezactivat la editare).
+  </p>
+
+  <p>
+    Câmpul <em>Număr PO</em> este generat automat la salvare și nu poate fi editat manual.
+    Câmpul <em>Status</em> este de asemenea gestionat automat de sistem.
+  </p>
+
+  <p>
+    Câmpurile opționale la nivel de PO sunt:
+  </p>
+  <ul>
+    <li><strong>Notițe interne</strong> — vizibile doar în ERP, nu se trimit furnizorului</li>
+    <li><strong>Notițe pentru furnizor</strong> — se includ în emailul sau PDF-ul trimis furnizorului</li>
+  </ul>
+
+  <hr>
+
+  <h3>6. Completarea liniilor (itemelor) unui PO</h3>
+
+  <p>
+    Secțiunea <strong>Produse comandate</strong> din formularul PO conține un tabel editabil cu
+    toate liniile comenzii. Fiecare linie corespunde unui produs comandat și are următoarele câmpuri:
+  </p>
+
+  <h4>Câmpuri per linie</h4>
+  <dl>
+    <dt>Imagine produs</dt>
+    <dd>
+      Miniatură a imaginii principale a produsului din WooCommerce, afișată automat la selectarea
+      unui produs. Ajută la identificare vizuală rapidă.
+    </dd>
+
+    <dt>Caută produs</dt>
+    <dd>
+      Selector cu căutare live prin baza de produse. Căutarea se face după nume sau SKU intern.
+      Dacă un furnizor este selectat la nivel de PO, lista este filtrată automat — afișând doar
+      produsele din catalogul furnizorului respectiv. La selectarea unui produs, se completează
+      automat: denumirea produsului, SKU-ul intern, SKU-ul furnizorului și prețul de achiziție
+      (dacă există în baza de date relația <code>ProductSupplier</code>).
+    </dd>
+
+    <dt>Denumire produs</dt>
+    <dd>
+      Câmp text editabil, obligatoriu. Poate fi modificat manual după auto-completare, util pentru
+      comenzi de produse noi sau cu denumiri diferite la furnizor.
+    </dd>
+
+    <dt>SKU intern</dt>
+    <dd>
+      Codul SKU din catalogul intern Malinco/WooCommerce. Se auto-completează din produsul selectat,
+      dar poate fi lăsat gol.
+    </dd>
+
+    <dt>SKU furnizor</dt>
+    <dd>
+      Codul folosit de furnizor pentru a identifica produsul în sistemul său. Esențial pentru
+      comenzile trimise prin email — furnizorul va recunoaște produsul mai ușor după propriul cod.
+      Se auto-completează din relația <code>ProductSupplier</code>, dacă există.
+    </dd>
+
+    <dt>Cantitate</dt>
+    <dd>
+      Câmp numeric, obligatoriu, minim 0.001. Suportă valori fracționare pentru produse cu unități
+      de măsură non-întregi. La pre-populare din Dashboard, conține suma cantităților rămase din
+      toate necesarele pentru acel produs.
+    </dd>
+
+    <dt>Preț unitar</dt>
+    <dd>
+      Prețul de achiziție per unitate, în RON. Optional — poate fi completat ulterior sau lăsat
+      gol pentru comenzi fără preț fix negociat. Se auto-completează din <code>purchase_price</code>
+      din relația <code>ProductSupplier</code>, dacă este setat.
+    </dd>
+
+    <dt>Total linie</dt>
+    <dd>
+      Calculat automat ca <code>cantitate × preț unitar</code>, se actualizează live la modificarea
+      oricăruia dintre cele două câmpuri. Afișat ca placeholder read-only în formular, stocată ca
+      <code>line_total</code> în baza de date cu precizie de 4 zecimale.
+    </dd>
+
+    <dt>Surse</dt>
+    <dd>
+      Afișare read-only a necesarelor care alimentează această linie (detalii în secțiunea 7 de mai
+      jos). La crearea manuală a unui PO, coloana Surse va fi goală.
+    </dd>
+
+    <dt>Notițe linie</dt>
+    <dd>
+      Note specifice acestei linii de produs, incluse în comunicarea cu furnizorul.
+    </dd>
+  </dl>
+
+  <h4>Total comandă</h4>
+  <p>
+    Sub tabelul de linii se afișează suma totală a comenzii, calculată live ca suma tuturor
+    totalurilor de linie. Aceasta este valoarea stocată în câmpul <code>total_value</code> al
+    PO-ului și care se recalculează automat la fiecare salvare/ștergere a unei linii.
+  </p>
+
+  <hr>
+
+  <h3>7. Secțiunea „Surse necesare" per item</h3>
+
+  <p>
+    Coloana <strong>Surse</strong> din tabelul de linii PO afișează, pentru fiecare produs comandat,
+    lista necesarelor care justifică această comandă. Informațiile sunt stocate în câmpul
+    <code>sources_json</code> al liniei și afișate ca o listă compactă în formă:
+    <code>[cantitate]× [număr necesar]</code>, cu un badge roșu <strong>URG</strong> dacă itemul
+    este urgent.
+  </p>
+
+  <p>
+    La hover pe o sursă, se afișează un tooltip cu detalii suplimentare:
+  </p>
+  <ul>
+    <li>Consultantul care a creat necesarul</li>
+    <li>Locația/depozitul de destinație</li>
+    <li>Data la care produsul este necesar (<em>Necesar: zz.ll.aaaa</em>)</li>
+    <li>Referința clientului, dacă a fost specificată</li>
+  </ul>
+
+  <p>
+    Această secțiune este esențială pentru trasabilitate — permite buyer-ului să știe exact de ce
+    comandă fiecare produs, în beneficiul cui și cu ce urgență. La vizualizarea PO-ului
+    (pagina View), același câmp <code>sources_json</code> este disponibil implicit în contextul
+    liniei, însă nu este afișat separat în infolist-ul standard.
+  </p>
+
+  <hr>
+
+  <h3>8. Stările unui PO și tranzițiile posibile</h3>
+
+  <p>
+    Un PO parcurge un ciclu de viață bine definit, cu stările gestionate automat de sistem:
+  </p>
+
+  <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; width:100%;">
+    <thead style="background:#f3f4f6;">
+      <tr>
+        <th>Stare</th>
+        <th>Culoare badge</th>
+        <th>Semnificație</th>
+        <th>Acțiuni disponibile</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Draft</strong></td>
+        <td>Gri</td>
+        <td>PO-ul a fost creat dar nu a fost procesat. Se poate edita liber.</td>
+        <td>Editare, Plasează comanda, Anulează</td>
+      </tr>
+      <tr>
+        <td><strong>În așteptare aprobare</strong></td>
+        <td>Galben/Warning</td>
+        <td>Comanda depășește pragul valoric sau cantitatea maximă per produs și necesită aprobare managerială.</td>
+        <td>Aprobă, Respinge (doar manageri/directori)</td>
+      </tr>
+      <tr>
+        <td><strong>Aprobat</strong></td>
+        <td>Verde</td>
+        <td>Comanda a fost aprobată și este gata de trimis furnizorului.</td>
+        <td>Trimite email furnizor, Marchează trimis, Anulează</td>
+      </tr>
+      <tr>
+        <td><strong>Respins</strong></td>
+        <td>Roșu/Danger</td>
+        <td>Comanda a fost respinsă. Itemele din necesare revin la starea „În așteptare".</td>
+        <td>Poate fi ștearsă</td>
+      </tr>
+      <tr>
+        <td><strong>Trimis</strong></td>
+        <td>Albastru/Info</td>
+        <td>Comanda a fost comunicată furnizorului (prin email sau alt canal). Se așteaptă livrarea.</td>
+        <td>Recepție marfă, Trimite email furnizor (re-trimitere)</td>
+      </tr>
+      <tr>
+        <td><strong>Recepționat</strong></td>
+        <td>Verde</td>
+        <td>Marfa a fost primită. PO-ul este închis. Dacă recepția a fost parțială, lipsurile sunt returnate în coada de cumpărare.</td>
+        <td>Trimite email furnizor (urmărire lipsuri), Descarcă PDF</td>
+      </tr>
+      <tr>
+        <td><strong>Anulat</strong></td>
+        <td>Gri</td>
+        <td>Comanda a fost anulată. Itemele din necesare revin la starea „În așteptare".</td>
+        <td>Poate fi ștearsă</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>Reguli de ștergere</h4>
+  <p>
+    Un PO poate fi șters doar dacă se află în starea <em>Draft</em>, <em>Anulat</em> sau
+    <em>Respins</em>. Comenzile active (în aprobare, aprobate, trimise sau recepționate) nu pot fi
+    șterse — trebuie mai întâi anulate prin butonul dedicat.
+  </p>
+
+  <hr>
+
+  <h3>9. Procesul de aprobare</h3>
+
+  <h4>Când este necesară aprobarea?</h4>
+  <p>
+    La apăsarea butonului <strong>Plasează comanda</strong> (disponibil în starea <em>Draft</em>
+    sau <em>Aprobat</em>), sistemul evaluează automat dacă PO-ul necesită aprobare, verificând
+    două reguli:
+  </p>
+  <ol>
+    <li>
+      <strong>Regula valorică</strong>: Valoarea totală a PO-ului depășește plafonul de aprobare
+      configurat pentru furnizorul respectiv (câmpul <code>po_approval_threshold</code> de pe
+      fișa furnizorului). Dacă furnizorul nu are plafon setat, această regulă nu se aplică.
+    </li>
+    <li>
+      <strong>Regula cantitativă</strong>: Cantitatea comandată pentru oricare produs din PO
+      depășește cantitatea maximă per comandă configurată în relația <code>ProductSupplier</code>
+      (câmpul <code>po_max_qty</code>). Această limită se configurează individual, per produs și
+      per furnizor.
+    </li>
+  </ol>
+
+  <h4>Fluxul de aprobare</h4>
+  <p>
+    Dacă niciuna dintre reguli nu este aplicabilă sau plafonul nu este depășit, comanda este
+    <strong>aprobată automat</strong> la apăsarea butonului „Plasează comanda" și trece direct în
+    starea <em>Aprobat</em>.
+  </p>
+  <p>
+    Dacă cel puțin o regulă este îndeplinită, comanda trece în starea
+    <strong>În așteptare aprobare</strong> și este trimisă o notificare (în aplicație și prin email)
+    tuturor utilizatorilor cu drept de aprobare: <em>Manager</em>, <em>Director Financiar</em>,
+    <em>Director Vânzări</em> și <em>super admin</em>.
+  </p>
+
+  <h4>Cine poate aproba sau respinge?</h4>
+  <p>
+    Butoanele <strong>Aprobă</strong> și <strong>Respinge</strong> sunt vizibile în pagina de
+    vizualizare a PO-ului (<em>View</em>) numai pentru utilizatorii cu rolurile:
+    <em>super admin</em>, <em>Manager</em>, <em>Director Financiar</em> sau <em>Director Vânzări</em>.
+    Buyer-ul (Manager Achiziții) care a creat comanda nu poate aproba propria comandă.
+  </p>
+
+  <h4>Respingerea comenzii</h4>
+  <p>
+    La respingere, un câmp obligatoriu cere motivul respingerii (<em>rejection_reason</em>). Sistemul:
+  </p>
+  <ul>
+    <li>Reverte itemele din necesare la starea <em>În așteptare</em> (scade <code>ordered_quantity</code>
+    cu cantitățile alocate de PO-ul respins)</li>
+    <li>Trece PO-ul în starea <em>Respins</em></li>
+    <li>Trimite o notificare buyer-ului care a creat comanda, cu motivul respingerii</li>
+  </ul>
+
+  <hr>
+
+  <h3>10. Recepția mărfii</h3>
+
+  <p>
+    Când comanda este în starea <em>Trimis</em>, în pagina de vizualizare a PO-ului apare butonul
+    <strong>Recepție marfă</strong>. Apăsarea butonului deschide un modal cu titlul
+    <em>Recepție marfă — [număr PO]</em>.
+  </p>
+
+  <h4>Modalul de recepție</h4>
+  <p>
+    Modalul conține un câmp numeric pentru fiecare linie de produs din PO, cu:
+  </p>
+  <ul>
+    <li>Eticheta cu denumirea produsului și SKU-ul intern</li>
+    <li>Text ajutător cu cantitatea comandată și SKU-ul furnizorului</li>
+    <li>Valoarea implicită setată la <strong>cantitatea comandată</strong> (buyer-ul modifică
+    în minus dacă a primit mai puțin)</li>
+    <li>Limita maximă = cantitatea comandată (nu se poate introduce mai mult decât s-a comandat)</li>
+  </ul>
+  <p>
+    La finalul formularului există și un câmp <em>Observații recepție</em> unde se poate nota
+    numărul facturii, lipsuri sau produse deteriorate.
+  </p>
+
+  <h4>Ce se întâmplă la confirmarea recepției</h4>
+  <p>
+    La salvarea recepției, sistemul:
+  </p>
+  <ol>
+    <li>Salvează cantitatea recepționată (<code>received_quantity</code>) pe fiecare linie de PO</li>
+    <li>Calculează lipsul (<code>shortfall = cantitate_comandata - cantitate_receptionata</code>)
+    pentru fiecare linie</li>
+    <li>Pentru liniile cu lipsuri, returnează cantitățile nelivrate înapoi în necesarele sursă
+    (proces detaliat în secțiunea 11)</li>
+    <li>Recalculează statusul fiecărui Necesar afectat</li>
+    <li>Trece PO-ul în starea <em>Recepționat</em> cu timestamp-ul recepției și utilizatorul care
+    a efectuat recepția</li>
+    <li>Dacă există lipsuri, trimite notificări (în aplicație și email) consultanților care au
+    generat necesarele afectate</li>
+  </ol>
+
+  <hr>
+
+  <h3>11. Recepția parțială — gestionarea lipsurilor</h3>
+
+  <p>
+    Recepția parțială apare atunci când furnizorul livrează o cantitate mai mică decât cea comandată
+    pentru cel puțin un produs. Sistemul gestionează automat această situație prin mecanismul de
+    <strong>returnare inversă FIFO</strong>.
+  </p>
+
+  <h4>Algoritmul de returnare a lipsurilor</h4>
+  <p>
+    Pentru fiecare linie de PO cu lipsuri (<code>shortfall &gt; 0</code>), sistemul parcurge
+    sursele din <code>sources_json</code> în ordine <strong>inversă față de alocare</strong>
+    (ultimii alocați sunt primii returnați — principiu „last in, first out" pentru returnări):
+  </p>
+  <ol>
+    <li>Se citește cantitatea alocată (<code>allocated_qty</code>) pentru fiecare sursă</li>
+    <li>Se calculează reducerea care poate fi aplicată: <code>min(shortfall_ramas, allocated_qty)</code></li>
+    <li>Se scade această reducere din <code>ordered_quantity</code> al itemului din necesar</li>
+    <li>Itemul din necesar revine în starea <em>În așteptare</em></li>
+    <li>Dacă <code>ordered_quantity</code> ajunge la 0 după reducere, se șterge și referința la
+    linia de PO (<code>purchase_order_item_id = null</code>)</li>
+  </ol>
+
+  <p>
+    Efectul concret: după o recepție parțială, itemele cu lipsuri revin vizibile în Dashboard-ul
+    Buyer, în cardul furnizorului respectiv (sau al altui furnizor, dacă buyer-ul decide să schimbe
+    sursa). Buyer-ul poate crea un nou PO pentru lipsuri, de la același furnizor sau de la altul.
+  </p>
+
+  <h4>Indicatorul de recepție parțială în lista PO-urilor</h4>
+  <p>
+    În lista de Comenzi furnizori există o coloană <strong>Recepție</strong> care afișează:
+  </p>
+  <ul>
+    <li><strong>Completă</strong> (verde) — toate cantitățile au fost recepționate integral</li>
+    <li><strong>Parțială ⚠</strong> (galben/warning) — cel puțin o linie a primit mai puțin decât
+    s-a comandat</li>
+    <li><strong>Așteptare</strong> (gri) — PO-ul este trimis dar nu a fost recepționat încă</li>
+  </ul>
+
+  <p>
+    Există și un filtru dedicat în lista de comenzi — <strong>Recepție parțială</strong> — care
+    permite găsirea rapidă a tuturor comenzilor cu lipsuri nerezolvate.
+  </p>
+
+  <h4>Notificările la recepție parțială</h4>
+  <p>
+    Consultanții care au creat necesarele afectate de lipsuri primesc o notificare automată
+    (<code>PurchaseOrderReceivedPartialNotification</code>) prin intermediul sistemului de notificări
+    Laravel (baza de date și email), cu lista produselor lipsă. Astfel, consultantul știe că trebuie
+    să aștepte sau să găsească o soluție alternativă pentru clientul său.
+  </p>
+
+  <hr>
+
+  <h3>12. Exportul PDF al comenzii</h3>
+
+  <p>
+    Butonul <strong>Descarcă PDF</strong> este disponibil în pagina de vizualizare a oricărui PO,
+    indiferent de starea sa. La apăsare, se generează un fișier PDF formatat pentru format A4
+    portret, folosind biblioteca <code>barryvdh/laravel-dompdf</code>.
+  </p>
+
+  <p>
+    Fișierul PDF are numele <code>[număr-PO].pdf</code> (ex: <code>PO-20260315-0001.pdf</code>)
+    și include:
+  </p>
+  <ul>
+    <li>Antetul comenzii: numărul PO, furnizorul, data, responsabilul de achiziții</li>
+    <li>Statusul comenzii și, dacă a fost aprobată, cine și când a aprobat-o</li>
+    <li>Tabelul complet cu liniile comenzii: denumire produs, SKU intern, SKU furnizor, cantitate,
+    preț unitar, total linie</li>
+    <li>Valoarea totală a comenzii</li>
+    <li>Notițele pentru furnizor, dacă există</li>
+  </ul>
+
+  <p>
+    PDF-ul este util pentru arhivare, pentru transmiterea comenzii prin fax sau prin email manual,
+    sau ca document intern de referință pentru departamentul de contabilitate la recepția facturii.
+  </p>
+
+  <hr>
+
+  <h3>13. Secțiunea „Comunicare furnizor" — emailuri contextuale</h3>
+
+  <p>
+    În pagina de vizualizare a unui PO, secțiunea <strong>Comunicare furnizor</strong> (colapsată
+    implicit) afișează emailurile schimbate cu furnizorul în jurul perioadei comenzii. Aceasta face
+    parte din modulul de inteligență email al platformei și permite corelarea contextului de
+    comunicare cu documentele de achiziție.
+  </p>
+
+  <h4>Fereastra temporală</h4>
+  <p>
+    Secțiunea afișează emailurile din intervalul:
+  </p>
+  <ul>
+    <li><strong>30 de zile înainte</strong> de crearea PO-ului — emailurile de negociere, confirmări
+    de prețuri, disponibilitate stocuri care au precedat comanda</li>
+    <li><strong>60 de zile după</strong> crearea PO-ului — confirmarea comenzii de la furnizor,
+    notificările de livrare, factura, corespondența ulterioară</li>
+  </ul>
+
+  <h4>Ce afișează</h4>
+  <p>
+    Emailurile sunt filtrate după furnizorul PO-ului (după adresele de email asociate contactelor
+    furnizorului și domeniului furnizorului). Fiecare email afișează:
+  </p>
+  <ul>
+    <li>Data și ora recepției/trimiterii</li>
+    <li>Expeditorul și destinatarul</li>
+    <li>Subiectul emailului</li>
+    <li>Un rezumat sau extrasul relevant dacă emailul a fost procesat de AI</li>
+  </ul>
+
+  <p>
+    Această secțiune este vizualizare pură — nu permite trimiterea de emailuri direct din ea.
+    Pentru a trimite un email furnizorului cu conținutul comenzii, se folosește butonul
+    <strong>Trimite email furnizor</strong> din header-ul paginii, descris mai jos.
+  </p>
+
+  <h4>Butonul „Trimite email furnizor"</h4>
+  <p>
+    Disponibil când PO-ul este în starea <em>Aprobat</em>, <em>Trimis</em> sau <em>Recepționat</em>,
+    butonul deschide un modal cu un formular de email pre-completat automat:
+  </p>
+  <ul>
+    <li><strong>Destinatar</strong> — emailul furnizorului, pre-completat din fișa furnizorului
+    (poate fi modificat)</li>
+    <li><strong>Subiect</strong> — „Comandă furnizor [număr PO]" (editabil)</li>
+    <li><strong>Conținut email</strong> — generat automat, conținând: salutare formală, numărul și
+    data comenzii, lista produselor cu SKU furnizor, cantitate, preț unitar și total linie, totalul
+    comenzii, observațiile pentru furnizor dacă există, și o rugăminte de confirmare a comenzii</li>
+  </ul>
+  <p>
+    La trimiterea cu succes, dacă PO-ul era în starea <em>Aprobat</em>, tranzitează automat în
+    <em>Trimis</em> și se marchează și itemele din necesare ca <em>Comandate</em>. La re-trimitere
+    (PO-ul era deja <em>Trimis</em> sau <em>Recepționat</em>), starea nu mai este modificată.
+  </p>
+
+  <p>
+    Alternativ, dacă comanda a fost comunicată furnizorului prin alt canal (telefon, fax, platformă
+    online a furnizorului), butonul <strong>Marchează trimis</strong> permite trecerea manuală în
+    starea <em>Trimis</em> fără a trimite un email din sistem.
+  </p>
+
+  <hr>
+
+  <h3>Filtre și căutare în lista de PO-uri</h3>
+
+  <p>
+    Pagina <strong>Comenzi furnizori</strong> afișează toate PO-urile ordonate implicit descrescător
+    după data creării. Coloanele disponibile includ: număr PO, furnizor, status (cu badge colorat),
+    valoare totală, responsabil achiziții, data trimiterii și coloana de recepție.
+  </p>
+
+  <p>
+    Filtrele disponibile sunt:
+  </p>
+  <ul>
+    <li><strong>Status</strong> — selectează comenzile după starea curentă</li>
+    <li><strong>Furnizor</strong> — filtrează după furnizor, cu căutare</li>
+    <li><strong>Recepție parțială</strong> — filtru ternar: toate / cu lipsuri / fără lipsuri</li>
+  </ul>
+
+  <p>
+    Câmpul de căutare globală filtrează după numărul PO-ului. Coloanele Furnizor, Valoare și
+    Data creării sunt sortabile prin click pe antet.
+  </p>
+
+  <hr>
+
+  <h3>Permisiuni rezumat</h3>
+
+  <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; width:100%;">
+    <thead style="background:#f3f4f6;">
+      <tr>
+        <th>Acțiune</th>
+        <th>Roluri permise</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Creare PO</td>
+        <td>Super Admin, Admin, Manager Achiziții, Manager</td>
+      </tr>
+      <tr>
+        <td>Editare PO (doar Draft)</td>
+        <td>Super Admin, Admin, Manager Achiziții, Manager</td>
+      </tr>
+      <tr>
+        <td>Ștergere PO (doar Draft/Anulat/Respins)</td>
+        <td>Super Admin, Admin, Manager Achiziții, Manager</td>
+      </tr>
+      <tr>
+        <td>Aprobare / Respingere PO</td>
+        <td>Super Admin, Manager, Director Financiar, Director Vânzări</td>
+      </tr>
+      <tr>
+        <td>Recepție marfă</td>
+        <td>Toți utilizatorii cu acces la PO (acțiunea este pe pagina View)</td>
+      </tr>
+      <tr>
+        <td>Dashboard Buyer (Generează comandă)</td>
+        <td>Super Admin, Admin, Manager Achiziții, Manager</td>
+      </tr>
+      <tr>
+        <td>Alocare furnizori (pagina Neasociate)</td>
+        <td>Super Admin, Admin, Director Vânzări, Manager</td>
+      </tr>
+    </tbody>
+  </table>
+
+</article>

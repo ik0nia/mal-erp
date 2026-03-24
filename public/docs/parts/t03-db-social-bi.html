@@ -1,0 +1,572 @@
+<!-- T03 — Schema BD: Social Media, BI & Stocuri -->
+<style>
+  .t03 { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; }
+  .t03 h2 { font-size: 1.5rem; font-weight: 700; margin: 2.5rem 0 0.4rem; border-bottom: 3px solid #a52a3f; padding-bottom: 0.4rem; color: #a52a3f; }
+  .t03 h3 { font-size: 1.1rem; font-weight: 700; margin: 2rem 0 0.5rem; color: #0f172a; letter-spacing: 0.01em; }
+  .t03 h4 { font-size: 0.92rem; font-weight: 600; margin: 1.2rem 0 0.3rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
+  .t03 p { margin: 0.3rem 0 0.7rem; font-size: 0.93rem; color: #334155; }
+  .t03 code { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 1px 5px; border-radius: 3px; font-size: 0.85rem; font-family: 'Consolas', monospace; color: #7c3aed; }
+  .t03 table { width: 100%; border-collapse: collapse; margin: 0.5rem 0 1.2rem; font-size: 0.875rem; }
+  .t03 thead th { background: #1e293b; color: #f8fafc; text-align: left; padding: 7px 10px; font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; }
+  .t03 tbody tr:nth-child(even) { background: #f8fafc; }
+  .t03 tbody tr:hover { background: #eff6ff; }
+  .t03 td { padding: 6px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+  .t03 td:first-child { font-family: 'Consolas', monospace; font-size: 0.83rem; color: #0f172a; white-space: nowrap; }
+  .t03 td:nth-child(2) { font-family: 'Consolas', monospace; font-size: 0.8rem; color: #0369a1; white-space: nowrap; }
+  .t03 .badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 0.73rem; font-weight: 600; }
+  .t03 .badge-yes { background: #dcfce7; color: #166534; }
+  .t03 .badge-no  { background: #fee2e2; color: #991b1b; }
+  .t03 .badge-pk  { background: #fef9c3; color: #854d0e; }
+  .t03 .badge-fk  { background: #e0f2fe; color: #075985; }
+  .t03 .badge-uq  { background: #faf5ff; color: #6b21a8; }
+  .t03 .idx-block { background: #f1f5f9; border-left: 3px solid #94a3b8; padding: 8px 12px; margin: 0.3rem 0; border-radius: 0 4px 4px 0; font-size: 0.83rem; }
+  .t03 .idx-block code { background: transparent; border: none; padding: 0; }
+  .t03 .rel-block { background: #fff7ed; border-left: 3px solid #f97316; padding: 8px 12px; margin: 0.3rem 0; border-radius: 0 4px 4px 0; font-size: 0.83rem; }
+  .t03 .cast-block { background: #f0fdf4; border-left: 3px solid #22c55e; padding: 8px 12px; margin: 0.3rem 0; border-radius: 0 4px 4px 0; font-size: 0.83rem; }
+  .t03 .section-group { border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem 1.2rem 0.5rem; margin-bottom: 2rem; }
+  .t03 .toc { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem 1.4rem; margin-bottom: 2rem; font-size: 0.88rem; }
+  .t03 .toc a { color: #0369a1; text-decoration: none; }
+  .t03 .toc a:hover { text-decoration: underline; }
+  .t03 .toc ul { margin: 0.3rem 0 0; padding-left: 1.3rem; }
+  .t03 .toc li { margin: 0.2rem 0; }
+  .t03 .enum-list { margin: 0.2rem 0; padding-left: 1.2rem; font-size: 0.83rem; color: #475569; }
+</style>
+
+<div class="t03">
+
+<h2>T03 — Schema BD: Social Media, BI &amp; Stocuri</h2>
+<p>Documentație tehnică completă pentru tabelele modulelor Social Media (postări Facebook/Instagram, template-uri grafice), Business Intelligence (analize BI generate cu Claude AI) și gestiunea stocurilor &amp; sincronizărilor (stocuri per locație, log prețuri, metrici zilnice, rulări sync). Generată din migrații &amp; modele Eloquent — 2026-03-15.</p>
+
+<div class="toc">
+  <strong>Cuprins tabele documentate</strong>
+  <ul>
+    <li><strong>Social Media:</strong>
+      <a href="#social_accounts">social_accounts</a> &bull;
+      <a href="#social_posts">social_posts</a> &bull;
+      <a href="#social_style_profiles">social_style_profiles</a> &bull;
+      <a href="#social_fetched_posts">social_fetched_posts</a> &bull;
+      <a href="#graphic_templates">graphic_templates</a>
+    </li>
+    <li><strong>Business Intelligence:</strong>
+      <a href="#bi_analyses">bi_analyses</a>
+    </li>
+    <li><strong>Stocuri &amp; Sincronizare:</strong>
+      <a href="#daily_stock_metrics">daily_stock_metrics</a> &bull;
+      <a href="#product_price_logs">product_price_logs</a> &bull;
+      <a href="#product_stocks">product_stocks</a> &bull;
+      <a href="#product_supplier_logs">product_supplier_logs</a> &bull;
+      <a href="#sync_runs">sync_runs</a>
+    </li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2>Social Media</h2>
+
+<!-- social_accounts -->
+<div class="section-group" id="social_accounts">
+  <h3>social_accounts</h3>
+  <p>Conturi de social media conectate (Facebook Page, Instagram). Stochează credentialele OAuth; token-ul de acces este criptat cu <code>encrypt()</code> Laravel. Modelul: <code>App\Models\SocialAccount</code>. Migrație: <code>2026_03_12_100000</code>.</p>
+
+  <table>
+    <thead>
+      <tr><th>Coloană</th><th>Tip SQL</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>AUTO_INCREMENT</td><td><span class="badge badge-pk">PK</span> Cheie primară</td></tr>
+      <tr><td>name</td><td>VARCHAR(255)</td><td><span class="badge badge-no">NO</span></td><td>—</td><td>Denumire cont (ex: "Malinco Facebook Page")</td></tr>
+      <tr><td>platform</td><td>VARCHAR(255)</td><td><span class="badge badge-no">NO</span></td><td><code>'facebook'</code></td><td>Platforma: <code>facebook</code> | <code>instagram</code></td></tr>
+      <tr><td>account_id</td><td>VARCHAR(255)</td><td><span class="badge badge-no">NO</span></td><td>—</td><td>ID-ul paginii/contului pe platformă (ex: Facebook Page ID)</td></tr>
+      <tr><td>access_token</td><td>TEXT</td><td><span class="badge badge-no">NO</span></td><td>—</td><td>Page Access Token — stocat criptat cu <code>encrypt()</code>; citit prin <code>getAccessToken()</code></td></tr>
+      <tr><td>token_expires_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Expirare token OAuth; verificat de <code>isTokenExpired()</code> și <code>isTokenExpiringSoon()</code> (&le;7 zile)</td></tr>
+      <tr><td>is_active</td><td>TINYINT(1)</td><td><span class="badge badge-no">NO</span></td><td><code>1</code></td><td>Contul este activ; cast <code>boolean</code></td></tr>
+      <tr><td>style_analyzed_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Ultima analiză stil AI (Job <code>AnalyzeSocialStyleJob</code>)</td></tr>
+      <tr><td>created_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+      <tr><td>updated_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Indecși</h4>
+  <div class="idx-block"><code>INDEX (platform, is_active)</code> — filtrare rapidă conturi active per platformă</div>
+
+  <h4>Relații Eloquent</h4>
+  <div class="rel-block">
+    <code>posts()</code> → <code>HasMany(SocialPost::class)</code><br>
+    <code>fetchedPosts()</code> → <code>HasMany(SocialFetchedPost::class)</code><br>
+    <code>styleProfiles()</code> → <code>HasMany(SocialStyleProfile::class)</code><br>
+    <code>activeStyleProfile()</code> → <em>primul profil activ ordonat descrescător după <code>generated_at</code></em>
+  </div>
+
+  <h4>Casturi Eloquent</h4>
+  <div class="cast-block">
+    <code>token_expires_at</code> → <code>datetime</code> &bull;
+    <code>style_analyzed_at</code> → <code>datetime</code> &bull;
+    <code>is_active</code> → <code>boolean</code>
+  </div>
+</div>
+
+<!-- social_posts -->
+<div class="section-group" id="social_posts">
+  <h3>social_posts</h3>
+  <p>Postări generate AI destinate publicării pe social media. Conține brief-ul, caption-ul generat de Claude, calea imaginii generate de Gemini, datele de publicare și ID-ul postării pe platformă după publicare. Modelul: <code>App\Models\SocialPost</code>. Migrații: <code>2026_03_12_110000</code>, <code>_200000</code>, <code>_210000</code>, <code>_220000</code>.</p>
+
+  <table>
+    <thead>
+      <tr><th>Coloană</th><th>Tip SQL</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>AUTO_INCREMENT</td><td><span class="badge badge-pk">PK</span></td></tr>
+      <tr><td>social_account_id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>—</td><td><span class="badge badge-fk">FK</span> → <code>social_accounts.id</code> CASCADE DELETE</td></tr>
+      <tr><td>woo_product_id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td><span class="badge badge-fk">FK</span> → <code>woo_products.id</code> SET NULL; produs asociat brieftului de tip <code>product</code></td></tr>
+      <tr><td>brand_id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td><span class="badge badge-fk">FK</span> → <code>brands.id</code> SET NULL; brand asociat pentru brief de tip <code>brand</code></td></tr>
+      <tr><td>created_by</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>—</td><td><span class="badge badge-fk">FK</span> → <code>users.id</code> CASCADE DELETE; populat automat din <code>auth()->id()</code> la creare</td></tr>
+      <tr><td>status</td><td>VARCHAR(255)</td><td><span class="badge badge-no">NO</span></td><td><code>'draft'</code></td><td>Stare postare: <code>draft</code> | <code>generating</code> | <code>ready</code> | <code>scheduled</code> | <code>publishing</code> | <code>published</code> | <code>failed</code></td></tr>
+      <tr><td>brief_type</td><td>VARCHAR(255)</td><td><span class="badge badge-no">NO</span></td><td>—</td><td>Tip brief: <code>product</code> | <code>brand</code> | <code>promo</code> | <code>general</code></td></tr>
+      <tr><td>brief_direction</td><td>TEXT</td><td><span class="badge badge-no">NO</span></td><td>—</td><td>Instrucțiunile utilizatorului (text liber) transmise la Claude</td></tr>
+      <tr><td>caption</td><td>TEXT</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Caption generat de Claude (fără hashtag-uri)</td></tr>
+      <tr><td>hashtags</td><td>TEXT</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Hashtag-uri generate de Claude; concatenate la caption în <code>getFullCaption()</code></td></tr>
+      <tr><td>image_path</td><td>TEXT</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Cale relativă în storage public (<code>social/...</code>); URL complet via <code>getImageUrl()</code></td></tr>
+      <tr><td>template</td><td>VARCHAR(20)</td><td><span class="badge badge-no">NO</span></td><td><code>'clasic'</code></td><td>Identificatorul template-ului grafic Fabric.js utilizat la generarea imaginii</td></tr>
+      <tr><td>image_prompt</td><td>TEXT</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Promptul complet trimis la Gemini pentru generarea imaginii</td></tr>
+      <tr><td>graphic_title</td><td>VARCHAR(120)</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Titlul principal afișat pe imaginea grafică (max 120 caractere)</td></tr>
+      <tr><td>graphic_subtitle</td><td>VARCHAR(160)</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Subtitlul afișat pe imaginea grafică (max 160 caractere)</td></tr>
+      <tr><td>graphic_label</td><td>VARCHAR(80)</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Etichetă/badge pe imagine (ex: "NOU", "OFERTĂ") — max 80 caractere</td></tr>
+      <tr><td>platform_post_id</td><td>VARCHAR(255)</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>ID-ul postării pe platformă după publicare reușită (ex: Facebook post ID)</td></tr>
+      <tr><td>platform_url</td><td>VARCHAR(255)</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>URL-ul public al postării publicate</td></tr>
+      <tr><td>scheduled_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Data/ora programată pentru publicare; cast <code>datetime</code></td></tr>
+      <tr><td>published_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Data/ora publicării efective; cast <code>datetime</code></td></tr>
+      <tr><td>error_message</td><td>TEXT</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Mesajul de eroare la status <code>failed</code></td></tr>
+      <tr><td>created_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+      <tr><td>updated_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Indecși</h4>
+  <div class="idx-block">
+    <code>INDEX (status)</code> — filtrare postări după stare<br>
+    <code>INDEX (scheduled_at)</code> — job de publicare programată<br>
+    <code>INDEX (social_account_id)</code> — listare postări per cont
+  </div>
+
+  <h4>Chei externe</h4>
+  <div class="idx-block">
+    <code>social_account_id</code> → <code>social_accounts.id</code> CASCADE DELETE<br>
+    <code>woo_product_id</code> → <code>woo_products.id</code> SET NULL<br>
+    <code>brand_id</code> → <code>brands.id</code> SET NULL<br>
+    <code>created_by</code> → <code>users.id</code> CASCADE DELETE
+  </div>
+
+  <h4>Relații Eloquent</h4>
+  <div class="rel-block">
+    <code>account()</code> → <code>BelongsTo(SocialAccount::class, 'social_account_id')</code><br>
+    <code>product()</code> → <code>BelongsTo(WooProduct::class, 'woo_product_id')</code><br>
+    <code>brand()</code> → <code>BelongsTo(Brand::class, 'brand_id')</code><br>
+    <code>creator()</code> → <code>BelongsTo(User::class, 'created_by')</code>
+  </div>
+
+  <h4>Casturi Eloquent</h4>
+  <div class="cast-block">
+    <code>scheduled_at</code> → <code>datetime</code> &bull;
+    <code>published_at</code> → <code>datetime</code>
+  </div>
+
+  <h4>Constante status</h4>
+  <ul class="enum-list">
+    <li><code>STATUS_DRAFT</code> — postare în editare</li>
+    <li><code>STATUS_GENERATING</code> — AI în curs de generare caption/imagine</li>
+    <li><code>STATUS_READY</code> — gata de programare (editabilă)</li>
+    <li><code>STATUS_SCHEDULED</code> — programată pentru publicare</li>
+    <li><code>STATUS_PUBLISHING</code> — în curs de publicare pe platformă</li>
+    <li><code>STATUS_PUBLISHED</code> — publicată cu succes</li>
+    <li><code>STATUS_FAILED</code> — eșuată (editabilă)</li>
+  </ul>
+</div>
+
+<!-- social_style_profiles -->
+<div class="section-group" id="social_style_profiles">
+  <h3>social_style_profiles</h3>
+  <p>Profiluri de stil AI ale unui cont social media — generate prin analiza postărilor istorice (ton, vocabular, structură caption, stil vizual). Poate exista mai multe profiluri per cont; cel activ este selectat prin <code>activeStyleProfile()</code>. Modelul: <code>App\Models\SocialStyleProfile</code>. Migrații: <code>2026_03_12_120000</code>, <code>_140000</code>.</p>
+
+  <table>
+    <thead>
+      <tr><th>Coloană</th><th>Tip SQL</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>AUTO_INCREMENT</td><td><span class="badge badge-pk">PK</span></td></tr>
+      <tr><td>social_account_id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>—</td><td><span class="badge badge-fk">FK</span> → <code>social_accounts.id</code> CASCADE DELETE</td></tr>
+      <tr><td>posts_analyzed</td><td>INT</td><td><span class="badge badge-no">NO</span></td><td><code>0</code></td><td>Numărul de postări analizate pentru generarea acestui profil</td></tr>
+      <tr><td>tone</td><td>TEXT</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Descrierea tonului comunicării (ex: "profesional, cald, direct")</td></tr>
+      <tr><td>vocabulary</td><td>TEXT</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Vocabularul și stilul lingvistic caracteristic</td></tr>
+      <tr><td>hashtag_patterns</td><td>TEXT</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Tipare de hashtag-uri utilizate frecvent</td></tr>
+      <tr><td>caption_structure</td><td>TEXT</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Structura tipică a unui caption (intro, corp, CTA)</td></tr>
+      <tr><td>visual_style</td><td>TEXT</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Descrierea stilului vizual pentru promptul de generare imagini (adăugat în migrația <code>_140000</code>)</td></tr>
+      <tr><td>raw_analysis</td><td>LONGTEXT</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Răspunsul brut complet al analizei AI (JSON sau Markdown)</td></tr>
+      <tr><td>is_active</td><td>TINYINT(1)</td><td><span class="badge badge-no">NO</span></td><td><code>1</code></td><td>Profilul este cel activ curent; cast <code>boolean</code></td></tr>
+      <tr><td>generated_at</td><td>TIMESTAMP</td><td><span class="badge badge-no">NO</span></td><td>CURRENT_TIMESTAMP</td><td>Data generării profilului; cast <code>datetime</code></td></tr>
+      <tr><td>created_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+      <tr><td>updated_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Indecși</h4>
+  <div class="idx-block"><code>INDEX (social_account_id, is_active)</code> — selecție profil activ per cont</div>
+
+  <h4>Relații Eloquent</h4>
+  <div class="rel-block">
+    <code>account()</code> → <code>BelongsTo(SocialAccount::class, 'social_account_id')</code>
+  </div>
+
+  <h4>Casturi Eloquent</h4>
+  <div class="cast-block">
+    <code>is_active</code> → <code>boolean</code> &bull;
+    <code>generated_at</code> → <code>datetime</code>
+  </div>
+
+  <h4>Metodă utilă</h4>
+  <div class="rel-block">
+    <code>toPromptContext(): string</code> — returnează profilul formatat (TON, VOCABULAR, HASHTAG-URI, STRUCTURA, STIL VIZUAL) pentru injecție directă în promptul Claude
+  </div>
+</div>
+
+<!-- social_fetched_posts -->
+<div class="section-group" id="social_fetched_posts">
+  <h3>social_fetched_posts</h3>
+  <p>Postările existente pe platformă, preluate prin Graph API (Job <code>FetchSocialPostsJob</code>) și utilizate pentru analiza stilului. Constrângere <code>UNIQUE</code> pe <code>(social_account_id, platform_post_id)</code> — idempotent la refetch. Modelul: <code>App\Models\SocialFetchedPost</code>. Migrație: <code>2026_03_12_130000</code>.</p>
+
+  <table>
+    <thead>
+      <tr><th>Coloană</th><th>Tip SQL</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>AUTO_INCREMENT</td><td><span class="badge badge-pk">PK</span></td></tr>
+      <tr><td>social_account_id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>—</td><td><span class="badge badge-fk">FK</span> → <code>social_accounts.id</code> CASCADE DELETE</td></tr>
+      <tr><td>platform_post_id</td><td>VARCHAR(255)</td><td><span class="badge badge-no">NO</span></td><td>—</td><td>ID-ul postării pe platformă (Facebook post ID)</td></tr>
+      <tr><td>message</td><td>TEXT</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Textul complet al postării (caption + hashtag-uri)</td></tr>
+      <tr><td>created_time</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Data publicării pe platformă; cast <code>datetime</code></td></tr>
+      <tr><td>likes_count</td><td>INT</td><td><span class="badge badge-no">NO</span></td><td><code>0</code></td><td>Numărul de like-uri la momentul fetch</td></tr>
+      <tr><td>comments_count</td><td>INT</td><td><span class="badge badge-no">NO</span></td><td><code>0</code></td><td>Numărul de comentarii la momentul fetch</td></tr>
+      <tr><td>raw_data</td><td>JSON</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Răspunsul complet al Graph API pentru postare; cast <code>array</code></td></tr>
+      <tr><td>created_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+      <tr><td>updated_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Indecși &amp; Constrângeri</h4>
+  <div class="idx-block">
+    <span class="badge badge-uq">UNIQUE</span> <code>(social_account_id, platform_post_id)</code> — previne duplicate la re-import
+  </div>
+
+  <h4>Relații Eloquent</h4>
+  <div class="rel-block">
+    <code>account()</code> → <code>BelongsTo(SocialAccount::class, 'social_account_id')</code>
+  </div>
+
+  <h4>Casturi Eloquent</h4>
+  <div class="cast-block">
+    <code>created_time</code> → <code>datetime</code> &bull;
+    <code>raw_data</code> → <code>array</code>
+  </div>
+</div>
+
+<!-- graphic_templates -->
+<div class="section-group" id="graphic_templates">
+  <h3>graphic_templates</h3>
+  <p>Template-uri grafice Fabric.js pentru generarea imaginilor de social media. Configurația vizuală (culori, texte fixe, opțiuni afișare) este stocată ca JSON în <code>config</code>. La migrare sunt seed-ate două template-uri implicite: <code>malinco-default</code> (layout produs) și <code>malinco-brand</code> (layout brand). Modelul: <code>App\Models\GraphicTemplate</code>. Migrații: <code>2026_03_12_230000</code>, <code>_240000</code>.</p>
+
+  <table>
+    <thead>
+      <tr><th>Coloană</th><th>Tip SQL</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>AUTO_INCREMENT</td><td><span class="badge badge-pk">PK</span></td></tr>
+      <tr><td>name</td><td>VARCHAR(255)</td><td><span class="badge badge-no">NO</span></td><td>—</td><td>Denumirea template-ului afișată în UI</td></tr>
+      <tr><td>slug</td><td>VARCHAR(255)</td><td><span class="badge badge-no">NO</span></td><td>—</td><td>Identificator unic URL-safe (ex: <code>malinco-default</code>); <span class="badge badge-uq">UNIQUE</span></td></tr>
+      <tr><td>layout</td><td>VARCHAR(255)</td><td><span class="badge badge-no">NO</span></td><td><code>'product'</code></td><td>Tipul de layout: <code>product</code> — imaginea produsului central; <code>brand</code> — logo brand partener</td></tr>
+      <tr><td>config</td><td>JSON</td><td><span class="badge badge-no">NO</span></td><td>—</td><td>Configurație vizuală: <code>primary_color</code>, <code>bottom_text</code>, <code>bottom_subtext</code>, <code>cta_text</code>, <code>show_rainbow_bar</code>, <code>show_truck</code>, <code>logo_scale</code>, <code>title_size_pct</code>, <code>subtitle_size_pct</code>; cast <code>array</code></td></tr>
+      <tr><td>preview_image</td><td>VARCHAR(255)</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Cale imagine preview generată pentru selecție în UI</td></tr>
+      <tr><td>is_active</td><td>TINYINT(1)</td><td><span class="badge badge-no">NO</span></td><td><code>1</code></td><td>Template vizibil/utilizabil; cast <code>boolean</code></td></tr>
+      <tr><td>created_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+      <tr><td>updated_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Indecși &amp; Constrângeri</h4>
+  <div class="idx-block">
+    <span class="badge badge-uq">UNIQUE</span> <code>(slug)</code>
+  </div>
+
+  <h4>Casturi Eloquent</h4>
+  <div class="cast-block">
+    <code>config</code> → <code>array</code> &bull;
+    <code>is_active</code> → <code>boolean</code>
+  </div>
+
+  <h4>Metodă statică utilă</h4>
+  <div class="rel-block">
+    <code>default(): ?self</code> — returnează template-ul cu slug <code>malinco-default</code> sau primul activ dacă acesta lipsește
+  </div>
+
+  <h4>Seed implicit la migrare</h4>
+  <ul class="enum-list">
+    <li><code>malinco-default</code> (layout: product) — culoare primară <code>#a52a3f</code>, cu bara curcubeu și camion</li>
+    <li><code>malinco-brand</code> (layout: brand) — aceleași setări, dimensiuni titlu ușor diferite</li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2>Business Intelligence</h2>
+
+<!-- bi_analyses -->
+<div class="section-group" id="bi_analyses">
+  <h3>bi_analyses</h3>
+  <p>Rapoarte BI generate asincron de Claude AI (Jobs: <code>GenerateBiAnalysisJob</code>). Conțin textul Markdown al analizei, un snapshot al metricilor brute utilizate și starea procesării. Rapoartele pot fi generate manual sau automat (weekly/monthly via cron). Modelul: <code>App\Models\BiAnalysis</code>. Migrații: <code>2026_02_27_174448</code>, <code>_175535</code>, <code>_225603</code>.</p>
+
+  <table>
+    <thead>
+      <tr><th>Coloană</th><th>Tip SQL</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>AUTO_INCREMENT</td><td><span class="badge badge-pk">PK</span></td></tr>
+      <tr><td>type</td><td>VARCHAR(20)</td><td><span class="badge badge-no">NO</span></td><td><code>'manual'</code></td><td>Tipul raportului: <code>manual</code> | <code>weekly</code> | <code>monthly</code> (adăugat în migrația <code>_225603</code>)</td></tr>
+      <tr><td>generated_by</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td><span class="badge badge-fk">FK</span> → <code>users.id</code> CASCADE DELETE; NULL pentru rapoarte generate automat de cron</td></tr>
+      <tr><td>status</td><td>VARCHAR(255)</td><td><span class="badge badge-no">NO</span></td><td><code>'pending'</code></td><td>Starea procesării: <code>pending</code> | <code>done</code> | <code>failed</code></td></tr>
+      <tr><td>title</td><td>VARCHAR(255)</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Titlul raportului generat (ex: "Raport Săptămânal 10-17 Mar 2026")</td></tr>
+      <tr><td>content</td><td>LONGTEXT</td><td><span class="badge badge-no">NO</span></td><td>—</td><td>Textul Markdown al analizei generate de Claude</td></tr>
+      <tr><td>metrics_snapshot</td><td>JSON</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Cifrele brute utilizate ca input pentru Claude (stocuri, prețuri, vânzări); cast <code>array</code></td></tr>
+      <tr><td>error_message</td><td>TEXT</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Mesajul de eroare la status <code>failed</code></td></tr>
+      <tr><td>generated_at</td><td>TIMESTAMP</td><td><span class="badge badge-no">NO</span></td><td>—</td><td>Momentul inițierii generării; cast <code>datetime</code></td></tr>
+      <tr><td>created_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+      <tr><td>updated_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Relații Eloquent</h4>
+  <div class="rel-block">
+    <code>generatedBy()</code> → <code>BelongsTo(User::class, 'generated_by')</code>
+  </div>
+
+  <h4>Casturi Eloquent</h4>
+  <div class="cast-block">
+    <code>metrics_snapshot</code> → <code>array</code> &bull;
+    <code>generated_at</code> → <code>datetime</code>
+  </div>
+
+  <h4>Comenzi cron asociate</h4>
+  <ul class="enum-list">
+    <li><code>bi:generate-weekly</code> — raport săptămânal (tip <code>weekly</code>)</li>
+    <li><code>bi:generate-monthly</code> — raport lunar (tip <code>monthly</code>)</li>
+    <li><code>bi:generate-period</code> — raport pe interval custom (tip <code>manual</code>)</li>
+    <li><code>bi:health-check</code> — verificare sănătate date BI</li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2>Stocuri &amp; Sincronizare</h2>
+
+<!-- daily_stock_metrics -->
+<div class="section-group" id="daily_stock_metrics">
+  <h3>daily_stock_metrics</h3>
+  <p>Metrici zilnice agregate per produs — deschidere/închidere stoc cantitativ și valoric, variații zilnice, min/max intraday. Indexat pe <code>reference_product_id</code> (SKU sau <code>woo:ID</code> ca fallback) care înlocuiește FK-ul direct pe <code>woo_product_id</code> pentru a supraviețui ștergerii produsului. Modelul: <code>App\Models\DailyStockMetric</code>. Migrații: <code>2026_02_23_120000</code>, <code>_121000</code>.</p>
+
+  <table>
+    <thead>
+      <tr><th>Coloană</th><th>Tip SQL</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>AUTO_INCREMENT</td><td><span class="badge badge-pk">PK</span></td></tr>
+      <tr><td>day</td><td>DATE</td><td><span class="badge badge-no">NO</span></td><td>—</td><td>Data metricii; cast <code>date</code></td></tr>
+      <tr><td>reference_product_id</td><td>VARCHAR(191)</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Identificator primar stabil: SKU produs sau <code>woo:&lt;id&gt;</code> dacă SKU lipsea, <code>legacy:&lt;id_row&gt;</code> pentru rânduri anterioare migrației; cast <code>string</code></td></tr>
+      <tr><td>woo_product_id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>—</td><td><span class="badge badge-fk">FK</span> → <code>woo_products.id</code> CASCADE DELETE; păstrat pentru JOIN-uri rapide</td></tr>
+      <tr><td>opening_total_qty</td><td>DECIMAL(15,3)</td><td><span class="badge badge-no">NO</span></td><td><code>0</code></td><td>Cantitate totală (toate locațiile) la primul snapshot al zilei; cast <code>decimal:3</code></td></tr>
+      <tr><td>closing_total_qty</td><td>DECIMAL(15,3)</td><td><span class="badge badge-no">NO</span></td><td><code>0</code></td><td>Cantitate totală la ultimul snapshot al zilei; cast <code>decimal:3</code></td></tr>
+      <tr><td>opening_available_qty</td><td>DECIMAL(15,3)</td><td><span class="badge badge-no">NO</span></td><td><code>0</code></td><td>Cantitate disponibilă (publicată) la deschidere; cast <code>decimal:3</code></td></tr>
+      <tr><td>closing_available_qty</td><td>DECIMAL(15,3)</td><td><span class="badge badge-no">NO</span></td><td><code>0</code></td><td>Cantitate disponibilă la închidere; cast <code>decimal:3</code></td></tr>
+      <tr><td>opening_sell_price</td><td>DECIMAL(15,4)</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Prețul de vânzare la deschidere (din primul snapshot); cast <code>decimal:4</code></td></tr>
+      <tr><td>closing_sell_price</td><td>DECIMAL(15,4)</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Prețul de vânzare la închidere; cast <code>decimal:4</code></td></tr>
+      <tr><td>daily_total_variation</td><td>DECIMAL(15,3)</td><td><span class="badge badge-no">NO</span></td><td><code>0</code></td><td>Variație zilnică cantitate totală = <code>closing_total_qty - opening_total_qty</code>; cast <code>decimal:3</code></td></tr>
+      <tr><td>daily_available_variation</td><td>DECIMAL(15,3)</td><td><span class="badge badge-no">NO</span></td><td><code>0</code></td><td>Variație zilnică cantitate disponibilă; cast <code>decimal:3</code></td></tr>
+      <tr><td>closing_sales_value</td><td>DECIMAL(20,4)</td><td><span class="badge badge-no">NO</span></td><td><code>0</code></td><td>Valoarea stocului la închidere = <code>closing_available_qty × closing_sell_price</code>; cast <code>decimal:4</code></td></tr>
+      <tr><td>daily_sales_value_variation</td><td>DECIMAL(20,4)</td><td><span class="badge badge-no">NO</span></td><td><code>0</code></td><td>Variație zilnică valoare stoc; cast <code>decimal:4</code></td></tr>
+      <tr><td>min_available_qty</td><td>DECIMAL(15,3)</td><td><span class="badge badge-no">NO</span></td><td><code>0</code></td><td>Cantitate minimă disponibilă înregistrată intraday; cast <code>decimal:3</code></td></tr>
+      <tr><td>max_available_qty</td><td>DECIMAL(15,3)</td><td><span class="badge badge-no">NO</span></td><td><code>0</code></td><td>Cantitate maximă disponibilă înregistrată intraday; cast <code>decimal:3</code></td></tr>
+      <tr><td>snapshots_count</td><td>INT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td><code>0</code></td><td>Numărul de snapshot-uri agregate în această intrare; cast <code>integer</code></td></tr>
+      <tr><td>first_snapshot_at</td><td>DATETIME</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Timestamp primul snapshot al zilei; cast <code>datetime</code></td></tr>
+      <tr><td>last_snapshot_at</td><td>DATETIME</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Timestamp ultimul snapshot al zilei; cast <code>datetime</code></td></tr>
+      <tr><td>created_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+      <tr><td>updated_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Indecși</h4>
+  <div class="idx-block">
+    <span class="badge badge-uq">UNIQUE</span> <code>daily_stock_metrics_day_reference_product_id_unique (day, reference_product_id)</code> — o singură înregistrare per produs per zi<br>
+    <code>INDEX daily_stock_metrics_reference_product_day_idx (reference_product_id, day)</code> — grafice per produs<br>
+    <code>INDEX (day)</code> — rapoarte zilnice agregate
+  </div>
+
+  <h4>Note de migrare</h4>
+  <p>Migrația <code>_121000</code> a transformat cheia unică de la <code>(day, woo_product_id)</code> la <code>(day, reference_product_id)</code> și a backfill-at <code>reference_product_id</code> din SKU-ul produsului. Rândurile duplicate per <code>(day, reference_product_id)</code> au fost consolidate prin sumă snapshots și selecție opening/closing pe baza timestamp-urilor.</p>
+
+  <h4>Relații Eloquent</h4>
+  <div class="rel-block">
+    <code>product()</code> → <code>BelongsTo(WooProduct::class, 'woo_product_id')</code>
+  </div>
+</div>
+
+<!-- product_price_logs -->
+<div class="section-group" id="product_price_logs">
+  <h3>product_price_logs</h3>
+  <p>Log imutabil al modificărilor de preț per produs per locație. Înregistrat la fiecare import Winmentor care produce o schimbare de preț. Modelul: <code>App\Models\ProductPriceLog</code>. Migrație: <code>2026_02_21_205252</code>.</p>
+
+  <table>
+    <thead>
+      <tr><th>Coloană</th><th>Tip SQL</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>AUTO_INCREMENT</td><td><span class="badge badge-pk">PK</span></td></tr>
+      <tr><td>woo_product_id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>—</td><td><span class="badge badge-fk">FK</span> → <code>woo_products.id</code> CASCADE DELETE; cast <code>integer</code></td></tr>
+      <tr><td>location_id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>—</td><td><span class="badge badge-fk">FK</span> → <code>locations.id</code> CASCADE DELETE; cast <code>integer</code></td></tr>
+      <tr><td>old_price</td><td>DECIMAL(15,4)</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Prețul anterior modificării; NULL la prima înregistrare; cast <code>decimal:4</code></td></tr>
+      <tr><td>new_price</td><td>DECIMAL(15,4)</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Noul preț după modificare; cast <code>decimal:4</code></td></tr>
+      <tr><td>source</td><td>VARCHAR(255)</td><td><span class="badge badge-no">NO</span></td><td><code>'winmentor_csv'</code></td><td>Sursa modificării (ex: <code>winmentor_csv</code>)</td></tr>
+      <tr><td>sync_run_id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td><span class="badge badge-fk">FK</span> → <code>sync_runs.id</code> SET NULL; cast <code>integer</code></td></tr>
+      <tr><td>payload</td><td>JSON</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Date brute CSV din care s-a extras prețul; cast <code>array</code></td></tr>
+      <tr><td>changed_at</td><td>DATETIME</td><td><span class="badge badge-no">NO</span></td><td>—</td><td>Momentul exact al schimbării de preț; cast <code>datetime</code></td></tr>
+      <tr><td>created_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+      <tr><td>updated_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Indecși</h4>
+  <div class="idx-block">
+    <code>INDEX price_logs_product_location_changed_at_idx (woo_product_id, location_id, changed_at)</code> — grafice istorice prețuri per produs per locație
+  </div>
+
+  <h4>Relații Eloquent</h4>
+  <div class="rel-block">
+    <code>product()</code> → <code>BelongsTo(WooProduct::class, 'woo_product_id')</code><br>
+    <code>location()</code> → <code>BelongsTo(Location::class)</code><br>
+    <code>syncRun()</code> → <code>BelongsTo(SyncRun::class)</code>
+  </div>
+</div>
+
+<!-- product_stocks -->
+<div class="section-group" id="product_stocks">
+  <h3>product_stocks</h3>
+  <p>Stocul curent al unui produs per locație — un rând per combinație <code>(woo_product_id, location_id)</code>, actualizat prin upsert la fiecare import. Modelul: <code>App\Models\ProductStock</code>. Migrație: <code>2026_02_21_205251</code>.</p>
+
+  <table>
+    <thead>
+      <tr><th>Coloană</th><th>Tip SQL</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>AUTO_INCREMENT</td><td><span class="badge badge-pk">PK</span></td></tr>
+      <tr><td>woo_product_id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>—</td><td><span class="badge badge-fk">FK</span> → <code>woo_products.id</code> CASCADE DELETE; cast <code>integer</code></td></tr>
+      <tr><td>location_id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>—</td><td><span class="badge badge-fk">FK</span> → <code>locations.id</code> CASCADE DELETE; cast <code>integer</code></td></tr>
+      <tr><td>quantity</td><td>DECIMAL(15,3)</td><td><span class="badge badge-no">NO</span></td><td><code>0</code></td><td>Cantitate disponibilă curentă; cast <code>decimal:3</code></td></tr>
+      <tr><td>price</td><td>DECIMAL(15,4)</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Prețul de vânzare curent per locație; cast <code>decimal:4</code></td></tr>
+      <tr><td>source</td><td>VARCHAR(255)</td><td><span class="badge badge-no">NO</span></td><td><code>'winmentor_csv'</code></td><td>Sursa ultimei actualizări</td></tr>
+      <tr><td>sync_run_id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td><span class="badge badge-fk">FK</span> → <code>sync_runs.id</code> SET NULL; cast <code>integer</code></td></tr>
+      <tr><td>synced_at</td><td>DATETIME</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Momentul ultimei sincronizări; cast <code>datetime</code></td></tr>
+      <tr><td>created_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+      <tr><td>updated_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Indecși &amp; Constrângeri</h4>
+  <div class="idx-block">
+    <span class="badge badge-uq">UNIQUE</span> <code>(woo_product_id, location_id)</code> — un rând per produs per locație<br>
+    <code>INDEX (location_id, source)</code> — filtrare per locație și sursă
+  </div>
+
+  <h4>Relații Eloquent</h4>
+  <div class="rel-block">
+    <code>product()</code> → <code>BelongsTo(WooProduct::class, 'woo_product_id')</code><br>
+    <code>location()</code> → <code>BelongsTo(Location::class)</code><br>
+    <code>syncRun()</code> → <code>BelongsTo(SyncRun::class)</code>
+  </div>
+</div>
+
+<!-- product_supplier_logs -->
+<div class="section-group" id="product_supplier_logs">
+  <h3>product_supplier_logs</h3>
+  <p>Jurnal de audit pentru asocierile produs-furnizor — înregistrează cine, când și cum a asociat un furnizor la un produs. Modelul: <code>App\Models\ProductSupplierLog</code>. Migrație: <code>2026_03_02_000001</code>.</p>
+
+  <table>
+    <thead>
+      <tr><th>Coloană</th><th>Tip SQL</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>AUTO_INCREMENT</td><td><span class="badge badge-pk">PK</span></td></tr>
+      <tr><td>woo_product_id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>—</td><td><span class="badge badge-fk">FK</span> → <code>woo_products.id</code> CASCADE DELETE</td></tr>
+      <tr><td>supplier_id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>—</td><td><span class="badge badge-fk">FK</span> → <code>suppliers.id</code> CASCADE DELETE</td></tr>
+      <tr><td>user_id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>—</td><td><span class="badge badge-fk">FK</span> → <code>users.id</code> CASCADE DELETE; utilizatorul care a efectuat acțiunea</td></tr>
+      <tr><td>action</td><td>VARCHAR(255)</td><td><span class="badge badge-no">NO</span></td><td><code>'associated'</code></td><td>Tipul acțiunii: <code>associated</code> — furnizor asociat la produs existent; <code>created_and_associated</code> — furnizor nou creat și asociat simultan</td></tr>
+      <tr><td>created_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+      <tr><td>updated_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Relații Eloquent</h4>
+  <div class="rel-block">
+    <code>product()</code> → <code>BelongsTo(WooProduct::class, 'woo_product_id')</code><br>
+    <code>supplier()</code> → <code>BelongsTo(Supplier::class)</code><br>
+    <code>user()</code> → <code>BelongsTo(User::class)</code>
+  </div>
+</div>
+
+<!-- sync_runs -->
+<div class="section-group" id="sync_runs">
+  <h3>sync_runs</h3>
+  <p>Jurnal al rulărilor de sincronizare (import produse/categorii WooCommerce, import stoc Winmentor). Fiecare import declanșat înregistrează o intrare cu statistici finale și erori. Modelul: <code>App\Models\SyncRun</code>. Migrație: <code>2026_02_21_185501</code>.</p>
+
+  <table>
+    <thead>
+      <tr><th>Coloană</th><th>Tip SQL</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>AUTO_INCREMENT</td><td><span class="badge badge-pk">PK</span></td></tr>
+      <tr><td>provider</td><td>VARCHAR(255)</td><td><span class="badge badge-no">NO</span></td><td>—</td><td>Furnizorul de date (ex: <code>woocommerce</code>, <code>winmentor</code>)</td></tr>
+      <tr><td>location_id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>—</td><td><span class="badge badge-fk">FK</span> → <code>locations.id</code> CASCADE DELETE; cast <code>integer</code></td></tr>
+      <tr><td>connection_id</td><td>BIGINT UNSIGNED</td><td><span class="badge badge-no">NO</span></td><td>—</td><td><span class="badge badge-fk">FK</span> → <code>integration_connections.id</code> CASCADE DELETE; cast <code>integer</code></td></tr>
+      <tr><td>type</td><td>VARCHAR(255)</td><td><span class="badge badge-no">NO</span></td><td>—</td><td>Tipul importului: <code>categories</code> | <code>products</code> | <code>winmentor_stock</code></td></tr>
+      <tr><td>status</td><td>VARCHAR(255)</td><td><span class="badge badge-no">NO</span></td><td>—</td><td>Starea rulării: <code>queued</code> | <code>running</code> | <code>success</code> | <code>failed</code> | <code>cancelled</code></td></tr>
+      <tr><td>started_at</td><td>DATETIME</td><td><span class="badge badge-no">NO</span></td><td>—</td><td>Momentul pornirii sincronizării; cast <code>datetime</code></td></tr>
+      <tr><td>finished_at</td><td>DATETIME</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Momentul finalizării (succes sau eșec); NULL dacă rulează; cast <code>datetime</code></td></tr>
+      <tr><td>stats</td><td>JSON</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Statistici finale: created/updated/skipped/deleted; cast <code>array</code></td></tr>
+      <tr><td>errors</td><td>JSON</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Lista erorilor întâlnite în timpul sincronizării; cast <code>array</code></td></tr>
+      <tr><td>created_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+      <tr><td>updated_at</td><td>TIMESTAMP</td><td><span class="badge badge-yes">YES</span></td><td>NULL</td><td>Laravel timestamps</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Indecși</h4>
+  <div class="idx-block">
+    <code>INDEX (provider, status)</code> — filtrare rulări active per provider<br>
+    <code>INDEX (connection_id, type)</code> — istoricul importurilor per conexiune și tip
+  </div>
+
+  <h4>Constante tip</h4>
+  <ul class="enum-list">
+    <li><code>TYPE_CATEGORIES = 'categories'</code></li>
+    <li><code>TYPE_PRODUCTS = 'products'</code></li>
+    <li><code>TYPE_WINMENTOR_STOCK = 'winmentor_stock'</code></li>
+  </ul>
+
+  <h4>Constante status</h4>
+  <ul class="enum-list">
+    <li><code>STATUS_QUEUED = 'queued'</code></li>
+    <li><code>STATUS_RUNNING = 'running'</code></li>
+    <li><code>STATUS_SUCCESS = 'success'</code></li>
+    <li><code>STATUS_FAILED = 'failed'</code></li>
+    <li><code>STATUS_CANCELLED = 'cancelled'</code></li>
+  </ul>
+
+  <h4>Relații Eloquent</h4>
+  <div class="rel-block">
+    <code>location()</code> → <code>BelongsTo(Location::class)</code><br>
+    <code>connection()</code> → <code>BelongsTo(IntegrationConnection::class, 'connection_id')</code>
+  </div>
+</div>
+
+</div><!-- end .t03 -->

@@ -123,4 +123,38 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Malinco ERP — Configurații aplicație
+    |--------------------------------------------------------------------------
+    */
+    'malinco' => [
+        'site_url' => env('MALINCO_SITE_URL', 'https://malinco.ro'),
+
+        'ai' => [
+            'models' => [
+                'sonnet' => env('CLAUDE_MODEL_SONNET', 'claude-sonnet-4-6'),
+                'haiku'  => env('CLAUDE_MODEL_HAIKU',  'claude-haiku-4-5-20251001'),
+            ],
+            'default_model' => env('CLAUDE_DEFAULT_MODEL', 'claude-haiku-4-5-20251001'),
+        ],
+
+        'cache' => [
+            'chat_prefix'  => 'chat:',
+            'chat_state'   => 'chat_state:',
+            'bi_prefix'    => 'bi_report:',
+        ],
+
+        'chat' => [
+            'max_history'   => 20,
+            'cache_ttl_min' => 15,
+            'session_ttl'   => 900, // 15 min în secunde
+        ],
+
+        'woo' => [
+            'sync_batch_size' => 100,
+            'api_timeout'     => 30,
+        ],
+    ],
+
 ];

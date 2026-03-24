@@ -7,11 +7,11 @@ use Illuminate\Support\Facades\DB;
 
 class BiStockTrendChartWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Evoluție valoare stoc';
+    protected ?string $heading = 'Evoluție valoare stoc';
 
-    protected static ?string $maxHeight = '260px';
+    protected ?string $maxHeight = '260px';
 
-    protected static ?string $pollingInterval = null;
+    protected ?string $pollingInterval = null;
 
     /** @var int Numărul de zile afișate: 30 sau 90 */
     public int $period = 30;

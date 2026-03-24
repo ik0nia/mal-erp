@@ -1,0 +1,888 @@
+<section id="t10-api-routes">
+  <h1>T10 — API Endpoints, Rute Web &amp; Comenzi Artisan</h1>
+
+  <!-- ================================================================== -->
+  <h2>1. Rute Web (<code>routes/web.php</code>)</h2>
+  <!-- ================================================================== -->
+
+  <p>Rutele publice (redirect-uri) nu necesită autentificare. Toate celelalte rute sunt protejate de middleware <code>web + auth</code>.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Method</th>
+        <th>URL</th>
+        <th>Controller / Handler</th>
+        <th>Middleware</th>
+        <th>Descriere</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/woo-products</code></td>
+        <td>Redirect permanent</td>
+        <td>—</td>
+        <td>Redirect 301 → <code>/produse</code> (slug redenumit)</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/woo-products/{any}</code></td>
+        <td>Redirect permanent</td>
+        <td>—</td>
+        <td>Redirect 301 → <code>/produse/{any}</code> cu query string păstrat</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/template-editor/{template}</code></td>
+        <td><code>GraphicTemplateController@show</code></td>
+        <td>web, auth</td>
+        <td>Editor vizual Fabric.js pentru template grafic (standalone, fără Livewire)</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/template-editor/{template}/save</code></td>
+        <td><code>GraphicTemplateController@save</code></td>
+        <td>web, auth</td>
+        <td>Salvează configurația unui template grafic (JSON cu config, canvas, element_positions)</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/template-editor/{template}/preview</code></td>
+        <td><code>GraphicTemplateController@preview</code></td>
+        <td>web, auth</td>
+        <td>Generează preview PNG via Node renderer și returnează URL-ul imaginii</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/sku/{sku}</code></td>
+        <td>Closure</td>
+        <td>web, auth</td>
+        <td>Redirect la pagina Filament a produsului cu SKU-ul dat (scanare cod de bare)</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/sku-check/{sku}</code></td>
+        <td>Closure → JSON</td>
+        <td>web, auth</td>
+        <td>AJAX: verifică dacă SKU există; returnează <code>{found, url}</code></td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/achizirii/products-search?q=</code></td>
+        <td>Closure → JSON</td>
+        <td>web, auth, throttle:search</td>
+        <td>AJAX: caută produse după nume/SKU pentru tabelul Necesare (max 30 rezultate); minim 2 caractere</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/achizirii/customers-search?q=</code></td>
+        <td>Closure → JSON</td>
+        <td>web, auth, throttle:search</td>
+        <td>AJAX: caută clienți după nume/telefon pentru popup rezervare necesar (max 20 rezultate)</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/achizirii/offers-search?q=</code></td>
+        <td>Closure → JSON</td>
+        <td>web, auth, throttle:search</td>
+        <td>AJAX: caută oferte după număr/client; fără query returnează ultimele 5 oferte ale userului curent</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/products/search?q=</code></td>
+        <td>Closure → JSON</td>
+        <td>web, auth, throttle:search</td>
+        <td>AJAX: caută produse instock după nume/SKU pentru asociere EAN (max 15 rezultate)</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/email-attachment/{id}/{index}</code></td>
+        <td>Closure → file response</td>
+        <td>web, auth, super_admin only</td>
+        <td>Descarcă atașament IMAP; PDF/imagini: inline în browser, altele: download</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/email-html/{id}</code></td>
+        <td>Closure → HTML</td>
+        <td>web, auth, super_admin only</td>
+        <td>Servește HTML-ul unui email sanitizat pentru iframe (CSP strict, <code>X-Frame-Options: SAMEORIGIN</code>)</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/ean-association</code></td>
+        <td>Closure → JSON</td>
+        <td>web, auth</td>
+        <td>AJAX: creează o cerere de asociere EAN la produs; returnează <code>{success: true}</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Rate Limiters (definite în AppServiceProvider)</h3>
+  <table>
+    <thead>
+      <tr><th>Limiter</th><th>Limită</th><th>Cheie partiționare</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>chat-message</code></td><td>20 req/min</td><td>IP</td></tr>
+      <tr><td><code>chat-contact</code></td><td>10 req/min</td><td>IP</td></tr>
+      <tr><td><code>chat-config</code></td><td>60 req/min</td><td>IP</td></tr>
+      <tr><td><code>search</code></td><td>60 req/min</td><td>user ID sau IP (dacă neautentificat)</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ================================================================== -->
+  <h2>2. Chat API Endpoints (<code>routes/chat.php</code>)</h2>
+  <!-- ================================================================== -->
+
+  <p>Înregistrate fără middleware CSRF sau auth (publice). CORS permis doar pentru originile <code>malinco.ro</code> și <code>www.malinco.ro</code> (în local: și <code>localhost:3000</code>, <code>127.0.0.1:8000</code>).</p>
+
+  <h3>OPTIONS /chat/message, /chat/contact, /chat/config</h3>
+  <table>
+    <tbody>
+      <tr><th>Method</th><td><span class="badge badge-get">OPTIONS</span></td></tr>
+      <tr><th>Controller</th><td><code>ChatController@preflight</code></td></tr>
+      <tr><th>Rate limiting</th><td>Fără throttle</td></tr>
+      <tr><th>Response</th><td><code>204 No Content</code> cu headere CORS (<code>Allow-Methods: GET, POST, OPTIONS</code>; <code>Allow-Headers: Content-Type, Accept</code>)</td></tr>
+    </tbody>
+  </table>
+
+  <hr>
+
+  <h3>POST /chat/message</h3>
+  <table>
+    <tbody>
+      <tr><th>Controller</th><td><code>ChatController@message</code></td></tr>
+      <tr><th>Rate limiting</th><td><code>throttle:chat-message</code> — 20 req/min per IP</td></tr>
+      <tr><th>Autentificare</th><td>Publică (fără auth); CORS restricționat</td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>Request body (JSON sau form):</strong></p>
+  <table>
+    <thead>
+      <tr><th>Câmp</th><th>Tip</th><th>Obligatoriu</th><th>Validare</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>message</code></td><td>string</td><td>Da</td><td>max:500</td><td>Mesajul utilizatorului</td></tr>
+      <tr><td><code>session_id</code></td><td>string</td><td>Nu</td><td>max:64</td><td>ID sesie; generat UUID dacă lipsește</td></tr>
+      <tr><td><code>page_url</code></td><td>string</td><td>Nu</td><td>max:500</td><td>URL-ul paginii curente în WooCommerce</td></tr>
+      <tr><td><code>page_title</code></td><td>string</td><td>Nu</td><td>max:200</td><td>Titlul paginii curente</td></tr>
+      <tr><td><code>page_history</code></td><td>array</td><td>Nu</td><td>max:5 intrări</td><td>Istoricul paginilor vizitate: <code>[{url, title}]</code></td></tr>
+      <tr><td><code>page_history[].url</code></td><td>string</td><td>Da (în array)</td><td>max:500</td><td>—</td></tr>
+      <tr><td><code>page_history[].title</code></td><td>string</td><td>Nu</td><td>max:200</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>Response JSON 200:</strong></p>
+  <pre><code>{
+  "reply": "string — răspunsul AI",
+  "session_id": "string (UUID)",
+  "products": [
+    {
+      "id": 123,
+      "name": "string",
+      "price": "string",
+      "image_url": "string|null",
+      "url": "string — permalink WooCommerce",
+      "stock_available": true,
+      "unit": "string|null"
+    }
+  ],
+  "contact_form": false,
+  "contact_form_message": "string"
+}</code></pre>
+
+  <p><strong>Comportament:</strong> Istoricul conversației în Cache (TTL 15 min, max 20 mesaje). Motor AI: Claude claude-haiku-4-5 cu Tool Use (searchProducts, checkQuantityAvailability, getOrderStatus, getCompanyInfo). Toate mesajele logate în <code>chat_logs</code> cu IP și tokeni AI. La eroare internă: mesaj generic fără a expune detalii tehnice.</p>
+
+  <hr>
+
+  <h3>POST /chat/contact</h3>
+  <table>
+    <tbody>
+      <tr><th>Controller</th><td><code>ChatController@contact</code></td></tr>
+      <tr><th>Rate limiting</th><td><code>throttle:chat-contact</code> — 10 req/min per IP</td></tr>
+      <tr><th>Autentificare</th><td>Publică; CORS restricționat</td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>Request body:</strong></p>
+  <table>
+    <thead>
+      <tr><th>Câmp</th><th>Tip</th><th>Obligatoriu</th><th>Validare</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>session_id</code></td><td>string</td><td>Da</td><td>max:64</td><td>Leagă contactul de conversația curentă</td></tr>
+      <tr><td><code>email</code></td><td>string</td><td>Condiționat*</td><td>email, max:200</td><td>Adresa de email</td></tr>
+      <tr><td><code>phone</code></td><td>string</td><td>Condiționat*</td><td>max:30</td><td>Numărul de telefon</td></tr>
+      <tr><td><code>wants_specialist</code></td><td>boolean</td><td>Nu</td><td>—</td><td>Clientul dorește contact de la un specialist</td></tr>
+    </tbody>
+  </table>
+  <p><small>* Cel puțin un câmp dintre <code>email</code> și <code>phone</code> este obligatoriu.</small></p>
+
+  <p><strong>Response:</strong></p>
+  <pre><code>// Succes (200):
+{ "saved": true }
+
+// Validare eșuată (422):
+{ "saved": false, "error": "Completați cel puțin un câmp." }</code></pre>
+
+  <p><strong>Side-effects:</strong> Dispatch <code>GenerateChatSummaryJob</code> (imediat după response) + <code>SendTelegramLeadJob</code> cu delay 35s (după ce rezumatul AI e gata).</p>
+
+  <hr>
+
+  <h3>GET /chat/config</h3>
+  <table>
+    <tbody>
+      <tr><th>Controller</th><td><code>ChatController@config</code></td></tr>
+      <tr><th>Rate limiting</th><td><code>throttle:chat-config</code> — 60 req/min per IP</td></tr>
+      <tr><th>Cache HTTP</th><td><code>Cache-Control: public, max-age=300</code> (5 minute)</td></tr>
+      <tr><th>Autentificare</th><td>Publică; CORS restricționat</td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>Response JSON 200:</strong></p>
+  <pre><code>{
+  "primary_color": "#e65100",
+  "bot_name": "Malinco",
+  "subtitle": "Asistent virtual",
+  "welcome_msg": "Bună ziua! Cu ce vă pot ajuta?...",
+  "enabled": true
+}</code></pre>
+
+  <p>Valorile sunt citite din <code>app_settings</code> (cheile: <code>chat_primary_color</code>, <code>chat_bot_name</code>, <code>chat_subtitle</code>, <code>chat_welcome_msg</code>, <code>chat_enabled</code>). Fallback pe valorile implicite dacă nu sunt configurate.</p>
+
+  <!-- ================================================================== -->
+  <h2>3. Template Editor API</h2>
+  <!-- ================================================================== -->
+
+  <p>Endpoint-uri pentru editorul vizual Fabric.js. Toate necesită <code>web + auth</code>.</p>
+
+  <table>
+    <thead>
+      <tr><th>Method</th><th>URL</th><th>Request body (câmpuri cheie)</th><th>Response</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/template-editor/{template}</code></td>
+        <td>—</td>
+        <td>View Blade cu <code>$template</code> și <code>$templates</code></td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/template-editor/{template}/save</code></td>
+        <td><code>name</code>, <code>layout</code> (product|brand), <code>primary_color</code>, <code>bottom_text</code>, <code>cta_text</code>, <code>logo_scale</code>, <code>title_size_pct</code>, <code>subtitle_size_pct</code>, <code>show_rainbow_bar</code>, <code>show_truck</code>, <code>element_positions</code> (array), <code>canvas_json</code> (Fabric.js JSON), <code>canvas.width/height/preset</code></td>
+        <td><code>{"ok": true}</code></td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/template-editor/{template}/preview</code></td>
+        <td><code>preview_title</code>, <code>preview_subtitle</code>, <code>preview_label</code></td>
+        <td><code>{"url": "..."}</code> sau <code>{"error": "..."}</code> (500)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ================================================================== -->
+  <h2>4. Plugin WordPress Bridge Endpoints</h2>
+  <!-- ================================================================== -->
+
+  <p>Expuse de plugin-ul <strong>malinco-erp-bridge</strong> (v1.1.0) pe <code>https://malinco.ro/wp-json/malinco-erp/v1/</code>.<br>
+  <strong>Autentificare:</strong> header <code>X-ERP-Api-Key: {cheie}</code> (cheie criptată în <code>AppSetting::KEY_WOO_PLUGIN_API_KEY</code>).<br>
+  <strong>Client PHP:</strong> <code>app/Services/WooCommerce/WooPluginClient.php</code> — timeout 15s (60s pentru self-update).</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Method</th>
+        <th>Endpoint</th>
+        <th>Request</th>
+        <th>Response</th>
+        <th>Descriere</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/version</code></td>
+        <td>—</td>
+        <td><code>{version, status, site}</code></td>
+        <td>Verifică dacă plugin-ul e activ și returnează versiunea curentă</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/product/meta</code></td>
+        <td>Query: <code>woo_id</code> sau <code>sku</code></td>
+        <td>Meta-datele produsului</td>
+        <td>Citește meta-datele custom ale unui produs WooCommerce</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/product/meta</code></td>
+        <td><code>{woo_id: int, sku: string, meta: {cheie: valoare}}</code></td>
+        <td><code>{success: bool}</code></td>
+        <td>Actualizează meta-datele unui produs (ex: <code>_furnizor_nume</code>, <code>_furnizor_sku</code>)</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/product/bulk-meta</code></td>
+        <td><code>{items: [{woo_id, sku, meta}]}</code></td>
+        <td><code>{results: {updated, failed, errors}}</code></td>
+        <td>Actualizează meta-datele pentru mai multe produse într-un singur request</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/product/recalculate</code></td>
+        <td><code>{product_ids: [int]}</code></td>
+        <td><code>{success: bool}</code></td>
+        <td>Declanșează recalcularea disponibilității/prețului (plugin malinco-availability-pricing)</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/options/{key}</code></td>
+        <td>—</td>
+        <td>Valoarea opțiunii WordPress</td>
+        <td>Citește o opțiune WordPress via <code>get_option()</code></td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/cache/flush</code></td>
+        <td>—</td>
+        <td><code>{success: bool}</code></td>
+        <td>Golește cache-ul WordPress/WooCommerce</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/self-update</code></td>
+        <td>multipart/form-data: fișier ZIP (<code>plugin</code>)</td>
+        <td><code>{success: bool}</code></td>
+        <td>Self-update plugin: instalează automat noua versiune din ZIP-ul primit</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p><strong>Deploy plugin:</strong> <code>php artisan woo:deploy-plugin</code> construiește ZIP-ul din <code>wordpress-plugin/malinco-erp-bridge/</code> și îl trimite via <code>/self-update</code>.</p>
+
+  <!-- ================================================================== -->
+  <h2>5. Comenzi Artisan</h2>
+  <!-- ================================================================== -->
+
+  <p>Total: <strong>49 comenzi</strong> în <code>app/Console/Commands/</code> și subdirectorul <code>BI/</code>.</p>
+
+  <h3>5.1 Produse &amp; Categorii</h3>
+  <table>
+    <thead>
+      <tr><th>Comandă</th><th>Argumente</th><th>Opțiuni</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>categories:assign-placeholder-products</code></td>
+        <td>—</td>
+        <td><code>--limit=</code>, <code>--batch-size=20</code>, <code>--reassign</code></td>
+        <td>Asignează categoria cea mai specifică produselor WinMentor fără categorie, via Claude AI</td>
+      </tr>
+      <tr>
+        <td><code>products:assign-suppliers</code></td>
+        <td>—</td>
+        <td><code>--dry-run</code>, <code>--force</code>, <code>--limit=</code></td>
+        <td>Asociază furnizori la produsele WinMentor pe baza denumirii (name matching)</td>
+      </tr>
+      <tr>
+        <td><code>products:assign-suppliers-by-brand</code></td>
+        <td>—</td>
+        <td><code>--dry-run</code>, <code>--force</code></td>
+        <td>Asociază furnizori la produse pe baza brandului (via tabela <code>brand_supplier</code>)</td>
+      </tr>
+      <tr>
+        <td><code>products:normalize-names</code></td>
+        <td>—</td>
+        <td><code>--dry-run</code>, <code>--limit=</code></td>
+        <td>Normalizează denumirile produselor WinMentor: expandează abrevieri, aplică Title Case</td>
+      </tr>
+      <tr>
+        <td><code>products:reformat-titles</code></td>
+        <td>—</td>
+        <td><code>--dry-run</code>, <code>--limit=</code>, <code>--batch-size=20</code>, <code>--regenerate</code></td>
+        <td>Reformatează ordinea parametrilor în titlurile produselor WinMentor via Claude</td>
+      </tr>
+      <tr>
+        <td><code>products:generate-descriptions</code></td>
+        <td>—</td>
+        <td><code>--limit=</code>, <code>--batch-size=10</code>, <code>--regenerate</code></td>
+        <td>Generează descrieri SEO în română pentru produse placeholder WinMentor via Claude</td>
+      </tr>
+      <tr>
+        <td><code>products:generate-attributes</code></td>
+        <td>—</td>
+        <td><code>--limit=</code>, <code>--batch-size=10</code>, <code>--regenerate</code></td>
+        <td>Generează atribute tehnice structurate pentru produsele WinMentor via Claude</td>
+      </tr>
+      <tr>
+        <td><code>products:evaluate-woo-content</code></td>
+        <td>—</td>
+        <td><code>--limit=</code>, <code>--batch-size=5</code>, <code>--sku=</code>, <code>--force</code>, <code>--enrich</code> (fetch DataForSEO), <code>--worker=1</code>, <code>--workers=1</code></td>
+        <td>Evaluează și îmbunătățește conținutul produselor WooCommerce (nume, descrieri, atribute) via Claude</td>
+      </tr>
+      <tr>
+        <td><code>products:enrich-from-web</code></td>
+        <td>—</td>
+        <td><code>--dry-run</code>, <code>--limit=</code>, <code>--batch-size=5</code>, <code>--regenerate</code>, <code>--sku=</code>, <code>--worker=1</code>, <code>--workers=1</code></td>
+        <td>Îmbogățește produsele WinMentor cu EAN lookup via web search + Claude</td>
+      </tr>
+      <tr>
+        <td><code>products:set-dimensions</code></td>
+        <td>—</td>
+        <td><code>--limit=</code>, <code>--force</code>, <code>--batch-size=10</code>, <code>--web-search</code> (DataForSEO), <code>--dry-run</code>, <code>--worker=1</code>, <code>--workers=1</code></td>
+        <td>Setează greutate, dimensiuni și <code>shipping_class</code> (volum-atipic) pentru produse via Claude</td>
+      </tr>
+      <tr>
+        <td><code>products:verify-images</code></td>
+        <td>—</td>
+        <td><code>--limit=50</code>, <code>--dry-run</code></td>
+        <td>Verifică cu Claude Vision dacă imaginile aprobate corespund produselor</td>
+      </tr>
+      <tr>
+        <td><code>ean:test-lookup</code></td>
+        <td>—</td>
+        <td><code>--sample=50</code>, <code>--service=all</code> (upcitemdb/goupc/opengtindb/all)</td>
+        <td>Testează acoperirea serviciilor EAN lookup pe produsele placeholder</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>5.2 Imagini Produse</h3>
+  <table>
+    <thead>
+      <tr><th>Comandă</th><th>Argumente</th><th>Opțiuni</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>images:search-placeholder-products</code></td>
+        <td>—</td>
+        <td><code>--limit=</code>, <code>--restart</code></td>
+        <td>Caută imagini via Bing Images pentru produse WinMentor placeholder și stochează candidați</td>
+      </tr>
+      <tr>
+        <td><code>images:search-dataforseo</code></td>
+        <td>—</td>
+        <td><code>--limit=</code>, <code>--restart</code>, <code>--only-empty</code>, <code>--results=10</code>, <code>--placeholder</code>, <code>--worker=1</code>, <code>--workers=1</code></td>
+        <td>Caută imagini via DataForSEO Google Images API și salvează candidați</td>
+      </tr>
+      <tr>
+        <td><code>images:search-google</code></td>
+        <td>—</td>
+        <td><code>--limit=</code>, <code>--restart</code>, <code>--only-empty</code>, <code>--results=5</code>, <code>--worker=1</code>, <code>--workers=1</code></td>
+        <td>Caută imagini via Google Custom Search API și salvează candidați</td>
+      </tr>
+      <tr>
+        <td><code>images:evaluate-candidates</code></td>
+        <td>—</td>
+        <td><code>--limit=</code>, <code>--re-evaluate</code>, <code>--worker=1</code>, <code>--workers=1</code></td>
+        <td>Evaluează cu Claude Vision candidații de imagini și aprobă cel mai bun per produs</td>
+      </tr>
+      <tr>
+        <td><code>images:download-to-local</code></td>
+        <td>—</td>
+        <td><code>--limit=</code>, <code>--force</code>, <code>--worker=1</code>, <code>--workers=1</code></td>
+        <td>Descarcă imaginile externe ale produselor în storage local (erp.malinco.ro)</td>
+      </tr>
+      <tr>
+        <td><code>images:upload-to-woo</code></td>
+        <td>—</td>
+        <td><code>--connection=1</code>, <code>--limit=</code>, <code>--placeholder</code>, <code>--worker=1</code>, <code>--workers=1</code></td>
+        <td>Sideload imagini externe în biblioteca media WooCommerce</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>5.3 WooCommerce Sync</h3>
+  <table>
+    <thead>
+      <tr><th>Comandă</th><th>Argumente</th><th>Opțiuni</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>woo:import-products</code></td>
+        <td><code>connectionId</code> (obligatoriu)</td>
+        <td>—</td>
+        <td>Importă produsele WooCommerce pentru o conexiune</td>
+      </tr>
+      <tr>
+        <td><code>woo:import-categories</code></td>
+        <td><code>connectionId</code> (obligatoriu)</td>
+        <td>—</td>
+        <td>Importă categoriile WooCommerce pentru o conexiune</td>
+      </tr>
+      <tr>
+        <td><code>woo:sync-categories</code></td>
+        <td>—</td>
+        <td>—</td>
+        <td>Sincronizează categoriile WooCommerce pentru toate conexiunile active</td>
+      </tr>
+      <tr>
+        <td><code>woo:sync-orders</code></td>
+        <td>—</td>
+        <td><code>--connection=</code> ID specific, <code>--pages=5</code> pagini fetch (100/pagină), <code>--status=</code> filtru status</td>
+        <td>Sincronizează comenzile WooCommerce local (fallback dacă webhook ratează)</td>
+      </tr>
+      <tr>
+        <td><code>woo:sync-product-statuses</code></td>
+        <td>—</td>
+        <td>—</td>
+        <td>Sync statusuri produse din WooCommerce folosind 3 workeri paraleli</td>
+      </tr>
+      <tr>
+        <td><code>woo:sync-supplier-meta</code></td>
+        <td>—</td>
+        <td><code>--limit=0</code> (0 = toate)</td>
+        <td>Sincronizează furnizorul preferat în meta WooCommerce (<code>_furnizor_nume</code>, <code>_furnizor_sku</code>)</td>
+      </tr>
+      <tr>
+        <td><code>woo:push-winmentor-products</code></td>
+        <td>—</td>
+        <td><code>--dry-run</code>, <code>--limit=0</code>, <code>--batch=10</code>, <code>--skip-images</code></td>
+        <td>Creează produsele WinMentor (placeholder) în WooCommerce via API batch</td>
+      </tr>
+      <tr>
+        <td><code>woo:push-winmentor-images</code></td>
+        <td>—</td>
+        <td><code>--connection=1</code>, <code>--limit=</code>, <code>--last=</code>, <code>--from-id=</code>, <code>--to-id=</code>, <code>--from-woo-id=</code>, <code>--to-woo-id=</code>, <code>--dry-run</code>, <code>--all</code></td>
+        <td>Actualizează imaginile produselor WinMentor în WooCommerce</td>
+      </tr>
+      <tr>
+        <td><code>woo:populate-winmentor-names</code></td>
+        <td>—</td>
+        <td><code>--connection=</code>, <code>--chunk=300</code>, <code>--workers=5</code></td>
+        <td>Populează câmpul <code>winmentor_name</code> pentru produsele din CSV-ul WinMentor</td>
+      </tr>
+      <tr>
+        <td><code>woo:deploy-plugin</code></td>
+        <td>—</td>
+        <td><code>--build-only</code> (ZIP fără deploy), <code>--check</code> (verifică versiunea activă)</td>
+        <td>Construiește ZIP-ul plugin-ului malinco-erp-bridge și îl deployează pe WordPress via self-update</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>5.4 WinMentor / Stock</h3>
+  <table>
+    <thead>
+      <tr><th>Comandă</th><th>Argumente</th><th>Opțiuni</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>stock:import-winmentor</code></td>
+        <td><code>connectionId</code> (obligatoriu)</td>
+        <td>—</td>
+        <td>Importă CSV stocuri și prețuri WinMentor pentru o conexiune</td>
+      </tr>
+      <tr>
+        <td><code>stock:dispatch-scheduled-winmentor</code></td>
+        <td>—</td>
+        <td><code>--connectionId=</code>, <code>--force</code></td>
+        <td>Dispatch import-uri WinMentor programate conform setărilor per conexiune</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>5.5 Furnizori</h3>
+  <table>
+    <thead>
+      <tr><th>Comandă</th><th>Argumente</th><th>Opțiuni</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>suppliers:import-csv</code></td>
+        <td>—</td>
+        <td><code>--dry-run</code>, <code>--force</code>, <code>--file=</code> fișier specific, <code>--no-move</code></td>
+        <td>Importă asocieri furnizor-produs din fișiere CSV în <code>storage/furnizori/</code></td>
+      </tr>
+      <tr>
+        <td><code>suppliers:import-from-woo-json</code></td>
+        <td>—</td>
+        <td>—</td>
+        <td>Importă furnizori din <code>meta_data</code> JSON al produselor WooCommerce</td>
+      </tr>
+      <tr>
+        <td><code>supplier:import-winmentor</code></td>
+        <td>—</td>
+        <td><code>--dry-run</code>, <code>--force</code></td>
+        <td>Importă furnizori și asocieri produs-furnizor din exportul WinMentor (XLSX/CSV)</td>
+      </tr>
+      <tr>
+        <td><code>supplier:discover-contacts</code></td>
+        <td>—</td>
+        <td><code>--dry-run</code></td>
+        <td>Descoperă contacte furnizori din istoricul emailurilor importate</td>
+      </tr>
+      <tr>
+        <td><code>supplier:auto-match-domains</code></td>
+        <td>—</td>
+        <td><code>--dry-run</code>, <code>--min-emails=3</code></td>
+        <td>Potrivește automat domeniile de email cu furnizorii (contact-match + name-match + Claude AI); aplică automat doar high confidence</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>5.6 Email</h3>
+  <table>
+    <thead>
+      <tr><th>Comandă</th><th>Argumente</th><th>Opțiuni</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>email:import-history</code></td>
+        <td>—</td>
+        <td><code>--since=2025-01-01</code></td>
+        <td>Importă istoricul emailurilor din IMAP (RAM-safe: UID search + fetch individual)</td>
+      </tr>
+      <tr>
+        <td><code>email:process-ai</code></td>
+        <td>—</td>
+        <td><code>--limit=200</code>, <code>--supplier=</code> ID furnizor, <code>--sync</code> (nu queue)</td>
+        <td>Procesează emailuri neprocesate cu Claude AI (claude-haiku-4-5); extrage tip, summary, prețuri, entități</td>
+      </tr>
+      <tr>
+        <td><code>email:rematch-quotes</code></td>
+        <td>—</td>
+        <td>—</td>
+        <td>Reface asocierea produse WooCommerce pentru <code>supplier_price_quotes</code> existente</td>
+      </tr>
+      <tr>
+        <td><code>imap:test</code></td>
+        <td>—</td>
+        <td><code>--limit=10</code></td>
+        <td>Testează conexiunea IMAP și afișează ultimele emailuri (read-only, fără modificări pe server)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>5.7 Social Media</h3>
+  <table>
+    <thead>
+      <tr><th>Comandă</th><th>Argumente</th><th>Opțiuni</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>social:publish-scheduled</code></td>
+        <td>—</td>
+        <td>—</td>
+        <td>Publică postările Social Media programate pentru momentul curent sau trecut</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>5.8 BI (Business Intelligence)</h3>
+  <table>
+    <thead>
+      <tr><th>Comandă</th><th>Argumente</th><th>Opțiuni</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>bi:compute-kpi</code></td>
+        <td>—</td>
+        <td><code>--day=</code> YYYY-MM-DD (implicit: ieri)</td>
+        <td>Calculează <code>bi_inventory_kpi_daily</code> pentru o zi</td>
+      </tr>
+      <tr>
+        <td><code>bi:compute-velocity</code></td>
+        <td>—</td>
+        <td><code>--day=</code> YYYY-MM-DD (implicit: ieri)</td>
+        <td>Calculează <code>bi_product_velocity_current</code> (fereastră 90 zile, 1 rând/produs)</td>
+      </tr>
+      <tr>
+        <td><code>bi:compute-alerts</code></td>
+        <td>—</td>
+        <td><code>--day=</code> YYYY-MM-DD (implicit: ieri)</td>
+        <td>Calculează <code>bi_inventory_alert_candidates_daily</code> (P0/P1/P2) pentru o zi</td>
+      </tr>
+      <tr>
+        <td><code>bi:compute-daily</code></td>
+        <td>—</td>
+        <td><code>--day=</code> YYYY-MM-DD (implicit: ieri)</td>
+        <td>Rulează toate agregările BI pentru o zi: KPI → Velocity → Alerts (idempotent)</td>
+      </tr>
+      <tr>
+        <td><code>bi:backfill</code></td>
+        <td>—</td>
+        <td><code>--from=</code> YYYY-MM-DD (obligatoriu), <code>--to=</code> YYYY-MM-DD (implicit: ieri), <code>--skip-restore</code></td>
+        <td>Backfill agregări BI pentru un interval de date (KPI + Velocity + Alerts per zi)</td>
+      </tr>
+      <tr>
+        <td><code>bi:health-check</code></td>
+        <td>—</td>
+        <td><code>--days=7</code>, <code>--silent</code></td>
+        <td>Watchdog BI: detectează și repară automat datele lipsă din <code>bi_inventory_kpi_daily</code></td>
+      </tr>
+      <tr>
+        <td><code>bi:generate-weekly-report</code></td>
+        <td>—</td>
+        <td><code>--from=</code>, <code>--to=</code> YYYY-MM-DD</td>
+        <td>Generează raportul BI săptămânal (7 zile, P0/P1/P2 + velocity) via Claude</td>
+      </tr>
+      <tr>
+        <td><code>bi:generate-monthly-report</code></td>
+        <td>—</td>
+        <td><code>--from=</code>, <code>--to=</code> YYYY-MM-DD</td>
+        <td>Generează raportul BI lunar (30 zile, grupat săptămânal + velocity) via Claude</td>
+      </tr>
+      <tr>
+        <td><code>bi:generate-period-report</code></td>
+        <td>—</td>
+        <td><code>--type=</code> quarterly|semiannual|annual (obligatoriu), <code>--from=</code>, <code>--to=</code></td>
+        <td>Generează raportul BI trimestrial (90z), semestrial (180z) sau anual (365z) via Claude</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>5.9 GDPR &amp; Utilitare</h3>
+  <table>
+    <thead>
+      <tr><th>Comandă</th><th>Argumente</th><th>Opțiuni</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>gdpr:cleanup-chat-logs</code></td>
+        <td>—</td>
+        <td><code>--days=90</code></td>
+        <td>Anonimizează IP-urile din <code>chat_logs</code> mai vechi de N zile (GDPR compliance)</td>
+      </tr>
+      <tr>
+        <td><code>inspire</code></td>
+        <td>—</td>
+        <td>—</td>
+        <td>Afișează un citat inspirațional (Laravel built-in)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p><strong>Notă — paralelism:</strong> Comenzile cu opțiunile <code>--worker=N --workers=M</code> pot fi lansate din mai multe procese simultan pentru a accelera procesarea în batch. Fiecare worker procesează un subset din înregistrări pe baza <code>id % workers</code>.</p>
+
+  <!-- ================================================================== -->
+  <h2>6. Schedule (Cron Jobs)</h2>
+  <!-- ================================================================== -->
+
+  <p>Definite în <code>routes/console.php</code>. Job-urile BI folosesc timezone <strong>Europe/Bucharest</strong> explicit. Restul rulează în timezone-ul serverului.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Comandă / Job</th>
+        <th>Frecvență</th>
+        <th>Timezone</th>
+        <th>Opțiuni</th>
+        <th>Descriere</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>stock:dispatch-scheduled-winmentor</code></td>
+        <td>La fiecare minut</td>
+        <td>server</td>
+        <td>withoutOverlapping</td>
+        <td>Dispatch import-uri WinMentor programate per conexiune</td>
+      </tr>
+      <tr>
+        <td><code>FetchEmailsJob</code> (queue)</td>
+        <td>La fiecare 5 minute</td>
+        <td>server</td>
+        <td>withoutOverlapping</td>
+        <td>Fetch emailuri noi din IMAP (peek mode, read-only); folosește <code>SINCE &lt;date&gt;</code> pentru eficiență RAM</td>
+      </tr>
+      <tr>
+        <td><code>email:process-ai --limit=100</code></td>
+        <td><em>DEZACTIVAT</em></td>
+        <td>—</td>
+        <td>—</td>
+        <td>Procesare AI emailuri — dezactivat temporar (consum API)</td>
+      </tr>
+      <tr>
+        <td><code>supplier:discover-contacts</code></td>
+        <td><em>DEZACTIVAT</em> (era zilnic 03:00)</td>
+        <td>—</td>
+        <td>—</td>
+        <td>Redescoperire contacte furnizori — dezactivat temporar (consum API)</td>
+      </tr>
+      <tr>
+        <td><code>social:publish-scheduled</code></td>
+        <td>La fiecare minut</td>
+        <td>server</td>
+        <td>withoutOverlapping</td>
+        <td>Publică postările Social Media programate</td>
+      </tr>
+      <tr>
+        <td><code>woo:sync-orders</code></td>
+        <td>La fiecare 15 minute</td>
+        <td>server</td>
+        <td>withoutOverlapping</td>
+        <td>Fallback sync comenzi WooCommerce (prinde ce ratează webhook-ul)</td>
+      </tr>
+      <tr>
+        <td><code>woo:sync-categories</code></td>
+        <td>La fiecare 6 ore</td>
+        <td>server</td>
+        <td>withoutOverlapping</td>
+        <td>Sync categorii WooCommerce (nu au webhook, se aduc periodic)</td>
+      </tr>
+      <tr>
+        <td><code>bi:compute-daily</code></td>
+        <td>Zilnic la <strong>00:30</strong></td>
+        <td>Europe/Bucharest</td>
+        <td>runInBackground</td>
+        <td>Calculează toate agregările BI pentru ziua de ieri: KPI → Velocity → Alerts (idempotent — UPDATE ON DUPLICATE KEY)</td>
+      </tr>
+      <tr>
+        <td><code>bi:health-check</code></td>
+        <td>Zilnic la <strong>09:00</strong></td>
+        <td>Europe/Bucharest</td>
+        <td>—</td>
+        <td>Watchdog: detectează și repară dacă <code>bi:compute-daily</code> a eșuat noaptea (auto-healing)</td>
+      </tr>
+      <tr>
+        <td><code>bi:generate-weekly-report</code></td>
+        <td>Duminică la <strong>05:00</strong></td>
+        <td>Europe/Bucharest</td>
+        <td>withoutOverlapping, runInBackground</td>
+        <td>Raport BI săptămânal — acoperă ultimele 7 zile complete (luni–sâmbătă)</td>
+      </tr>
+      <tr>
+        <td><code>bi:generate-monthly-report</code></td>
+        <td>1 ale lunii la <strong>11:00</strong></td>
+        <td>Europe/Bucharest</td>
+        <td>withoutOverlapping, runInBackground</td>
+        <td>Raport BI lunar — ultimele 30 zile, grupat săptămânal + rapoartele zilnice ca și context</td>
+      </tr>
+      <tr>
+        <td><code>bi:generate-period-report --type=quarterly</code></td>
+        <td>1 ian / 1 apr / 1 iul / 1 oct la <strong>06:00</strong></td>
+        <td>Europe/Bucharest</td>
+        <td>withoutOverlapping, runInBackground, when(luna ∈ {1,4,7,10})</td>
+        <td>Raport BI trimestrial — ultimele 90 zile, context: rapoarte lunare + săptămânale</td>
+      </tr>
+      <tr>
+        <td><code>bi:generate-period-report --type=semiannual</code></td>
+        <td>1 ian / 1 iul la <strong>08:00</strong></td>
+        <td>Europe/Bucharest</td>
+        <td>withoutOverlapping, runInBackground, when(luna ∈ {1,7})</td>
+        <td>Raport BI semestrial — ultimele 180 zile, grupat lunar, context: rapoarte trimestriale</td>
+      </tr>
+      <tr>
+        <td><code>bi:generate-period-report --type=annual</code></td>
+        <td>1 ianuarie la <strong>10:00</strong></td>
+        <td>Europe/Bucharest</td>
+        <td>withoutOverlapping, runInBackground</td>
+        <td>Raport BI anual — ultimele 365 zile, grupat lunar (12 rânduri KPI), context complet</td>
+      </tr>
+      <tr>
+        <td><code>gdpr:cleanup-chat-logs</code></td>
+        <td>Săptămânal la <strong>03:00</strong></td>
+        <td>server</td>
+        <td>—</td>
+        <td>Anonimizează IP-urile din <code>chat_logs</code> mai vechi de 90 zile (GDPR compliance)</td>
+      </tr>
+    </tbody>
+  </table>
+
+</section>

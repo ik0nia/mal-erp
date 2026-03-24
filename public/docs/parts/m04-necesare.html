@@ -1,0 +1,717 @@
+<section id="m04-necesare">
+
+  <h2>Modul 4 — Necesare de Marfă (PNR)</h2>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       4.1 Ce este un Necesar de Marfă și de ce se folosește
+  ════════════════════════════════════════════════════════════ -->
+  <h3 id="m04-intro">4.1 Ce este un Necesar de Marfă și de ce se folosește</h3>
+
+  <p>
+    Un <strong>Necesar de Marfă</strong> (prescurtat <strong>PNR</strong> — de la „Purchase Request")
+    este documentul intern prin care se solicită aprovizionarea cu produse. El reprezintă primul pas
+    din fluxul de achiziții al ERP-ului Malinco și stă la baza oricărui Ordin de Cumpărare (PO) emis
+    ulterior către furnizori.
+  </p>
+
+  <p>
+    Rolul unui necesar este simplu: centralizează toate solicitările de reaprovizionare într-un singur
+    loc, indiferent dacă provin din analiza stocurilor, din necesitățile identificate de consultanți de
+    vânzări sau din comenzile clienților care includ produse „la comandă" (on-demand). Buyer-ul
+    (managerul de achiziții) vede toate necesarele trimise, le prioritizează și le transformă în ordine
+    de cumpărare concrete.
+  </p>
+
+  <p>Sistemul suportă trei surse de creare a unui necesar:</p>
+  <ul>
+    <li>
+      <strong>Manual</strong> — un consultant sau buyer creează necesarul direct din secțiunea
+      <em>Achiziții → Necesare → Adaugă necesar</em>, adăugând produsele și cantitățile dorite.
+    </li>
+    <li>
+      <strong>Din pagina „Necesar de Marfă"</strong> — raportul de reaprovizionare automată
+      calculează care produse se apropie de epuizare și propune cantitățile recomandate;
+      utilizatorul selectează produsele și generează necesarele cu un singur clic.
+    </li>
+    <li>
+      <strong>Auto-generat din comanda WooCommerce</strong> — când o comandă online conține
+      produse marcate ca „la comandă" (procurement_type = on_demand), sistemul creează automat
+      un necesar în starea <em>Trimis</em> cu referința comenzii, fără intervenție manuală.
+    </li>
+  </ul>
+
+  <p>
+    Numerotarea necesarelor urmează formatul <code>PNR-XXXX</code> (ex: <code>PNR-0042</code>),
+    configurat din setările aplicației (serie + număr de start). Numărul este generat automat la
+    salvare și nu poate fi modificat ulterior.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       4.2 Pagina „Necesar de Marfă" — calculul automat
+  ════════════════════════════════════════════════════════════ -->
+  <h3 id="m04-pagina-raport">4.2 Pagina „Necesar de Marfă" — cum se calculează automat ce produse au nevoie de reaprovizionare</h3>
+
+  <p>
+    Pagina <strong>Rapoarte → Necesar de marfă</strong> este instrumentul principal de monitorizare
+    a stocurilor critice. Ea analizează automat întregul catalog de produse și identifică acele
+    articole al căror stoc curent nu acoperă consumul estimat pentru perioada configurată.
+  </p>
+
+  <h4>Surse de date</h4>
+  <p>Calculul combină trei seturi de informații:</p>
+  <ol>
+    <li>
+      <strong>Stocul curent</strong> — suma cantităților din toate locațiile/depozitele (tabelul
+      <code>product_stocks</code>, agregat pe produs).
+    </li>
+    <li>
+      <strong>Viteza de vânzare</strong> — din view-ul <code>bi_product_velocity_current</code>,
+      care expune medii zilnice calculate pe trei ferestre de timp: 7 zile, 30 zile și 90 zile.
+      Această bază de date de viteză este actualizată periodic de modulul BI.
+    </li>
+    <li>
+      <strong>Furnizorul activ</strong> — din tabelul <code>product_suppliers</code>, filtrat pe
+      furnizori activi (<code>is_active = true</code>). Produsele fără furnizor activ apar
+      separat, la grupul „Fără furnizor".
+    </li>
+  </ol>
+
+  <h4>Algoritmul de calcul al vitezei ajustate</h4>
+  <p>
+    Pentru fiecare produs, sistemul aplică un algoritm în trei pași care evită atât
+    subestimarea (când datele istorice sunt incomplete) cât și supraestimarea (când
+    cererea a scăzut recent):
+  </p>
+  <ol>
+    <li>
+      <strong>Baseline</strong> — se ia maximul dintre cele trei medii zilnice (7z, 30z, 90z).
+      Această alegere este deliberată: dacă un produs a fost vândut intensiv în ultimele 7 zile
+      dar media pe 30 sau 90 de zile este diluată (pentru că produsul este nou sau a intrat în stoc
+      recent), maximul asigură că nu se subestimează necesarul.
+    </li>
+    <li>
+      <strong>Corecție trend</strong> — dacă media pe 7 zile este cu mai mult de 15% sub media pe
+      30 de zile, sistemul aplică o atenuare conservatoare (maxim 50% reducere față de baseline).
+      Această corecție reflectă o cerere în scădere clară și evită comenzi excesive pentru produse
+      care nu se mai vând la fel de bine.
+    </li>
+    <li>
+      <strong>Safety stock</strong> — la cantitatea calculată pentru perioada de acoperire
+      configurată se adaugă un buffer de 3 zile de consum, ca marjă de siguranță pentru
+      întârzieri de livrare sau variații neprevăzute ale cererii.
+    </li>
+  </ol>
+
+  <p>Formula finală pentru cantitatea recomandată este:</p>
+  <blockquote>
+    <code>Cantitate recomandată = max(0, ceil(viteză_ajustată × zile_acoperire + safety_stock_3_zile − stoc_curent))</code>
+  </blockquote>
+
+  <h4>Filtre și produse excluse</h4>
+  <p>Pagina exclude automat produsele marcate ca <em>discontinue</em> (<code>is_discontinued = true</code>).
+  De asemenea, produsele fără nicio mișcare în istoricul BI (fără intrări în
+  <code>daily_stock_metrics</code>) sunt afișate separat ca „fără istoric" în tab-ul Pe furnizori,
+  cu o stilizare distinctă, pentru că viteza lor de vânzare nu poate fi estimată fiabil.</p>
+
+  <h4>Câmpul „Acoperire comandă (zile)"</h4>
+  <p>
+    În colțul din dreapta al paginii există un input numeric cu eticheta
+    <strong>Acoperire comandă (zile)</strong>, cu valoarea implicită de 14 zile și limite între
+    7 și 60 de zile. Modificând această valoare, toți indicatorii se recalculează în timp real
+    (cu un debounce de 500ms). Rezultatele sunt cache-uite 5 minute per utilizator per valoare
+    de acoperire, pentru performanță.
+  </p>
+
+  <h4>Statisticile sumare (cardurile de sus)</h4>
+  <p>La partea de sus a paginii sunt afișate 5 indicatori de sinteză:</p>
+  <ul>
+    <li><strong>Furnizori afectați</strong> — numărul de furnizori activi care au cel puțin un produs sub pragul de reaprovizionare.</li>
+    <li><strong>Produse afectate</strong> — numărul total de produse unice care necesită reaprovizionare (afișat pe fond portocaliu).</li>
+    <li><strong>Stoc zero</strong> — numărul produselor cu stoc 0 (afișat pe fond roșu; situație critică).</li>
+    <li><strong>Urgente (&lt;7 zile)</strong> — produse cu mai puțin de 7 zile de stoc rămas (roșu intens).</li>
+    <li><strong>Curând (7–14 zile)</strong> — produse cu 7 până la 14 zile de stoc rămas (portocaliu).</li>
+  </ul>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       4.3 Interpretarea zilelor de stoc și a trendului
+  ════════════════════════════════════════════════════════════ -->
+  <h3 id="m04-trend">4.3 Cum să interpretezi zilele de stoc și indicatorul de trend (↑↓)</h3>
+
+  <h4>Coloana „Zile până la epuizare"</h4>
+  <p>
+    Această coloană arată câte zile mai durează stocul curent la viteza actuală de vânzare.
+    Calculul folosește media pe 7 zile (cea mai recentă și mai relevantă):
+  </p>
+  <blockquote>
+    <code>Zile până la epuizare = stoc_curent / medie_zilnică_7_zile</code>
+  </blockquote>
+  <p>
+    Dacă media pe 7 zile este zero (produsul nu s-a vândut deloc în ultima săptămână), câmpul
+    afișează „—" (valoare nulă), ceea ce înseamnă că nu se poate estima epuizarea pe baza
+    datelor recente.
+  </p>
+
+  <p>Interpretare rapidă:</p>
+  <ul>
+    <li><strong>Sub 3 zile</strong> — situație extrem de critică; produs epuizat practic sau pe cale să se epuizeze în weekend.</li>
+    <li><strong>3–7 zile</strong> — urgent; necesarul trebuie creat imediat, ținând cont de termenul de livrare al furnizorului.</li>
+    <li><strong>7–14 zile</strong> — situație ce merită atenție în următoarea zi sau două; apare în tab-ul „Curând".</li>
+    <li><strong>Peste 14 zile</strong> — produsul nu mai apare în pagină (nu e sub prag).</li>
+  </ul>
+
+  <h4>Indicatorul de trend (↑ ↓ sau neutru)</h4>
+  <p>
+    Coloana <strong>Viteză estimată/zi</strong> afișează viteza de consum ajustată, însoțită de
+    un indicator de trend:
+  </p>
+  <ul>
+    <li>
+      <strong>↑ (săgeată verde în sus)</strong> — cererea în ultimele 7 zile este cu mai mult de
+      15% peste media pe 30 de zile. Produsul se vinde mai repede decât de obicei; cantitatea
+      recomandată este calculată mai conservator pentru a reflecta accelerarea.
+    </li>
+    <li>
+      <strong>↓ (săgeată roșie în jos)</strong> — cererea în ultimele 7 zile este cu mai mult de
+      15% sub media pe 30 de zile. Produsul se vinde mai lent; sistemul atenuează viteza de bază
+      pentru a evita suprastocarea.
+    </li>
+    <li>
+      <strong>Neutru (fără săgeată)</strong> — variația dintre media pe 7 și cea pe 30 de zile se
+      încadrează în ±15%; cererea este stabilă.
+    </li>
+  </ul>
+
+  <p>
+    <strong>Important:</strong> trendul este un indicator informativ. El nu modifică dramatic
+    cantitatea recomandată — este folosit exclusiv pentru atenuare (scădere) când cererea a scăzut
+    clar. Amplificarea nu se aplică automat: dacă vânzările au explodat în ultima săptămână, sistemul
+    ia deja ca baseline media pe 7 zile (care este mai mare), deci cantitatea reflectă deja
+    accelerarea.
+  </p>
+
+  <h4>Coloana „De comandat"</h4>
+  <p>
+    Reprezintă cantitatea recomandată calculată automat, rotunjită în sus la număr întreg.
+    Aceasta este valoarea precompletată când selectezi produsul pentru generarea unui necesar.
+    Utilizatorul o poate modifica liber înainte de trimitere, direct din pagina de creare a
+    necesarului.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       4.4 Tab-urile paginii
+  ════════════════════════════════════════════════════════════ -->
+  <h3 id="m04-tabs">4.4 Tab-uri: Urgențe (&lt;7 zile), Curând (7–14 zile), Pe furnizori</h3>
+
+  <p>
+    Pagina „Necesar de marfă" este organizată în trei tab-uri, fiecare cu un unghi de abordare
+    diferit. Comutarea între tab-uri se face instant, fără reîncărcare de date.
+  </p>
+
+  <h4>Tab 1 — Urgențe (&lt;7 zile)</h4>
+  <p>
+    Afișează toate produsele cu mai puțin de 7 zile de stoc rămas, sortate crescător după
+    numărul de zile (cele mai critice primele). Tabela include:
+  </p>
+  <ul>
+    <li><strong>Furnizor</strong> — furnizorul preferat al produsului; „N/A" dacă nu există furnizor activ.</li>
+    <li><strong>Denumire produs</strong> — numele produsului din catalog.</li>
+    <li><strong>De comandat</strong> — cantitatea recomandată pentru perioada de acoperire configurată.</li>
+    <li><strong>Zile până la epuizare</strong> — valoarea-cheie, afișată colorat: roșu sub 3 zile, portocaliu 3–7 zile.</li>
+    <li><strong>Stoc actual</strong> — stocul total curent.</li>
+    <li><strong>Vândut 7 zile</strong> — cantitatea totală vândută în ultimele 7 zile.</li>
+    <li><strong>Viteză estimată/zi</strong> — media zilnică ajustată cu trendul, cu săgeata de trend.</li>
+  </ul>
+  <p>
+    Produsele fără furnizor activ sunt incluse în lista de urgențe (cu indicatorul „N/A" la
+    coloana Furnizor) dar nu pot fi selectate pentru generarea automată a necesarului — ele
+    trebuie tratate manual prin atribuirea unui furnizor.
+  </p>
+  <p>
+    Dacă nu există produse urgente, tab-ul afișează un mesaj de confirmare cu fond verde:
+    <em>„Niciun produs cu stoc critic și mișcare recentă."</em>
+  </p>
+
+  <h4>Tab 2 — Curând (7–14 zile)</h4>
+  <p>
+    Structura este identică cu tab-ul Urgențe, dar filtrată pe produsele cu 7 până la 14 zile
+    de stoc rămas. Acestea nu sunt situații critice imediate, dar necesită planificare în
+    orizontul săptămânii următoare, mai ales dacă furnizorul are termene de livrare de 5–10 zile.
+    Produsele sunt sortate crescător după numărul de zile.
+  </p>
+
+  <h4>Tab 3 — Situație pe furnizori</h4>
+  <p>
+    Acest tab prezintă aceeași informație grupată per furnizor, oferind o perspectivă orientată
+    pe comanda la furnizor. Pentru fiecare furnizor se afișează:
+  </p>
+  <ul>
+    <li>
+      <strong>Header-ul furnizorului</strong> — logo (dacă există), denumire, și trei contoare:
+      produse urgente (roșu), produse „curând" (portocaliu), produse cu stoc zero (gri).
+    </li>
+    <li>
+      <strong>Tabel cu produsele furnizorului</strong> — aceleași coloane ca în celelalte tab-uri,
+      cu posibilitate de selectare individuală.
+    </li>
+    <li>
+      <strong>Produse fără istoric</strong> — produse asociate furnizorului dar fără date de vânzare
+      în sistemul BI (nou intrate în catalog sau produse cu vânzări rare). Acestea sunt afișate
+      separat, în italic, cu o notă explicativă că estimarea nu este disponibilă.
+    </li>
+  </ul>
+  <p>
+    Furnizorii sunt sortați alfabetic, cu grupul „Fără furnizor" (produse fără furnizor activ
+    alocat) afișat întotdeauna la final.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       4.5 Selectarea produselor și generarea necesarelor
+  ════════════════════════════════════════════════════════════ -->
+  <h3 id="m04-selectie">4.5 Cum selectezi produse și generezi necesare din selecție</h3>
+
+  <h4>Selectarea rândurilor</h4>
+  <p>
+    În orice tab, fiecare rând de produs are un checkbox circular în prima coloană. Poți selecta
+    produsele în două moduri:
+  </p>
+  <ul>
+    <li>
+      <strong>Individual</strong> — clic oriunde pe rând (nu doar pe checkbox) comută starea de
+      selecție a produsului respectiv. Rândul selectat se colorează în verde deschis pentru
+      vizibilitate.
+    </li>
+    <li>
+      <strong>Selectează tot</strong> — checkbox-ul circular din header-ul tabelului selectează
+      sau deselectează toate produsele din tab-ul curent. Dacă toate sunt selectate deja,
+      un nou clic le deselectează pe toate.
+    </li>
+  </ul>
+  <p>
+    Selecția este persistentă între tab-uri: poți selecta produse din Urgențe, comuta la
+    Curând, selecta altele, și toate vor fi incluse la generare.
+  </p>
+
+  <h4>Bannerul de selecție</h4>
+  <p>
+    Imediat ce ai cel puțin un produs selectat, apare un banner albastru în partea de sus
+    a paginii (sub carduri) cu:
+  </p>
+  <ul>
+    <li>Numărul de poziții selectate (ex: „3 poziții selectate").</li>
+    <li>Un link „Deselectează tot" pentru a reseta selecția rapid.</li>
+    <li>Butonul <strong>Creează necesar</strong> (albastru, cu iconiță de document).</li>
+  </ul>
+
+  <h4>Generarea necesarelor</h4>
+  <p>
+    La apăsarea butonului <strong>Creează necesar</strong>, sistemul:
+  </p>
+  <ol>
+    <li>
+      Grupează produsele selectate <strong>pe furnizor</strong> — pentru fiecare furnizor unic
+      se creează un necesar separat. Aceasta reflectă realitatea că un ordin de cumpărare se
+      emite per furnizor.
+    </li>
+    <li>
+      Creează fiecare necesar direct în starea <strong>Trimis (submitted)</strong> —
+      necesarele generate automat nu trec prin starea draft; ele sunt considerate deja aprobate
+      pentru procesare de către buyer.
+    </li>
+    <li>
+      Adaugă câte un item per produs cu cantitatea recomandată calculată de sistem (poate fi
+      editată ulterior din necesarul creat).
+    </li>
+    <li>
+      Produsele fără furnizor activ (cele marcate „N/A") sunt <strong>omise</strong> din
+      generare; un mesaj de avertizare indică câte produse au fost sărite din acest motiv.
+    </li>
+    <li>
+      La final, afișează o notificare de succes cu numerele necesarelor create (ex:
+      <em>„2 necesare create — 5 produse: PNR-0041, PNR-0042"</em>) și redirecționează
+      automat spre Dashboard-ul buyer-ului.
+    </li>
+  </ol>
+
+  <p>
+    <strong>Notă:</strong> toate inserțiile se fac într-o singură tranzacție de bază de date,
+    garantând că fie toate necesarele sunt create cu succes, fie niciuna (în caz de eroare).
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       4.6 Lista Necesare — stările unui necesar
+  ════════════════════════════════════════════════════════════ -->
+  <h3 id="m04-stari">4.6 Lista Necesare — stările unui necesar</h3>
+
+  <p>
+    Secțiunea <strong>Achiziții → Necesare</strong> din meniu afișează toate necesarele
+    accesibile utilizatorului curent. Consultanții de vânzări văd doar necesarele proprii;
+    buyer-ii și managerii văd toate necesarele.
+  </p>
+
+  <p>
+    Un necesar trece prin <strong>cinci stări posibile</strong>, afișate ca badge-uri colorate
+    în lista și în detaliul fiecărui necesar:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Stare</th>
+        <th>Culoare</th>
+        <th>Semnificație</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Draft</strong></td>
+        <td>Gri</td>
+        <td>
+          Necesar în lucru, nesalvat spre buyer. Poate fi editat liber de creatorul său sau de
+          administrator. Nu este vizibil în dashboard-ul buyer-ului ca item de acțiune.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Trimis</strong></td>
+        <td>Albastru (info)</td>
+        <td>
+          Necesarul a fost finalizat și trimis spre buyer pentru procesare. Nu mai poate fi
+          editat de consultant. Buyer-ul primește o notificare. Apare în badge-ul din meniu
+          (număr portocaliu) și în dashboard-ul buyer-ului ca item de prelucrat.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Parțial comandat</strong></td>
+        <td>Portocaliu (warning)</td>
+        <td>
+          Cel puțin un item din necesar a fost inclus într-un ordin de cumpărare, dar nu
+          toate itemele au fost acoperite complet. Necesarul rămâne deschis până la acoperirea
+          tuturor itemelor active.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Complet comandat</strong></td>
+        <td>Verde (success)</td>
+        <td>
+          Toate itemele active (neânulate) au cantitatea comandată cel puțin egală cu
+          cantitatea cerută. Necesarul este considerat finalizat.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Anulat</strong></td>
+        <td>Roșu (danger)</td>
+        <td>
+          Necesarul a fost anulat manual (din draft sau trimis) sau automat (când toate
+          itemele sale au fost anulate individual). Nu mai poate fi reactivat.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>Tranziții automate ale stării</h4>
+  <p>
+    Starea necesarului se recalculează automat de fiecare dată când se modifică starea unui
+    item component. Regulile sunt:
+  </p>
+  <ul>
+    <li>Toți itemii activi complet comandați → necesar devine <strong>Complet comandat</strong>.</li>
+    <li>Cel puțin un item comandat parțial → necesar devine <strong>Parțial comandat</strong>.</li>
+    <li>Niciun item comandat (dar există itemi activi) → necesar rămâne/revine la <strong>Trimis</strong>.</li>
+    <li>Toți itemii anulați → necesar devine automat <strong>Anulat</strong>.</li>
+  </ul>
+
+  <h4>Badge-ul din meniu</h4>
+  <p>
+    Intrarea „Necesare" din meniu afișează un badge portocaliu cu numărul necesarelor în starea
+    <strong>Trimis</strong> — adică cele care așteaptă procesarea de către buyer. Badge-ul
+    dispare când nu există necesare în așteptare.
+  </p>
+
+  <h4>Filtrele din lista de necesare</h4>
+  <p>Lista suportă două filtre:</p>
+  <ul>
+    <li><strong>Status</strong> — filtrare după oricare din cele 5 stări.</li>
+    <li><strong>Urgent</strong> — filtru ternar: „Da" (necesare cu cel puțin un item urgent),
+    „Nu" (necesare fără itemi urgenți), sau „Toate".</li>
+  </ul>
+  <p>Sortarea implicită este descrescătoare după dată (cele mai recente primele).</p>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       4.7 Crearea manuală a unui necesar
+  ════════════════════════════════════════════════════════════ -->
+  <h3 id="m04-creare">4.7 Crearea manuală a unui necesar</h3>
+
+  <p>
+    Pentru a crea un necesar manual, navighează la <strong>Achiziții → Necesare</strong> și
+    apasă butonul <strong>Adaugă necesar</strong> din colțul din dreapta sus.
+  </p>
+
+  <p>Formularul de creare conține două secțiuni principale:</p>
+
+  <h4>Secțiunea „Produse solicitate"</h4>
+  <p>
+    Aceasta este secțiunea principală, reprezentând un tabel interactiv de adăugare a itemelor.
+    Inițial este gol; se adaugă rânduri prin butonul „+ Adaugă produs". Fiecare rând are câmpurile
+    descrise în detaliu la secțiunea 4.8.
+  </p>
+
+  <h4>Câmpul „Observații"</h4>
+  <p>
+    Un câmp text liber, opțional, pentru note contextuale despre întregul necesar (ex:
+    „Urgent — stoc zero în depozit central", „Comandă pentru proiect XYZ"). Această notă
+    este vizibilă în detaliul necesarului și în notificarea trimisă buyer-ului.
+  </p>
+
+  <h4>Butoanele de acțiune</h4>
+  <ul>
+    <li><strong>Salvează necesar</strong> — creează necesarul în starea <strong>Draft</strong>. Poți continua să îl editezi ulterior.</li>
+    <li><strong>Renunță</strong> — revine la lista de necesare fără a salva nimic.</li>
+  </ul>
+
+  <p>
+    La salvare, sistemul alocă automat un număr unic (PNR-XXXX), înregistrează utilizatorul
+    creator și locația sa curentă. Dacă utilizatorul este super-admin, poate selecta manual
+    locația din formular.
+  </p>
+
+  <p>
+    <strong>Observație importantă:</strong> un necesar în stare Draft nu este vizibil buyer-ului
+    ca item de acțiune și nu generează notificări. Trebuie trimis explicit (butonul „Trimite
+    spre buyer") pentru a intra în fluxul de procesare.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       4.8 Adăugarea itemelor
+  ════════════════════════════════════════════════════════════ -->
+  <h3 id="m04-iteme">4.8 Adăugarea itemelor: produs, furnizor, cantitate, urgență, termen necesar, referință client</h3>
+
+  <p>
+    Tabelul de iteme din formularul de creare/editare al unui necesar permite adăugarea unui
+    număr nelimitat de produse. Fiecare item are următoarele câmpuri:
+  </p>
+
+  <h4>Produs (câmp obligatoriu)</h4>
+  <p>
+    Select cu căutare live în catalogul de produse. Poți căuta după denumire sau după codul SKU.
+    La selectarea unui produs, sistemul completează automat:
+  </p>
+  <ul>
+    <li>Numele produsului (salvat în câmpul <code>product_name</code> pentru păstrarea istoricului chiar dacă denumirea din catalog se schimbă ulterior).</li>
+    <li>SKU-ul produsului.</li>
+    <li>Furnizorul preferat al produsului (dacă există unul marcat ca <code>is_preferred = true</code> în relațiile produs-furnizor).</li>
+  </ul>
+
+  <h4>Furnizor</h4>
+  <p>
+    Pre-completat automat cu furnizorul preferat al produsului, dacă există. Poate fi modificat
+    manual la orice furnizor activ. Dacă produsul nu are furnizor preferat, câmpul rămâne gol
+    și trebuie completat manual. Un item fără furnizor poate fi salvat în draft, dar nu va fi
+    preluat în generarea automată a necesarelor din pagina de raport.
+  </p>
+
+  <h4>Cantitate (câmp obligatoriu)</h4>
+  <p>
+    Cantitatea dorită, cu precizie de până la 3 zecimale (pentru produse vândute la kg, litri
+    sau alte unități fracționale). Valoarea minimă acceptată este 0,001. La generarea din
+    pagina de raport, cantitatea este pre-completată cu valoarea recomandată de sistem; la
+    crearea manuală, valoarea implicită este 1.
+  </p>
+
+  <h4>Termen necesar (Needed by)</h4>
+  <p>
+    Data până la care produsul este necesar în stoc. Câmp opțional, util pentru prioritizare:
+    buyer-ul vede această dată și o poate lua în considerare la negocierea cu furnizorul.
+    Afișat în detaliul necesarului în format zi.lună.an.
+  </p>
+
+  <h4>Urgență (checkbox)</h4>
+  <p>
+    Marcajul de urgent (<code>is_urgent</code>) indică faptul că itemul necesită atenție
+    imediată. Necesarele cu cel puțin un item urgent apar cu o iconiță roșie de avertizare
+    în lista necesarelor și pot fi filtrate separat. La necesarele generate automat din comenzi
+    WooCommerce, toate itemele sunt marcate automat ca urgente.
+  </p>
+
+  <h4>Rezervat pentru client</h4>
+  <p>
+    Checkbox-ul <strong>Rezervat</strong> (<code>is_reserved</code>) indică că marfa este
+    destinată unui anumit client sau ofertă. La activare, apar două câmpuri suplimentare:
+  </p>
+  <ul>
+    <li><strong>Client</strong> — select din lista de clienți înregistrați în ERP.</li>
+    <li><strong>Ofertă</strong> — select din ofertele emise (cu numărul și numele clientului);
+    dacă itemul provine dintr-o ofertă specifică, linkul spre ofertă este afișat în detaliul
+    necesarului și în cel al ordinului de cumpărare.</li>
+  </ul>
+
+  <h4>Notițe item</h4>
+  <p>
+    Câmp text liber per item, pentru observații specifice (ex: „Să fie aceeași culoare ca
+    factura anterioară", „Verificat cu furnizorul la telefon — disponibil săptămâna viitoare").
+  </p>
+
+  <h4>Ștergerea unui item din formular</h4>
+  <p>
+    Fiecare rând are un buton de ștergere (iconiță coș de gunoi). La editare, itemele cu
+    status <strong>Comandat</strong> sau <strong>Anulat</strong> nu pot fi șterse sau modificate
+    — ele sunt protejate deoarece sunt deja incluse în ordine de cumpărare. Doar itemele în
+    stare <strong>În așteptare</strong> pot fi editate sau șterse la editarea necesarului.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       4.9 Trimiterea unui necesar (submit)
+  ════════════════════════════════════════════════════════════ -->
+  <h3 id="m04-submit">4.9 Trimiterea unui necesar (submit) — ce se întâmplă după</h3>
+
+  <p>
+    Trimiterea unui necesar este acțiunea prin care consultantul de vânzări sau alt utilizator
+    finalizează necesarul și îl pune la dispoziția buyer-ului. Se poate face din trei locuri:
+  </p>
+  <ul>
+    <li>Din <strong>lista de necesare</strong> — butonul portocaliu „Trimite" din coloana de acțiuni (vizibil doar pentru necesarele în draft).</li>
+    <li>Din <strong>pagina de editare</strong> — butonul verde „Trimite spre buyer" din header.</li>
+    <li>Din <strong>pagina de vizualizare</strong> — același buton verde în header.</li>
+  </ul>
+
+  <p>
+    Înainte de confirmare, sistemul afișează un dialog de confirmare cu mesajul:
+    <em>„Trimiți necesarul spre buyer? După trimitere nu mai poți edita necesarul."</em>
+    Confirmarea este necesară pentru a preveni trimiteri accidentale.
+  </p>
+
+  <h4>Ce se întâmplă după trimitere</h4>
+  <ol>
+    <li>
+      Starea necesarului se schimbă din <strong>Draft</strong> în <strong>Trimis</strong> și
+      nu mai poate fi revocată (nu există buton de „retrage din trimitere").
+    </li>
+    <li>
+      <strong>Notificări automate</strong>: sistemul identifică buyer-ii responsabili pentru
+      furnizorii din necesar (pe baza câmpului <code>buyer_id</code> de pe fișa furnizorului)
+      și trimite o notificare în aplicație și pe email fiecărui buyer vizat, cu link direct
+      spre necesarul nou. Dacă nu există buyer specific alocat, notificarea este trimisă
+      tuturor utilizatorilor cu rolul „Manager Achiziții".
+    </li>
+    <li>
+      Necesarul apare în <strong>badge-ul portocaliu</strong> din meniu la intrarea „Necesare"
+      (numărul necesarelor în stare Trimis).
+    </li>
+    <li>
+      Necesarul devine vizibil pe <strong>Dashboard-ul buyer-ului</strong> și în pagina
+      <strong>Iteme nealocate</strong> (UnassignedItemsPage), de unde buyer-ul poate include
+      itemele în ordine de cumpărare noi sau existente.
+    </li>
+    <li>
+      Editarea necesarului devine <strong>blocată</strong> pentru consultanți; numai
+      administratorii pot face modificări de urgență.
+    </li>
+  </ol>
+
+  <h4>Anularea unui necesar</h4>
+  <p>
+    Dacă necesarul nu mai este relevant (ex: clientul a anulat comanda), el poate fi anulat
+    din pagina de vizualizare cu butonul roșu <strong>Anulează</strong> (disponibil în stările
+    Draft și Trimis, pentru utilizatorii cu drepturi de editare). Anularea necesarului revine
+    automat toate itemele în starea „Anulat" și recalculează statusul comenzilor de cumpărare
+    asociate.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       4.10 Vizualizarea unui necesar — secțiunea emailuri asociate
+  ════════════════════════════════════════════════════════════ -->
+  <h3 id="m04-view">4.10 Vizualizarea unui necesar — secțiunea emailuri asociate</h3>
+
+  <p>
+    Pagina de vizualizare a unui necesar (accesată prin clic pe numărul PNR din listă sau
+    prin acțiunea „Vizualizează") prezintă toate informațiile necesarului organizate în trei
+    secțiuni distincte.
+  </p>
+
+  <h4>Secțiunea „Informații necesar"</h4>
+  <p>
+    Afișează metadata necesarului: numărul PNR, statusul (badge colorat), locația, utilizatorul
+    creator, data și ora creării, și observațiile generale. Toate câmpurile sunt read-only în
+    această pagină.
+  </p>
+
+  <h4>Secțiunea „Comunicare furnizori" (colapsabilă)</h4>
+  <p>
+    Această secțiune este una dintre caracteristicile distinctive ale modulului de achiziții
+    integrat cu modulul de email. Ea afișează, în timp real, ultimele emailuri relevante
+    schimbate cu furnizorii din necesar.
+  </p>
+  <p>
+    Funcționarea: sistemul extrage lista furnizorilor din itemele necesarului (câmpul
+    <code>supplier_id</code>) și caută în baza de date de emailuri (<code>email_messages</code>)
+    cele mai recente 8 mesaje din folderele INBOX și Sent care implică acești furnizori, sortate
+    descrescător după data trimiterii.
+  </p>
+  <p>
+    Fiecare email afișat include:
+  </p>
+  <ul>
+    <li>Data și ora trimiterii.</li>
+    <li>Expeditorul și destinatarul.</li>
+    <li>Subiectul mesajului.</li>
+    <li>Furnizorul asociat (cu link spre fișa furnizorului).</li>
+    <li>Un rezumat AI (dacă emailul a fost procesat de modulul de inteligență email).</li>
+  </ul>
+  <p>
+    Această secțiune este colapsată implicit (pentru a nu îngreuna pagina) și se deschide la
+    clic pe header. Ea oferă context rapid: buyer-ul vede dacă a mai contactat furnizorul recent,
+    dacă există prețuri negociate sau termene de livrare confirmate în corespondența anterioară,
+    fără să fie nevoit să comute în alt modul.
+  </p>
+  <p>
+    Dacă furnizorii din necesar nu au emailuri asociate în sistem, secțiunea afișează un mesaj
+    informativ.
+  </p>
+
+  <h4>Secțiunea „Produse solicitate"</h4>
+  <p>
+    Lista detaliată a tuturor itemelor necesarului, cu următoarele informații per item:
+  </p>
+  <ul>
+    <li><strong>Produs</strong> — denumirea salvată la momentul creării itemului.</li>
+    <li><strong>Furnizor</strong> — furnizorul alocat itemului.</li>
+    <li><strong>Cantitate cerută</strong> — cantitatea inițial solicitată.</li>
+    <li>
+      <strong>Cantitate comandată</strong> — afișată ca fracție față de cantitatea cerută
+      (ex: „50 / 100"), cu badge verde dacă este complet acoperită sau portocaliu dacă
+      este parțial acoperită. Dacă nu s-a comandat nimic, afișează „—".
+    </li>
+    <li><strong>Necesar până la</strong> — data limită dacă a fost specificată.</li>
+    <li><strong>Urgent</strong> — iconiță boolean (verde=da, gri=nu).</li>
+    <li><strong>Rezervat</strong> — iconiță boolean.</li>
+    <li><strong>Client rezervare</strong> — dacă itemul este rezervat pentru un client.</li>
+    <li><strong>Ofertă rezervare</strong> — badge albastru cu link spre ofertă, dacă există.</li>
+    <li>
+      <strong>PO</strong> — numărul ordinului de cumpărare în care a fost inclus itemul,
+      afișat ca badge albastru cu link direct spre ordinul respectiv. Dacă itemul nu a fost
+      încă inclus în niciun PO, afișează „—".
+    </li>
+    <li><strong>Status item</strong> — badge colorat: portocaliu (În așteptare), verde (Comandat), roșu (Anulat).</li>
+    <li><strong>Notițe</strong> — observațiile specifice itemului.</li>
+  </ul>
+
+  <h4>Acțiunile din header</h4>
+  <p>
+    Pagina de vizualizare oferă până la patru butoane de acțiune, în funcție de stare și
+    permisiuni:
+  </p>
+  <ul>
+    <li><strong>Editează</strong> — disponibil doar în starea Draft și doar pentru creatorul necesarului, admini și super-admini.</li>
+    <li><strong>Trimite spre buyer</strong> — disponibil în Draft, cu confirmare dialog.</li>
+    <li><strong>Anulează</strong> — disponibil în Draft și Trimis, cu confirmare dialog.</li>
+    <li><strong>Șterge</strong> — disponibil doar în Draft și Anulat, cu confirmare; admin și creatorul pot șterge propriile necesare.</li>
+  </ul>
+
+  <h4>Anularea unui item individual</h4>
+  <p>
+    Chiar din pagina de vizualizare, fiecare item în stare <strong>În așteptare</strong> are
+    un buton mic roșu <strong>Anulează item</strong>. Aceasta permite buyer-ului să excludă
+    selectiv un produs care nu mai poate fi aprovizionat (ex: produs discontinuat la furnizor),
+    fără să anuleze întregul necesar. La anularea unui item, statusul necesarului se
+    recalculează automat.
+  </p>
+
+</section>

@@ -8,10 +8,11 @@ use App\Filament\App\Resources\BrandResource\Pages;
 use App\Models\Brand;
 use App\Models\Supplier;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
 class BrandResource extends Resource
@@ -19,9 +20,9 @@ class BrandResource extends Resource
     use ChecksRolePermissions, HasDynamicNavSort;
     protected static ?string $model = Brand::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-tag';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-tag';
 
-    protected static ?string $navigationGroup = 'Achiziții';
+    protected static string|\UnitEnum|null $navigationGroup = 'Achiziții';
 
     protected static ?string $navigationLabel = 'Branduri';
 
@@ -31,10 +32,11 @@ class BrandResource extends Resource
 
     protected static ?int $navigationSort = 5;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Forms\Components\Section::make('Informații brand')
+                ->columnSpanFull()
                 ->columns(2)
                 ->schema([
                     Forms\Components\TextInput::make('name')
@@ -60,10 +62,9 @@ class BrandResource extends Resource
                         ->columnSpanFull(),
 
                     Forms\Components\TextInput::make('logo_url')
-                        ->label('URL Logo')
-                        ->url()
+                        ->label('URL / cale logo')
                         ->maxLength(500)
-                        ->hint('URL direct către imaginea logo-ului')
+                        ->hint('URL complet (https://...) sau cale relativă (brand-logos/nume.png)')
                         ->columnSpanFull(),
 
                     Forms\Components\Textarea::make('description')
@@ -78,6 +79,7 @@ class BrandResource extends Resource
                 ]),
 
             Forms\Components\Section::make('Furnizori')
+                ->columnSpanFull()
                 ->description('Furnizorii de la care putem comanda produse ale acestui brand')
                 ->schema([
                     Forms\Components\Select::make('suppliers')
@@ -138,7 +140,8 @@ class BrandResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Activ'),
             ])
-            ->actions([
+            ->deferFilters(false)
+            ->recordActions([
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
@@ -147,6 +150,11 @@ class BrandResource extends Resource
                 ]),
             ])
             ->defaultSort('name');
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(['suppliers']);
     }
 
     public static function getPages(): array

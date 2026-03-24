@@ -9,7 +9,7 @@ use App\Filament\App\Resources\CustomerResource\Pages;
 use App\Models\Customer;
 use App\Services\CompanyData\OpenApiCompanyLookupService;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Notifications\Notification;
@@ -30,9 +30,9 @@ class CustomerResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    protected static ?string $navigationIcon = 'heroicon-o-user-group';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
 
-    protected static ?string $navigationGroup = 'Vânzări';
+    protected static string|\UnitEnum|null $navigationGroup = 'Vânzări';
 
     protected static ?string $navigationLabel = 'Clienți';
 
@@ -62,11 +62,12 @@ class CustomerResource extends Resource
         return static::canAccessRecord($record);
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\Section::make('Detalii client')
+                    ->columnSpanFull()
                     ->columns(3)
                     ->schema([
                         Forms\Components\Hidden::make('location_id')
@@ -185,6 +186,7 @@ class CustomerResource extends Resource
                             ->maxLength(255),
                     ]),
                 Forms\Components\Section::make('Adresă implicită')
+                    ->columnSpanFull()
                     ->columns(3)
                     ->schema([
                         Forms\Components\TextInput::make('address')
@@ -207,6 +209,7 @@ class CustomerResource extends Resource
                             ->columnSpanFull(),
                     ]),
                 Forms\Components\Section::make('Adrese de livrare alternative')
+                    ->columnSpanFull()
                     ->description('Adrese suplimentare cu contact dedicat pentru livrare.')
                     ->schema([
                         Forms\Components\Repeater::make('deliveryAddresses')
@@ -298,7 +301,8 @@ class CustomerResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Activ'),
             ])
-            ->actions([
+            ->deferFilters(false)
+            ->recordActions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])

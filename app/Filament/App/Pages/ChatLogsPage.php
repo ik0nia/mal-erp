@@ -18,20 +18,20 @@ use Illuminate\Support\Facades\DB;
 
 class ChatLogsPage extends Page
 {
-    protected static ?string $navigationIcon  = 'heroicon-o-chat-bubble-left-right';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-chat-bubble-left-right';
     protected static ?string $navigationLabel = 'Chat Clienți';
-    protected static ?string $navigationGroup = 'Comunicare';
+    protected static string|\UnitEnum|null $navigationGroup = 'Comunicare';
     protected static ?int    $navigationSort  = 10;
-    protected static string  $view            = 'filament.app.pages.chat-logs';
+    protected string  $view            = 'filament.app.pages.chat-logs';
 
     public static function shouldRegisterNavigation(): bool
     {
-        return auth()->user()?->isSuperAdmin() ?? false;
+        return \App\Models\RolePermission::check(static::class, 'can_access');
     }
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isSuperAdmin() ?? false;
+        return \App\Models\RolePermission::check(static::class, 'can_access');
     }
 
     protected function getHeaderActions(): array
@@ -64,8 +64,9 @@ class ChatLogsPage extends Page
                     'bot_name'      => AppSetting::get(AppSetting::KEY_CHAT_BOT_NAME,      'Malinco'),
                     'subtitle'      => AppSetting::get(AppSetting::KEY_CHAT_SUBTITLE,      'Asistent virtual'),
                     'welcome_msg'   => AppSetting::get(AppSetting::KEY_CHAT_WELCOME_MSG,   'Bună ziua! Cu ce vă pot ajuta?'),
-                    'telegram_token'   => AppSetting::getEncrypted(AppSetting::KEY_TELEGRAM_BOT_TOKEN) ?? '',
-                    'telegram_chat_id' => AppSetting::get(AppSetting::KEY_TELEGRAM_CHAT_ID, ''),
+                    'telegram_token'        => AppSetting::getEncrypted(AppSetting::KEY_TELEGRAM_BOT_TOKEN) ?? '',
+                    'telegram_chat_id'      => AppSetting::get(AppSetting::KEY_TELEGRAM_CHAT_ID, ''),
+                    'max_cost_per_session'  => AppSetting::get(AppSetting::KEY_CHAT_MAX_COST_PER_SESSION, '0'),
                 ])
                 ->form([
                     Section::make('Aspect widget')
@@ -102,6 +103,19 @@ class ChatLogsPage extends Page
                                 ->helperText('ID-ul grupului Telegram unde botul va trimite notificările. Format: -100xxxxxxxxx')
                                 ->maxLength(50),
                         ]),
+
+                    Section::make('Limite AI')
+                        ->description('Controlează costul maxim per sesiune de chat. La depășirea limitei, botul va redirecționa clientul la telefon.')
+                        ->schema([
+                            TextInput::make('max_cost_per_session')
+                                ->label('Cost maxim per sesiune (USD)')
+                                ->helperText('Ex: 0.05 = maxim 5 cenți per sesiune (~25 mesaje). Lasă 0 pentru fără limită.')
+                                ->numeric()
+                                ->minValue(0)
+                                ->step(0.01)
+                                ->suffix('USD')
+                                ->placeholder('0'),
+                        ]),
                 ])
                 ->action(function (array $data) {
                     AppSetting::set(AppSetting::KEY_CHAT_PRIMARY_COLOR, $data['primary_color']);
@@ -113,6 +127,7 @@ class ChatLogsPage extends Page
                         AppSetting::setEncrypted(AppSetting::KEY_TELEGRAM_BOT_TOKEN, $data['telegram_token']);
                     }
                     AppSetting::set(AppSetting::KEY_TELEGRAM_CHAT_ID, $data['telegram_chat_id'] ?? '');
+                    AppSetting::set(AppSetting::KEY_CHAT_MAX_COST_PER_SESSION, $data['max_cost_per_session'] ?? '0');
 
                     Notification::make()->title('Setări salvate')->success()->send();
                 }),
@@ -155,8 +170,9 @@ class ChatLogsPage extends Page
             ->get()
             ->groupBy('session_id');
 
-        // Date de contact colectate — un singur query
+        // Date de contact colectate — un singur query (cu user-ul care a marcat contactul)
         $contacts = ChatContact::whereIn('session_id', $sessionIds)
+            ->with('contactedByUser:id,name')
             ->get()
             ->keyBy('session_id');
 
@@ -165,8 +181,10 @@ class ChatLogsPage extends Page
 
             // Primul mesaj al clientului ca preview
             $first = $msgs->where('role', 'user')->first();
-            $row->first_message = $first ? mb_substr($first->content, 0, 90) : '—';
-            $row->messages      = $msgs->values();
+            $row->first_message  = $first ? mb_substr($first->content, 0, 90) : '—';
+            $row->first_page_url   = $first?->page_url;
+            $row->first_page_title = $first?->page_title;
+            $row->messages         = $msgs->values();
 
             // Date contact
             $contact = $contacts->get($row->session_id);
@@ -175,9 +193,41 @@ class ChatLogsPage extends Page
             $row->wants_specialist   = (bool) ($contact?->wants_specialist ?? false);
             $row->summary            = $contact?->summary;
             $row->interested_in      = $contact?->interested_in;
+            $row->contacted_at       = $contact?->contacted_at;
+            $row->contacted_by_name  = $contact?->contactedByUser?->name;
 
             return $row;
         });
+    }
+
+    /**
+     * Lead-uri necontactate: sesiuni cu date contact (email/telefon) dar fără contacted_at.
+     */
+    public function getUncontactedLeads(): Collection
+    {
+        return ChatContact::whereNull('contacted_at')
+            ->where(function ($q) {
+                $q->whereNotNull('email')->orWhereNotNull('phone');
+            })
+            ->with('contactedByUser:id,name')
+            ->orderByDesc('created_at')
+            ->get();
+    }
+
+    /**
+     * Marchează un lead ca și contactat de userul curent.
+     */
+    public function markAsContacted(string $sessionId): void
+    {
+        ChatContact::where('session_id', $sessionId)->update([
+            'contacted_at' => now(),
+            'contacted_by' => auth()->id(),
+        ]);
+
+        Notification::make()
+            ->title('Lead marcat ca și contactat')
+            ->success()
+            ->send();
     }
 
     /**

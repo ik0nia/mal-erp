@@ -9,7 +9,7 @@ use App\Models\Customer;
 use App\Models\Supplier;
 use App\Models\SupplierContact;
 use App\Models\WooProduct;
-use Filament\GlobalSearch\Contracts\GlobalSearchProvider;
+use Filament\GlobalSearch\Providers\Contracts\GlobalSearchProvider;
 use Filament\GlobalSearch\GlobalSearchResult;
 use Filament\GlobalSearch\GlobalSearchResults;
 use Illuminate\Database\Eloquent\Builder;
@@ -80,22 +80,44 @@ class AppGlobalSearchProvider implements GlobalSearchProvider
             return;
         }
 
-        $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $query) . '%';
+        // Împarte în termeni independenți (AND între ei, OR pe câmpuri)
+        $terms = collect(preg_split('/\s+/', trim($query)))
+            ->filter(fn ($t) => is_string($t) && $t !== '')
+            ->map(fn ($t) => str_replace(['%', '_'], ['\\%', '\\_'], $t))
+            ->values();
+
+        if ($terms->isEmpty()) {
+            return;
+        }
+
         $user = Auth::user();
 
         $q = WooProduct::query()
-            ->select(['id', 'name', 'sku', 'price', 'stock_status'])
-            ->where(function (Builder $sub) use ($like): void {
+            ->select(['id', 'name', 'sku', 'price', 'stock_status', 'winmentor_name', 'status', 'is_placeholder', 'woo_id']);
+
+        // Fiecare termen trebuie să apară în cel puțin unul din câmpuri
+        foreach ($terms as $term) {
+            $like = "%{$term}%";
+            $q->where(function (Builder $sub) use ($like): void {
                 $sub->where('name', 'like', $like)
+                    ->orWhere('winmentor_name', 'like', $like)
                     ->orWhere('sku', 'like', $like);
             });
+        }
 
         if ($user && method_exists($user, 'isSuperAdmin') && ! $user->isSuperAdmin()) {
             $locationIds = $user->operationalLocationIds();
             $q->whereHas('stocks', fn (Builder $s) => $s->whereIn('location_id', $locationIds)->where('quantity', '>', 0));
         }
 
-        $products = $q->orderByRaw('CASE WHEN sku = ? THEN 0 ELSE 1 END', [$query])
+        // Construiește query FULLTEXT boolean pentru scoring relevanță (term*)
+        $ftQuery = $terms
+            ->map(fn ($t) => preg_replace('/[+\-><()~*"@\\\\]/', '', $t) . '*')
+            ->implode(' ');
+
+        $products = $q
+            ->orderByRaw('CASE WHEN sku = ? THEN 0 ELSE 1 END', [$query])
+            ->orderByRaw('MATCH(name, winmentor_name, sku) AGAINST(? IN BOOLEAN MODE) DESC', [$ftQuery])
             ->orderBy('name')
             ->limit(8)
             ->get();
@@ -109,10 +131,30 @@ class AppGlobalSearchProvider implements GlobalSearchProvider
                 ? number_format((float) $product->price, 2, '.', ',') . ' RON'
                 : '—';
 
+            $isOnSite = ! $product->is_placeholder && $product->woo_id && $product->status === 'publish';
+
+            $rawTitle = html_entity_decode((string) $product->name, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $title    = $rawTitle;
+            if (! $isOnSite && $product->woo_id && ! $product->is_placeholder) {
+                $title = new \Illuminate\Support\HtmlString(
+                    e($rawTitle) . ' <span style="color:#f97316;font-weight:600;">(nepublicat)</span>'
+                );
+            }
+
+            $details = [
+                'SKU'  => $product->sku ?: '—',
+                'Preț' => new \Illuminate\Support\HtmlString('<span style="color:#dc2626;font-weight:600;">' . e($price) . '</span>'),
+            ];
+
+            // Afișează denumirea WinMentor dacă există și diferă de nume
+            if ($product->winmentor_name && $product->winmentor_name !== $product->name) {
+                $details['WinMentor'] = $product->winmentor_name;
+            }
+
             return new GlobalSearchResult(
-                title: html_entity_decode((string) $product->name, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+                title: $title,
                 url: WooProductResource::getUrl('view', ['record' => $product->id]),
-                details: ['SKU' => $product->sku ?: '—', 'Preț' => $price],
+                details: $details,
             );
         });
 

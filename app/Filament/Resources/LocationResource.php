@@ -9,7 +9,7 @@ use App\Services\CompanyData\OpenApiCompanyLookupService;
 use Filament\Forms;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -21,9 +21,9 @@ class LocationResource extends Resource
 {
     protected static ?string $model = Location::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-map-pin';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-map-pin';
 
-    protected static ?string $navigationGroup = 'Setări';
+    protected static string|\UnitEnum|null $navigationGroup = 'Setări';
 
     protected static ?string $navigationLabel = 'Locații';
 
@@ -63,9 +63,9 @@ class LocationResource extends Resource
         return static::currentUser()?->isAdmin() ?? false;
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\TextInput::make('name')
                     ->label('Nume')
@@ -257,7 +257,8 @@ class LocationResource extends Resource
                     ->falseLabel('Doar inactive')
                     ->native(false),
             ])
-            ->actions([
+            ->deferFilters(false)
+            ->recordActions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])

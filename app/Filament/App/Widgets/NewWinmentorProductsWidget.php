@@ -9,11 +9,9 @@ class NewWinmentorProductsWidget extends Widget
 {
     protected static ?int $sort = -10;
 
-    protected static ?string $pollingInterval = '60s';
-
     protected int|string|array $columnSpan = 'full';
 
-    protected static string $view = 'filament.widgets.new-winmentor-products-widget';
+    protected string $view = 'filament.widgets.new-winmentor-products-widget';
 
     public function getData(): array
     {

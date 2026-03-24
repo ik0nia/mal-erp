@@ -1,5 +1,33 @@
 <x-filament-panels::page>
 
+{{-- Culori Tailwind lipsă din CSS compilat (build nu a inclus aceste clase) --}}
+<style>
+.bg-orange-100{background-color:#ffedd5}.bg-orange-500{background-color:#f97316}
+.text-orange-600{color:#ea580c}.rounded-br-sm{border-bottom-right-radius:2px}.rounded-bl-sm{border-bottom-left-radius:2px}
+.bg-red-50{background-color:#fef2f2}.bg-red-100{background-color:#fee2e2}.bg-red-500{background-color:#ef4444}
+.text-red-600{color:#dc2626}.text-red-700{color:#b91c1c}.text-red-800{color:#991b1b}
+.border-red-200{border-color:#fecaca}.bg-green-500{background-color:#22c55e}.hover\:bg-green-600:hover{background-color:#16a34a}
+.bg-indigo-50{background-color:#eef2ff}.border-indigo-100{border-color:#e0e7ff}
+.text-indigo-400{color:#818cf8}.text-indigo-500{color:#6366f1}.text-indigo-700{color:#4338ca}
+.text-amber-500{color:#f59e0b}.text-amber-700{color:#b45309}.text-amber-800{color:#92400e}
+.bg-amber-50{background-color:#fffbeb}.bg-blue-100{background-color:#dbeafe}
+.text-blue-600{color:#2563eb}.text-blue-700{color:#1d4ed8}
+.border-blue-200{border-color:#bfdbfe}
+.text-emerald-700{color:#047857}.border-emerald-200{border-color:#a7f3d0}
+.bg-green-100{background-color:#dcfce7}.text-green-700{color:#15803d}
+/* dark mode */
+.dark .bg-orange-900\/30{background-color:rgba(124,45,18,.3)}.dark .text-orange-400{color:#fb923c}
+.dark .bg-red-900\/40{background-color:rgba(153,27,27,.4)}.dark .text-red-300{color:#fca5a5}
+.dark .bg-indigo-950\/30{background-color:rgba(30,27,75,.3)}.dark .border-indigo-900\/40{border-color:rgba(49,46,129,.4)}
+.dark .text-indigo-300{color:#a5b4fc}.dark .text-indigo-400{color:#818cf8}
+.dark .text-amber-300{color:#fcd34d}.dark .text-amber-400{color:#fbbf24}
+.dark .bg-amber-900\/20{background-color:rgba(120,53,15,.2)}
+.dark .text-blue-400{color:#60a5fa}.dark .bg-blue-900\/30{background-color:rgba(30,58,138,.3)}
+.dark .border-blue-800{border-color:#1e40af}
+.dark .text-emerald-400{color:#34d399}.dark .bg-emerald-900\/30{background-color:rgba(6,78,59,.3)}.dark .border-emerald-800{border-color:#065f46}
+.dark .bg-green-900\/30{background-color:rgba(20,83,45,.3)}.dark .text-green-400{color:#4ade80}
+</style>
+
 {{-- Auto-refresh la 30 secunde --}}
 <div wire:poll.30s class="space-y-5">
 
@@ -31,6 +59,7 @@
 
     {{-- Sesiune — Alpine.js toggle, fără round-trip server --}}
     <div
+        id="session-{{ $session->session_id }}"
         x-data="{ open: false }"
         class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
     >
@@ -105,6 +134,27 @@
 
                 </div>
                 @endif
+                {{-- Status contactat / buton marcare --}}
+                @if($session->contact_email || $session->contact_phone)
+                <div class="mt-2 flex items-center gap-2">
+                    @if($session->contacted_at)
+                    <span class="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-400 px-2.5 py-1 rounded-full">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                        Contactat de {{ $session->contacted_by_name ?? 'cineva' }}
+                        · {{ \Carbon\Carbon::parse($session->contacted_at)->format('d.m H:i') }}
+                    </span>
+                    @else
+                    <button
+                        wire:click.stop="markAsContacted('{{ $session->session_id }}')"
+                        class="inline-flex items-center gap-1.5 text-xs font-semibold bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg transition-colors"
+                    >
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                        Marchează contactat
+                    </button>
+                    @endif
+                </div>
+                @endif
+
                 <div class="flex flex-wrap items-center gap-2 mt-1">
                     <span class="text-xs text-gray-400">
                         {{ \Carbon\Carbon::parse($session->started_at)->format('d.m.Y H:i') }}
@@ -129,6 +179,15 @@
                         ultima: {{ \Carbon\Carbon::parse($session->last_at)->format('H:i') }}
                     </span>
                     @endif
+                    {{-- Pagina de start --}}
+                    @if($session->first_page_url)
+                    <a href="{{ $session->first_page_url }}" target="_blank" rel="noopener"
+                       class="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                       title="{{ $session->first_page_url }}">
+                        <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                        {{ $session->first_page_title ?: parse_url($session->first_page_url, PHP_URL_PATH) ?: $session->first_page_url }}
+                    </a>
+                    @endif
                 </div>
             </div>
 
@@ -146,6 +205,39 @@
             x-transition:enter-end="opacity-100 translate-y-0"
             class="border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30 px-5 pb-5 pt-4 space-y-3"
         >
+            {{-- Pagini vizitate (unice, în ordine) --}}
+            @php
+                $visitedPages = $session->messages
+                    ->where('role', 'user')
+                    ->whereNotNull('page_url')
+                    ->unique('page_url')
+                    ->values();
+            @endphp
+            @if($visitedPages->isNotEmpty())
+            <div class="mb-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2">
+                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                    Pagini vizitate ({{ $visitedPages->count() }})
+                </p>
+                <ol class="space-y-1">
+                    @foreach($visitedPages as $i => $pMsg)
+                    <li class="flex items-start gap-2">
+                        <span class="flex-shrink-0 text-[10px] font-bold text-gray-300 dark:text-gray-600 w-4 text-right mt-0.5">{{ $i + 1 }}</span>
+                        <div class="min-w-0">
+                            @if($pMsg->page_title)
+                            <p class="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{{ $pMsg->page_title }}</p>
+                            @endif
+                            <a href="{{ $pMsg->page_url }}" target="_blank" rel="noopener"
+                               class="text-[11px] font-mono text-blue-600 dark:text-blue-400 hover:underline break-all">
+                                {{ $pMsg->page_url }}
+                            </a>
+                        </div>
+                    </li>
+                    @endforeach
+                </ol>
+            </div>
+            @endif
+
             @foreach($session->messages as $msg)
             <div class="flex {{ $msg->role === 'user' ? 'justify-end' : 'justify-start' }}">
                 <div class="max-w-xl min-w-0">
@@ -167,6 +259,15 @@
                         {{ $msg->role === 'user'
                             ? 'bg-orange-500 text-white rounded-br-sm'
                             : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded-bl-sm shadow-sm' }}">{{ $msg->content }}</div>
+                    @if($msg->role === 'user' && $msg->page_url)
+                    <p class="text-right mt-1">
+                        <a href="{{ $msg->page_url }}" target="_blank" rel="noopener"
+                           class="inline-flex items-center gap-1 text-[10px] font-mono text-orange-200 hover:text-white transition-colors break-all">
+                            <svg class="w-3 h-3 flex-shrink-0 flex-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                            {{ $msg->page_url }}
+                        </a>
+                    </p>
+                    @endif
                 </div>
             </div>
             @endforeach
@@ -179,5 +280,24 @@
     @endif
 
 </div>
+
+{{-- Auto-deschide sesiunea dacă vine din widget (?open=SESSION_ID) --}}
+<script>
+(function () {
+    const id = new URLSearchParams(window.location.search).get('open');
+    if (!id) return;
+    function tryOpen() {
+        const el = document.getElementById('session-' + id);
+        if (el && window.Alpine) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const data = Alpine.$data(el);
+            if (data) data.open = true;
+        } else {
+            setTimeout(tryOpen, 150);
+        }
+    }
+    setTimeout(tryOpen, 400);
+})();
+</script>
 
 </x-filament-panels::page>

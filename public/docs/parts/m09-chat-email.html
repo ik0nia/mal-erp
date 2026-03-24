@@ -1,0 +1,592 @@
+<section id="m09-chat-email">
+
+  <h2>Modulul 9 — Chatbot AI și Email Intelligence</h2>
+
+  <p>
+    Sistemul ERP Malinco integrează două componente de comunicare bazate pe inteligență artificială:
+    un chatbot embeddabil pe site-ul public pentru interacțiunea cu clienții și un modul complet de
+    Email Intelligence pentru urmărirea și analiza corespondenței cu furnizorii. Ambele componente
+    folosesc modelul Claude Haiku (Anthropic) și sunt accesibile din grupul de navigare
+    <strong>Comunicare</strong> al panoului ERP.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h3 id="m09-chatbot">9.1 Chatbot-ul AI pe site</h3>
+
+  <p>
+    Chatbot-ul Malinco este un asistent virtual integrat pe site-ul public
+    <code>malinco.ro</code>. Apare ca un widget în colțul din dreapta-jos al paginii și permite
+    vizitatorilor să pună întrebări în limbaj natural, fără a cunoaște structura catalogului sau a
+    naviga manual prin categorii.
+  </p>
+
+  <h4>Ce poate răspunde botul</h4>
+  <p>Asistentul are acces la patru unelte (tools) pe care le apelează automat în funcție de întrebarea clientului:</p>
+  <ul>
+    <li>
+      <strong>Căutare produse</strong> — caută în catalogul WooCommerce după cuvinte cheie și
+      returnează carduri cu imagine, preț, disponibilitate stoc și link direct la pagina produsului.
+      Botul poate returna mai multe variante și lăsa clientul să aleagă.
+    </li>
+    <li>
+      <strong>Verificare cantitate disponibilă</strong> — verifică stocul unui produs specific și
+      răspunde dacă acesta este disponibil pentru cantitatea dorită. Nu dezvăluie niciodată cantitățile
+      exacte din stoc, conform politicii companiei.
+    </li>
+    <li>
+      <strong>Status comandă</strong> — permite unui client care a plasat o comandă online să afle
+      statusul acesteia pe baza numărului de comandă sau a adresei de email.
+    </li>
+    <li>
+      <strong>Informații despre companie</strong> — răspunde la întrebări generale despre program,
+      adresă, modalități de livrare, politici de returnare și alte informații configurate în sistemul
+      de setări.
+    </li>
+  </ul>
+
+  <p>
+    Botul nu preia comenzi comerciale mari și nu oferă consultanță tehnică specializată — în ambele
+    cazuri redirecționează clientul către numărul de telefon al echipei de vânzări.
+  </p>
+
+  <h4>Istoricul conversației și sesiunile</h4>
+  <p>
+    Fiecare vizitator primește automat un identificator unic de sesiune (generat în browser) care
+    persistă în <code>localStorage</code> cu o durată de viață de 15 minute de la ultimul mesaj.
+    Serverul menține același istoric în cache cu același TTL. Astfel, dacă un client revine pe site
+    în aceeași fereastră în interval de un sfert de oră, conversația continuă de unde a rămas.
+    Istoricul trimis la AI este limitat la maximum 20 de mesaje pentru a controla costul.
+  </p>
+
+  <h4>Limita de cost per sesiune</h4>
+  <p>
+    Din setările widgetului se poate configura un cost maxim în USD per sesiune. Când limita este
+    atinsă, botul informează clientul că a depășit numărul de întrebări disponibile și îl îndrumă
+    să contacteze echipa telefonic. Valoarea implicită este 0 (fără limită). O sesiune tipică de
+    circa 25 de mesaje costă aproximativ 5 cenți USD, folosind modelul Claude Haiku.
+  </p>
+
+  <h4>Embed pe site WordPress</h4>
+  <p>
+    Widgetul se adaugă pe orice pagină WordPress prin două linii de cod în footer-ul temei:
+  </p>
+  <pre><code>&lt;script&gt;window.MalincoChat={apiUrl:'https://erp.malinco.ro'};&lt;/script&gt;
+&lt;script src="https://erp.malinco.ro/chat/widget.js" defer&gt;&lt;/script&gt;</code></pre>
+  <p>
+    Aspectul vizual (culoare principală, numele botului, subtitlu, mesaj de bun-venit) se configurează
+    din ERP, fără a modifica codul site-ului.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h3 id="m09-chat-logs">9.2 Pagina Chat Clienți (Chat Logs)</h3>
+
+  <p>
+    Pagina <strong>Comunicare → Chat Clienți</strong> este accesibilă exclusiv utilizatorilor cu
+    rolul <em>super_admin</em>. Ea oferă o vedere completă asupra tuturor conversațiilor purtate
+    prin widget, organizate pe sesiuni, cu refresh automat la 30 de secunde.
+  </p>
+
+  <h4>Cardurile de statistici</h4>
+  <p>
+    În partea de sus a paginii sunt afișate trei cifre-cheie actualizate în timp real:
+  </p>
+  <ul>
+    <li><strong>Sesiuni totale</strong> — numărul total de sesiuni distincte înregistrate din toate timpurile.</li>
+    <li><strong>Sesiuni azi</strong> — sesiunile pornite în ziua curentă.</li>
+    <li><strong>Mesaje azi</strong> — numărul total de mesaje (atât de la clienți cât și de la bot) din ziua curentă.</li>
+  </ul>
+
+  <h4>Lista sesiunilor</h4>
+  <p>
+    Sunt afișate maximum 50 de sesiuni recente, sortate descrescător după ultimul mesaj. Fiecare
+    sesiune apare ca un card expandabil care conține:
+  </p>
+  <ul>
+    <li>
+      <strong>Preview-ul primului mesaj</strong> al clientului — primele 90 de caractere, pentru a
+      identifica rapid subiectul conversației.
+    </li>
+    <li>
+      <strong>Data și ora</strong> de start, numărul de întrebări ale clientului, adresa IP și ora
+      ultimului mesaj (dacă e din ziua curentă).
+    </li>
+    <li>
+      <strong>Indicator "produse afișate"</strong> — o etichetă verde apare dacă botul a returnat
+      carduri de produse în cursul conversației.
+    </li>
+    <li>
+      <strong>Costul AI al sesiunii</strong> — calculat pe baza tokenilor consumați (input: $0.80/MTok,
+      output: $4.00/MTok). Afișat în cenți sau dolari cu 4 zecimale.
+    </li>
+    <li>
+      <strong>Pagina de start</strong> — URL-ul și titlul paginii de pe care clientul a inițiat
+      conversația, util pentru a înțelege contextul (ex: pagina unui produs specific).
+    </li>
+  </ul>
+
+  <p>
+    Dând click pe un card, acesta se extinde și afișează întreaga conversație în format chat (mesajele
+    clientului în portocaliu la dreapta, răspunsurile botului în alb la stânga), împreună cu lista
+    paginilor vizitate în cursul sesiunii.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h3 id="m09-leads">9.3 Leads din chat — contacte lăsate de vizitatori</h3>
+
+  <p>
+    Când un vizitator furnizează voluntar adresa de email sau numărul de telefon în cursul
+    conversației (sau când cere explicit să fie contactat de un specialist), datele sunt salvate
+    automat în tabela <code>chat_contacts</code> și asociate sesiunii respective.
+  </p>
+
+  <h4>Cum arată un lead în interfață</h4>
+  <p>
+    Sesiunile care au generat un lead sunt evidențiate vizual printr-un card albastru-indigo chiar
+    sub preview-ul mesajului. Cardul afișează:
+  </p>
+  <ul>
+    <li>
+      Eticheta <strong>Lead</strong> urmată de adresa de email (cu link <code>mailto:</code>) și
+      numărul de telefon (cu link <code>tel:</code>), pentru a putea contacta direct din browser.
+    </li>
+    <li>
+      Badge-ul roșu <strong>Vrea specialist</strong> dacă clientul a solicitat explicit o consultanță
+      personalizată sau o ofertă.
+    </li>
+    <li>
+      <strong>Produsele de interes</strong> — extrase automat de AI din conversație (ex: "parchet
+      laminat 8mm, adeziv parchet").
+    </li>
+    <li>
+      <strong>Rezumatul AI</strong> al conversației — o frază sau două care descriu ce a căutat
+      clientul și la ce concluzie s-a ajuns.
+    </li>
+  </ul>
+
+  <h4>Marcarea ca și contactat</h4>
+  <p>
+    Sub fiecare lead necontactat apare butonul verde <strong>Marchează contactat</strong>. La apăsare,
+    se înregistrează ora exactă și numele utilizatorului ERP care a efectuat contactul. Ulterior,
+    în locul butonului apare un badge verde cu textul „Contactat de [Nume] · [dată]", astfel încât
+    toți colegii știu că acel lead a fost preluat.
+  </p>
+  <p>
+    Această logică simplifică gestionarea leadurilor fără a necesita un modul CRM separat: toate
+    conversațiile cu date de contact sunt vizibile și urmăribile direct din ERP.
+  </p>
+
+  <h4>Notificări Telegram pentru leaduri noi</h4>
+  <p>
+    Din <strong>Setări Widget</strong> (buton în header-ul paginii Chat Clienți) se poate configura
+    un bot Telegram care trimite o notificare instantanee ori de câte ori un vizitator lasă date de
+    contact. Configurarea necesită:
+  </p>
+  <ul>
+    <li><strong>Bot Token</strong> — obținut de la @BotFather pe Telegram (format: <code>7123456789:AAF...</code>).</li>
+    <li><strong>Chat ID grup</strong> — ID-ul grupului Telegram unde vor fi trimise notificările (format: <code>-100xxxxxxxxx</code>).</li>
+  </ul>
+  <p>
+    Butonul <strong>Test Telegram</strong> din header trimite imediat un mesaj de test pentru a
+    verifica că configurația funcționează înainte de a o salva definitiv.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h3 id="m09-email-intelligence">9.4 Email Intelligence — importul emailurilor</h3>
+
+  <p>
+    Modulul Email Intelligence sincronizează întreaga corespondență de afaceri a companiei din
+    serverul IMAP și o face căutabilă, analizabilă și asociabilă cu furnizorii din ERP.
+  </p>
+
+  <h4>Sursele de emailuri</h4>
+  <p>
+    Sistemul importă emailuri din contul de email configurat în setările de integrare, acoperind
+    mai multe foldere IMAP:
+  </p>
+  <ul>
+    <li><strong>INBOX</strong> — emailurile primite (cel mai mare volum, circa 9.400 de mesaje în baza curentă).</li>
+    <li><strong>INBOX.Sent</strong> — emailurile trimise de echipă (circa 1.175 de mesaje).</li>
+    <li><strong>INBOX.Archives / INBOX.Archives.XXXX</strong> — arhivele pe ani anteriori.</li>
+  </ul>
+  <p>
+    Sincronizarea rulează automat prin job-ul <code>FetchEmailsJob</code> la fiecare 5 minute,
+    folosind comanda IMAP <code>SINCE &lt;data&gt;</code> pentru a prelua doar emailurile noi și a
+    nu supraîncărca serverul. La prima rulare, istoricul complet este importat.
+  </p>
+
+  <h4>Datele stocate per email</h4>
+  <p>
+    Fiecare email este salvat în tabela <code>email_messages</code> cu următoarele informații:
+  </p>
+  <ul>
+    <li>Expeditor (email + nume), destinatari To și CC, subiect, dată trimitere.</li>
+    <li>Conținut HTML și text plain (corpul emailului).</li>
+    <li>Lista atașamentelor (nume fișiere, tip MIME, dimensiune).</li>
+    <li>Folderul IMAP de proveniență.</li>
+    <li>Starea de citit/necitit și flagged/unflagged.</li>
+    <li>Asocierea cu un furnizor (<code>supplier_id</code>) și un contact furnizor (<code>supplier_contact_id</code>).</li>
+    <li>Rezultatele analizei AI (<code>agent_actions</code> — JSON complet) și data procesării.</li>
+    <li>Note interne ale echipei.</li>
+  </ul>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h3 id="m09-inbox">9.5 Pagina Inbox Email</h3>
+
+  <p>
+    Pagina <strong>Comunicare → Inbox Email</strong> (super_admin) afișează un client de email
+    intern cu interfață în două panouri: lista de emailuri în stânga și conținutul emailului selectat
+    în dreapta.
+  </p>
+
+  <h4>Filtre disponibile</h4>
+  <ul>
+    <li><strong>Folder</strong> — comutare între INBOX, Trimise, Arhivă și alte foldere IMAP.</li>
+    <li><strong>Citit / Necitit</strong> — filtrare rapidă după starea de lectură.</li>
+    <li>
+      <strong>Tip AI</strong> — filtrare după tipul clasificat de AI: ofertă, factură, listă de prețuri,
+      confirmare comandă, notificare livrare, plată, reclamație, interogare, automat sau general.
+    </li>
+    <li><strong>Urgență AI</strong> — afișează doar emailurile clasificate ca urgente (high).</li>
+    <li>
+      <strong>Necesită răspuns</strong> — toggle care filtrează emailurile pentru care AI a detectat
+      că este necesară o replică.
+    </li>
+    <li><strong>Căutare text</strong> — caută în subiect, adresă email expeditor și nume expeditor.</li>
+  </ul>
+
+  <h4>Acțiuni din header</h4>
+  <ul>
+    <li>
+      <strong>Sincronizează</strong> — declanșează manual un <code>FetchEmailsJob</code> pentru a
+      prelua emailurile noi fără a aștepta rularea automată la 5 minute.
+    </li>
+    <li>
+      <strong>Salvează notă</strong> — adaugă o notă internă pe emailul selectat, vizibilă doar
+      în ERP, utilă pentru a marca acțiuni de urmat sau observații.
+    </li>
+    <li>
+      <strong>Asociază furnizor</strong> — permite asocierea manuală a unui email cu un furnizor
+      din sistem, prin selecție din lista completă a furnizorilor activi.
+    </li>
+  </ul>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h3 id="m09-supplier-match">9.6 Asocierea emailurilor la furnizori</h3>
+
+  <p>
+    Asocierea emailurilor cu furnizorii se face prin două mecanisme complementare:
+    automată (prin algoritm și AI) și manuală (din inbox sau pagina furnizorului).
+  </p>
+
+  <h4>Asocierea automată prin comanda <code>supplier:auto-match-domains</code></h4>
+  <p>
+    Această comandă rulează zilnic la ora 03:00 (sau poate fi declanșată manual) și parcurge
+    trei pași succesivi pentru a potrivi domeniile de email necunoscute cu furnizorii din sistem:
+  </p>
+
+  <ol>
+    <li>
+      <strong>Contact-domain match</strong> (încredere maximă) — dacă există deja un contact de
+      furnizor cu un email din același domeniu (ex: <code>dan@cemacon.ro</code> → domeniu
+      <code>cemacon.ro</code>), toate emailurile din acel domeniu sunt asociate automat furnizorului
+      respectiv.
+    </li>
+    <li>
+      <strong>Name-match</strong> (încredere maximă) — dacă cuvântul-cheie din domeniu (ex:
+      <code>soudal</code> din <code>soudal.ro</code>) apare în numele furnizorului (sau invers),
+      asocierea se face automat.
+    </li>
+    <li>
+      <strong>Claude AI match</strong> — domeniile care nu au putut fi potrivite prin primele două
+      metode sunt trimise la modelul Claude împreună cu lista completă a furnizorilor activi.
+      AI returnează potriviri cu un nivel de încredere (<em>high</em> sau <em>low</em>).
+      Potrivirile <em>high</em> se aplică automat; cele <em>low</em> necesită confirmare
+      interactivă sau sunt ignorate în rulările automate.
+    </li>
+  </ol>
+
+  <p>
+    Comanda ignoră automat domeniile de email care nu sunt furnizori (bănci, curierat, utilități,
+    ANAF, furnizori de email gen Gmail/Yahoo, newsletter-uri etc.). Lista de excludere este menținută
+    în codul comenzii.
+  </p>
+  <p>
+    La final, comanda setează și emailul canonic al furnizorului (adresa cea mai frecventă din
+    domeniu) și actualizează statisticile contactelor.
+  </p>
+
+  <h4>Asocierea manuală</h4>
+  <p>
+    Din pagina Inbox Email, butonul <strong>Asociază furnizor</strong> din header permite selectarea
+    unui furnizor pentru emailul vizualizat în acel moment. Util pentru emailuri de pe domenii
+    generice (ex: un reprezentant comercial care trimite de pe Gmail).
+  </p>
+  <p>
+    Alternativ, din pagina de vizualizare a unui furnizor, secțiunea
+    <strong>Comunicare furnizor</strong> afișează emailurile deja asociate și permite editarea
+    asocierii direct de acolo.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h3 id="m09-ai-processing">9.7 Procesarea AI a emailurilor și extragerea de prețuri</h3>
+
+  <p>
+    Job-ul <code>ProcessEmailAIJob</code> rulează automat la fiecare 30 de minute și procesează
+    în batch de maxim 100 de emailuri neprocesate (în principal din INBOX și Sent). Pentru fiecare
+    email, trimite conținutul la Claude Haiku și primește înapoi un JSON structurat cu:
+  </p>
+
+  <h4>Date extrase per email</h4>
+  <ul>
+    <li>
+      <strong>Tip email</strong> — una din valorile: <code>offer</code> (ofertă),
+      <code>invoice</code> (factură), <code>order_confirmation</code> (confirmare comandă),
+      <code>delivery_notification</code> (notificare livrare), <code>price_list</code>
+      (listă prețuri), <code>payment</code> (plată), <code>complaint</code> (reclamație),
+      <code>inquiry</code> (interogare), <code>automated</code> (mesaj automat/newsletter),
+      <code>general</code> (general).
+    </li>
+    <li><strong>Rezumat în română</strong> — 1-2 propoziții care descriu conținutul esențial.</li>
+    <li><strong>Urgență</strong> — <code>low</code>, <code>medium</code> sau <code>high</code>.</li>
+    <li><strong>Necesită răspuns</strong> — boolean detectat din contextul emailului.</li>
+    <li><strong>Sentiment</strong> — pozitiv, neutru sau negativ față de companie.</li>
+    <li>
+      <strong>Prețuri menționate</strong> — lista prețurilor unitare pentru produse/materiale fizice
+      (ex: "Cărămidă NF 25 lei/buc"). AI ignoră explicit totaluri de factură, costuri transport,
+      comisioane și alte tipuri de sume care nu sunt prețuri de produs.
+    </li>
+    <li>
+      <strong>Produse menționate</strong> — lista produselor cu nume, SKU (dacă este explicit în email),
+      cantitate și unitate de măsură.
+    </li>
+    <li>
+      <strong>Entități extrase</strong> — număr factură, dată livrare (format ISO), termeni de plată,
+      discounturi menționate, iteme de acțiune.
+    </li>
+    <li><strong>Informație cheie</strong> — număr comandă, referință sau altă informație importantă.</li>
+  </ul>
+
+  <h4>Salvarea prețurilor extrase — SupplierPriceQuote</h4>
+  <p>
+    Dacă emailul este asociat unui furnizor și conține prețuri de produse, acestea sunt salvate
+    automat în tabela <code>supplier_price_quotes</code>. Sistemul încearcă să asocieze fiecare
+    preț cu un produs din catalogul WooCommerce prin trei strategii:
+  </p>
+  <ol>
+    <li><strong>Potrivire după SKU</strong> — dacă AI a extras un cod de produs explicit.</li>
+    <li><strong>Potrivire exactă după nume</strong> — comparație case-insensitive cu titlurile din catalog.</li>
+    <li>
+      <strong>Scoring după cuvinte distinctive</strong> — cuvintele semnificative (minim 4 litere,
+      fără stopwords, fără numere pure) din numele produsului sunt căutate în titlurile din catalog.
+      Produsul cu cel mai mare scor de potrivire (minim 60% din cuvintele distinctive) este ales.
+      Dacă titlul candidat conține întreaga frază originală, primește un bonus suplimentar care
+      garantează selecția.
+    </li>
+  </ol>
+  <p>
+    Fiecare cotație salvată conține: furnizor, email sursă, produsul WooCommerce asociat (dacă s-a
+    găsit o potrivire), numele brut al produsului din email, prețul unitar, moneda, cantitatea minimă
+    și data cotației (data emailului).
+  </p>
+  <p>
+    Emailurile clasificate ca <code>automated</code> sau <code>general</code> nu generează cotații
+    de prețuri, evitând poluarea bazei de date cu prețuri din newslettere sau notificări automate.
+  </p>
+
+  <h4>Entitățile extrase — tabela email_entities</h4>
+  <p>
+    Separat de cotațiile de prețuri, fiecare entitate structurată este salvată individual în
+    <code>email_entities</code> cu tip (<code>product_price</code>, <code>delivery_date</code>,
+    <code>invoice_number</code>, <code>payment_terms</code>, <code>discount</code>), textul brut,
+    valoarea parsată și un scor de încredere (70-90%).
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h3 id="m09-supplier-emails">9.8 Emailurile unui furnizor în pagina furnizorului</h3>
+
+  <p>
+    Pagina de vizualizare a unui furnizor (și cea de editare a unei comenzi de achiziție) include
+    o secțiune dedicată <strong>Comunicare furnizor</strong>, care afișează emailurile asociate
+    furnizorului respectiv dintr-o fereastră de timp configurabilă (implicit ±30 de zile față de
+    data curentă, cu opțiunea de extindere la ±60 de zile).
+  </p>
+  <p>
+    Această vizualizare contextuală permite, de exemplu, să deschizi un bon de comandă de achiziție
+    și să vezi imediat toate emailurile schimbate cu furnizorul în perioada relevantă — fără a
+    naviga la inbox-ul general. Emailurile sunt afișate cu subiect, expeditor, dată și rezumatul AI
+    (dacă a fost procesat).
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h3 id="m09-supplier-contacts">9.9 Contacte furnizor descoperite automat din emailuri</h3>
+
+  <p>
+    Comanda <code>supplier:discover-contacts</code> analizează expeditorii din emailurile asociate
+    fiecărui furnizor și creează sau actualizează automat intrările din tabela
+    <code>supplier_contacts</code>.
+  </p>
+
+  <h4>Logica de descoperire</h4>
+  <p>
+    Pentru fiecare furnizor cu emailuri asociate, sistemul identifică adresele de email unice din
+    câmpul <code>from_email</code> și:
+  </p>
+  <ul>
+    <li>
+      Dacă adresa nu există în contactele furnizorului, creează un contact nou cu sursa
+      <code>email_discovery</code>, preluând numele din câmpul <code>from_name</code> al emailului.
+    </li>
+    <li>
+      Dacă contactul există deja (adăugat manual cu sursa <code>manual</code>), actualizează
+      statisticile (prima apariție, ultima apariție, numărul total de emailuri) fără a modifica
+      datele introduse manual (rol, departament, telefon, note).
+    </li>
+  </ul>
+
+  <h4>Informații disponibile per contact descoperit</h4>
+  <p>
+    Fiecare contact din tabela <code>supplier_contacts</code> are:
+  </p>
+  <ul>
+    <li>Furnizorul asociat, numele și adresa de email.</li>
+    <li>Rolul și departamentul (completabile manual ulterior).</li>
+    <li>
+      <strong>Sursa</strong> — <code>manual</code> (adăugat de echipă), <code>email_discovery</code>
+      (descoperit din emailuri primite), <code>domain_match</code> (asociat prin potrivire domeniu).
+    </li>
+    <li>
+      <strong>Prima apariție</strong> (<code>first_seen_at</code>) și
+      <strong>ultima apariție</strong> (<code>last_seen_at</code>) — datele primului și ultimului
+      email trimis de acel contact.
+    </li>
+    <li>
+      <strong>Numărul total de emailuri</strong> (<code>email_count</code>) — actualizat automat
+      la fiecare rulare a comenzii de descoperire.
+    </li>
+    <li>Marcaj de contact primar (<code>is_primary</code>) — editabil manual.</li>
+  </ul>
+  <p>
+    Din pagina de editare a furnizorului, tab-ul <strong>Contacte</strong> afișează toți contactele
+    descoperiți și manuali, cu posibilitatea de editare directă a rolului, departamentului, telefonului
+    și notelor.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h3 id="m09-stats">9.10 Statistici comunicare furnizori</h3>
+
+  <p>
+    Pagina <strong>Comunicare → Statistici Comunicare</strong> (super_admin) oferă o vedere de
+    ansamblu asupra volumului și calității corespondenței cu furnizorii.
+  </p>
+
+  <h4>Carduri sumar</h4>
+  <ul>
+    <li><strong>Total emailuri</strong> — numărul total de emailuri importate în sistem.</li>
+    <li><strong>Procesate de AI</strong> — emailurile pentru care s-a rulat analiza Claude.</li>
+    <li>
+      <strong>Neprocesate</strong> — emailuri din INBOX și Sent care nu au fost încă analizate
+      (în așteptarea job-ului de procesare).
+    </li>
+    <li><strong>Total contacte furnizori</strong> — suma tuturor contactelor din sistem.</li>
+    <li>
+      <strong>Descoperite automat</strong> — contacte cu sursa diferită de <code>manual</code>,
+      adică identificate prin analiza emailurilor.
+    </li>
+    <li>
+      <strong>Expeditori necunoscuți</strong> — adrese de email unice din inbox care nu sunt asociate
+      niciunui furnizor (și care nu sunt adrese de tip noreply/no-reply). Aceștia sunt candidați
+      pentru asociere manuală sau pentru rularea comenzii de auto-matching.
+    </li>
+  </ul>
+
+  <h4>Top furnizori după volum de emailuri</h4>
+  <p>
+    Un tabel cu primii 15 furnizori după numărul total de emailuri schimbate. Pentru fiecare furnizor
+    sunt afișate:
+  </p>
+  <ul>
+    <li>Numărul de emailuri primite și trimise separat.</li>
+    <li>Numărul de emailuri cu atașamente.</li>
+    <li>Data primului și ultimului email (pentru a vedea durata relației).</li>
+    <li>
+      <strong>Frecvența per lună</strong> — calculată ca total emailuri împărțit la numărul de luni
+      din durata relației. Util pentru a identifica furnizorii activi față de cei ocazionali.
+    </li>
+    <li>Zilele de la ultimul email — indicator de activitate recentă.</li>
+  </ul>
+
+  <h4>Furnizori tăcuți</h4>
+  <p>
+    O secțiune specială listează furnizorii activi care nu au mai trimis sau primit niciun email în
+    ultimele 60 de zile. Aceștia sunt sortați descrescător după numărul de zile de tăcere. Vizualizarea
+    este utilă pentru a identifica relații comerciale care s-ar putea deteriora sau furnizori care
+    nu mai sunt relevanți.
+  </p>
+
+  <h4>Volum lunar al emailurilor</h4>
+  <p>
+    Un grafic cu volumul de emailuri primite și trimise per lună, pe ultimele 15 luni. Permite
+    identificarea sezonalității în comunicarea cu furnizorii și a perioadelor de activitate intensă
+    (ex: înainte de sezonul de construcții).
+  </p>
+
+  <h4>Distribuția pe tipuri AI</h4>
+  <p>
+    Un grafic cu numărul de emailuri clasificate per tip de AI (ofertă, factură, notificare livrare
+    etc.), calculat doar pentru emailurile procesate. Util pentru a înțelege ce tip de corespondență
+    predomină cu furnizorii.
+  </p>
+
+  <h4>Expeditori necunoscuți — candidați pentru asociere</h4>
+  <p>
+    Un tabel cu expeditorii care au trimis cel puțin 2 emailuri și nu sunt asociați niciunui furnizor.
+    Include adresa de email, numele afișat, numărul de emailuri și data ultimului email. Acești
+    expeditori pot fi asociați manual unui furnizor din inbox sau pot fi procesați automat la
+    următoarea rulare a comenzii <code>supplier:auto-match-domains</code>.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h3 id="m09-config">9.11 Configurare și accese</h3>
+
+  <h4>Accese</h4>
+  <p>
+    Toate paginile din grupul <strong>Comunicare</strong> — Inbox Email, Statistici Comunicare și
+    Chat Clienți — sunt restricționate la utilizatorii cu rolul <code>super_admin</code>. Accesul
+    nu poate fi delegat prin roluri personalizate.
+  </p>
+
+  <h4>Chei API necesare</h4>
+  <ul>
+    <li>
+      <strong>ANTHROPIC_API_KEY</strong> — necesară pentru procesarea emailurilor cu AI și pentru
+      auto-match-ul de domenii. Se configurează din <strong>Setări → Integrări</strong> (câmpul
+      <code>KEY_ANTHROPIC_API_KEY</code>) sau ca variabilă de mediu în <code>.env</code>. Sistemul
+      folosește automat fallback-ul din <code>.env</code> dacă cheia nu este setată în baza de date.
+    </li>
+    <li>
+      <strong>Credențiale IMAP</strong> — serverul, portul, utilizatorul și parola contului de email
+      se configurează din pagina de setări de integrare.
+    </li>
+    <li>
+      <strong>Telegram Bot Token</strong> — opțional, pentru notificările de leaduri. Se configurează
+      din <strong>Chat Clienți → Setări Widget</strong>.
+    </li>
+  </ul>
+
+  <h4>Comenzi disponibile manual (CLI)</h4>
+  <ul>
+    <li><code>php artisan email:import-history</code> — importă istoricul complet de emailuri (rulare unică la setup).</li>
+    <li><code>php artisan email:process-ai</code> — procesează un batch de 100 emailuri neprocesate cu AI.</li>
+    <li><code>php artisan supplier:discover-contacts</code> — descoperă contacte noi din expeditorii emailurilor.</li>
+    <li><code>php artisan supplier:auto-match-domains</code> — potrivește domeniile de email cu furnizorii (cu opțiunile <code>--dry-run</code> și <code>--min-emails=N</code>).</li>
+  </ul>
+
+  <h4>Planificarea automată (schedule)</h4>
+  <ul>
+    <li>Sincronizare emailuri noi — la fiecare 5 minute (<code>FetchEmailsJob</code>).</li>
+    <li>Procesare AI batch — la fiecare 30 de minute, maxim 100 emailuri per rulare.</li>
+    <li>Descoperire contacte — zilnic la 03:00.</li>
+    <li>Auto-match domenii — zilnic la 03:30 (după descoperirea contactelor).</li>
+  </ul>
+
+</section>

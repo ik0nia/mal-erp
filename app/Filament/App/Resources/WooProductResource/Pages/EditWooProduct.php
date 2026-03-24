@@ -3,7 +3,9 @@
 namespace App\Filament\App\Resources\WooProductResource\Pages;
 
 use App\Filament\App\Resources\WooProductResource;
+use App\Jobs\SyncProductSupplierMetaJob;
 use App\Models\WooProduct;
+use App\Services\WooCommerce\WooClient;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
@@ -71,5 +73,38 @@ class EditWooProduct extends EditRecord
         }
 
         $product->suppliers()->sync($syncData);
+
+        // Procesează modul "La comandă"
+        $isOnDemand = (bool) ($this->data['is_on_demand'] ?? false);
+        $newType    = $isOnDemand ? WooProduct::PROCUREMENT_ON_DEMAND : WooProduct::PROCUREMENT_STOCK;
+
+        if ($product->procurement_type !== $newType) {
+            $product->update([
+                'procurement_type' => $newType,
+                'on_demand_label'  => $isOnDemand ? ($this->data['on_demand_label'] ?? null) : null,
+            ]);
+
+            // Push backorders la WooCommerce dacă produsul are woo_id
+            if ($product->woo_id) {
+                try {
+                    $connection = $product->connection;
+                    $client     = new WooClient($connection);
+                    $client->updateProduct($product->woo_id, $isOnDemand
+                        ? ['manage_stock' => true, 'stock_quantity' => 0, 'backorders' => 'yes']
+                        : ['backorders' => 'no']
+                    );
+                } catch (\Throwable) {
+                    // Nu blocăm salvarea dacă WooCommerce nu răspunde
+                }
+            }
+        } elseif ($isOnDemand) {
+            // Actualizează label-ul chiar dacă tipul nu s-a schimbat
+            $product->update(['on_demand_label' => $this->data['on_demand_label'] ?? null]);
+        }
+
+        // Sincronizează furnizorul preferat în meta WooCommerce via plugin
+        if ($product->woo_id && ! $product->is_placeholder) {
+            SyncProductSupplierMetaJob::dispatch($product->id);
+        }
     }
 }

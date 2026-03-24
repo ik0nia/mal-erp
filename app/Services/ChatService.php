@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AiUsageLog;
 use App\Models\AppSetting;
 use App\Models\ChatContact;
 use App\Models\Location;
@@ -20,11 +21,39 @@ use Illuminate\Support\Facades\Log;
  */
 class ChatService
 {
-    private const MAX_HISTORY_MESSAGES = 20;
-    private const CACHE_TTL            = 900;  // 15 min
-    private const CACHE_PREFIX         = 'chat:';
+    private const MAX_CONTEXT_MESSAGES  = 6;   // mesaje recente trimise la Claude
+    private const COST_PREFIX          = 'chat_cost:';
     private const MAX_TOOL_ITERATIONS  = 5;
-    private const SITE_URL             = 'https://malinco.ro';
+
+    private static function maxHistoryMessages(): int
+    {
+        return (int) config('app.malinco.chat.max_history', 20);
+    }
+
+    private static function cacheTtl(): int
+    {
+        return (int) config('app.malinco.chat.session_ttl', 900);
+    }
+
+    private static function cachePrefix(): string
+    {
+        return config('app.malinco.cache.chat_prefix', 'chat:');
+    }
+
+    private static function statePrefix(): string
+    {
+        return config('app.malinco.cache.chat_state', 'chat_state:');
+    }
+
+    private static function siteUrl(): string
+    {
+        return rtrim(config('app.malinco.site_url', 'https://malinco.ro'), '/');
+    }
+
+    private static function modelHaiku(): string
+    {
+        return config('app.malinco.ai.models.haiku', 'claude-haiku-4-5-20251001');
+    }
 
     private string $apiKey;
 
@@ -45,6 +74,15 @@ class ChatService
     /** Pagina curentă a utilizatorului (URL + titlu), trimis din widget */
     private ?array $pageContext = null;
 
+    /** Rezumatul conversației anterioare (generat când history > MAX_CONTEXT_MESSAGES) */
+    private string $conversationSummary = '';
+
+    /** Starea conversației (salvată în cache, trimisă la Claude) */
+    private array $conversationState = [];
+
+    /** Istoricul paginilor vizitate de client (trimis din widget) */
+    private ?array $pageHistory = null;
+
     /** Flag: Claude a cerut afișarea formularului de contact */
     private bool   $showContactForm    = false;
     private string $contactFormMessage = '';
@@ -59,15 +97,18 @@ class ChatService
      *
      * @return array{reply: string, products: array}
      */
-    public function chat(string $sessionId, string $userMessage, ?array $pageContext = null): array
+    public function chat(string $sessionId, string $userMessage, ?array $pageContext = null, ?array $pageHistory = null): array
     {
         $this->foundProducts      = []; // reset per request
         $this->totalInputTokens   = 0;
         $this->totalOutputTokens  = 0;
         $this->currentSessionId   = $sessionId;
         $this->pageContext         = $pageContext;
-        $this->showContactForm    = false;
-        $this->contactFormMessage = '';
+        $this->pageHistory         = $pageHistory;
+        $this->showContactForm      = false;
+        $this->contactFormMessage  = '';
+        $this->conversationSummary = '';
+        $this->conversationState   = [];
 
         if (blank($this->apiKey)) {
             Log::warning('ChatService: API key Anthropic lipsă');
@@ -75,18 +116,65 @@ class ChatService
             return ['reply' => 'Serviciul de chat nu este disponibil momentan.', 'products' => []];
         }
 
+        // Verifică limita de cost per sesiune ÎNAINTE de orice apel AI
+        if ($this->isSessionCostExceeded($sessionId)) {
+            Log::info('[ChatService] FALLBACK_COST_LIMIT', [
+                'session_id' => $sessionId,
+                'message'    => mb_substr($userMessage, 0, 100),
+                'cost'       => $this->getSessionCost($sessionId),
+            ]);
+
+            return $this->costLimitReply();
+        }
+
         $history   = $this->loadHistory($sessionId);
         $history[] = ['role' => 'user', 'content' => $userMessage];
+
+        // Mesaje triviale — răspuns instant fără apel AI (înainte de loadState pentru eficiență)
+        if ($this->isTrivialMessage($userMessage)) {
+            Log::info('[ChatService] FALLBACK_TRIVIAL', [
+                'session_id' => $sessionId,
+                'message'    => mb_substr($userMessage, 0, 100),
+            ]);
+            $reply     = 'Cu drag! Dacă ai nevoie de materiale sau vrei să verific disponibilitatea unui produs, spune-mi.';
+            $history[] = ['role' => 'assistant', 'content' => $reply];
+            if (count($history) > self::maxHistoryMessages()) {
+                $history = array_slice($history, count($history) - self::maxHistoryMessages());
+            }
+            $this->saveHistory($sessionId, $history);
+
+            return [
+                'reply'                => $reply,
+                'products'             => [],
+                'input_tokens'         => 0,
+                'output_tokens'        => 0,
+                'show_contact_form'    => false,
+                'contact_form_message' => '',
+            ];
+        }
+
+        $this->conversationState = $this->loadState($sessionId);
 
         $reply = $this->callClaude($history);
 
         $history[] = ['role' => 'assistant', 'content' => $reply];
 
-        if (count($history) > self::MAX_HISTORY_MESSAGES) {
-            $history = array_slice($history, count($history) - self::MAX_HISTORY_MESSAGES);
+        if (count($history) > self::maxHistoryMessages()) {
+            $history = array_slice($history, count($history) - self::maxHistoryMessages());
         }
 
         $this->saveHistory($sessionId, $history);
+
+        // Actualizează starea conversației și costul sesiunii
+        $this->updateConversationState($userMessage, $reply);
+        $this->saveState($sessionId, $this->conversationState);
+        $this->addSessionCost($sessionId, $this->totalInputTokens, $this->totalOutputTokens);
+
+        if ($this->totalInputTokens > 0) {
+            AiUsageLog::record('chatbot', self::modelHaiku(), $this->totalInputTokens, $this->totalOutputTokens, [
+                'session_id' => $sessionId,
+            ]);
+        }
 
         return [
             'reply'                => $reply,
@@ -104,8 +192,15 @@ class ChatService
 
     private function callClaude(array $history): string
     {
-        $messages = $history;
-        $tools    = $this->getToolDefinitions();
+        // Scoatem showContactForm din tool-uri dacă formularul a fost deja afișat —
+        // cel mai sigur mod de a preveni apelurile repetate (instrucțiunile din prompt nu sunt suficiente).
+        $tools = $this->getToolDefinitions();
+        if (! empty($this->conversationState['contact_form_shown'])) {
+            $tools = array_values(array_filter($tools, fn ($t) => $t['name'] !== 'showContactForm'));
+        }
+
+        $messages     = $this->buildContextMessages($history); // context redus (filtrare + rezumat)
+        $systemPrompt = $this->getSystemPrompt($history);      // calculat o singură dată; include rezumatul
 
         for ($i = 0; $i < self::MAX_TOOL_ITERATIONS; $i++) {
             try {
@@ -114,20 +209,27 @@ class ChatService
                     'anthropic-version' => '2023-06-01',
                     'content-type'      => 'application/json',
                 ])->timeout(30)->post('https://api.anthropic.com/v1/messages', [
-                    'model'      => 'claude-haiku-4-5-20251001',
+                    'model'      => self::modelHaiku(),
                     'max_tokens' => 768,
-                    'system'     => $this->getSystemPrompt($history),
+                    'system'     => $systemPrompt,
                     'tools'      => $tools,
                     'messages'   => $messages,
                 ]);
             } catch (\Throwable $e) {
-                Log::error('ChatService: timeout/rețea', ['error' => $e->getMessage()]);
+                Log::error('[ChatService] FALLBACK_ERROR timeout/rețea', [
+                    'session_id' => $this->currentSessionId,
+                    'error'      => $e->getMessage(),
+                ]);
 
                 return $this->fallbackMessage();
             }
 
             if (! $response->successful()) {
-                Log::warning('ChatService: API error ' . $response->status(), ['body' => $response->body()]);
+                Log::warning('[ChatService] FALLBACK_ERROR API', [
+                    'session_id' => $this->currentSessionId,
+                    'status'     => $response->status(),
+                    'body'       => $response->body(),
+                ]);
 
                 return $this->fallbackMessage();
             }
@@ -519,10 +621,10 @@ class ChatService
         // URL produs: preferăm permalink-ul din data WooCommerce, fallback slug
         $permalink = data_get($product->data, 'permalink');
         if (blank($permalink) && filled($product->slug)) {
-            $permalink = self::SITE_URL . '/produs/' . $product->slug;
+            $permalink = self::siteUrl() . '/produs/' . $product->slug;
         }
         if (blank($permalink)) {
-            $permalink = self::SITE_URL . '/?p=' . $product->woo_id;
+            $permalink = self::siteUrl() . '/?p=' . $product->woo_id;
         }
 
         $this->foundProducts[] = [
@@ -651,137 +753,527 @@ class ChatService
     private function getSystemPrompt(array $history = []): string
     {
         $base = <<<'PROMPT'
-Ești Alex, asistentul virtual al Malinco — magazin de materiale de construcții, finisaje și renovări din Sântandrei, județul Bihor, înființat în 1997. Catalog: peste 7.500 de produse.
+Ești Alex, asistentul virtual Malinco — magazin materiale de construcții, Sântandrei, Bihor (7.500+ produse, din 1997). Ton: prietenos, expert, concis. Răspunsuri max 2-3 propoziții. FORMAT STRICT: niciodată asteriscuri, bold, italic, liste cu -, bullet points sau emoji — doar text simplu continuu.
 
-PERSONALITATE: Ești prietenos, cald și entuziast — ca un coleg expert care chiar vrea să ajute. Folosești un limbaj natural, relaxat, dar profesional. Ești direct și concis, nu birocratul. Când nu găsești ceva, nu te scuzi excesiv — oferi imediat alternative.
+STOC: Nu dezvălui niciodată cantități exacte. Folosești: "avem în stoc" / "stoc limitat" / "nu avem momentan". La cantitate cerută, folosește checkQuantityAvailability și răspunde: "avem la magazin" / "aducem din depozit în 1-5 zile" / "sună-ne pentru cantități mari".
 
-CUNOȘTINȚE EXTINSE: Pe lângă catalogul Malinco, folosește-ți cunoștințele generale despre materiale de construcții pentru a oferi sfaturi utile. Dacă un client întreabă de un produs și ai informații relevante (proprietăți, utilizare, comparații, sfaturi de montaj), oferă-le pe scurt chiar dacă nu sunt în tool results. Scopul e să fii un consultant real, nu doar un motor de căutare.
+TELEFON 0359 444 999: Doar reclamații, proiecte mari, garanție/retur. Program: L-V 08-17, Sâm 08-14.
 
-MISIUNE: Ajuți clienții să găsească produse, să înțeleagă ce li se potrivește și să afle informații despre magazin.
+FLOW PRODUSE (ordine strictă):
+1. Cerere vagă ("vreau vopsea", "ce glet aveți") → întreabă clarificări (tip, suprafață, interior/exterior) înainte de orice tool call
+2. Cerere clară → getAvailableBrands → listează brandurile, întreabă preferința
+3. Client spune brandul → confirmă afișare: "Vă arăt câteva produse [brand]?"
+4. Client confirmă → searchProducts → 1 rând intro scurt ("Am găsit:"), produsele apar automat
+5. După afișare produse → pune o întrebare scurtă de follow-up: "Doriți să verific disponibilitatea?" sau "Aveți nevoie de o anumită cantitate?"
+NU apela searchProducts fără confirmare explicită. Max 2 tool calls per răspuns.
 
-REGULI (respectă-le întotdeauna):
+PREȚURI: searchProducts returnează prețuri. Nu spune niciodată că nu ai acces la prețuri.
 
-1. Comunică EXCLUSIV în română. Tonul e prietenos și natural.
+SPECIFICAȚII TEHNICE: Sfaturi generale despre materiale — ok din cunoștințele tale. Specificații exacte ale unui produs (dimensiuni, compoziție, norme tehnice) — DOAR din tool results, nu inventa niciodată.
 
-2. STOC: Nu dezvălui niciodată cantități exacte. Răspunsuri permise: "avem în stoc", "stoc limitat", "nu avem momentan la magazin".
-
-3. CANTITATE CERUTĂ: Dacă clientul întreabă dacă ai X bucăți/mp/kg, folosește checkQuantityAvailability și răspunde:
-   - available_at_store=true → "Da, avem la magazin, poți veni sau comanda oricând."
-   - available_at_store=false + available_total=true → "La magazin nu avem toată cantitatea, dar o aducem din depozit în 1-5 zile — fără probleme."
-   - available_total=false → "Momentan e mai greu cu această cantitate, dar scrie-ne sau sună ca să găsim o soluție."
-
-4. FLOW RECOMANDARE PRODUSE — urmează exact această ordine:
-
-   Pasul 1 — Branduri disponibile: Când clientul cere un tip de produs, apelează ÎNTÂI getAvailableBrands.
-   - 2+ branduri găsite → listează-le scurt, întreabă preferința. Ex: "Avem Vitex, Kober și Baumit. Preferați vreunul?"
-   - 1 brand găsit → menționează-l, întreabă dacă e ok. Ex: "Avem în principal VOX. Vă interesează?"
-   - 0 branduri / no_brand_info=true → sari direct la Pasul 3.
-
-   Pasul 2 — Confirmare afișare: DUPĂ ce clientul și-a spus preferința de brand, întreabă scurt:
-   "Vreți să vă arăt câteva produse [brand]?" sau "Vă arăt câteva opțiuni?"
-   NU apela searchProducts până clientul nu confirmă că vrea să vadă produse.
-
-   Pasul 3 — Afișare produse: Când clientul confirmă (da / arată / vreu), apelează searchProducts.
-   - Scrie DOAR 1 rând scurt înaintea produselor: "Iată ce am găsit:" sau "Am găsit acestea:"
-   - Produsele apar automat ca imagini în chat — nu le descrie în text.
-   - "Nu contează brandul" → caută fără filtru brand.
-
-5. PRODUS NEGĂSIT: Încearcă cu un termen mai scurt. Dacă tot nu găsești, spune că poate fi în showroom.
-
-6. TELEFON (0359 444 999): Doar pentru reclamații, proiecte mari, garanție/retur. NU pentru întrebări simple. Program: L-V 08-17, Sâm 08-14.
-
-7. ALTERNATIVE: Produs indisponibil (stock_available=false) → caută similar cu searchProducts, prezintă scurt.
-
-8. SFATURI TEHNICE: La întrebări "cât îmi trebuie", "ce e mai bun pentru X", "cum se montează" — răspunde din cunoștințele tale generale, scurt.
-
-9. CONTEXT PRODUS: Folosește atributele și descrierile din tool results pentru răspunsuri precise.
-
-10. FORMATARE — IMPORTANT:
-    - Răspunsuri SCURTE: maxim 2-3 propoziții per mesaj, exceptând cazurile când oferi sfaturi tehnice detaliate.
-    - Text simplu, fără markdown, fără emoji.
-    - Când urmează să afișezi produse, textul de intro e 1 rând maxim.
-
-11. PREȚURI: Prețurile produselor sunt disponibile în catalogul nostru și le poți vedea prin searchProducts. Când cineva întreabă de prețul unui produs, caută-l cu searchProducts și arată prețul din rezultate. NICIODATĂ nu spune că "nu pot vedea prețurile" sau că "nu am acces la prețuri" — ai acces, folosește tool-ul.
-
-12. Nu discuta despre prețuri de achiziție de la furnizori sau date interne.
-
-13. COLECTARE DATE CONTACT — OBLIGATORIU prin formular grafic:
-
-La al 2-lea mesaj al clientului sau după ce i-ai recomandat produse, apelează showContactForm cu un mesaj scurt și prietenos.
-NU cere contactul în text — apelează TOOL-UL showContactForm care afișează un formular grafic elegant în chat.
-NU sări dacă ai ajutat cu produse sau clientul are un proiect.
-NU repeta dacă ai afișat deja formularul sau dacă clientul a refuzat.
-NU afișa formularul dacă conversația e doar despre program/adresă fără interes de achiziție.
-
-Exemple de message pentru showContactForm (scurt, 1 propoziție, prietenos):
-- "Vă pot pune în legătură cu un specialist Malinco pentru o ofertă personalizată!"
-- "Dacă aveți un proiect, un coleg vă poate oferi consultanță gratuită."
-- "Lăsați un contact și revenim cu detalii complete!"
-
-CÂND clientul scrie email/telefon DIRECT ÎN CHAT (fără să fi completat formularul):
-- Apelează collectContactInfo imediat, confirmă că ai notat.
-
-CÂND clientul REFUZĂ formularul: acceptă scurt ("Nicio problemă! Suntem aici dacă aveți întrebări."), nu mai afișa formularul.
+CONTACT (obligatoriu prin formular grafic):
+- După al 2-lea mesaj al clientului, apelează showContactForm o singură dată cu un mesaj scurt și prietenos
+- NU afișa dacă: clientul a refuzat, formularul a fost deja afișat, conversația e doar despre program/adresă fără interes de achiziție
+- Când clientul scrie email/telefon direct în chat → apelează collectContactInfo imediat
+- La refuz: "Nicio problemă! Suntem aici dacă aveți întrebări." și nu mai afișa
 PROMPT;
 
-        // Numără mesajele clientului din conversație (include mesajul curent)
+        if (filled($this->conversationSummary)) {
+            $base .= "\n\nCONTEXT CONVERSAȚIE ANTERIOARĂ: {$this->conversationSummary}";
+        }
+
+        // State conversație — ajută Claude să evite întrebări redundante
+        $state = $this->conversationState;
+        if (! empty($state)) {
+            $stateLines = [];
+            if (filled($state['product_type'] ?? '')) {
+                $stateLines[] = "Clientul caută: {$state['product_type']}";
+            }
+            if (filled($state['brand'] ?? '')) {
+                $stateLines[] = "Brand preferat: {$state['brand']}";
+            }
+            if (! empty($state['products_shown'])) {
+                $stateLines[] = 'Produse deja afișate: Da — nu mai afișa aceleași, oferă variante noi sau follow-up';
+            }
+            if (! empty($state['contact_form_shown'])) {
+                $stateLines[] = 'Formular contact: afișat deja — NU mai apela showContactForm';
+            }
+            if (! empty($stateLines)) {
+                $base .= "\n\nSTARE CONVERSAȚIE:\n" . implode("\n", $stateLines);
+            }
+        }
+
+        // Context navigare — ultimele pagini vizitate de client
+        if (! empty($this->pageHistory)) {
+            $navLines = [];
+            foreach (array_slice($this->pageHistory, 0, 5) as $page) {
+                $pageTitle = trim($page['title'] ?? '');
+                $pageUrl   = trim($page['url']   ?? '');
+                if (blank($pageTitle) && blank($pageUrl)) {
+                    continue;
+                }
+                // Detectează tipul paginii din URL
+                $type = '';
+                if (preg_match('#/(p|produs)/#', $pageUrl))          { $type = 'produs'; }
+                elseif (preg_match('#/categorie/#', $pageUrl))        { $type = 'categorie'; }
+                elseif (preg_match('#/cautare|search#i', $pageUrl))   { $type = 'căutare'; }
+
+                $label = $pageTitle ?: $pageUrl;
+                $navLines[] = $type ? "{$label} ({$type})" : $label;
+            }
+            if (! empty($navLines)) {
+                $base .= "\n\nCONTEXT NAVIGARE CLIENT:\nClientul a vizitat recent: " . implode(', ', $navLines) . ". Folosește acest context doar dacă întrebarea clientului e ambiguă.";
+            }
+        }
+
         $userMsgCount = count(array_filter($history, fn ($m) => $m['role'] === 'user'));
 
-        // Verifică dacă s-a colectat deja contactul (cel mai sigur indicator: există în DB)
-        $contactCollected = filled($this->currentSessionId)
-            && \App\Models\ChatContact::where('session_id', $this->currentSessionId)->exists();
+        if ($userMsgCount >= 2 && ! $this->contactAlreadyHandled($history)) {
+            $base .= "\n\n⚠️ Ai {$userMsgCount} mesaje cu clientul și NU ai apelat showContactForm. Apelează-l ACUM cu un mesaj scurt (nu în text — apelează tool-ul).";
+        }
 
-        // Verifică dacă s-a propus deja contactul (caută fraza specifică în răspunsuri)
-        $alreadyAsked = $contactCollected;
-        if (! $alreadyAsked) {
-            foreach ($history as $m) {
-                if ($m['role'] === 'assistant' && is_string($m['content'])) {
-                    $lower = mb_strtolower($m['content']);
-                    // Caută fraze specifice de invitare la contact (nu orice mențiune a cuvântului)
-                    if (str_contains($lower, 'lăsați un email') ||
-                        str_contains($lower, 'lăsați un număr') ||
-                        str_contains($lower, 'lăsați-mi un') ||
-                        str_contains($lower, 'puteți lăsa un contact') ||
-                        str_contains($lower, 'date de contact') ||
-                        str_contains($lower, 'vă pot pune în legătură cu un specialist') ||
-                        str_contains($lower, 'vreți să lăsați')) {
-                        $alreadyAsked = true;
-                        break;
+        if ($this->pageContext) {
+            $url   = $this->pageContext['url']   ?? '';
+            $title = $this->pageContext['title'] ?? '';
+
+            if (preg_match('#/(p|produs)/[^/?]+#', $url)) {
+                $productName = trim(preg_replace('/\s*[–—\-]+\s*(Malinco|Magazin|Shop).*$/ui', '', $title));
+                if (blank($productName)) {
+                    $productName = $title;
+                }
+                $base .= "\n\nPAGINĂ PRODUS: Clientul vizualizează \"{$productName}\". Dacă întreabă despre preț, stoc, disponibilitate sau vrea să cumpere — caută cu searchProducts(\"{$productName}\"). La întrebări generale (montaj, sfaturi), răspunde din cunoștințele tale fără să cauți.";
+            } else {
+                $base .= "\n\nPAGINĂ CURENTĂ: \"{$title}\". Nu e pagină de produs — referințele vagi la \"acest produs\" nu au context, roagă clientul să specifice.";
+            }
+        }
+
+        return $base;
+    }
+
+    /**
+     * Verifică dacă formularul de contact a fost deja afișat sau clientul a refuzat.
+     */
+    private function contactAlreadyHandled(array $history): bool
+    {
+        // Formularul a fost deja afișat în această sesiune (din state)
+        if (! empty($this->conversationState['contact_form_shown'])) {
+            return true;
+        }
+
+        // Contactul a fost salvat în DB
+        if (filled($this->currentSessionId)
+            && \App\Models\ChatContact::where('session_id', $this->currentSessionId)->exists()) {
+            return true;
+        }
+
+        // Clientul a refuzat (Claude a răspuns cu fraza de acceptare a refuzului)
+        foreach ($history as $m) {
+            if ($m['role'] === 'assistant' && is_string($m['content'])) {
+                $lower = mb_strtolower($m['content']);
+                if (str_contains($lower, 'nicio problem')) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // Context optimization — reducere tokeni
+    // ──────────────────────────────────────────────────────────
+
+    /**
+     * Construiește array-ul de mesaje trimis la Claude.
+     *
+     * Dacă istoricul e scurt (≤ MAX_CONTEXT_MESSAGES), îl trimite întreg.
+     * Dacă e lung, generează un rezumat al mesajelor vechi și trimite
+     * doar ultimele MAX_CONTEXT_MESSAGES mesaje reale.
+     * Mesajele triviale (ok, da, bine etc.) sunt filtrate din context.
+     */
+    private function buildContextMessages(array $history): array
+    {
+        // Garanție: niciodată array gol (API-ul Claude nu acceptă messages:[])
+        if (empty($history)) {
+            return [['role' => 'user', 'content' => '...']];
+        }
+
+        $filtered = $this->filterTrivialMessages($history);
+        $filtered = $this->truncateHistory($filtered); // previne context overflow (>6000 chars)
+
+        // filterTrivialMessages() păstrează întotdeauna ultimul mesaj,
+        // deci $filtered nu poate fi gol dacă $history nu era gol.
+        if (count($filtered) <= self::MAX_CONTEXT_MESSAGES) {
+            return $filtered;
+        }
+
+        // Split: mesaje vechi (de rezumat) + mesaje recente (de trimis)
+        $older  = array_slice($filtered, 0, -self::MAX_CONTEXT_MESSAGES);
+        $recent = array_slice($filtered, -self::MAX_CONTEXT_MESSAGES);
+
+        // API-ul Claude cere ca primul mesaj să fie 'user'.
+        // Dacă slice-ul începe cu un mesaj 'assistant', îl mutăm în older.
+        while (! empty($recent) && $recent[0]['role'] !== 'user') {
+            $older[] = array_shift($recent);
+        }
+
+        $this->conversationSummary = $this->summarizeConversation($older);
+
+        // Fallback de siguranță: dacă cumva recent e gol, returnează ultimul mesaj user
+        if (empty($recent)) {
+            foreach (array_reverse($filtered) as $m) {
+                if ($m['role'] === 'user') {
+                    return [$m];
+                }
+            }
+
+            return [['role' => 'user', 'content' => '...']];
+        }
+
+        return $recent;
+    }
+
+
+    /**
+     * Limitează istoricul la maxim 6000 caractere totale (≈1500 tokeni).
+     * Parcurge în ordine inversă și păstrează mesajele recente.
+     * Ultimul mesaj (cel curent al utilizatorului) este întotdeauna păstrat.
+     */
+    private function truncateHistory(array $messages): array
+    {
+        $maxChars   = 6000; // ~1500 tokens safety limit
+        $totalChars = 0;
+        $result     = [];
+
+        // Parcurge în ordine inversă (păstrează mesajele recente)
+        foreach (array_reverse($messages) as $msg) {
+            $chars = strlen($msg['content'] ?? '');
+            if ($totalChars + $chars > $maxChars && count($result) > 0) {
+                break; // oprește când depășim limita
+            }
+            $result[]    = $msg;
+            $totalChars += $chars;
+        }
+
+        return array_reverse($result);
+    }
+
+    /**
+     * Elimină din array mesajele user fără valoare de context:
+     * răspunsuri monosilabice ("ok", "da", "bine", "mhm" etc.).
+     */
+    private function filterTrivialMessages(array $history): array
+    {
+        $trivialWords = [
+            'ok', 'oki', 'okay', 'da', 'nu', 'bine', 'bun', 'super', 'perfect',
+            'mhm', 'hmm', 'aha', 'yep', 'yes', 'no', 'mersi', 'ms',
+            'multumesc', 'mulțumesc', 'mulțumesc!', 'mersi!',
+        ];
+
+        // Ultimul mesaj (mesajul curent al utilizatorului) nu se filtrează niciodată
+        $lastIndex = count($history) - 1;
+
+        return array_values(array_filter($history, function (array $m, int $idx) use ($trivialWords, $lastIndex): bool {
+            // Ultimul mesaj — întotdeauna păstrat
+            if ($idx === $lastIndex) {
+                return true;
+            }
+
+            // Mesajele asistentului nu se filtrează niciodată
+            if ($m['role'] !== 'user') {
+                return true;
+            }
+
+            $normalized = $this->normalizeText($m['content'] ?? '');
+
+            // Dacă e suficient de lung, îl păstrăm
+            if (mb_strlen($normalized) > 20) {
+                return true;
+            }
+
+            return ! in_array($normalized, $trivialWords, true);
+        }, ARRAY_FILTER_USE_BOTH));
+    }
+
+    /**
+     * Normalizează text pentru comparare: lowercase, elimină punctuație, collapse whitespace.
+     * Folosit atât în isTrivialMessage cât și în filterTrivialMessages.
+     */
+    private function normalizeText(string $text): string
+    {
+        $text = mb_strtolower(trim($text));
+        // Elimină orice caracter care nu e literă, cifră sau spațiu (punctuație, emoji etc.)
+        $text = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $text);
+        // Collapse whitespace multiplu
+        $text = trim(preg_replace('/\s+/u', ' ', $text));
+
+        return $text;
+    }
+
+    /**
+     * Verifică dacă un mesaj e trivial (scurt și fără conținut informațional).
+     * Folosit pentru a intercepta mesaje banale înainte de apelul Claude.
+     */
+    private function isTrivialMessage(string $message): bool
+    {
+        $normalized = $this->normalizeText($message);
+
+        if (mb_strlen($normalized) > 25) {
+            return false;
+        }
+
+        $trivialWords = [
+            'ok', 'oki', 'okay', 'da', 'nu', 'bine', 'bun', 'super', 'perfect',
+            'mhm', 'hmm', 'aha', 'yep', 'yes', 'no', 'mersi', 'ms',
+            'multumesc', 'mulțumesc', 'gata', 'am inteles', 'am înțeles',
+            'inteleg', 'înțeleg', 'ok mersi', 'ok multumesc', 'ok mulțumesc',
+            'super mersi', 'super multumesc', 'perfect mersi',
+        ];
+
+        return in_array($normalized, $trivialWords, true);
+    }
+
+    /**
+     * Creează un rezumat scurt al conversației (fără apel API suplimentar).
+     *
+     * Extrage: ce a cerut clientul, branduri menționate, dacă s-au afișat produse.
+     */
+    private function summarizeConversation(array $history): string
+    {
+        $userIntents    = [];
+        $productsShown  = false;
+        $brandsMentioned = [];
+
+        // Branduri comune în catalogul Malinco (pentru detecție rapidă)
+        $knownBrands = [
+            'vitex', 'kober', 'baumit', 'knauf', 'tikkurila', 'dulux', 'caparol',
+            'weber', 'mapei', 'cemix', 'vipol', 'vox', 'egger', 'kronospan',
+            'quick-mix', 'tytan', 'penosil', 'sika', 'henkel',
+        ];
+
+        foreach ($history as $m) {
+            $content = is_string($m['content']) ? trim($m['content']) : '';
+            if (blank($content)) {
+                continue;
+            }
+
+            if ($m['role'] === 'user' && mb_strlen($content) > 8) {
+                $userIntents[] = mb_substr($content, 0, 100);
+
+                // Detectează branduri în mesajele clientului
+                $lower = mb_strtolower($content);
+                foreach ($knownBrands as $brand) {
+                    if (str_contains($lower, $brand) && ! in_array($brand, $brandsMentioned)) {
+                        $brandsMentioned[] = ucfirst($brand);
+                    }
+                }
+            }
+
+            if ($m['role'] === 'assistant') {
+                $lower = mb_strtolower($content);
+                // Detectează dacă produse au fost deja prezentate
+                if (str_contains($content, 'RON') ||
+                    str_contains($lower, 'am găsit') ||
+                    str_contains($lower, 'iată ce') ||
+                    str_contains($lower, 'am găsit acestea')) {
+                    $productsShown = true;
+                }
+                // Detectează branduri menționate de asistent
+                foreach ($knownBrands as $brand) {
+                    if (str_contains($lower, $brand) && ! in_array(ucfirst($brand), $brandsMentioned)) {
+                        $brandsMentioned[] = ucfirst($brand);
                     }
                 }
             }
         }
 
-        // Injectează reminder urgent dacă sunt 2+ mesaje și nu s-a întrebat încă
-        if ($userMsgCount >= 2 && ! $alreadyAsked) {
-            $base .= "\n\n⚠️ REMINDER OBLIGATORIU: Ai schimbat deja {$userMsgCount} mesaje cu clientul și NU ai afișat formularul de contact. Apelează ACUM tool-ul showContactForm cu un mesaj scurt și prietenos (regula 13). NU scrie în text — apelează tool-ul.";
+        $parts = [];
+
+        if (! empty($userIntents)) {
+            $parts[] = 'Clientul a cerut: ' . implode('; ', array_slice($userIntents, 0, 2));
         }
 
-        // Injectează context pagina curentă dacă e disponibil
-        if ($this->pageContext) {
-            $url   = $this->pageContext['url']   ?? '';
-            $title = $this->pageContext['title'] ?? '';
+        if (! empty($brandsMentioned)) {
+            $parts[] = 'branduri discutate: ' . implode(', ', $brandsMentioned);
+        }
 
-            $base .= "\n\nCONTEXT PAGINA CURENTĂ: Clientul se află pe pagina \"{$title}\" ({$url}).";
+        if ($productsShown) {
+            $parts[] = 'produse deja afișate în chat';
+        }
 
-            // Detectează pagina de produs — URL-urile Malinco sunt /p/slug/ sau /produs/slug/
-            if (preg_match('#/(p|produs)/[^/?]+#', $url)) {
-                // Elimină sufixul temei din titlu (ex: "Vata Minerala Knauf – Malinco" → "Vata Minerala Knauf")
-                $productName = trim(preg_replace('/\s*[–—\-]+\s*(Malinco|Magazin|Shop).*$/ui', '', $title));
-                if (blank($productName)) {
-                    $productName = $title;
-                }
-                $base .= "\n⚡ PAGINA DE PRODUS CURENTĂ: \"{$productName}\".";
-                $base .= "\n- Indiferent de ce s-a discutat anterior în conversație, ACUM clientul se află pe pagina acestui produs.";
-                $base .= "\n- Dacă clientul întreabă despre \"acest produs\", \"cel de aici\", \"cât costă\", \"e în stoc\" etc. — se referă STRICT la \"{$productName}\", nu la produse din mesajele anterioare.";
-                $base .= "\n- Caută-l IMEDIAT cu searchProducts(\"{$productName}\") fără să întrebi despre care produs e vorba.";
-            } else {
-                // Nu e pagina de produs — anulează orice asociere implicită cu un produs
-                $base .= "\n- Clientul NU se află pe o pagină de produs specific. Referințele vagi (\"acest produs\") nu au context — roagă clientul să specifice.";
+        return ! empty($parts) ? implode('. ', $parts) . '.' : '';
+    }
+
+
+    // ──────────────────────────────────────────────────────────
+    // Conversation State
+    // ──────────────────────────────────────────────────────────
+
+    /**
+     * Structura implicită a stării conversației.
+     */
+    private function defaultState(): array
+    {
+        return [
+            'intent'               => null,  // product_search | order_inquiry | info_request
+            'product_type'         => null,  // ex: "vopsea", "glet", "parchet"
+            'brand'                => null,  // ex: "Vitex", "Knauf"
+            'products_shown'       => false,
+            'contact_form_shown'   => false,
+        ];
+    }
+
+    private function loadState(string $sessionId): array
+    {
+        try {
+            $cached = Cache::get(self::statePrefix() . $sessionId);
+
+            return is_array($cached) ? array_merge($this->defaultState(), $cached) : $this->defaultState();
+        } catch (\Throwable) {
+            return $this->defaultState();
+        }
+    }
+
+    private function saveState(string $sessionId, array $state): void
+    {
+        try {
+            Cache::put(self::statePrefix() . $sessionId, $state, self::cacheTtl());
+        } catch (\Throwable $e) {
+            Log::warning('ChatService: nu am putut salva state-ul', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Actualizează starea pe baza mesajului curent și a răspunsului generat.
+     * Fără apel API — analiză locală prin keyword matching.
+     */
+    private function updateConversationState(string $userMessage, string $reply): void
+    {
+        $lower = mb_strtolower($userMessage);
+
+        // ── Intent detection ──────────────────────────────────────
+        if (blank($this->conversationState['intent'])) {
+            if (preg_match('/vreau|caut|aveți|aveti|am nevoie|arătați|aratati|ce .+ aveți/u', $lower)) {
+                $this->conversationState['intent'] = 'product_search';
+            } elseif (preg_match('/comand|livrare|tracking|colet|expedit/u', $lower)) {
+                $this->conversationState['intent'] = 'order_inquiry';
+            } elseif (preg_match('/program|adres|telefon|orar|unde|contact/u', $lower)) {
+                $this->conversationState['intent'] = 'info_request';
             }
         }
 
-        return $base;
+        // ── Product type detection ────────────────────────────────
+        if (blank($this->conversationState['product_type'])) {
+            $productKeywords = [
+                'vopsea' => ['vopsea', 'vopsele', 'lac', 'lacuri', 'email'],
+                'glet'   => ['glet', 'gleturi', 'gletuiala'],
+                'parchet' => ['parchet', 'laminat', 'pvc', 'podea', 'duşumea'],
+                'rigips'  => ['rigips', 'gips-carton', 'carton-gips', 'placa'],
+                'caramida' => ['caramida', 'cărămidă', 'cărămizi', 'blocuri ceramice'],
+                'izolatie' => ['vata', 'polistiren', 'izolatie', 'izolaţie', 'termoizolatie'],
+                'adeziv'  => ['adeziv', 'lipici', 'mortar', 'chit', 'silicon'],
+                'profile'  => ['profil', 'profile', 'ghidaj', 'montant', 'cornier'],
+                'tencuiala' => ['tencuiala', 'tencuieli', 'finisaj', 'grunduri', 'grund'],
+                'tigla'    => ['tigla', 'acoperis', 'acoperiș', 'invelitoare'],
+                'faianta'  => ['faianta', 'faianță', 'gresie', 'ceramica', 'placi'],
+                'sanitare' => ['cada', 'lavoar', 'vas', 'toaleta', 'robinet', 'baterie', 'dus'],
+            ];
+
+            foreach ($productKeywords as $type => $keywords) {
+                foreach ($keywords as $keyword) {
+                    if (str_contains($lower, $keyword)) {
+                        $this->conversationState['product_type'] = $type;
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        // ── Brand detection ───────────────────────────────────────
+        if (blank($this->conversationState['brand'])) {
+            $knownBrands = [
+                'vitex', 'kober', 'baumit', 'knauf', 'tikkurila', 'dulux', 'caparol',
+                'weber', 'mapei', 'cemix', 'vipol', 'vox', 'egger', 'kronospan',
+                'quick-mix', 'tytan', 'penosil', 'sika', 'henkel', 'oskar', 'hardy',
+                'technogip', 'laticrete', 'jub', 'trilak', 'helios',
+            ];
+            foreach ($knownBrands as $brand) {
+                if (str_contains($lower, $brand)) {
+                    $this->conversationState['brand'] = ucfirst($brand);
+                    break;
+                }
+            }
+        }
+
+        // ── Products shown ────────────────────────────────────────
+        if (! $this->conversationState['products_shown'] && ! empty($this->foundProducts)) {
+            $this->conversationState['products_shown'] = true;
+        }
+
+        // ── Contact form shown ────────────────────────────────────
+        if ($this->showContactForm) {
+            $this->conversationState['contact_form_shown'] = true;
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // Cost tracking per sesiune
+    // ──────────────────────────────────────────────────────────
+
+    private function getSessionCost(string $sessionId): float
+    {
+        try {
+            return (float) (Cache::get(self::COST_PREFIX . $sessionId, 0.0));
+        } catch (\Throwable) {
+            return 0.0;
+        }
+    }
+
+    private function addSessionCost(string $sessionId, int $inputTokens, int $outputTokens): void
+    {
+        if ($inputTokens === 0 && $outputTokens === 0) {
+            return;
+        }
+
+        $requestCost = ($inputTokens  / 1_000_000) * self::PRICE_INPUT_PER_M
+                     + ($outputTokens / 1_000_000) * self::PRICE_OUTPUT_PER_M;
+
+        try {
+            $current = $this->getSessionCost($sessionId);
+            Cache::put(self::COST_PREFIX . $sessionId, $current + $requestCost, self::cacheTtl());
+        } catch (\Throwable $e) {
+            Log::warning('ChatService: nu am putut actualiza costul sesiunii', ['error' => $e->getMessage()]);
+        }
+    }
+
+    private function isSessionCostExceeded(string $sessionId): bool
+    {
+        $maxCost = (float) AppSetting::get(AppSetting::KEY_CHAT_MAX_COST_PER_SESSION, '0.05');
+
+        // 0 sau negativ = fără limită
+        if ($maxCost <= 0) {
+            return false;
+        }
+
+        return $this->getSessionCost($sessionId) >= $maxCost;
+    }
+
+    /**
+     * Răspuns fallback când limita de cost per sesiune a fost depășită.
+     */
+    private function costLimitReply(): array
+    {
+        return [
+            'reply'                => "Pentru mai multe informații vă rugăm să ne contactați direct la telefon:
+0359 444 999
+
+Un coleg din magazin vă poate ajuta imediat. Program: L-V 08:00-17:00, Sâm 08:00-14:00.",
+            'products'             => [],
+            'input_tokens'         => 0,
+            'output_tokens'        => 0,
+            'show_contact_form'    => false,
+            'contact_form_message' => '',
+        ];
     }
 
     // ──────────────────────────────────────────────────────────
@@ -791,7 +1283,7 @@ PROMPT;
     private function loadHistory(string $sessionId): array
     {
         try {
-            $cached = Cache::get(self::CACHE_PREFIX . $sessionId);
+            $cached = Cache::get(self::cachePrefix() . $sessionId);
 
             return is_array($cached) ? $cached : [];
         } catch (\Throwable) {
@@ -802,7 +1294,7 @@ PROMPT;
     private function saveHistory(string $sessionId, array $history): void
     {
         try {
-            Cache::put(self::CACHE_PREFIX . $sessionId, $history, self::CACHE_TTL);
+            Cache::put(self::cachePrefix() . $sessionId, $history, self::cacheTtl());
         } catch (\Throwable $e) {
             Log::warning('ChatService: nu am putut salva istoricul', ['error' => $e->getMessage()]);
         }
@@ -810,6 +1302,6 @@ PROMPT;
 
     private function fallbackMessage(): string
     {
-        return 'Am întâmpinat o problemă tehnică. Vă rugăm să reîncercați.';
+        return "Se pare că situația aceasta mă depășește momentan.\nTe rog să îi contactezi pe colegii mei din magazin la 0359 444 999 și te vor ajuta imediat.";
     }
 }

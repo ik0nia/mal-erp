@@ -19,15 +19,20 @@ class SkuDiscrepancyReport extends Page implements HasTable
     use HasDynamicNavSort, InteractsWithTable;
     use EnforcesLocationScope;
 
-    protected static ?string $navigationIcon = 'heroicon-o-exclamation-triangle';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-exclamation-triangle';
 
-    protected static ?string $navigationGroup = 'Administrare magazin';
+    protected static string|\UnitEnum|null $navigationGroup = 'Administrare magazin';
 
     protected static ?string $navigationLabel = 'Discrepanțe SKU';
 
     protected static ?int $navigationSort = 30;
 
-    protected static string $view = 'filament.app.pages.sku-discrepancy-report';
+    protected string $view = 'filament.app.pages.sku-discrepancy-report';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return \App\Models\RolePermission::check(static::class, 'can_access');
+    }
 
     public static function canAccess(): bool
     {

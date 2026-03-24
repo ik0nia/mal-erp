@@ -41,4 +41,12 @@ class ImportWooCategoriesJob implements ShouldQueue
         $connection = IntegrationConnection::query()->findOrFail($this->connectionId);
         $action->execute($connection);
     }
+
+    public function failed(\Throwable $exception): void
+    {
+        \Illuminate\Support\Facades\Log::error(class_basename(static::class) . ' failed', [
+            'exception' => $exception->getMessage(),
+            'trace'     => $exception->getTraceAsString(),
+        ]);
+    }
 }

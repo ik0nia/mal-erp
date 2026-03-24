@@ -1,0 +1,1102 @@
+
+<section id="t5-resources">
+  <h1>T5. Filament Resources</h1>
+  <p>Toate resursele sunt în namespace <code>App\Filament\App\Resources</code>, panelul <strong>App</strong>. Folosesc trăsăturile <code>EnforcesLocationScope</code> (filtrare per locație), <code>ChecksRolePermissions</code> și <code>HasDynamicNavSort</code>.</p>
+
+  <h2>WooProductResource</h2>
+  <p>Slug: <code>/produse</code> (redirect 301 din <code>/woo-products*</code>). Grup navigare: <em>fără grup</em>. Permisiune: toți utilizatorii autentificați.</p>
+
+  <h3>Câmpuri formular (Edit)</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Câmp</th><th>Tip</th><th>Validare / Reguli</th></tr>
+    <tr><td>name</td><td>TextInput</td><td>required, maxLength 500</td></tr>
+    <tr><td>sku</td><td>TextInput</td><td>required, unique (ignoră record curent)</td></tr>
+    <tr><td>price</td><td>TextInput numeric</td><td>min 0, suffix RON</td></tr>
+    <tr><td>stock_status</td><td>Select</td><td>instock / outofstock / onbackorder</td></tr>
+    <tr><td>status</td><td>Select</td><td>publish / draft / private / pending</td></tr>
+    <tr><td>brand</td><td>TextInput</td><td>nullable</td></tr>
+    <tr><td>main_image_url</td><td>TextInput URL</td><td>nullable</td></tr>
+    <tr><td>is_discontinued</td><td>Toggle</td><td>boolean, default false</td></tr>
+    <tr><td>is_on_demand</td><td>Toggle</td><td>boolean, default false — produs la comandă</td></tr>
+    <tr><td>category_ids</td><td>Select multiple</td><td>relație many-to-many woo_categories</td></tr>
+    <tr><td>supplier (ProductSupplier)</td><td>Repeater/relație</td><td>supplier_id, purchase_price, supplier_sku, is_preferred, po_max_qty</td></tr>
+  </table>
+
+  <h3>Coloane tabel</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Coloană</th><th>Sortabil</th><th>Searchable</th><th>Detalii</th></tr>
+    <tr><td>main_image_url</td><td>Nu</td><td>Nu</td><td>ImageColumn, 40×40px</td></tr>
+    <tr><td>sku</td><td>Da</td><td>Da</td><td>font-mono</td></tr>
+    <tr><td>name</td><td>Da</td><td>Da</td><td>afișează <code>(nepublicat)</code> portocaliu dacă status != publish și are woo_id</td></tr>
+    <tr><td>brand</td><td>Da</td><td>Da</td><td>toggleable</td></tr>
+    <tr><td>price</td><td>Da</td><td>Nu</td><td>sufix RON</td></tr>
+    <tr><td>stock_status</td><td>Da</td><td>Nu</td><td>badge: instock=success, outofstock=danger</td></tr>
+    <tr><td>status</td><td>Da</td><td>Nu</td><td>badge publish/draft/private</td></tr>
+    <tr><td>updated_at</td><td>Da</td><td>Nu</td><td>format d.m.Y</td></tr>
+  </table>
+
+  <h3>Filtre disponibile</h3>
+  <ul>
+    <li>stock_status: instock / outofstock / onbackorder</li>
+    <li>status: publish / draft / private / pending</li>
+    <li>brand: SelectFilter cu toate brandurile distincte</li>
+    <li>category: SelectFilter cu categoriile WooCommerce</li>
+    <li>has_supplier: TernaryFilter (are / nu are furnizor activ)</li>
+    <li>is_discontinued: TernaryFilter</li>
+    <li>is_on_demand: TernaryFilter</li>
+  </ul>
+
+  <h3>Acțiuni</h3>
+  <ul>
+    <li><strong>ViewAction</strong> — deschide ViewWooProduct (infolist complet)</li>
+    <li><strong>EditAction</strong> — editare produs</li>
+    <li><strong>Toggle publish/draft</strong> — schimbă statusul pe WooCommerce via WooClient::updateProduct(), confirmă statusul din răspuns</li>
+    <li><strong>Adaugă la necesar</strong> (coș icon-only portocaliu warning) — deschide modal cu formular PurchaseRequestItem</li>
+    <li><strong>BulkAction: Export CSV</strong> — câmpurile de bază</li>
+    <li><strong>BulkAction: Assign Category</strong> — atribuie categorie la produse selectate</li>
+  </ul>
+
+  <h3>Pagini</h3>
+  <ul>
+    <li><code>ListWooProducts</code> — tabel cu filtre și acțiuni</li>
+    <li><code>EditWooProduct</code> — formular edit; la <code>afterSave()</code> dacă produsul are <code>woo_id</code> dispatchează <code>SyncProductSupplierMetaJob</code></li>
+    <li><code>ViewWooProduct</code> — infolist cu: imagine, detalii produs, stocuri per locație, istoric prețuri (grafic), furnizori asociați, comenzi recente, secțiune îmbogățire AI</li>
+  </ul>
+
+  <hr/>
+
+  <h2>SupplierResource</h2>
+  <p>Grup: <em>Achiziții</em>, sort 4. Icon: heroicon-o-truck. Permisiune: ChecksRolePermissions.</p>
+
+  <h3>Câmpuri formular</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Câmp</th><th>Tip</th><th>Validare</th></tr>
+    <tr><td>name</td><td>TextInput</td><td>required, maxLength 255</td></tr>
+    <tr><td>email</td><td>TextInput email</td><td>nullable, email</td></tr>
+    <tr><td>phone</td><td>TextInput tel</td><td>nullable</td></tr>
+    <tr><td>website_url</td><td>TextInput URL</td><td>nullable</td></tr>
+    <tr><td>logo_url</td><td>TextInput</td><td>nullable</td></tr>
+    <tr><td>is_active</td><td>Toggle</td><td>default true</td></tr>
+    <tr><td>buyer_id</td><td>Select (User)</td><td>nullable — responsabilul de achiziții</td></tr>
+    <tr><td>po_approval_threshold</td><td>TextInput numeric</td><td>nullable, min 0 — prag RON peste care PO necesită aprobare</td></tr>
+    <tr><td>conditions</td><td>Textarea</td><td>nullable — condiții comerciale (discount, termen plată)</td></tr>
+    <tr><td>notes</td><td>Textarea</td><td>nullable</td></tr>
+    <tr><td>brands (relație)</td><td>Select multiple</td><td>many-to-many Brand</td></tr>
+  </table>
+
+  <h3>Coloane tabel</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Coloană</th><th>Sortabil</th><th>Detalii</th></tr>
+    <tr><td>logo_url</td><td>Nu</td><td>ImageColumn 80×40</td></tr>
+    <tr><td>name</td><td>Da</td><td>searchable</td></tr>
+    <tr><td>email</td><td>Nu</td><td>searchable, toggleable</td></tr>
+    <tr><td>buyer.name</td><td>Da</td><td>responsabilul de achiziții</td></tr>
+    <tr><td>brands.name</td><td>Nu</td><td>listWithLineBreaks, limitList 3</td></tr>
+    <tr><td>is_active</td><td>Da</td><td>IconColumn boolean</td></tr>
+    <tr><td>products_count</td><td>Da</td><td>număr produse asociate</td></tr>
+  </table>
+
+  <h3>Acțiuni</h3>
+  <ul>
+    <li>ViewAction — ViewSupplier cu: detalii, RelationManager Contacts, RelationManager Products, RelationManager Emails</li>
+    <li>EditAction — EditSupplier</li>
+    <li>BulkAction: DeleteBulkAction</li>
+  </ul>
+
+  <h3>RelationManagers</h3>
+  <ul>
+    <li><strong>ContactsRelationManager</strong> — gestionare SupplierContact: câmpuri name, email, phone, role, department, is_primary; sursa (manual/email_discovery/domain_match); first_seen_at, last_seen_at, email_count</li>
+    <li><strong>ProductsRelationManager</strong> — produse asociate furnizorului via product_suppliers: afișează SKU, denumire, purchase_price, supplier_sku, is_preferred</li>
+    <li><strong>EmailsRelationManager</strong> — emailuri asociate (EmailMessage): from, subject, sent_at, agent_actions type/summary</li>
+  </ul>
+
+  <h3>Pagini</h3>
+  <ul>
+    <li><code>ListSuppliers</code>, <code>CreateSupplier</code>, <code>EditSupplier</code>, <code>ViewSupplier</code></li>
+  </ul>
+
+  <hr/>
+
+  <h2>PurchaseRequestResource (Necesare)</h2>
+  <p>Grup: <em>Achiziții</em>, sort 1. Badge de navigare: numărul de necesare în status <code>submitted</code> (culoare warning).</p>
+
+  <h3>Câmpuri formular</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Câmp</th><th>Tip</th><th>Reguli</th></tr>
+    <tr><td>number</td><td>TextInput disabled</td><td>generat automat PNR-Ymd-XXXX</td></tr>
+    <tr><td>status</td><td>Select disabled</td><td>default draft; modificat programatic</td></tr>
+    <tr><td>location_id</td><td>Select</td><td>required; super_admin vede toate, ceilalți doar locațiile lor</td></tr>
+    <tr><td>notes</td><td>Textarea</td><td>nullable, rows 2</td></tr>
+    <tr><td>items</td><td>PurchaseItemsTable (custom)</td><td>produse solicitate cu câmpuri: product (search), supplier, quantity, needed_by, is_urgent, is_reserved, customer_id, offer_id, notes</td></tr>
+  </table>
+
+  <h3>Coloane tabel</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Coloană</th><th>Sortabil</th><th>Filtru</th></tr>
+    <tr><td>number</td><td>Da</td><td>searchable</td></tr>
+    <tr><td>location.name</td><td>Da</td><td>—</td></tr>
+    <tr><td>user.name (Consultant)</td><td>Da</td><td>—</td></tr>
+    <tr><td>status</td><td>Nu</td><td>SelectFilter cu statusOptions()</td></tr>
+    <tr><td>items_count</td><td>Da</td><td>—</td></tr>
+    <tr><td>has_urgent</td><td>Nu</td><td>TernaryFilter — whereHas items is_urgent=true</td></tr>
+    <tr><td>created_at</td><td>Da</td><td>—</td></tr>
+  </table>
+
+  <h3>Statusuri PurchaseRequest</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Status</th><th>Descriere</th><th>Culoare</th></tr>
+    <tr><td>draft</td><td>Ciornă, editabil</td><td>gray</td></tr>
+    <tr><td>submitted</td><td>Trimis spre buyer</td><td>warning</td></tr>
+    <tr><td>partially_ordered</td><td>Parțial comandat</td><td>info</td></tr>
+    <tr><td>fully_ordered</td><td>Complet comandat</td><td>success</td></tr>
+    <tr><td>cancelled</td><td>Anulat</td><td>danger</td></tr>
+  </table>
+
+  <h3>Acțiuni (tabel)</h3>
+  <ul>
+    <li>ViewAction, EditAction (doar owner sau admin, doar dacă draft), DeleteAction (draft/cancelled: owner/admin)</li>
+    <li><strong>Trimite</strong> — mută statusul din draft → submitted; trimite notificarea <code>PurchaseRequestSubmittedNotification</code> la buyer-ii responsabili pentru furnizorii din necesar (sau toți managerii de achiziții ca fallback)</li>
+  </ul>
+
+  <h3>View Page (Infolist)</h3>
+  <p>Afișează: informații necesar, secțiune colapsabilă <em>Comunicare furnizori</em> (emailuri ±30/+60 zile), lista de produse solicitate cu statusuri individuale, cantitate comandată vs. cerută, link la PO, acțiune <em>Anulează item</em> per produs pending.</p>
+
+  <h3>Permisiuni</h3>
+  <ul>
+    <li>canCreate: orice utilizator autentificat</li>
+    <li>canEdit: doar dacă status=draft și (owner sau admin/super_admin)</li>
+    <li>canDelete: draft/cancelled + (owner sau admin/super_admin); nu se pot șterge necesare active</li>
+    <li>Consultanții de vânzări văd doar necesarele proprii (filtru automat în getEloquentQuery)</li>
+  </ul>
+
+  <hr/>
+
+  <h2>PurchaseOrderResource (Comenzi furnizori)</h2>
+  <p>Grup: <em>Achiziții</em>, sort 4. Icon: heroicon-o-shopping-bag.</p>
+
+  <h3>Câmpuri formular (Create/Edit)</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Câmp</th><th>Tip</th><th>Reguli</th></tr>
+    <tr><td>number</td><td>TextInput disabled</td><td>generat automat PO-Ymd-XXXX (sequence MAX+1)</td></tr>
+    <tr><td>supplier_id</td><td>Select</td><td>required, searchable; disabled pe edit; filtrează is_active=true</td></tr>
+    <tr><td>status</td><td>Select disabled</td><td>default draft; gestionat prin acțiuni</td></tr>
+    <tr><td>notes_internal</td><td>Textarea</td><td>nullable — notițe interne</td></tr>
+    <tr><td>notes_supplier</td><td>Textarea</td><td>nullable — notițe pentru furnizor (apar în PDF)</td></tr>
+    <tr><td>items (TableRepeater)</td><td>Tabel repeater</td><td>câmpuri per linie: thumbnail (auto), woo_product_id (search filtrat după furnizor), product_name (auto-fill), sku (auto-fill), supplier_sku (auto-fill din ProductSupplier), quantity (numeric, min 0.001), unit_price (numeric, suffix RON), line_total (placeholder calculat live), sources_json (hidden), notes</td></tr>
+  </table>
+
+  <p>La selectarea unui produs: auto-fill denumire, SKU intern, SKU furnizor și preț de achiziție din tabela <code>product_suppliers</code>.</p>
+
+  <h3>Coloane tabel</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Coloană</th><th>Sortabil</th><th>Filtru</th></tr>
+    <tr><td>number</td><td>Da</td><td>searchable</td></tr>
+    <tr><td>supplier.name</td><td>Da</td><td>SelectFilter furnizori</td></tr>
+    <tr><td>status</td><td>Nu</td><td>SelectFilter statusOptions()</td></tr>
+    <tr><td>total_value</td><td>Da</td><td>—</td></tr>
+    <tr><td>buyer.name</td><td>Da</td><td>—</td></tr>
+    <tr><td>sent_at</td><td>Da</td><td>—</td></tr>
+    <tr><td>reception_status</td><td>Nu</td><td>TernaryFilter recepție parțială</td></tr>
+    <tr><td>created_at</td><td>Da</td><td>—</td></tr>
+  </table>
+
+  <h3>Statusuri PurchaseOrder</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Status</th><th>Descriere</th><th>Culoare</th></tr>
+    <tr><td>draft</td><td>Ciornă</td><td>gray</td></tr>
+    <tr><td>pending_approval</td><td>Trimis spre aprobare</td><td>warning</td></tr>
+    <tr><td>approved</td><td>Aprobat</td><td>success</td></tr>
+    <tr><td>rejected</td><td>Respins</td><td>danger</td></tr>
+    <tr><td>sent</td><td>Trimis furnizorului</td><td>info</td></tr>
+    <tr><td>received</td><td>Recepționat</td><td>success</td></tr>
+    <tr><td>cancelled</td><td>Anulat</td><td>gray</td></tr>
+  </table>
+
+  <h3>View Page — acțiuni header</h3>
+  <ul>
+    <li><strong>Trimite spre aprobare</strong> — draft → pending_approval; notificare manageri</li>
+    <li><strong>Aprobă / Respinge</strong> — (manager/director) pending_approval → approved/rejected; la rejected: revert items din necesare la pending</li>
+    <li><strong>Marchează ca trimis</strong> — approved → sent; completează sent_at</li>
+    <li><strong>Recepție marfă</strong> — sent → received; formular cu received_quantity per item (default 0, nu cantitatea comandată); notificări consultanți dacă recepție parțială</li>
+    <li><strong>Descarcă PDF</strong> — template <code>resources/views/pdf/purchase-order.blade.php</code> via barryvdh/laravel-dompdf</li>
+    <li><strong>Anulează</strong> — orice status activ → cancelled; revert items în necesare</li>
+  </ul>
+
+  <h3>Permisiuni</h3>
+  <ul>
+    <li>canCreate: super_admin, admin, manager_achizitii, manager</li>
+    <li>canDelete: draft/cancelled/rejected + (super_admin, admin, manager_achizitii, manager)</li>
+    <li>canApprove: super_admin, manager, director_financiar, director_vanzari</li>
+  </ul>
+
+  <hr/>
+
+  <h2>BrandResource</h2>
+  <p>Grup: <em>Achiziții</em>, sort 5.</p>
+  <h3>Câmpuri formular</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Câmp</th><th>Tip</th><th>Validare</th></tr>
+    <tr><td>name</td><td>TextInput</td><td>required, maxLength 255; auto-generează slug la blur</td></tr>
+    <tr><td>slug</td><td>TextInput</td><td>required, unique (ignoreRecord)</td></tr>
+    <tr><td>website_url</td><td>TextInput URL</td><td>nullable, prefix https://</td></tr>
+    <tr><td>logo_url</td><td>TextInput</td><td>nullable — URL complet sau cale relativă brand-logos/</td></tr>
+    <tr><td>description</td><td>Textarea</td><td>nullable</td></tr>
+    <tr><td>is_active</td><td>Toggle</td><td>default true</td></tr>
+    <tr><td>suppliers</td><td>Select multiple</td><td>relație many-to-many Supplier</td></tr>
+  </table>
+  <p>Pagini: List, Create, Edit. Bulk action: DeleteBulkAction.</p>
+
+  <hr/>
+
+  <h2>CustomerResource</h2>
+  <p>Grup: <em>Vânzări</em>, sort 5. Permisiune: toți utilizatorii autentificați (cu filtrare per locație).</p>
+
+  <h3>Câmpuri formular</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Câmp</th><th>Tip</th><th>Reguli</th></tr>
+    <tr><td>type</td><td>Select</td><td>required: individual / company; live — ascunde/afișează câmpuri firma</td></tr>
+    <tr><td>cui</td><td>TextInput numeric</td><td>required dacă company; la blur: apel automat OpenApiCompanyLookupService — precompletează name, registration_number, address, city, county, postal_code, phone, is_vat_payer</td></tr>
+    <tr><td>name</td><td>TextInput</td><td>required, maxLength 255</td></tr>
+    <tr><td>representative_name</td><td>TextInput</td><td>required dacă company</td></tr>
+    <tr><td>phone</td><td>TextInput tel</td><td>required dacă company</td></tr>
+    <tr><td>email</td><td>TextInput email</td><td>nullable</td></tr>
+    <tr><td>is_vat_payer</td><td>Toggle</td><td>vizibil doar company; auto-completat din OpenAPI</td></tr>
+    <tr><td>registration_number</td><td>TextInput</td><td>nullable, vizibil company</td></tr>
+    <tr><td>address, city, county, postal_code</td><td>TextInput</td><td>address required</td></tr>
+    <tr><td>notes</td><td>Textarea</td><td>nullable</td></tr>
+    <tr><td>deliveryAddresses (Repeater)</td><td>Relație CustomerDeliveryAddress</td><td>câmpuri: label, is_active, contact_name, contact_phone, address (req), city, county, postal_code; reorderabil</td></tr>
+  </table>
+  <p>Pagini: List, Create, Edit. Filtre: type, is_active.</p>
+
+  <hr/>
+
+  <h2>OfferResource</h2>
+  <p>Grup: <em>Vânzări</em>. Permisiune: toți autentificați (cu filtrare locație).</p>
+  <p>Formular complex cu: informații client (tip individual/firmă cu auto-lookup CUI), secțiune produse (TableRepeater cu auto-fill din catalog WooCommerce: name, sku, price; calcul automat total linie și total ofertă), câmpuri discount, termen valabilitate, notițe.</p>
+  <p>Acțiuni: View, Edit, Delete, <strong>Generează PDF</strong> (template Blade via dompdf), <strong>Trimite pe email</strong> (dacă clientul are email). Pagini: List, Create, Edit, View.</p>
+
+  <hr/>
+
+  <h2>WooOrderResource (Comenzi Online)</h2>
+  <p>Grup: <em>Comenzi</em>, sort 10. Read-only: canCreate=false, canEdit=false, canDelete=false.</p>
+
+  <h3>Coloane tabel</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Coloană</th><th>Detalii</th></tr>
+    <tr><td>number</td><td>#WooID, searchable, sortabil</td></tr>
+    <tr><td>status</td><td>badge cu WooOrder::STATUS_COLORS și STATUS_LABELS; filtru SelectFilter</td></tr>
+    <tr><td>customer_name</td><td>din billing JSON; search custom via JSON_EXTRACT</td></tr>
+    <tr><td>customer_email</td><td>din billing JSON; toggleable</td></tr>
+    <tr><td>total</td><td>formatat cu monedă; sortabil</td></tr>
+    <tr><td>payment_method_title</td><td>—</td></tr>
+    <tr><td>order_date</td><td>sortabil; filtru date range (from/until)</td></tr>
+  </table>
+
+  <h3>View Page (Infolist)</h3>
+  <p>Secțiuni: Comandă (număr, status, dată, plată), Client (adresă facturare + livrare, telefon, email), Produse (repeater cu name, sku, quantity, <strong>erp_stock</strong> — stoc ERP color-coded success/danger față de cantitatea comandată, price, total), Totale (subtotal, livrare, discount, TVA, TOTAL bold mare), AWB-uri Sameday.</p>
+
+  <h3>Acțiuni header (ViewWooOrder)</h3>
+  <ul>
+    <li>Schimbă status — apel WooClient::updateProduct cu noul status</li>
+    <li>Adaugă notă internă</li>
+    <li>Resync comandă — re-fetch din WooCommerce</li>
+    <li>Creare AWB Sameday</li>
+  </ul>
+  <p>Bulk action pe tabel: <strong>Resync selectate</strong> — re-fetch fiecare comandă selectată din WooCommerce.</p>
+
+  <hr/>
+
+  <h2>SocialPostResource</h2>
+  <p>Grup: <em>Social Media</em>, sort 1. Icon: heroicon-o-share.</p>
+
+  <h3>Câmpuri formular (Create)</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Câmp</th><th>Tip</th><th>Reguli</th></tr>
+    <tr><td>social_account_id</td><td>Select</td><td>required; default primul cont activ</td></tr>
+    <tr><td>brief_type</td><td>Select</td><td>required: product / brand / promo; live — afișează câmpuri condiționale</td></tr>
+    <tr><td>woo_product_id</td><td>Select searchable</td><td>vizibil dacă brief_type=product; nullable</td></tr>
+    <tr><td>brand_id</td><td>Select</td><td>vizibil dacă brief_type=brand; nullable</td></tr>
+    <tr><td>template</td><td>Select</td><td>nullable; opțiuni din GraphicTemplate::where(is_active=true); dacă gol → auto-selecție după tip</td></tr>
+    <tr><td>brief_direction</td><td>Textarea</td><td>required, rows 4 — direcția creativă pentru Claude</td></tr>
+  </table>
+
+  <h3>View (Infolist)</h3>
+  <p>Preview imagine generată (1080×1080), status badge, tip, template folosit, cont, produs/brand asociat, dată programată/publicată, link Facebook. Secțiune Caption generat (HTML cu nl2br). Secțiune Texte grafică (label/titlu/subtitlu). Secțiune Brief (direcție + prompt imagine Gemini). Secțiune Eroare (dacă status=failed).</p>
+
+  <h3>Flux generare postare</h3>
+  <ol>
+    <li>Create → dispatchează <code>GenerateSocialPostJob</code></li>
+    <li>Job: Claude generează caption + hashtags + texte grafice</li>
+    <li>Job: NodeImageRenderer randează imaginea 1080×1080 via Node.js canvas</li>
+    <li>Status: draft → generating → ready</li>
+    <li>User programează (scheduled_at) → comanda <code>social:publish-scheduled</code> dispatchează <code>PublishSocialPostJob</code></li>
+    <li>Job: MetaGraphClient::publishPost() → Facebook Page API</li>
+  </ol>
+
+  <hr/>
+
+  <h2>GraphicTemplateResource</h2>
+  <p>Grup: <em>Social Media</em>. Gestionează template-urile grafice pentru postări. Câmpuri: name, slug (unique), layout (product/brand/promo), is_active, config (JSON — culori, fonturi, proporții), preview_image.</p>
+
+  <hr/>
+
+  <h2>Alte resurse</h2>
+  <ul>
+    <li><strong>WooCategoryResource</strong> — categorii WooCommerce; read-only din sincronizare; câmpuri: woo_id, name, slug, parent_id, image_url</li>
+    <li><strong>SamedayAwbResource</strong> — AWB-uri curier Sameday; câmpuri: awb_number, status, woo_order_id, tracking details</li>
+    <li><strong>ProductPriceLogResource</strong> — istoricul modificărilor de preț; read-only; câmpuri: sku, old_price, new_price, changed_at, change_%</li>
+    <li><strong>EanAssociationRequestResource</strong> — cereri asociere EAN; câmpuri: ean, woo_product_id, requested_by, status (pending/approved/rejected)</li>
+  </ul>
+</section>
+
+<section id="t6-pages">
+  <h1>T6. Filament Pages — Pagini Custom</h1>
+
+  <h2>NecesarMarfa (Raport Necesar de Marfă)</h2>
+  <p>Grup: <em>Rapoarte</em>, sort 0. Permisiune: <code>RolePermission::check()</code>. View: <code>filament.app.pages.necesar-marfa</code>.</p>
+
+  <h3>Algoritmul de calcul</h3>
+  <p>Pagina interogează tabelele <code>product_suppliers</code>, <code>woo_products</code>, <code>product_stocks</code> (agregat per produs) și <code>bi_product_velocity_current</code> (view BI cu medii zilnice calculate). Cache 5 minute per user + coverDays.</p>
+
+  <h4>Query principal</h4>
+  <p>Condiție de includere: <code>stock &lt; MAX(avg_out_qty_7d, avg_out_qty_30d) × fetchDays</code> (unde fetchDays = max(coverDays, 14)). Se execută separat pentru produse cu furnizor activ și fără furnizor, unite cu UNION.</p>
+
+  <h4>Calcul dinamic per produs</h4>
+  <pre><code>// Baseline: maximul dintre mediile zilnice 7d, 30d, 90d
+$base = max($avg7, $avg30, $avg90);
+
+// Trend: atenuare conservatoare dacă cererea scade &gt;15% față de media 30d
+$trend = 1.0;
+if ($avg30 &gt; 0 &amp;&amp; $avg7 &gt; 0 &amp;&amp; $avg7 &lt; $avg30 * 0.85) {
+    $trend = max(0.5, $avg7 / $avg30);
+}
+
+$adjustedDaily = $base * $trend;
+$safetyStock   = $adjustedDaily * 3;  // buffer 3 zile
+
+// Cantitate recomandată de comandat:
+$recommended_qty = max(0, ceil($adjustedDaily * $coverDays + $safetyStock - $stock));
+
+// Zile până la epuizare (folosind avg_daily_7d ca estimare curentă):
+$days_until_stockout = $avg7 &gt; 0 ? $stock / $avg7 : null;</code></pre>
+
+  <h4>Clasificare urgențe</h4>
+  <ul>
+    <li><strong>Urgent</strong> (&lt;7 zile stoc): <code>days_until_stockout &lt; 7</code></li>
+    <li><strong>Curând</strong> (7-14 zile): <code>days_until_stockout ∈ [7, 14)</code></li>
+    <li><strong>Direcție trend</strong>: ↑ dacă avg7 &gt; avg30 × 1.15; ↓ dacă avg7 &lt; avg30 × 0.85</li>
+  </ul>
+
+  <h4>Parametri URL</h4>
+  <ul>
+    <li><code>coverDays</code>: număr zile acoperire dorit (min 7, max 60, default 14)</li>
+    <li><code>selectedSupplierId</code>: filtrare pe un furnizor specific</li>
+  </ul>
+
+  <h4>Acțiunea Creează Necesar</h4>
+  <p>Metoda <code>createNecesarFromSelection(array $items)</code>: primește selecția utilizatorului (<code>[{product_id, supplier_id, qty}]</code>), grupează pe furnizor, creează câte un <code>PurchaseRequest</code> per furnizor cu status <code>submitted</code> direct, în tranzacție DB. Redirecționează la BuyerDashboardPage.</p>
+
+  <h4>Statistici afișate</h4>
+  <ul>
+    <li>Număr furnizori afectați, total produse sub stoc, produse cu stoc 0, urgente (&lt;7 zile), curând (7-14 zile)</li>
+    <li>Tab "Urgente" și tab "Curând" cu lista consolidată (un rând per produs, indiferent de furnizor)</li>
+    <li>Secțiuni per furnizor cu produsele lor, contorizare urgente/curând/stoc 0</li>
+  </ul>
+
+  <hr/>
+
+  <h2>BuyerDashboardPage (Generează Comandă)</h2>
+  <p>Grup: <em>Achiziții</em>, sort 3. Permisiune: super_admin, admin, manager_achizitii, manager. Badge navigare: numărul total de items pending din necesare submitted + partially_ordered (culoare danger).</p>
+
+  <h3>Date afișate</h3>
+  <p>Agregă <code>PurchaseRequestItem</code> cu status=pending din necesare în statusurile submitted/partially_ordered, unde:</p>
+  <ul>
+    <li>furnizorul este în lista vizibilă pentru buyer-ul curent (buyer_id match sau super_admin/admin vede toți)</li>
+    <li><code>quantity &gt; COALESCE(ordered_quantity, 0)</code> — exclude complet comandatele</li>
+    <li>produsul nu este discontinu</li>
+  </ul>
+
+  <h3>Filtre disponibile</h3>
+  <ul>
+    <li>Furnizor specific (dropdown)</li>
+    <li>Locație (dropdown)</li>
+    <li>Consultant (dropdown — doar consultanții cu items pending)</li>
+    <li>Necesar până la (from/to date range)</li>
+    <li>Toggle: Doar urgente</li>
+    <li>Toggle: Doar rezervate</li>
+  </ul>
+
+  <h3>Date returnate per grup furnizor</h3>
+  <pre><code>[
+    'supplier_id', 'supplier_name', 'items_count', 'urgent_count',
+    'items' => [
+        'id', 'product_name', 'sku', 'is_discontinued',
+        'quantity' (remaining — cantitate rămasă necomandată),
+        'ordered_quantity', 'needed_by', 'is_urgent', 'is_reserved',
+        'client_reference', 'notes', 'consultant', 'location',
+        'request_number', 'request_id'
+    ]
+]</code></pre>
+
+  <h3>Acțiune principală</h3>
+  <p><code>createPoForSupplier(int $supplierId)</code> — redirecționează la CreatePurchaseOrder cu <code>supplier_id</code> pre-selectat. De acolo, <code>afterCreate()</code> populează automat produsele din items pending ale acelui furnizor (în tranzacție cu <code>lockForUpdate()</code>).</p>
+
+  <h3>Comenzi WooCommerce în procurement</h3>
+  <p>Metoda <code>getWooOrdersPendingProcurement()</code>: returnează necesarele generate automat din comenzi WooCommerce (source_type=woo_order) în statusuri submitted/partially_ordered — pentru produse "la comandă".</p>
+
+  <hr/>
+
+  <h2>EmailInboxPage</h2>
+  <p>Grup: <em>Comunicare</em>, sort 1. Accesibil doar super_admin.</p>
+  <p>Interfață de tip mail client cu:</p>
+  <ul>
+    <li><strong>Sidebar foldere</strong>: lista folderelor IMAP cu număr emailuri; labels prietenoase (INBOX→Inbox, INBOX.Sent→Trimise etc.)</li>
+    <li><strong>Listă emailuri</strong>: max 300, sortate descrescător după sent_at; filtre: citit/necitit, folder, tip AI (offer/invoice/price_list), urgență AI (high/medium/low), needs_reply, search (subiect/from)</li>
+    <li><strong>Panou preview</strong>: emailul selectat cu HTML sanitizat în iframe izolat (CSP: no scripts)</li>
+    <li><strong>Contoare AI</strong>: needs_reply, high urgency, tip offer/invoice/price_list</li>
+  </ul>
+  <p>Acțiuni header: Sincronizează (dispatchează FetchEmailsJob), Salvează notă internă, Asociază furnizor (Select manual).</p>
+  <p>Metoda <code>getAiFilterCounts()</code>: execută 5 query-uri pe <code>email_messages</code> cu JSON_EXTRACT din câmpul <code>agent_actions</code>.</p>
+
+  <hr/>
+
+  <h2>EmailCommunicationStatsPage</h2>
+  <p>Grup: <em>Comunicare</em>. Accesibil doar super_admin. Afișează statistici agregate: total emailuri, pe furnizori, tipuri AI, distribuție temporală. Date din tabelele <code>email_messages</code>, <code>supplier_price_quotes</code>, <code>email_entities</code>.</p>
+
+  <hr/>
+
+  <h2>ChatLogsPage (Chat Clienți)</h2>
+  <p>Grup: <em>Comunicare</em>, sort 10. Accesibil doar super_admin.</p>
+
+  <h3>Date afișate</h3>
+  <ul>
+    <li>Statistici globale: total sesiuni distincte, mesaje azi, sesiuni azi</li>
+    <li>Lead-uri necontactate: sesiuni cu email/telefon colectat și fără contacted_at (prioritizate în roșu)</li>
+    <li>Lista sesiuni recente (max 50): session_id, IP, started_at, last_at, total_messages, user_messages, had_products, total_tokens input/output, cost USD calculat</li>
+    <li>Per sesiune: first_message preview (90 char), first_page_url/title, toate mesajele expandabile, date contact (email, telefon, wants_specialist, summary, interested_in)</li>
+  </ul>
+
+  <h3>Calcul cost USD (Claude Haiku)</h3>
+  <pre><code>$usd = ($inputTokens * 0.80 + $outputTokens * 4.00) / 1_000_000;</code></pre>
+
+  <h3>Acțiuni</h3>
+  <ul>
+    <li><strong>Marchează ca Contactat</strong>: setează contacted_at=now() și contacted_by=auth()->id() pe ChatContact</li>
+    <li><strong>Setări Widget</strong> (modal): primary_color, bot_name, subtitle, welcome_msg, telegram_token (criptat), telegram_chat_id, max_cost_per_session</li>
+    <li><strong>Test Telegram</strong>: trimite mesaj test via TelegramService</li>
+  </ul>
+
+  <h3>Query sesiuni (optimizat N+1)</h3>
+  <p>Un singur query agregat pe <code>chat_logs</code> + un query pentru toate mesajele sesiunilor returnate + un query pentru ChatContact — total 3 query-uri pentru max 50 sesiuni.</p>
+
+  <hr/>
+
+  <h2>SocialAccountsPage</h2>
+  <p>Grup: <em>Social Media</em>, sort 2. Accesibil doar super_admin.</p>
+  <p>Gestionează conturile Facebook conectate (SocialAccount). Acțiuni:</p>
+  <ul>
+    <li>Adaugă cont: name, Facebook Page ID, Page Access Token (criptat), token_expires_at</li>
+    <li>Setează Gemini API Key + Meta App ID/Secret (credențiale criptate în AppSetting)</li>
+    <li>Încarcă referințe vizuale: imagini PNG/JPG/WEBP în <code>storage/app/public/social/style-references/</code></li>
+    <li>Selectează referințe și dispatchează <code>AnalyzeReferenceImagesJob</code> pentru generare template-uri via Claude</li>
+    <li>Per cont: Fetch Posts (dispatchează FetchSocialPostsJob), Analizează stil (AnalyzeSocialStyleJob), Actualizează token, Toggle activ/inactiv</li>
+  </ul>
+
+  <hr/>
+
+  <h2>GraphicTemplateEditorPage / GraphicTemplateVisualEditorPage</h2>
+  <p>Grup: <em>Social Media</em>. Editor grafic Fabric.js (implementat în pași: CanvasManager, ZoomManager, StateManager, ElementFactory, EditorCore, LayersPanel cu drag-reorder). Permite editare vizuală a template-urilor grafice cu layere, text, forme, imagini. Salvează config JSON în <code>graphic_templates.config</code>.</p>
+
+  <hr/>
+
+  <h2>AppSettingsPage</h2>
+  <p>Panel: Admin (nu App). Sort 100. Setări la nivel de aplicație stocate în tabela <code>app_settings</code>.</p>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Setare</th><th>Cheie AppSetting</th><th>Stocare</th><th>Descriere</th></tr>
+    <tr><td>Nume aplicație</td><td>KEY_BRAND_NAME</td><td>plain</td><td>Titlul din sidebar</td></tr>
+    <tr><td>Logo</td><td>KEY_LOGO_PATH</td><td>plain (cale)</td><td>PNG transparent, disk public</td></tr>
+    <tr><td>IMAP Host</td><td>KEY_IMAP_HOST</td><td>plain</td><td>Server mail (ex: mail.malinco.ro)</td></tr>
+    <tr><td>IMAP Port</td><td>KEY_IMAP_PORT</td><td>plain</td><td>993 (SSL), 143 (TLS)</td></tr>
+    <tr><td>IMAP Encryption</td><td>KEY_IMAP_ENCRYPTION</td><td>plain</td><td>ssl / tls / starttls / notls</td></tr>
+    <tr><td>IMAP Username</td><td>KEY_IMAP_USERNAME</td><td>plain</td><td>Adresa email</td></tr>
+    <tr><td>IMAP Password</td><td>KEY_IMAP_PASSWORD</td><td>criptat</td><td>Nu se preîncarcă în formular</td></tr>
+    <tr><td>Anthropic API Key</td><td>KEY_ANTHROPIC_API_KEY</td><td>criptat</td><td>sk-ant-... pentru Claude AI</td></tr>
+    <tr><td>WooCommerce Plugin API Key</td><td>KEY_WOO_PLUGIN_API_KEY</td><td>criptat</td><td>Cheia pentru plugin-ul WordPress malinco-erp-bridge</td></tr>
+  </table>
+  <p>Setări suplimentare (gestionate din ChatLogsPage și SocialAccountsPage):</p>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Cheie</th><th>Stocare</th><th>Descriere</th></tr>
+    <tr><td>KEY_CHAT_PRIMARY_COLOR</td><td>plain</td><td>Culoarea widget chat (#e65100 default)</td></tr>
+    <tr><td>KEY_CHAT_BOT_NAME</td><td>plain</td><td>Numele afișat al botului</td></tr>
+    <tr><td>KEY_CHAT_SUBTITLE</td><td>plain</td><td>Subtitlul widget-ului</td></tr>
+    <tr><td>KEY_CHAT_WELCOME_MSG</td><td>plain</td><td>Mesajul de bun-venit</td></tr>
+    <tr><td>KEY_CHAT_MAX_COST_PER_SESSION</td><td>plain</td><td>Cost maxim USD per sesiune (0=fără limită)</td></tr>
+    <tr><td>KEY_TELEGRAM_BOT_TOKEN</td><td>criptat</td><td>Token bot Telegram pentru notificări lead-uri</td></tr>
+    <tr><td>KEY_TELEGRAM_CHAT_ID</td><td>plain</td><td>ID grup Telegram</td></tr>
+    <tr><td>gemini_api_key</td><td>criptat</td><td>Cheie Gemini pentru generare imagini sociale</td></tr>
+    <tr><td>meta_app_id / meta_app_secret</td><td>plain / criptat</td><td>Aplicație Meta pentru token permanent</td></tr>
+  </table>
+
+  <hr/>
+
+  <h2>Alte pagini</h2>
+  <ul>
+    <li><strong>BiDashboardPage / BiAnalysisPage</strong> — rapoarte BI cu grafice (valoare stoc, comenzi, prețuri); generare manuală raport AI via GenerateBiAnalysisJob</li>
+    <li><strong>SupplierPriceIntelligencePage</strong> — prețuri extrase din emailuri (SupplierPriceQuote); comparare prețuri per furnizor per produs</li>
+    <li><strong>UnassignedItemsPage</strong> — items din necesare fără furnizor atribuit; sortare după produs pentru atribuire manuală</li>
+    <li><strong>ProductsWithoutSupplier</strong> — produse WooCommerce fără nicio relație ProductSupplier</li>
+    <li><strong>SkuDiscrepancyReport</strong> — SKU-uri prezente în ERP dar absente din WooCommerce sau invers</li>
+    <li><strong>StockMovementsReport</strong> — mișcări de stoc pe perioadă; grafic cantitate/valoare toggle</li>
+    <li><strong>OnlineShopReport</strong> — raport comenzi online cu statistici și grafice</li>
+    <li><strong>AiUsageLogPage</strong> (Admin panel) — istoricul apelurilor AI: model, tokeni, cost USD, context (email_ai/bi_daily/chat/social)</li>
+  </ul>
+</section>
+
+<section id="t7-jobs">
+  <h1>T7. Jobs și Procesare Asincronă</h1>
+
+  <p>Toate job-urile implementează <code>ShouldQueue</code> și rulează în queue-ul default (Laravel queue worker). La eșec final, toate loghează eroarea via <code>Log::error()</code> în metoda <code>failed()</code>.</p>
+
+  <h2>FetchEmailsJob</h2>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Proprietate</th><th>Valoare</th></tr>
+    <tr><td>timeout</td><td>300s</td></tr>
+    <tr><td>tries</td><td>1 (nu re-încearcă)</td></tr>
+    <tr><td>Dispatched de</td><td>Schedule la fiecare 5 minute; butonul "Sincronizează" din EmailInboxPage</td></tr>
+  </table>
+  <p><strong>Algoritm:</strong></p>
+  <ol>
+    <li>Citește credențiale IMAP din AppSetting</li>
+    <li>Construiește index dublu: suppliers.email → supplier_id + supplier_contacts.email → supplier_id</li>
+    <li>Listează toate folderele IMAP (recursiv), sare trash/spam/junk/drafts</li>
+    <li>Per folder: reconnect fresh (evită state intern IMAP), execută <code>SEARCH SINCE &lt;data-3zile&gt;</code> via UID (evită SEARCH ALL care crăpă pe unele servere)</li>
+    <li>Filtrează UID-urile deja existente în DB (<code>EmailMessage::whereIn(imap_uid)</code>)</li>
+    <li>Fetch individual per UID nou: from, subject (decode MIME), body HTML + text, to/cc/attachments (metadate)</li>
+    <li>Auto-asociere furnizor: supplier.email → supplier_contact.email</li>
+    <li>Salvare EmailMessage cu toate câmpurile</li>
+  </ol>
+  <p><strong>Output:</strong> EmailMessage records în DB. Loghează numărul de emailuri noi importate.</p>
+
+  <hr/>
+
+  <h2>ProcessEmailAIJob</h2>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Proprietate</th><th>Valoare</th></tr>
+    <tr><td>timeout</td><td>60s</td></tr>
+    <tr><td>tries</td><td>2</td></tr>
+    <tr><td>backoff</td><td>30s</td></tr>
+    <tr><td>Input</td><td>emailId (int)</td></tr>
+    <tr><td>Dispatched de</td><td>Manual via comanda <code>email:process-ai</code>; schedule dezactivat temporar</td></tr>
+  </table>
+  <p><strong>Algoritm:</strong></p>
+  <ol>
+    <li>Skip dacă agent_processed_at deja setat (idempotent)</li>
+    <li>Construiește textul emailului: subiect + expeditor + furnizor + data + body (max 4000 chars din text plain sau HTML stripped)</li>
+    <li>Apel Claude Haiku via HTTP direct la <code>https://api.anthropic.com/v1/messages</code></li>
+    <li>Prompt structurat: clasificare tip (offer/invoice/order_confirmation/etc.), rezumat, urgență (low/medium/high), needs_reply, produse menționate, <strong>prețuri unitare</strong> (NUMAI prețuri per produs fizic, nu totaluri/transport), dată livrare, termen plată, discount, nr. factură</li>
+    <li>Parsează JSON din răspuns (extrage din markdown code block dacă necesar)</li>
+    <li>Salvează JSON complet în <code>email_messages.agent_actions</code></li>
+    <li>Salvează entități individuale în <code>email_entities</code>: fiecare preț, data livrare, nr. factură, termen plată, discount</li>
+    <li>Salvează prețuri în <code>supplier_price_quotes</code> cu matching produs (SKU exact → exact name → scoring cuvinte)</li>
+    <li>Loghează tokenuri în AiUsageLog</li>
+  </ol>
+  <p><strong>Matching produs</strong> (<code>matchProduct()</code>): (1) SKU explicit; (2) potrivire exactă nume; (3) scoring: câte cuvinte distinctive (≥4 litere, non-stopwords, non-numerice) din emailul brut apar în titlul produsului; bonus +10 dacă titlul conține fraza completă; prag minim 60% din cuvintele distinctive.</p>
+
+  <hr/>
+
+  <h2>GenerateBiAnalysisJob</h2>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Proprietate</th><th>Valoare</th></tr>
+    <tr><td>timeout</td><td>300s</td></tr>
+    <tr><td>tries</td><td>1</td></tr>
+    <tr><td>Input</td><td>analysisId, sections (both/stock/online), dateFrom, dateTo</td></tr>
+    <tr><td>Dispatched de</td><td>BiDashboardPage (manual), comenzile bi:generate-*-report</td></tr>
+  </table>
+  <p><strong>Algoritm:</strong></p>
+  <ol>
+    <li>Colectare metrici: stoc zilnic/săptămânal/lunar din <code>daily_stock_metrics</code> (granularitate: ≤30 zile=zilnic, 31-180=săptămânal, >180=lunar); top 15 produse cu scăderi stoc; modificări prețuri; top produse prețuri crescute/scăzute; comenzi online (același sistem granularitate); top 15 produse vândute</li>
+    <li>Context rapoarte anterioare: max 2 lunare (3000 chars), max 4 săptămânale (2500), max 2 manuale (1500) din aceeași perioadă</li>
+    <li>Construiește prompt detaliat în română cu toate datele + instrucțiuni de raport (rezumat, stocuri, prețuri, online, recomandări aprovizionare cu tabel Markdown, sezonalitate piață)</li>
+    <li>Apel Claude Sonnet via SDK Anthropic, max 12000 tokeni output</li>
+    <li>Salvează conținut Markdown + metrics_snapshot + cost USD în BiAnalysis</li>
+  </ol>
+  <p>Model folosit: <code>claude-sonnet-4-6</code>. Cost estimat: $3/MTok input + $15/MTok output.</p>
+
+  <hr/>
+
+  <h2>GenerateSocialPostJob</h2>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Proprietate</th><th>Valoare</th></tr>
+    <tr><td>timeout</td><td>400s</td></tr>
+    <tr><td>tries</td><td>2</td></tr>
+    <tr><td>backoff</td><td>15s</td></tr>
+    <tr><td>Input</td><td>postId (int)</td></tr>
+    <tr><td>Dispatched de</td><td>CreateSocialPost::afterCreate()</td></tr>
+  </table>
+  <p><strong>Algoritm:</strong></p>
+  <ol>
+    <li>Setează status=generating</li>
+    <li><code>SocialCaptionService::generate()</code> — Claude generează caption, hashtags, image_prompt, graphic_title, graphic_subtitle</li>
+    <li>Rezolvare titlu: numele produsului (fără codul numeric de la sfârșit) sau numele brandului</li>
+    <li>Rezolvare subtitlu: prima linie semnificativă din caption (max 70 chars)</li>
+    <li>Rezolvare label: "DIN CATALOGUL NOSTRU" / "BRAND PARTENER" / "OFERTĂ SPECIALĂ"</li>
+    <li>Rezolvare template: slug explicit → layout tip → template default</li>
+    <li><code>NodeImageRenderer::render()</code> — randare imagine 1080×1080 via Node.js</li>
+    <li>Setează status=ready; la eroare: status=failed cu error_message</li>
+  </ol>
+
+  <hr/>
+
+  <h2>PublishSocialPostJob</h2>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Proprietate</th><th>Valoare</th></tr>
+    <tr><td>timeout</td><td>60s</td></tr>
+    <tr><td>tries</td><td>3</td></tr>
+    <tr><td>backoff</td><td>60s</td></tr>
+    <tr><td>Dispatched de</td><td>Comanda <code>social:publish-scheduled</code> (everyMinute)</td></tr>
+  </table>
+  <p><strong>Algoritm:</strong> <code>DB::transaction()</code> cu <code>lockForUpdate()</code> pentru a preveni dubla publicare. Verifică status=scheduled. Setează status=publishing. Apelează <code>MetaGraphClient::publishPost()</code> cu caption + image URL. Salvează platform_post_id, platform_url, published_at. La eșec final: status=failed.</p>
+
+  <hr/>
+
+  <h2>ImportWooProductsJob</h2>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Proprietate</th><th>Valoare</th></tr>
+    <tr><td>timeout</td><td>1800s (30 min)</td></tr>
+    <tr><td>tries</td><td>1</td></tr>
+    <tr><td>Middleware</td><td>WithoutOverlapping per connectionId (expireAfter 1800s, dontRelease)</td></tr>
+    <tr><td>Input</td><td>connectionId</td></tr>
+  </table>
+  <p>Delegă la <code>ImportWooProductsAction::execute()</code>: fetch paginat (100/pagină) din WooCommerce via WooClient, upsert în <code>woo_products</code>.</p>
+
+  <hr/>
+
+  <h2>ImportWooCategoriesJob</h2>
+  <p>Timeout 300s, tries 1. Fetch paginat categorii WooCommerce, upsert în <code>woo_categories</code>. Dispatched de comanda <code>woo:sync-categories</code> (schedule la 6 ore).</p>
+
+  <hr/>
+
+  <h2>GenerateChatSummaryJob</h2>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Proprietate</th><th>Valoare</th></tr>
+    <tr><td>timeout</td><td>30s</td></tr>
+    <tr><td>tries</td><td>2</td></tr>
+    <tr><td>Input</td><td>sessionId (string)</td></tr>
+    <tr><td>Dispatched de</td><td>ChatController după colectare date contact</td></tr>
+  </table>
+  <p>Ia ultimele 30 mesaje din sesiune, construiește prompt pentru Claude Haiku: extrage produse/categorii de interes (max 3) și rezumat nevoie client. Salvează în <code>chat_contacts.summary</code> și <code>.interested_in</code>.</p>
+
+  <hr/>
+
+  <h2>SendTelegramLeadJob</h2>
+  <p>Timeout 30s, tries 2, backoff 10s. Input: sessionId. Trimite notificare Telegram cu datele de contact ale lead-ului (email, telefon, interested_in, summary) via TelegramService. Dispatched de ChatController după colectare contact.</p>
+
+  <hr/>
+
+  <h2>SyncProductSupplierMetaJob</h2>
+  <p>Input: woo_product_id. Scrie meta-datele furnizorului pe produsul WooCommerce: <code>_furnizor_nume</code> și <code>_furnizor_sku</code> via <code>WooClient::updateProduct()</code> cu <code>meta_data</code>. Dispatched automat din <code>EditWooProduct::afterSave()</code> când produsul are woo_id.</p>
+
+  <hr/>
+
+  <h2>SyncWooProductStatusesJob</h2>
+  <p>Sincronizează statusurile (publish/draft) ale produselor din WooCommerce fără a face fetch complet. Folosește <code>WooClient::getProductStatuses()</code> (câmpuri _fields=id,status). Dispatched de comanda <code>woo:sync-product-statuses</code>.</p>
+
+  <hr/>
+
+  <h2>AnalyzeReferenceImagesJob</h2>
+  <p>Input: array căi imagini, userId. Trimite imaginile de referință la Claude pentru analiză vizuală și generare propuneri de template-uri grafice. Notifică utilizatorul via Filament Notification la final.</p>
+
+  <hr/>
+
+  <h2>AnalyzeSocialStyleJob</h2>
+  <p>Input: accountId. Analizează stilul vizual al postărilor istorice ale contului Facebook (fetch via MetaGraphClient, imagini via Gemini). Salvează profilul de stil în <code>social_style_profiles</code>.</p>
+
+  <hr/>
+
+  <h2>FetchSocialPostsJob</h2>
+  <p>Input: accountId. Descarcă postările istorice ale paginii Facebook via MetaGraphClient Graph API. Salvează în <code>social_fetched_posts</code>.</p>
+
+  <hr/>
+
+  <h2>RegenerateImageJob</h2>
+  <p>Input: postId. Re-rulează doar pasul de generare imagine (NodeImageRenderer) pentru o postare existentă, fără a regenera caption-ul. Util dacă template-ul s-a schimbat.</p>
+
+  <hr/>
+
+  <h2>PopulateWinmentorNamesBatchJob</h2>
+  <p>Procesează un batch de produse Winmentor pentru a popula denumirile din fișierele CSV. Dispatched în lanț de comanda <code>woo:populate-winmentor-names</code>.</p>
+
+  <hr/>
+
+  <h2>PushWinmentorPricesToWooJob</h2>
+  <p>Timeout 3600s, tries 1. Push prețuri din Winmentor (fișiere CSV importate) pe WooCommerce via WooClient. Aplică logica gate stoc + first-import.</p>
+</section>
+
+<section id="t8-services">
+  <h1>T8. Services și Integrări Externe</h1>
+
+  <h2>ClaudeAiClient (<code>App\Services\Ai\ClaudeAiClient</code>)</h2>
+  <p>Client centralizat pentru apeluri la Anthropic API. Folosit în servicii care au nevoie de flexibilitate (tool use, streaming).</p>
+
+  <h3>Modele configurate</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Constantă</th><th>Model ID</th><th>Cost input</th><th>Cost output</th></tr>
+    <tr><td>MODEL_SONNET</td><td>claude-sonnet-4-6</td><td>$3.00/MTok</td><td>$15.00/MTok</td></tr>
+    <tr><td>MODEL_HAIKU</td><td>claude-haiku-4-5-20251001</td><td>$0.80/MTok</td><td>$4.00/MTok</td></tr>
+  </table>
+
+  <h3>Rezolvare API key</h3>
+  <pre><code>// Prioritate: parametru constructor → AppSetting DB (criptat) → config services.anthropic.api_key → env ANTHROPIC_API_KEY
+$this->apiKey = $apiKey
+    ?? AppSetting::getEncrypted(AppSetting::KEY_ANTHROPIC_API_KEY)
+    ?? config('services.anthropic.api_key', env('ANTHROPIC_API_KEY', ''));</code></pre>
+
+  <h3>Metode publice</h3>
+  <ul>
+    <li><code>rawClient(): AnthropicClient</code> — returnează clientul SDK brut pentru tool use / streaming</li>
+    <li><code>complete(string $prompt, ?string $system, string $model, int $maxTokens): array</code> — răspuns simplu; returnează <code>['content', 'tokens' =&gt; ['input', 'output'], 'cost_usd']</code></li>
+    <li><code>static calculateCost(string $model, int $inputTokens, int $outputTokens): float</code></li>
+    <li><code>static pricing(string $model): array{input, output}</code></li>
+  </ul>
+
+  <hr/>
+
+  <h2>ChatService (<code>App\Services\ChatService</code>)</h2>
+  <p>Serviciu principal al chatbot-ului AI pentru site-ul public. Returnează <code>['reply' =&gt; string, 'products' =&gt; array]</code>.</p>
+
+  <h3>Configurare</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Parametru</th><th>Config key</th><th>Default</th></tr>
+    <tr><td>Max history messages</td><td>app.malinco.chat.max_history</td><td>20</td></tr>
+    <tr><td>Session TTL</td><td>app.malinco.chat.session_ttl</td><td>900s (15 min)</td></tr>
+    <tr><td>Chat cache prefix</td><td>app.malinco.cache.chat_prefix</td><td>chat:</td></tr>
+    <tr><td>State prefix</td><td>app.malinco.cache.chat_state</td><td>chat_state:</td></tr>
+    <tr><td>Site URL</td><td>app.malinco.site_url</td><td>https://malinco.ro</td></tr>
+    <tr><td>Model AI</td><td>app.malinco.ai.models.haiku</td><td>claude-haiku-4-5-20251001</td></tr>
+  </table>
+
+  <h3>Tool Use — Tools disponibile</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Tool</th><th>Input</th><th>Ce face</th></tr>
+    <tr><td>searchProducts</td><td>query, limit (max 5)</td><td>FULLTEXT search în woo_products (name + sku), filtrare status=publish, returnează {id, name, price, image_url, url (permalink), stock_available (boolean), unit}</td></tr>
+    <tr><td>checkQuantityAvailability</td><td>product_id sau sku, quantity</td><td>Verifică stocul disponibil din product_stocks; returnează dacă cantitatea e disponibilă fără a dezvălui numărul exact</td></tr>
+    <tr><td>getOrderStatus</td><td>order_number sau email</td><td>Caută în woo_orders după number sau billing.email; returnează status + data comenzii</td></tr>
+    <tr><td>getCompanyInfo</td><td>topic</td><td>Returnează informații despre companie (adresă, program, servicii) din AppSetting sau hardcodat</td></tr>
+  </table>
+
+  <h3>Algoritm conversație (Tool Use loop)</h3>
+  <ol>
+    <li>Citește istoricul din Cache (<code>chat:{session_id}</code>), max 20 mesaje text-only (produsele sunt stripped din istoric)</li>
+    <li>Apel Claude Haiku cu tools definite, max 5 iterații tool-use</li>
+    <li>Dacă Claude returnează tool_use: execută tool-ul local, trimite rezultatul înapoi ca tool_result</li>
+    <li>Colectează produsele returnate de searchProducts (deduplicare pe id)</li>
+    <li>Actualizează istoricul în Cache (text-only pentru compactare)</li>
+    <li>Verifică limita de cost per sesiune (KEY_CHAT_MAX_COST_PER_SESSION); dacă depășită, bot redirecționează la telefon</li>
+    <li>Loghează mesajele în chat_logs cu input/output tokens</li>
+  </ol>
+
+  <h3>Constrângeri chatbot</h3>
+  <ul>
+    <li>Nu dezvăluie niciodată cantități exacte de stoc</li>
+    <li>Telefon DOAR pentru reclamații și comenzi comerciale mari (B2B)</li>
+    <li>Max 5 produse per răspuns</li>
+    <li>MAX_TOOL_ITERATIONS = 5 (previne bucle infinite)</li>
+  </ul>
+
+  <hr/>
+
+  <h2>WooClient (<code>App\Services\WooCommerce\WooClient</code>)</h2>
+  <p>Client HTTP pentru WooCommerce REST API v3. Autentificare Basic Auth cu consumer_key + consumer_secret din IntegrationConnection.</p>
+  <p>Base URL: <code>{connection.base_url}/wp-json/wc/v3</code>.</p>
+
+  <h3>Metode disponibile</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Metodă</th><th>Endpoint WC</th><th>Descriere</th></tr>
+    <tr><td>getCategories(page, perPage)</td><td>GET products/categories</td><td>Paginat, orderby=id</td></tr>
+    <tr><td>getCategory(id)</td><td>GET products/categories/{id}</td><td>—</td></tr>
+    <tr><td>getProducts(page, perPage)</td><td>GET products</td><td>Paginat, orderby=id</td></tr>
+    <tr><td>getProductStatuses(page, perPage)</td><td>GET products?status=any&_fields=id,status</td><td>Lightweight — doar id+status</td></tr>
+    <tr><td>getProduct(id)</td><td>GET products/{id}</td><td>—</td></tr>
+    <tr><td>testConnection()</td><td>GET system_status</td><td>Fallback la GET products?per_page=1</td></tr>
+    <tr><td>updateProductPrice(productId, regularPrice)</td><td>PUT products/{id}</td><td>Retry cu retryRequest()</td></tr>
+    <tr><td>updateProduct(productId, data)</td><td>PUT products/{id}</td><td>Update câmpuri arbitrare (status, meta_data, etc.)</td></tr>
+    <tr><td>getOrders(page, perPage, params)</td><td>GET orders</td><td>Paginat</td></tr>
+    <tr><td>getOrder(id)</td><td>GET orders/{id}</td><td>—</td></tr>
+    <tr><td>updateOrder(id, data)</td><td>PUT orders/{id}</td><td>Update status, note</td></tr>
+  </table>
+  <p>Toate metodele de write folosesc <code>retryRequest()</code> cu exponential backoff (3 încercări). Timeout configurat pe IntegrationConnection (<code>resolveTimeoutSeconds()</code>). SSL verify configurat per conexiune.</p>
+
+  <hr/>
+
+  <h2>WooOrderSyncService (<code>App\Services\WooCommerce\WooOrderSyncService</code>)</h2>
+  <p>Sincronizează comenzile WooCommerce în tabela <code>woo_orders</code>.</p>
+  <h3>Metoda upsertOrder(connectionId, locationId, raw)</h3>
+  <ol>
+    <li>Mapează câmpurile raw WC → orderData: number, status, currency, billing, shipping, payment, totale (subtotal calculat manual dacă 0 din totals)</li>
+    <li><code>WooOrder::updateOrCreate([connection_id, woo_id], orderData)</code></li>
+    <li>Sync items: <code>syncItems(order, raw.line_items)</code> — upsert WooOrderItem cu name, sku, quantity, price, total, woo_product_id (lookup local by woo_id)</li>
+    <li>Dacă comandă nou creată și status pending/processing/on-hold: <code>PurchaseRequest::createFromWooOrder($order)</code> — creează automat PNR pentru produsele "la comandă" (is_on_demand=true)</li>
+  </ol>
+  <p>Safeguard: dacă pagina 1 returnează 0 comenzi dar există >10 local → loghează warning și oprește sync (WooCommerce posibil down).</p>
+
+  <hr/>
+
+  <h2>ImapMailboxService (<code>App\Services\Email\ImapMailboxService</code>)</h2>
+  <p>Serviciu IMAP pur, fără persistare în DB. Wrappează biblioteca <code>Webklex\PHPIMAP</code>.</p>
+  <h3>Metode publice</h3>
+  <ul>
+    <li><code>connect(): static</code> — conectare IMAP via ClientManager; method chaining</li>
+    <li><code>disconnect(): void</code> — deconectare sigură (ignoră erori)</li>
+    <li><code>getFolders(): array</code> — listare recursivă foldere, excluse: trash/spam/junk/drafts</li>
+    <li><code>fetchSince(string $folderPath, Carbon $since): Collection</code> — SEARCH SINCE via UID, fetch individual per UID</li>
+  </ul>
+  <p>Folosit în ImportEmailHistoryCommand pentru importul inițial al istoricului. FetchEmailsJob implementează propria logică similară direct (pentru performanță).</p>
+
+  <hr/>
+
+  <h2>NodeImageRenderer (<code>App\Services\SocialMedia\NodeImageRenderer</code>)</h2>
+  <p>Randează imagini 1080×1080 JPEG pentru postările sociale folosind Node.js + Canvas.</p>
+  <h3>Metoda render()</h3>
+  <pre><code>render(
+    string $postId,
+    ?string $productImageUrl,  // URL sau cale locală imagine produs
+    ?string $brandLogoPath,    // cale locală logo brand partener
+    ?string $title,            // text mare roșu (numele produsului)
+    ?string $subtitle,         // text mic (hook-ul din caption)
+    array $extraElements,      // elemente suplimentare Fabric.js
+    ?string $label,            // eyebrow label
+    array $templateConfig      // override-uri stil din GraphicTemplate::config
+): ?string  // returnează filename relativ (social/xxx.jpg) sau null</code></pre>
+  <p><strong>Flux:</strong> construiește config JSON → rulează <code>node node-renderer/render.js '{config}'</code> via <code>Symfony\Component\Process\Process</code> (timeout 30s) → verifică existența fișierului output → returnează calea relativă.</p>
+  <p>Dimensiuni fixe: 1080×1080px. Template config merges cu output/width/height/malinco_logo protejate (nu pot fi suprascrise).</p>
+  <p><code>isAvailable(): bool</code> — verifică existența <code>node-renderer/render.js</code> și <code>public/storage/malinco-logo.png</code>.</p>
+
+  <hr/>
+
+  <h2>MetaGraphClient (<code>App\Services\SocialMedia\MetaGraphClient</code>)</h2>
+  <p>Client pentru Meta Graph API (Facebook).</p>
+  <ul>
+    <li>Autentificare: Page Access Token transmis la construcție</li>
+    <li><code>publishPost(string $pageId, string $message, ?string $imageUrl): array</code> — POST la <code>/v19.0/{pageId}/photos</code> (cu imagine) sau <code>/feed</code> (fără); returnează post_id</li>
+    <li><code>getPosts(string $pageId, int $limit): array</code> — GET postări istorice cu câmpuri id, message, full_picture, created_time, permalink_url</li>
+  </ul>
+
+  <hr/>
+
+  <h2>SocialCaptionService (<code>App\Services\SocialMedia\SocialCaptionService</code>)</h2>
+  <p>Generează textul postărilor sociale folosind Claude.</p>
+  <p><code>generate(SocialPost $post, ?SocialStyleProfile $style): array</code> — construiește prompt cu: tipul postării, produsul/brandul asociat, direcția creativă (brief_direction), profilul de stil (dacă există). Apelează Claude Haiku. Returnează <code>['caption', 'hashtags', 'image_prompt', 'graphic_title', 'graphic_subtitle']</code>.</p>
+
+  <hr/>
+
+  <h2>StyleAnalysisService (<code>App\Services\SocialMedia\StyleAnalysisService</code>)</h2>
+  <p>Analizează stilul vizual al postărilor istorice (imagini fetch via MetaGraphClient + analiză Gemini/Claude). Salvează profilul în SocialStyleProfile: tone_of_voice, visual_style, color_palette, content_themes.</p>
+
+  <hr/>
+
+  <h2>WooPluginClient (<code>App\Services\WooCommerce\WooPluginClient</code>)</h2>
+  <p>Client pentru plugin-ul WordPress <code>malinco-erp-bridge</code>. Autentificare via header <code>X-ERP-Api-Key</code> (cheie din AppSetting::KEY_WOO_PLUGIN_API_KEY, criptată). Endpoint-uri: GET /version, GET /product/meta, POST /product/meta, POST /product/bulk-meta, POST /cache/flush, GET /options/{key}, POST /self-update.</p>
+
+  <hr/>
+
+  <h2>TelegramService (<code>App\Services\TelegramService</code>)</h2>
+  <p>Trimite notificări Telegram via Bot API. <code>isConfigured(): bool</code> — verifică existența token + chat_id. <code>send(string $html): bool</code> — POST la <code>https://api.telegram.org/bot{token}/sendMessage</code> cu parse_mode=HTML.</p>
+
+  <hr/>
+
+  <h2>CompanyData Services (<code>App\Services\CompanyData\</code>)</h2>
+  <p><strong>OpenApiCompanyLookupService</strong>: lookup firme românești după CUI via openapi.ro. Returnează: company_name, company_registration_number, address, city, county, postal_code, phone, company_is_vat_payer. Metoda statică <code>normalizeCui()</code> — elimină prefixul "RO" și leading zeros.</p>
+</section>
+
+<section id="t9-commands-routes">
+  <h1>T9. Console Commands, Routes și Scheduler</h1>
+
+  <h2>Schedule complet (<code>routes/console.php</code>)</h2>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Comandă / Job</th><th>Frecvență</th><th>Timezone</th><th>Opțiuni</th></tr>
+    <tr><td>stock:dispatch-scheduled-winmentor</td><td>everyMinute</td><td>—</td><td>withoutOverlapping</td></tr>
+    <tr><td>FetchEmailsJob</td><td>everyFiveMinutes</td><td>—</td><td>withoutOverlapping</td></tr>
+    <tr><td>social:publish-scheduled</td><td>everyMinute</td><td>—</td><td>withoutOverlapping</td></tr>
+    <tr><td>woo:sync-orders</td><td>everyFifteenMinutes</td><td>—</td><td>withoutOverlapping</td></tr>
+    <tr><td>woo:sync-categories</td><td>everySixHours</td><td>—</td><td>withoutOverlapping</td></tr>
+    <tr><td>bi:compute-daily</td><td>dailyAt('00:30')</td><td>Europe/Bucharest</td><td>runInBackground (fără withoutOverlapping — idempotent)</td></tr>
+    <tr><td>bi:health-check</td><td>dailyAt('09:00')</td><td>Europe/Bucharest</td><td>—</td></tr>
+    <tr><td>bi:generate-weekly-report</td><td>weeklyOn(0, '05:00') (duminică)</td><td>Europe/Bucharest</td><td>withoutOverlapping, runInBackground</td></tr>
+    <tr><td>bi:generate-monthly-report</td><td>monthlyOn(1, '11:00')</td><td>Europe/Bucharest</td><td>withoutOverlapping, runInBackground</td></tr>
+    <tr><td>bi:generate-period-report --type=quarterly</td><td>monthlyOn(1, '06:00') când luna ∈ {1,4,7,10}</td><td>Europe/Bucharest</td><td>withoutOverlapping, runInBackground</td></tr>
+    <tr><td>bi:generate-period-report --type=semiannual</td><td>monthlyOn(1, '08:00') când luna ∈ {1,7}</td><td>Europe/Bucharest</td><td>withoutOverlapping, runInBackground</td></tr>
+    <tr><td>bi:generate-period-report --type=annual</td><td>yearlyOn(1, 1, '10:00') (1 ianuarie)</td><td>Europe/Bucharest</td><td>withoutOverlapping, runInBackground</td></tr>
+    <tr><td>gdpr:cleanup-chat-logs</td><td>weekly la 03:00</td><td>—</td><td>Anonimizare IP-uri chat_logs &gt;90 zile</td></tr>
+  </table>
+  <p><strong>Schedule dezactivate temporar (consum API):</strong></p>
+  <ul>
+    <li><code>email:process-ai --limit=100</code> — everyThirtyMinutes, withoutOverlapping</li>
+    <li><code>supplier:discover-contacts</code> — dailyAt('03:00')</li>
+  </ul>
+
+  <hr/>
+
+  <h2>Toate comenzile Artisan disponibile</h2>
+
+  <h3>Grup Achiziții / Furnizori</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Comandă</th><th>Descriere</th><th>Argumente notabile</th></tr>
+    <tr><td>assign:product-categories</td><td>Atribuie categorii WooCommerce la produse pe baza regulilor configurate</td><td>—</td></tr>
+    <tr><td>assign:product-suppliers</td><td>Atribuire furnizori la produse pe baza CSV/reguli</td><td>—</td></tr>
+    <tr><td>assign:suppliers-by-brand</td><td>Atribuie furnizori la produse prin brand</td><td>—</td></tr>
+    <tr><td>supplier:auto-match-domains</td><td>Potrivire automată furnizori → domenii email (contact-domain + name-match + Claude AI); aplică automat doar high confidence</td><td>--dry-run, --min-confidence</td></tr>
+    <tr><td>supplier:discover-contacts</td><td>Descoperă contacte noi din emailurile importate</td><td>--limit</td></tr>
+    <tr><td>supplier:rematch-price-quotes</td><td>Repotrivire cotații de preț din emailuri cu produsele din catalog (după algoritmul matchProduct)</td><td>—</td></tr>
+  </table>
+
+  <h3>Grup WooCommerce</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Comandă</th><th>Descriere</th><th>Argumente notabile</th></tr>
+    <tr><td>woo:sync-orders</td><td>Sincronizează comenzile WooCommerce local</td><td>--connection=ID, --pages=5, --status=processing</td></tr>
+    <tr><td>woo:sync-categories</td><td>Sincronizează categoriile WooCommerce</td><td>--connection=ID</td></tr>
+    <tr><td>woo:import-products</td><td>Import complet produse WooCommerce (dispatch ImportWooProductsJob)</td><td>--connection=ID</td></tr>
+    <tr><td>woo:import-categories</td><td>Import categorii (dispatch ImportWooCategoriesJob)</td><td>--connection=ID</td></tr>
+    <tr><td>woo:sync-product-statuses</td><td>Sincronizează statusurile produselor (lightweight, fără fetch complet)</td><td>--connection=ID</td></tr>
+    <tr><td>woo:sync-supplier-meta</td><td>Bulk sync meta furnizor (_furnizor_nume, _furnizor_sku) pe toate produsele cu woo_id</td><td>--limit, --dry-run</td></tr>
+    <tr><td>woo:deploy-plugin</td><td>Build ZIP plugin WordPress + upload via /self-update endpoint</td><td>--check (verifică versiunea), --build-only (doar ZIP)</td></tr>
+    <tr><td>woo:push-winmentor-products</td><td>Push produse din Winmentor CSV pe WooCommerce</td><td>--connection=ID, --file</td></tr>
+    <tr><td>woo:push-winmentor-images</td><td>Push imagini produse Winmentor pe WooCommerce</td><td>—</td></tr>
+    <tr><td>woo:push-winmentor-prices</td><td>Push prețuri Winmentor pe WooCommerce (cu gate stoc)</td><td>—</td></tr>
+    <tr><td>woo:populate-winmentor-names</td><td>Populează denumirile produselor din fișiere Winmentor</td><td>—</td></tr>
+  </table>
+
+  <h3>Grup Email</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Comandă</th><th>Descriere</th><th>Argumente</th></tr>
+    <tr><td>email:import-history</td><td>Import inițial emailuri istorice (folosește ImapMailboxService)</td><td>--since=YYYY-MM-DD, --folder=INBOX, --limit</td></tr>
+    <tr><td>email:process-ai</td><td>Procesare AI pe emailuri neprocesate (dispatch ProcessEmailAIJob în batch)</td><td>--limit=100</td></tr>
+    <tr><td>email:test-imap</td><td>Testare conexiune IMAP cu credențialele din AppSetting</td><td>—</td></tr>
+  </table>
+
+  <h3>Grup BI</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Comandă</th><th>Descriere</th><th>Argumente</th></tr>
+    <tr><td>bi:compute-daily</td><td>Calculează KPI zilnici, velocity, alerts pentru ziua de ieri (idempotent)</td><td>--date=YYYY-MM-DD</td></tr>
+    <tr><td>bi:health-check</td><td>Watchdog: detectează dacă bi:compute-daily nu a rulat și îl rulează acum</td><td>—</td></tr>
+    <tr><td>bi:generate-weekly-report</td><td>Generează raport BI săptămânal via Claude Sonnet</td><td>--from, --to</td></tr>
+    <tr><td>bi:generate-monthly-report</td><td>Generează raport BI lunar (30 zile, grupat săptămânal)</td><td>--from, --to</td></tr>
+    <tr><td>bi:generate-period-report</td><td>Generează raport BI pentru perioade lungi</td><td>--type=quarterly/semiannual/annual, --from, --to</td></tr>
+  </table>
+
+  <h3>Grup Produse / Imagini / AI</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Comandă</th><th>Descriere</th></tr>
+    <tr><td>products:enrich-from-web</td><td>Îmbogățire produse cu date de pe web (dimensiuni, descrieri) via AI</td></tr>
+    <tr><td>products:evaluate-image-candidates</td><td>Evaluare candidați imagini pentru produse via Claude Vision</td></tr>
+    <tr><td>products:evaluate-woo-content</td><td>Evaluare calitate conținut produse WooCommerce</td></tr>
+    <tr><td>products:generate-attributes</td><td>Generare atribute produse via AI</td></tr>
+    <tr><td>products:generate-descriptions</td><td>Generare descrieri produse via Claude</td></tr>
+    <tr><td>products:reformat-titles</td><td>Reformatare titluri produse (normalizare)</td></tr>
+    <tr><td>products:set-dimensions</td><td>Extragere și setare dimensiuni din titluri/descrieri</td></tr>
+    <tr><td>products:normalize-names</td><td>Normalizare denumiri (caractere speciale, encoding)</td></tr>
+    <tr><td>products:search-images</td><td>Căutare imagini produse (Google/web)</td></tr>
+    <tr><td>products:search-images-google</td><td>Căutare imagini via Google Custom Search API</td></tr>
+    <tr><td>products:search-images-data-seo</td><td>Căutare imagini via DataForSEO API</td></tr>
+    <tr><td>products:download-images-local</td><td>Descărcare imagini produse local</td></tr>
+    <tr><td>products:upload-images-woo</td><td>Upload imagini produse pe WooCommerce</td></tr>
+    <tr><td>products:verify-images</td><td>Verificare imagini produse (accesibilitate, dimensiuni)</td></tr>
+  </table>
+
+  <h3>Grup Social Media</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Comandă</th><th>Descriere</th></tr>
+    <tr><td>social:publish-scheduled</td><td>Publică postările cu scheduled_at &lt;= now() și status=scheduled (dispatchează PublishSocialPostJob)</td></tr>
+  </table>
+
+  <h3>Grup Stocuri / Import</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Comandă</th><th>Descriere</th></tr>
+    <tr><td>stock:import-winmentor</td><td>Import stocuri din fișiere CSV Winmentor</td></tr>
+    <tr><td>stock:dispatch-scheduled-winmentor</td><td>Verifică conexiunile cu import schedulat și dispatchează job-urile corespunzătoare (everyMinute)</td></tr>
+    <tr><td>stock:import-supplier-products-winmentor</td><td>Import produse furnizori din Winmentor</td></tr>
+    <tr><td>stock:import-suppliers-csv</td><td>Import furnizori din CSV</td></tr>
+    <tr><td>stock:import-suppliers-woo-json</td><td>Import furnizori din exportul JSON WooCommerce</td></tr>
+  </table>
+
+  <h3>Grup GDPR / Mentenanță</h3>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Comandă</th><th>Descriere</th></tr>
+    <tr><td>gdpr:cleanup-chat-logs</td><td>Anonimizare IP-uri în chat_logs mai vechi de 90 de zile (GDPR compliance)</td></tr>
+  </table>
+
+  <hr/>
+
+  <h2>Rute Web (<code>routes/web.php</code>)</h2>
+  <p>Toate rutele sunt sub middleware <code>['web', 'auth']</code>, cu excepția redirectelor permanente.</p>
+
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Rută</th><th>Metodă</th><th>Middleware</th><th>Descriere</th></tr>
+    <tr><td>/woo-products → /produse</td><td>GET (301)</td><td>—</td><td>Redirect permanent slug vechi</td></tr>
+    <tr><td>/woo-products/{any} → /produse/{any}</td><td>GET (301)</td><td>—</td><td>Redirect cu query string păstrat</td></tr>
+    <tr><td>/template-editor/{template}</td><td>GET</td><td>web, auth</td><td>GraphicTemplateController::show — editor Fabric.js standalone</td></tr>
+    <tr><td>/template-editor/{template}/save</td><td>POST</td><td>web, auth</td><td>GraphicTemplateController::save — salvează config JSON</td></tr>
+    <tr><td>/template-editor/{template}/preview</td><td>POST</td><td>web, auth</td><td>GraphicTemplateController::preview — render preview imagine</td></tr>
+    <tr><td>/sku/{sku}</td><td>GET</td><td>web, auth</td><td>Redirect la ViewWooProduct (scanare cod bare)</td></tr>
+    <tr><td>/sku-check/{sku}</td><td>GET</td><td>web, auth</td><td>AJAX: JSON {found, url} — verifică existența SKU</td></tr>
+    <tr><td>/achizirii/products-search</td><td>GET</td><td>web, auth, throttle:search</td><td>AJAX: caută produse după name/sku (min 2 chars, limit 30)</td></tr>
+    <tr><td>/achizirii/customers-search</td><td>GET</td><td>web, auth, throttle:search</td><td>AJAX: caută clienți după name/phone (min 2 chars, limit 20)</td></tr>
+    <tr><td>/achizirii/offers-search</td><td>GET</td><td>web, auth, throttle:search</td><td>AJAX: caută oferte (fără query: ultimele 5 ale userului)</td></tr>
+    <tr><td>/products/search</td><td>GET</td><td>web, auth, throttle:search</td><td>AJAX: caută produse instock pentru asociere EAN (limit 15)</td></tr>
+    <tr><td>/email-attachment/{id}/{index}</td><td>GET</td><td>web, auth, super_admin</td><td>Descarcă atașament IMAP (inline PDF/imagini, attachment rest)</td></tr>
+    <tr><td>/email-html/{id}</td><td>GET</td><td>web, auth, super_admin</td><td>Servește HTML email sanitizat în iframe (CSP strict)</td></tr>
+    <tr><td>/ean-association</td><td>POST</td><td>web, auth</td><td>AJAX: creare cerere asociere EAN→produs</td></tr>
+  </table>
+
+  <h3>Rute webhook (fără CSRF, fără session)</h3>
+  <p>Definite în <code>bootstrap/app.php</code> → <code>routes/webhooks.php</code>:</p>
+  <ul>
+    <li>POST <code>/webhooks/woocommerce/{connectionId}</code> — webhook comenzi/produse WooCommerce; verificare semnătură HMAC-SHA256 via <code>X-WC-Webhook-Signature</code>; dispatchează SyncWooOrdersCommand sau ImportWooProductsJob</li>
+  </ul>
+
+  <h3>Plugin WordPress — endpoint-uri ERP Bridge</h3>
+  <p>Definite în plugin-ul WordPress, apelate de WooPluginClient. Autentificare: <code>X-ERP-Api-Key</code> header.</p>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Endpoint</th><th>Metodă</th><th>Descriere</th></tr>
+    <tr><td>/wp-json/malinco-erp/v1/version</td><td>GET</td><td>Returnează versiunea curentă a plugin-ului instalat</td></tr>
+    <tr><td>/wp-json/malinco-erp/v1/product/meta</td><td>GET</td><td>Citește meta-datele ERP ale unui produs (supplier, sku furnizor)</td></tr>
+    <tr><td>/wp-json/malinco-erp/v1/product/meta</td><td>POST</td><td>Scrie meta-datele ERP pe un produs</td></tr>
+    <tr><td>/wp-json/malinco-erp/v1/product/bulk-meta</td><td>POST</td><td>Scrie meta-date pe mai multe produse simultan</td></tr>
+    <tr><td>/wp-json/malinco-erp/v1/cache/flush</td><td>POST</td><td>Golește cache-ul WordPress pentru produse</td></tr>
+    <tr><td>/wp-json/malinco-erp/v1/options/{key}</td><td>GET</td><td>Citește o opțiune WordPress</td></tr>
+    <tr><td>/wp-json/malinco-erp/v1/self-update</td><td>POST</td><td>Primește ZIP plugin și se auto-actualizează</td></tr>
+  </table>
+
+  <hr/>
+
+  <h2>Rute Chat (<code>routes/chat.php</code>)</h2>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <tr><th>Rută</th><th>Metodă</th><th>Middleware / Throttle</th><th>Descriere</th></tr>
+    <tr><td>/chat/message</td><td>POST</td><td>throttle:chat-message (20 req/min per IP)</td><td>Endpoint principal chatbot; input: {message, session_id}; output: {reply, session_id, products[]}</td></tr>
+    <tr><td>/chat/contact</td><td>POST</td><td>throttle:chat-contact (10 req/min per IP)</td><td>Salvare date contact din formularul din widget; input: {session_id, name, email, phone, wants_specialist}</td></tr>
+    <tr><td>/chat/config</td><td>GET</td><td>throttle:chat-config (60 req/min per IP)</td><td>Returnează configurarea widget-ului: primary_color, bot_name, subtitle, welcome_msg</td></tr>
+    <tr><td>/chat/message (OPTIONS)</td><td>OPTIONS</td><td>—</td><td>CORS preflight</td></tr>
+    <tr><td>/chat/contact (OPTIONS)</td><td>OPTIONS</td><td>—</td><td>CORS preflight</td></tr>
+    <tr><td>/chat/config (OPTIONS)</td><td>OPTIONS</td><td>—</td><td>CORS preflight</td></tr>
+  </table>
+
+  <h3>Widget embed code</h3>
+  <pre><code>&lt;script&gt;window.MalincoChat={apiUrl:'https://erp.malinco.ro'};&lt;/script&gt;
+&lt;script src="https://erp.malinco.ro/chat/widget.js" defer&gt;&lt;/script&gt;</code></pre>
+
+  <h3>Structura răspuns /chat/message</h3>
+  <pre><code>{
+  "reply": "string — răspunsul textual al botului",
+  "session_id": "uuid-v4",
+  "products": [
+    {
+      "id": 123,
+      "name": "Cărămidă NF",
+      "price": "2.50",
+      "image_url": "https://...",
+      "url": "https://malinco.ro/produs/caramida-nf/",
+      "stock_available": true,
+      "unit": "buc"
+    }
+  ]
+}</code></pre>
+</section>

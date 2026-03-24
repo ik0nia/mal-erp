@@ -1,0 +1,673 @@
+<section id="furnizori" class="doc-section">
+
+  <h2>Modulul Furnizori</h2>
+
+  <p>
+    Modulul <strong>Furnizori</strong> se găsește în grupul de navigare <em>Achiziții</em> din bara laterală a aplicației
+    (iconița camion). Acesta centralizează toate informațiile despre partenerii comerciali de la care se
+    aprovizionează compania: date de identificare fiscală, date bancare, persoane de contact, produsele livrate
+    cu prețurile de achiziție aferente și condițiile comerciale negociate (livrare, comandă, transport, plată,
+    discounturi, retur și garanție). Modulul este strâns integrat cu modulele Achiziții (Necesare și Comenzi de
+    aprovizionare) și cu sistemul de inteligență emailuri.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       1. LISTA FURNIZORI
+  ════════════════════════════════════════════════════════════════ -->
+  <h3 id="furnizori-lista">1. Lista furnizorilor</h3>
+
+  <p>
+    Accesând <em>Achiziții → Furnizori</em> din meniu, se deschide tabelul cu toți furnizorii înregistrați
+    în sistem. Tabelul afișează implicit furnizorii sortați după data ultimei modificări, cu paginare automată.
+  </p>
+
+  <h4>Coloanele tabelului</h4>
+  <ul>
+    <li>
+      <strong>Furnizor</strong> — denumirea comercială a furnizorului. Coloana este căutabilă și sortabilă.
+    </li>
+    <li>
+      <strong>Branduri</strong> — logouri stacked ale brandurilor asociate furnizorului (maxim 6 afișate).
+      Coloana poate fi ascunsă/afișată din meniul de coloane.
+    </li>
+    <li>
+      <strong>Contact principal</strong> — numele primei persoane de contact înregistrate. Afișează maxim
+      un rezultat; dacă există mai mulți, restul sunt vizibili în pagina furnizorului. Coloana este comutabilă.
+    </li>
+    <li>
+      <strong>Telefon</strong> — numărul de telefon al contactului principal, cu buton de copiere rapidă.
+      Coloana este comutabilă.
+    </li>
+    <li>
+      <strong>CUI</strong> — codul unic de înregistrare fiscală. Coloana este comutabilă.
+    </li>
+    <li>
+      <strong>Buyer</strong> — responsabilul intern de achiziții asignat acestui furnizor. Coloana este
+      comutabilă.
+    </li>
+    <li>
+      <strong>Activ</strong> — indicator boolean (bifă verde / x roșu) care arată dacă furnizorul este activ
+      sau dezactivat.
+    </li>
+    <li>
+      <strong>Produse</strong> — numărul total de produse asociate furnizorului. Coloana este sortabilă —
+      util pentru a identifica rapid furnizorii cu portofoliu mare.
+    </li>
+    <li>
+      <strong>Modificat</strong> — data ultimei modificări a fișei furnizorului (format zi.lună.an). Coloana
+      este sortabilă și comutabilă.
+    </li>
+  </ul>
+
+  <h4>Căutarea unui furnizor</h4>
+  <p>
+    Bara de căutare din partea superioară a tabelului permite căutare liberă după <strong>denumirea
+    furnizorului</strong>. Căutarea este insensibilă la majuscule. Introduceți câteva litere din denumire
+    și tabelul se filtrează în timp real.
+  </p>
+
+  <h4>Filtrarea după status</h4>
+  <p>
+    Butonul <em>Filtre</em> din bara tabelului expune filtrul <strong>Activ</strong> de tip ternar, cu trei
+    opțiuni:
+  </p>
+  <ul>
+    <li><em>Toți</em> — afișează atât furnizorii activi cât și cei inactivi (implicit).</li>
+    <li><em>Da</em> — doar furnizorii cu <code>is_active = true</code>.</li>
+    <li><em>Nu</em> — doar furnizorii dezactivați.</li>
+  </ul>
+
+  <h4>Acțiuni din tabel</h4>
+  <p>Fiecare linie din tabel are în dreapta trei acțiuni rapide:</p>
+  <ul>
+    <li><strong>Vizualizare</strong> — deschide pagina de detalii (View) în mod read-only.</li>
+    <li><strong>Editare</strong> — deschide formularul de editare.</li>
+    <li>
+      <strong>Mută produse</strong> (portocaliu, iconița săgeți) — apare doar dacă furnizorul are produse
+      asociate. Permite transferul în bloc al produselor către un alt furnizor activ, cu posibilitatea de a
+      muta toate produsele sau de a le selecta manual.
+    </li>
+  </ul>
+
+  <p>
+    Ștergerea în masă (bifă multiplă) este protejată: dacă oricare din furnizorii selectați are produse
+    asociate, ștergerea este blocată cu mesaj de eroare explicit.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       2. CREAREA UNUI FURNIZOR NOU
+  ════════════════════════════════════════════════════════════════ -->
+  <h3 id="furnizori-creare">2. Crearea unui furnizor nou</h3>
+
+  <p>
+    Apăsați butonul <strong>Furnizor nou</strong> din colțul dreapta-sus al listei. Formularul de creare
+    este structurat în mai multe secțiuni.
+  </p>
+
+  <h4>Secțiunea „Informații generale"</h4>
+  <ul>
+    <li>
+      <strong>Nume furnizor</strong> (obligatoriu) — denumirea comercială sau legală a furnizorului. Maxim
+      255 de caractere.
+    </li>
+    <li>
+      <strong>Website</strong> — adresa web a furnizorului. Câmpul validează formatul URL. Este prefixat
+      automat cu <code>https://</code>. Maxim 255 de caractere.
+    </li>
+    <li>
+      <strong>Adresă</strong> — adresa poștală completă (sediu social sau depozit principal). Câmp text
+      multi-linie, 2 rânduri.
+    </li>
+    <li>
+      <strong>Activ</strong> — comutator (toggle) care determină dacă furnizorul apare în selecțiile din
+      modulele Necesare și Comenzi de aprovizionare. Bifat implicit la creare.
+    </li>
+  </ul>
+
+  <h4>Secțiunea „Date fiscale și bancare"</h4>
+  <ul>
+    <li><strong>CUI / CIF</strong> — codul unic de înregistrare fiscală. Maxim 50 de caractere.</li>
+    <li><strong>Nr. Reg. Com.</strong> — numărul de înregistrare la Registrul Comerțului. Maxim 50 de caractere.</li>
+    <li><strong>IBAN</strong> — contul bancar internațional al furnizorului. Maxim 50 de caractere.</li>
+    <li><strong>Bancă</strong> — denumirea băncii aferente contului IBAN. Maxim 255 de caractere.</li>
+  </ul>
+
+  <h4>Secțiunea „Configurare achiziții"</h4>
+  <ul>
+    <li>
+      <strong>Responsabil achiziții (Buyer)</strong> — selectează utilizatorul intern cu rolul
+      <em>Manager Achiziții</em> care gestionează relația cu acest furnizor. Câmpul este opțional; dacă
+      nu este asignat, apare eticheta <em>Neasignat</em>. Lista este căutabilă.
+    </li>
+    <li>
+      <strong>Plafon maxim PO fără aprobare (RON)</strong> — valoarea maximă a unei Comenzi de
+      aprovizionare (PO) care poate fi aprobată automat, fără a necesita validarea unui manager. Dacă
+      valoarea totală a unui PO depășește acest plafon, comanda intră automat în starea
+      <em>Pending Approval</em> și managerul primește notificare. Lăsați câmpul gol pentru a permite
+      aprobarea automată indiferent de valoare.
+    </li>
+  </ul>
+
+  <h4>Secțiunea „Notițe"</h4>
+  <p>
+    Câmp text liber de 3 rânduri pentru orice informații suplimentare relevante despre furnizor care nu
+    se încadrează în celelalte câmpuri structurate.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       3. EDITAREA UNUI FURNIZOR EXISTENT
+  ════════════════════════════════════════════════════════════════ -->
+  <h3 id="furnizori-editare">3. Editarea unui furnizor existent</h3>
+
+  <p>
+    Editarea se accesează fie prin butonul <strong>Editare</strong> din rândul din tabel, fie din butonul
+    <em>Editează</em> aflat în header-ul paginii de vizualizare a furnizorului.
+  </p>
+
+  <p>
+    Pagina de editare conține <strong>același formular</strong> ca și crearea (toate secțiunile descrise
+    mai sus), plus două panouri de relații afișate sub formular:
+  </p>
+  <ul>
+    <li><strong>Persoane de contact</strong> — gestionarea contactelor furnizorului (detaliat în secțiunea 4).</li>
+    <li>
+      <strong>Emailuri</strong> — afișează emailurile asociate automat acestui furnizor prin modulul de
+      inteligență emailuri (detaliat în secțiunea 8).
+    </li>
+  </ul>
+
+  <p>
+    Modificările sunt salvate cu butonul <strong>Salvează</strong>. În header-ul paginii se găsesc și
+    butoanele <em>Vizualizare</em> (revine la view read-only) și <em>Șterge</em>. Ștergerea unui furnizor
+    care are produse asociate este blocată.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       4. PERSOANE DE CONTACT
+  ════════════════════════════════════════════════════════════════ -->
+  <h3 id="furnizori-contacte">4. Gestionarea persoanelor de contact</h3>
+
+  <p>
+    Fiecare furnizor poate avea oricâte persoane de contact înregistrate. Contactele sunt vizibile în
+    panoul <em>Persoane de contact</em>, disponibil atât pe pagina de vizualizare cât și pe pagina de
+    editare a furnizorului.
+  </p>
+
+  <h4>Coloanele listei de contacte</h4>
+  <ul>
+    <li><strong>Nume</strong> — numele persoanei, afișat aldin; sub el apare funcția/titlul (câmpul Funcție).</li>
+    <li>
+      <strong>Departament</strong> — badge colorat cu departamentul din care face parte contactul.
+      Opțiunile disponibile sunt: Comercial (albastru), Comenzi (verde), Director (roșu),
+      Contabilitate/Financiar (galben), Logistică, Tehnic/Service, Marketing, Altul (gri).
+    </li>
+    <li>
+      <strong>Email</strong> — adresa de email, cu iconița plic. Câmpul este copiabil cu un click și
+      funcționează ca link <code>mailto:</code> pentru a deschide clientul de email.
+    </li>
+    <li>
+      <strong>Telefon</strong> — numărul de telefon, cu iconița receptor. Câmpul este copiabil.
+    </li>
+    <li>
+      <strong>Emailuri</strong> — numărul de emailuri din istoricul de comunicare care provin de la adresa
+      acestui contact. Culoare verde la 50+, galben la 10–49, gri sub 10.
+    </li>
+    <li>
+      <strong>Ultimul contact</strong> — data și ora celui mai recent email primit de la acest contact,
+      afișat în format relativ (ex: „acum 3 zile"). Dacă nu există emailuri, apare „Necunoscut".
+    </li>
+    <li>
+      <strong>Sursă</strong> — badge care indică cum a fost creat contactul:
+      <ul>
+        <li><em>Manual</em> (verde) — adăugat manual de un utilizator.</li>
+        <li><em>Din emailuri</em> (albastru) — descoperit automat prin analiza istoricului de emailuri.</li>
+        <li><em>Domeniu potrivit</em> (galben) — asociat automat prin potrivire de domeniu email cu furnizorul.</li>
+      </ul>
+    </li>
+    <li><strong>Principal</strong> — iconița bifă/x care indică dacă este contactul principal al furnizorului.</li>
+  </ul>
+
+  <p>Lista de contacte este sortată implicit după numărul de emailuri, descrescător.</p>
+
+  <h4>Adăugarea unui contact nou</h4>
+  <p>
+    Apăsați butonul <strong>Adaugă contact</strong> din header-ul panoului. Se deschide un modal cu
+    următoarele câmpuri:
+  </p>
+  <ul>
+    <li><strong>Nume</strong> (obligatoriu) — numele complet al persoanei. Maxim 255 de caractere.</li>
+    <li>
+      <strong>Funcție / Titlu</strong> — rolul sau titlul persoanei (ex: Director comercial, Agent vânzări).
+      Câmp opțional, maxim 255 de caractere.
+    </li>
+    <li>
+      <strong>Departament</strong> — lista predefinită de departamente descrisă mai sus. Opțional.
+    </li>
+    <li>
+      <strong>Contact principal</strong> — toggle pentru a marca această persoană ca principalul punct
+      de contact al furnizorului. Implicit dezactivat.
+    </li>
+    <li><strong>Email</strong> — adresa de email, validată ca format email. Maxim 255 de caractere.</li>
+    <li><strong>Telefon</strong> — numărul de telefon. Maxim 50 de caractere.</li>
+    <li><strong>Note</strong> — câmp text liber de 2 rânduri pentru observații suplimentare.</li>
+  </ul>
+  <p>
+    Contactele adăugate manual primesc automat sursa <em>manual</em>.
+  </p>
+
+  <h4>Editarea și ștergerea unui contact</h4>
+  <p>
+    Fiecare rând din tabelul de contacte are acțiunile <strong>Editează</strong> și <strong>Șterge</strong>
+    la extrema dreaptă. Editarea deschide același modal ca adăugarea, precompletat cu datele existente.
+    Ștergerea este imediată, fără confirmare suplimentară.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       5. PRODUSE ASOCIATE
+  ════════════════════════════════════════════════════════════════ -->
+  <h3 id="furnizori-produse">5. Produsele asociate unui furnizor</h3>
+
+  <p>
+    Panoul <strong>Produse asociate</strong> este disponibil pe pagina de <em>vizualizare</em> a
+    furnizorului (nu pe pagina de editare). Afișează toate produsele din catalog care sunt asociate
+    acestui furnizor, cu detaliile de aprovizionare aferente.
+  </p>
+
+  <h4>Coloanele tabelului de produse</h4>
+  <ul>
+    <li>
+      <strong>SKU</strong> — codul SKU intern al produsului din catalogul WooCommerce, afișat cu font
+      monospaced. Copiabil cu un click. Câmpul este căutabil.
+    </li>
+    <li>
+      <strong>Produs</strong> — denumirea produsului, trunchiat la 60 de caractere. Câmpul este căutabil.
+    </li>
+    <li>
+      <strong>SKU furnizor</strong> — codul pe care furnizorul îl folosește pentru acest produs în
+      propriul catalog sau pe facturile emise. Util la plasarea comenzilor.
+    </li>
+    <li>
+      <strong>Preț achiziție</strong> — prețul de cumpărare negociat cu furnizorul, afișat în RON.
+      Aceasta este valoarea stocată pe relația <code>product_suppliers</code> dintre produs și furnizor.
+    </li>
+    <li>
+      <strong>Preferat</strong> — indicator boolean care arată dacă acest furnizor este marcat ca
+      furnizorul preferat pentru produsul respectiv. Când un produs are mai mulți furnizori posibili,
+      furnizorul preferat este cel sugerat implicit la crearea necesarelor.
+    </li>
+  </ul>
+
+  <p>Tabelul este sortat implicit după denumirea produsului.</p>
+
+  <h4>Mutarea unui produs la alt furnizor</h4>
+  <p>
+    Fiecare produs din tabel are acțiunea <strong>Mută la furnizor</strong> (iconița săgeată portocaliu).
+    Aceasta deschide un modal în care selectați furnizorul destinație (dintre furnizorii activi). La
+    confirmare:
+  </p>
+  <ul>
+    <li>
+      Dacă produsul <em>nu</em> este deja asociat furnizorului destinație, asocierea este mutată complet,
+      păstrând toate datele (SKU furnizor, preț, etc.).
+    </li>
+    <li>
+      Dacă produsul <em>există deja</em> la furnizorul destinație, legătura de la furnizorul curent este
+      pur și simplu eliminată (nu se suprascrie asocierea existentă).
+    </li>
+  </ul>
+
+  <h4>Editarea prețului de achiziție și a datelor de aprovizionare</h4>
+  <p>
+    Prețul de achiziție, SKU-ul furnizorului și marcajul „Preferat" se editează din <strong>fișa
+    produsului</strong>, nu din fișa furnizorului. Navigați la <em>Produse → [produs]</em>, secțiunea
+    <em>Furnizori</em>, unde puteți gestiona toți furnizorii unui produs cu câmpurile:
+  </p>
+  <ul>
+    <li><strong>SKU furnizor</strong> — codul produsului în catalogul furnizorului.</li>
+    <li><strong>Preț achiziție</strong> — prețul negociat (RON sau altă monedă).</li>
+    <li><strong>Monedă</strong> — moneda în care se facturează (RON, EUR, USD).</li>
+    <li><strong>Lead days</strong> — numărul de zile de la comandă până la livrare pentru acest produs specific.</li>
+    <li><strong>Cantitate minimă comandă</strong> — minimul de bucăți per comandă impus de furnizor.</li>
+    <li><strong>Cantitate maximă PO</strong> — limita de cantitate per Comandă de aprovizionare.</li>
+    <li><strong>Furnizor preferat</strong> — toggle pentru a marca ca preferat.</li>
+    <li><strong>Note</strong> — observații specifice produsului la furnizorul respectiv.</li>
+  </ul>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       6. CONDIȚII COMERCIALE
+  ════════════════════════════════════════════════════════════════ -->
+  <h3 id="furnizori-conditii">6. Condiții comerciale</h3>
+
+  <p>
+    Secțiunea <strong>Condiții comerciale</strong> din formularul furnizorului este colapsabilă (implicit
+    închisă) și conține un set de taburi cu informații detaliate despre condițiile de colaborare.
+    Toate câmpurile din această secțiune sunt opționale și servesc ca referință pentru echipa de achiziții.
+    Datele sunt stocate ca JSON în câmpul <code>conditions</code> al furnizorului.
+  </p>
+
+  <h4>Tab Livrare</h4>
+  <ul>
+    <li><strong>Lead time standard (zile)</strong> — câte zile lucrătoare trec de la plasarea comenzii până la livrare în condiții normale.</li>
+    <li><strong>Lead time urgent (zile)</strong> — termenul de livrare accelerată, dacă furnizorul oferă această opțiune.</li>
+    <li><strong>Oră limită comandă</strong> — ora până la care o comandă plasată azi este procesată tot azi (ex: 14:00).</li>
+    <li><strong>Zile preluare comenzi</strong> — zilele săptămânii în care furnizorul acceptă comenzi noi.</li>
+    <li><strong>Zile livrare</strong> — zilele săptămânii în care furnizorul efectuează livrări fizice.</li>
+    <li><strong>Ridicare din depozit propriu</strong> — toggle; dacă activ, apare câmpul <em>Adresă depozit ridicare</em>.</li>
+    <li><strong>Note livrare</strong> — text liber pentru observații despre livrare.</li>
+  </ul>
+
+  <h4>Tab Comandă</h4>
+  <ul>
+    <li><strong>Metode de plasare comenzi</strong> — bifați toate modalitățile acceptate: Email, Telefon, Portal web, WhatsApp, Față în față, EDI.</li>
+    <li><strong>Metodă preferată</strong> — metoda recomandată de furnizor.</li>
+    <li><strong>Email comenzi</strong> — adresa dedicată pentru trimiterea comenzilor (poate fi diferită de emailul general).</li>
+    <li><strong>Telefon comenzi</strong> și <strong>WhatsApp comenzi</strong> — numere dedicate comenzilor.</li>
+    <li><strong>URL portal comenzi</strong> — link direct la platforma online a furnizorului.</li>
+    <li><strong>User portal</strong> — contul de autentificare pe portalul furnizorului.</li>
+    <li><strong>Valoare minimă comandă (RON)</strong> — sub această valoare furnizorul poate refuza comanda.</li>
+    <li><strong>Nr. minim linii</strong> — numărul minim de produse distincte per comandă.</li>
+    <li><strong>Suprataxă sub minim (RON)</strong> — sumă fixă adăugată dacă comanda nu atinge minimul.</li>
+  </ul>
+
+  <h4>Tab Transport</h4>
+  <ul>
+    <li><strong>Incoterm</strong> — termenul comercial internațional care stabilește responsabilitățile de transport: EXW, FCA, CPT, CIP, DAP, DDP, FOB, CFR, CIF. Fiecare opțiune are o descriere în clar.</li>
+    <li><strong>Transport plătit de</strong> — Furnizor, Cumpărător sau Împărțit.</li>
+    <li><strong>Prag transport gratuit (RON)</strong> — valoarea de la care furnizorul oferă transport fără cost.</li>
+    <li><strong>Cost fix transport (RON)</strong> — suma fixă de transport sub pragul gratuit.</li>
+    <li><strong>Curier / Transportator</strong> — firma de curierat folosită de furnizor.</li>
+    <li><strong>Asigurare marfă inclusă</strong> — toggle pentru asigurare de transport.</li>
+  </ul>
+
+  <h4>Tab Plată</h4>
+  <ul>
+    <li><strong>Metode plată acceptate</strong> — Transfer bancar (OP), Numerar, Card, CEC, Bilet la ordin, Debitare directă, Compensare, Factoring.</li>
+    <li><strong>Termen de plată</strong> — Avans 100%, Avans parțial, La livrare, Net 7/14/30/45/60/90 zile sau Custom (cu număr de zile introduse manual).</li>
+    <li><strong>Procent avans (%)</strong> — vizibil doar la termenul „Avans parțial".</li>
+    <li><strong>Monedă facturare</strong> — RON, EUR sau USD.</li>
+    <li><strong>Discount plată anticipată (%)</strong> — reducere acordată la plata înainte de scadență.</li>
+    <li><strong>Termen discount anticipat (zile)</strong> — numărul de zile în care plata aduce reducerea.</li>
+    <li><strong>Penalitate întârziere (%/zi)</strong> — procent zilnic aplicat sumelor restante.</li>
+    <li><strong>Clauză valutară</strong> — regula de conversie (ex: factură în EUR, plata la cursul BNR).</li>
+  </ul>
+
+  <h4>Tab Discount</h4>
+  <ul>
+    <li><strong>Discount comercial general (%)</strong> — reducerea fixă negociată pentru toate comenzile.</li>
+    <li>
+      <strong>Aplicare discount</strong> — Per linie factură, Total factură sau Rabat anual (reducere
+      retroactivă la sfârșitul anului dacă se depășește pragul de achiziții).
+    </li>
+    <li><strong>Prag anual rabat (RON)</strong> și <strong>% rabat la prag</strong> — pentru rabatul anual.</li>
+    <li><strong>Discount trimestrial (%)</strong> — reducere trimestrială bazată pe volum.</li>
+    <li><strong>Discount promoțional (%)</strong> și <strong>Valabil până la</strong> — reducere temporară cu dată de expirare.</li>
+    <li>
+      <strong>Tranșe de volum</strong> — repetor care permite configurarea de discounturi progresive
+      (ex: comenzi peste 5.000 RON → 3%, peste 10.000 RON → 5%). Fiecare tranșă are câmpurile
+      <em>De la valoare (RON)</em> și <em>Discount (%)</em>. Adăugați tranșe cu butonul
+      <em>Adaugă tranșă</em>.
+    </li>
+  </ul>
+
+  <h4>Tab Retur &amp; Garanție</h4>
+  <ul>
+    <li><strong>Retururi acceptate</strong> — toggle de principiu.</li>
+    <li><strong>Necesită autorizație (RMA)</strong> — dacă trebuie cerută aprobarea înainte de retur.</li>
+    <li><strong>Ferestră retur (zile)</strong> — numărul de zile de la recepție în care se poate iniția returul.</li>
+    <li>
+      <strong>Condiție marfă returnată</strong> — Nedeschis/sigilat, Vandabil sau Orice stare (inclusiv
+      defect).
+    </li>
+    <li><strong>Comision restocking (%)</strong> — procent reținut de furnizor din valoarea mărfii returnate.</li>
+    <li><strong>Email retururi</strong> — adresa dedicată pentru solicitări de retur.</li>
+    <li><strong>Procedura de retur</strong> — câmp text liber cu pașii procesului de returnare.</li>
+    <li><strong>Garanție produse (luni)</strong> — durata garanției acordate.</li>
+    <li><strong>Tip garanție</strong> — Furnizor, Producător sau Ambele.</li>
+  </ul>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       7. FURNIZORI INACTIVI
+  ════════════════════════════════════════════════════════════════ -->
+  <h3 id="furnizori-inactivi">7. Furnizori inactivi</h3>
+
+  <p>
+    Un furnizor poate fi <strong>dezactivat</strong> prin setarea câmpului <em>Activ</em> pe
+    <code>fals</code> în formularul de editare. Dezactivarea nu șterge nicio dată din sistem; ea
+    restricționează apariția furnizorului în anumite contexte.
+  </p>
+
+  <h4>Efecte ale dezactivării</h4>
+  <ul>
+    <li>
+      <strong>Lista furnizori</strong> — furnizorul apare cu indicatorul roșu în coloana <em>Activ</em>.
+      Implicit, lista afișează toți furnizorii (activi și inactivi); pentru a-i ascunde pe cei inactivi,
+      aplicați filtrul <em>Activ = Da</em>.
+    </li>
+    <li>
+      <strong>Modulul Achiziții</strong> — furnizorii inactivi <em>nu</em> apar în selecțiile de furnizori
+      din formularele de Necesare și Comenzi de aprovizionare. Aceasta previne plasarea de comenzi la
+      furnizori cu care colaborarea a încetat.
+    </li>
+    <li>
+      <strong>Acțiunea „Mută produse"</strong> — lista de furnizori destinație include doar furnizori
+      activi. Un furnizor inactiv nu poate fi destinație pentru mutarea produselor.
+    </li>
+    <li>
+      <strong>Produsele asociate</strong> — produsele rămân asociate furnizorului inactiv; asocierile nu
+      sunt șterse automat. Dacă furnizorul ar trebui înlocuit, mutați produsele la un alt furnizor activ
+      înainte de sau după dezactivare.
+    </li>
+    <li>
+      <strong>Comenzile existente</strong> — comenzile de aprovizionare deja create pentru un furnizor
+      dezactivat ulterior rămân vizibile și procesabile în istoricul comenzilor. Dezactivarea nu afectează
+      retroactiv documentele existente.
+    </li>
+  </ul>
+
+  <p>
+    <strong>Reactivarea</strong> unui furnizor se face tot din formularul de editare, bifând din nou
+    comutatorul <em>Activ</em>. Toată istoricul și toate asocierile se restabilesc imediat.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       8. INTELLIGENCE EMAILURI FURNIZOR
+  ════════════════════════════════════════════════════════════════ -->
+  <h3 id="furnizori-emailuri">8. Inteligența emailurilor furnizorului</h3>
+
+  <p>
+    ERP-ul include un modul de inteligență a comunicărilor care importă și procesează automat emailurile
+    din căsuța poștală a companiei, asociindu-le furnizorilor corespunzători. Panoul
+    <strong>Emailuri</strong> este disponibil pe pagina de editare a furnizorului.
+  </p>
+
+  <h4>Cum se asociază emailurile unui furnizor</h4>
+  <p>
+    Sistemul folosește trei mecanisme de potrivire, cu grade diferite de acuratețe:
+  </p>
+  <ol>
+    <li>
+      <strong>Potrivire contact-domeniu</strong> — dacă adresa de email a expeditorului coincide cu
+      emailul unui contact deja asociat furnizorului, emailul este atribuit direct acelui furnizor și
+      contact.
+    </li>
+    <li>
+      <strong>Descoperire contacte din emailuri</strong> — comanda automată <code>supplier:discover-contacts</code>
+      analizează adresele expeditorului din emailurile deja asociate furnizorilor și creează automat
+      contacte noi pentru adresele necunoscute de pe același domeniu. Aceste contacte au sursa
+      <em>Din emailuri</em>.
+    </li>
+    <li>
+      <strong>Potrivire domeniu + AI</strong> — comanda <code>supplier:auto-match-domains</code> încearcă
+      să asocieze domenii de email (ex: <code>@furnizor.ro</code>) cu furnizori prin potrivire de text
+      pe denumire și, în caz de ambiguitate, prin analiză AI. Asocierile cu grad ridicat de
+      încredere sunt aplicate automat; contactele rezultate au sursa <em>Domeniu potrivit</em>.
+    </li>
+  </ol>
+
+  <h4>Ce informații afișează panoul Emailuri</h4>
+  <p>
+    Panoul afișează lista emailurilor primite de la și trimise către contactele furnizorului, cu:
+    data și ora, subiectul, direcția (primit/trimis), contactul asociat, rezumatul generat de AI
+    (dacă emailul a fost procesat), tipul de email detectat (ofertă de preț, confirmare livrare,
+    factură etc.) și acțiunile extrase de AI.
+  </p>
+
+  <h4>Cotații de prețuri extrase automat</h4>
+  <p>
+    Modulul de procesare AI (<code>email:process-ai</code>) analizează emailurile și extrage automat
+    prețurile cotate de furnizor. Aceste cotații sunt stocate în tabelul <code>supplier_price_quotes</code>
+    și sunt vizibile în secțiunea dedicată din pagina furnizorului, cu produsul asociat, prețul unitar,
+    moneda și data cotației. Această funcționalitate permite urmărirea istoricului de prețuri al
+    furnizorului direct din corespondența sa.
+  </p>
+
+  <h4>Setarea emailului principal al furnizorului</h4>
+  <p>
+    Câmpul <strong>Email</strong> din fișa furnizorului (model <code>Supplier</code>) reprezintă
+    emailul general de contact. Acesta este distinct de emailurile contactelor individuale și de
+    emailul dedicat comenzilor (configurat în condițiile comerciale, Tab Comandă). Sistemul de
+    inteligență emailuri folosește adresele din tabelul de contacte pentru a corela corespondența,
+    nu neapărat emailul general al furnizorului.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       9. FURNIZOR PREFERAT PER PRODUS
+  ════════════════════════════════════════════════════════════════ -->
+  <h3 id="furnizori-preferat">9. Setarea furnizorului preferat pentru un produs</h3>
+
+  <p>
+    Un produs poate fi asociat cu mai mulți furnizori simultan (de exemplu, același produs se poate
+    achiziționa de la trei furnizori diferiți, la prețuri diferite). Marcajul
+    <strong>Furnizor preferat</strong> indică sistemului care furnizor ar trebui sugerat implicit la
+    crearea necesarelor de aprovizionare și a comenzilor.
+  </p>
+
+  <h4>Cum setezi furnizorul preferat</h4>
+  <ol>
+    <li>
+      Navigați la <em>Produse → [denumire produs]</em> și deschideți pagina de editare a produsului.
+    </li>
+    <li>
+      În secțiunea sau tab-ul <em>Furnizori</em> al produsului, identificați rândul furnizorului pe
+      care doriți să-l marcați ca preferat.
+    </li>
+    <li>
+      Activați comutatorul (toggle) <strong>Furnizor preferat</strong> (câmpul <code>is_preferred</code>
+      pe relația <code>product_suppliers</code>).
+    </li>
+    <li>Salvați modificările produsului.</li>
+  </ol>
+
+  <p>
+    <strong>Important:</strong> Câmpul <em>is_preferred</em> este stocat pe relația de legătură dintre
+    produs și furnizor, nu pe furnizor în general. Același furnizor poate fi „preferat" pentru unele
+    produse și „nepreferit" pentru altele.
+  </p>
+
+  <h4>Vizualizarea furnizorilor preferați din fișa furnizorului</h4>
+  <p>
+    În panoul <em>Produse asociate</em> de pe pagina de vizualizare a furnizorului, coloana
+    <strong>Preferat</strong> arată cu iconița de bifă (verde) produsele pentru care furnizorul curent
+    este marcat ca preferat. Aceasta oferă o perspectivă rapidă asupra portofoliului prioritar al
+    furnizorului.
+  </p>
+
+  <h4>Impactul în modulul Achiziții</h4>
+  <p>
+    Atunci când se generează un Necesar de marfă sau se creează o Comandă de aprovizionare, produsele
+    fără furnizor asignat sau cu furnizor desemnat explicit vor folosi informațiile de preț și lead
+    time de pe relația <code>product_suppliers</code>. Furnizorul marcat ca preferat este cel recomandat
+    implicit, reducând efortul manual de selecție în procesele de achiziție repetitive.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       ANEXĂ: Câmpuri rapide de referință
+  ════════════════════════════════════════════════════════════════ -->
+  <h3 id="furnizori-referinta">Referință rapidă — câmpurile furnizorului</h3>
+
+  <table class="doc-table">
+    <thead>
+      <tr>
+        <th>Câmp</th>
+        <th>Tip</th>
+        <th>Obligatoriu</th>
+        <th>Descriere</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>name</code></td>
+        <td>Text</td>
+        <td>Da</td>
+        <td>Denumirea comercială sau legală a furnizorului</td>
+      </tr>
+      <tr>
+        <td><code>website_url</code></td>
+        <td>URL</td>
+        <td>Nu</td>
+        <td>Site-ul web al furnizorului</td>
+      </tr>
+      <tr>
+        <td><code>address</code></td>
+        <td>Text</td>
+        <td>Nu</td>
+        <td>Adresa poștală</td>
+      </tr>
+      <tr>
+        <td><code>is_active</code></td>
+        <td>Boolean</td>
+        <td>—</td>
+        <td>Furnizor activ / inactiv; implicit <em>activ</em></td>
+      </tr>
+      <tr>
+        <td><code>vat_number</code></td>
+        <td>Text</td>
+        <td>Nu</td>
+        <td>CUI / CIF fiscal</td>
+      </tr>
+      <tr>
+        <td><code>reg_number</code></td>
+        <td>Text</td>
+        <td>Nu</td>
+        <td>Număr Registrul Comerțului</td>
+      </tr>
+      <tr>
+        <td><code>bank_account</code></td>
+        <td>Text</td>
+        <td>Nu</td>
+        <td>IBAN</td>
+      </tr>
+      <tr>
+        <td><code>bank_name</code></td>
+        <td>Text</td>
+        <td>Nu</td>
+        <td>Denumirea băncii</td>
+      </tr>
+      <tr>
+        <td><code>buyer_id</code></td>
+        <td>FK User</td>
+        <td>Nu</td>
+        <td>Responsabilul intern de achiziții (rol Manager Achiziții)</td>
+      </tr>
+      <tr>
+        <td><code>po_approval_threshold</code></td>
+        <td>Decimal</td>
+        <td>Nu</td>
+        <td>Plafon maxim PO fără aprobare manuală (RON)</td>
+      </tr>
+      <tr>
+        <td><code>notes</code></td>
+        <td>Text</td>
+        <td>Nu</td>
+        <td>Note interne libere</td>
+      </tr>
+      <tr>
+        <td><code>conditions</code></td>
+        <td>JSON</td>
+        <td>Nu</td>
+        <td>Condiții comerciale structurate (livrare, comandă, transport, plată, discount, retur)</td>
+      </tr>
+    </tbody>
+  </table>
+
+</section>

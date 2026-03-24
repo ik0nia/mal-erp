@@ -72,7 +72,7 @@ class EvaluateWooProductContentCommand extends Command
         }
 
         $this->claude        = new AnthropicClient(apiKey: $apiKey);
-        $this->model         = config('services.anthropic.model', 'claude-haiku-4-5-20251001');
+        $this->model         = config('app.malinco.ai.models.haiku', 'claude-haiku-4-5-20251001');
         $this->useDataForSeo = (bool) $this->option('enrich');
 
         $limit     = $this->option('limit')   ? (int) $this->option('limit')   : null;

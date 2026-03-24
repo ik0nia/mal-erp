@@ -1,0 +1,1560 @@
+<!-- =========================================================
+     MANUAL UTILIZARE ERP MALINCO — PARTEA A DOUA (Secțiunile 6–11)
+     ========================================================= -->
+
+<!-- =====================================================
+     SECȚIUNEA 6: OFERTE
+     ===================================================== -->
+<section id="s6-oferte">
+  <h1>6. Oferte</h1>
+
+  <p>
+    Modulul <strong>Oferte</strong> este localizat în grupul de navigare <em>Vânzări</em> din panelul App.
+    El permite consultanților de vânzări să creeze oferte comerciale personalizate pentru clienți,
+    să le gestioneze pe tot parcursul ciclului de viață — de la ciornă la acceptare sau respingere —
+    și să le tipărească sau exporteze în format imprimabil direct din interfață.
+  </p>
+
+  <h2>6.1 Lista ofertelor</h2>
+  <p>
+    Accesând <strong>Vânzări → Oferte</strong>, se afișează o tabelă cu toate ofertele asociate locației
+    utilizatorului curent. Coloanele vizibile în tabelă sunt:
+  </p>
+  <ul>
+    <li><strong>Număr</strong> — codul unic al ofertei (generat automat la creare).</li>
+    <li><strong>Client</strong> — numele persoanei sau firmei căreia i s-a adresat oferta.</li>
+    <li><strong>Magazin</strong> — locația (showroom-ul) care a emis oferta.</li>
+    <li><strong>Status</strong> — starea curentă a ofertei, afișată ca badge colorat.</li>
+    <li><strong>Total</strong> — valoarea totală a ofertei în RON.</li>
+    <li><strong>Valabilă până la</strong> — data de expirare a ofertei.</li>
+    <li><strong>Actualizat</strong> — ultima dată la care oferta a fost modificată.</li>
+  </ul>
+  <p>
+    Tabelul permite filtrarea după <strong>status</strong> și după <strong>magazin</strong>.
+    La fiecare rând există acțiuni rapide: <em>Preview</em> (vizualizare), <em>Print</em>
+    (deschide pagina de imprimat) și <em>Editare</em>.
+  </p>
+
+  <h2>6.2 Stările unei oferte</h2>
+  <p>O ofertă poate parcurge următoarele stări:</p>
+  <table>
+    <thead>
+      <tr><th>Status</th><th>Culoare badge</th><th>Semnificație</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Ciornă (draft)</td><td>Gri</td><td>Oferta este în lucru, nu a fost trimisă clientului.</td></tr>
+      <tr><td>Trimisă (sent)</td><td>Albastru (info)</td><td>Oferta a fost comunicată clientului (email, telefon, imprimat).</td></tr>
+      <tr><td>Acceptată (accepted)</td><td>Verde (success)</td><td>Clientul a confirmat comanda pe baza ofertei.</td></tr>
+      <tr><td>Respinsă (rejected)</td><td>Roșu (danger)</td><td>Clientul nu a dat curs ofertei.</td></tr>
+      <tr><td>Expirată (expired)</td><td>Portocaliu (warning)</td><td>Data de valabilitate a trecut fără răspuns.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6.3 Crearea unei oferte noi</h2>
+  <p>
+    Apasă butonul <strong>Ofertă nouă</strong> din dreapta sus a listei. Se deschide formularul
+    de creare, împărțit în patru secțiuni principale.
+  </p>
+
+  <h3>6.3.1 Secțiunea „Detalii ofertă"</h3>
+  <p>Conține câmpurile de bază:</p>
+  <ul>
+    <li>
+      <strong>Număr ofertă</strong> — se generează automat la salvare. Nu poate fi editat manual.
+    </li>
+    <li>
+      <strong>Status</strong> — implicit <em>Ciornă</em>. Poți schimba statusul direct din formular
+      în orice moment.
+    </li>
+    <li>
+      <strong>Valabilă până la</strong> — implicit 14 zile de la data curentă. Se poate modifica
+      manual. Oferta va trece automat în starea <em>Expirată</em> după această dată.
+    </li>
+    <li>
+      <strong>Magazin</strong> — se completează automat cu locația utilizatorului curent.
+      Super-administratorii pot selecta orice locație din lista derulantă.
+    </li>
+    <li>
+      <strong>Caută client existent</strong> — câmp de căutare cu autocompletare. Poți căuta
+      după nume, telefon sau email. La selectarea unui client, câmpurile de contact de mai jos
+      se completează automat.
+    </li>
+  </ul>
+
+  <h3>6.3.2 Adăugarea unui client nou din mers</h3>
+  <p>
+    Dacă clientul nu există în baza de date, apasă butonul <strong>Client nou</strong> (roșu,
+    cu iconiță de utilizator+) de lângă câmpul de căutare. Se deschide un modal complet cu:
+  </p>
+  <ul>
+    <li><strong>Date de contact</strong>: tip client (persoană fizică / firmă), nume, telefon, email.</li>
+    <li>
+      <strong>Date firmă</strong> (vizibil doar pentru tipul „Firmă"): CUI, număr registru comerț,
+      plătitor TVA, persoană de contact. La completarea CUI-ului și ieșire din câmp, sistemul
+      caută automat datele firmei prin serviciul OpenAPI ANAF și le completează automat
+      (denumire, adresă, cod poștal, telefon).
+    </li>
+    <li><strong>Adresă</strong>: stradă, oraș, județ, cod poștal, observații.</li>
+  </ul>
+  <p>
+    După salvare, clientul nou este selectat automat în formular și datele sale sunt preluate în ofertă.
+  </p>
+
+  <div class="tip">
+    <strong>Sfat:</strong> Funcția de completare automată din ANAF funcționează pentru orice
+    CUI românesc valid. Introdu CUI-ul, apasă Tab sau click în altă parte și datele se completează
+    în câteva secunde.
+  </div>
+
+  <h3>6.3.3 Câmpurile de contact ale clientului</h3>
+  <p>
+    Indiferent dacă clientul a fost căutat sau creat nou, formularul expune câmpurile:
+    <strong>Nume client</strong>, <strong>Companie</strong>, <strong>Email</strong>,
+    <strong>Telefon</strong> și <strong>Observații</strong> (note interne pe ofertă).
+    Acestea pot fi modificate manual fără a afecta fișa clientului din baza de date.
+  </p>
+
+  <h3>6.3.4 Secțiunea „Produse ofertă"</h3>
+  <p>
+    Aceasta este secțiunea centrală a ofertei. Se afișează un tabel-repeater în care poți adăuga
+    câte produse dorești. Fiecare linie conține:
+  </p>
+  <ul>
+    <li>
+      <strong>Imagine</strong> — miniatură preluată automat din catalogul ERP după selectarea produsului.
+    </li>
+    <li>
+      <strong>Produs</strong> — câmp de căutare cu autocompletare în catalogul WooCommerce.
+      La selectare, se completează automat prețul unitar și SKU-ul.
+    </li>
+    <li>
+      <strong>Cantitate</strong> — acceptă valori zecimale (ex: 1.500 tone).
+    </li>
+    <li>
+      <strong>Preț unitar</strong> — preluat din catalog, poate fi modificat manual la prețul
+      negociat. Prefixat cu „RON".
+    </li>
+    <li>
+      <strong>Discount %</strong> — procentul de reducere aplicat liniei. Acceptă valori zecimale
+      (ex: 5,00%).
+    </li>
+    <li>
+      <strong>Total linie</strong> — calculat în timp real: cantitate × preț unitar × (1 − discount/100).
+      Se actualizează instantaneu la fiecare modificare.
+    </li>
+  </ul>
+  <p>
+    Apasă <strong>Adaugă produs</strong> pentru o linie nouă. Poți naviga rapid cu <kbd>Tab</kbd>:
+    la apăsarea Tab de pe câmpul Discount al ultimei linii se adaugă automat o linie nouă și
+    cursorul sare la câmpul Produs al noii linii.
+  </p>
+
+  <h3>6.3.5 Secțiunea „Totaluri"</h3>
+  <p>
+    Calculele sunt live — nu trebuie să salvezi oferta pentru a vedea totalurile:
+  </p>
+  <ul>
+    <li><strong>Subtotal</strong> — suma tuturor liniilor fără discount.</li>
+    <li><strong>Discount total</strong> — suma reducerilor aplicate.</li>
+    <li><strong>Total</strong> — valoarea finală de plată (cu bold).</li>
+  </ul>
+
+  <h2>6.4 Editarea unei oferte</h2>
+  <p>
+    Din lista de oferte, apasă acțiunea <em>Editare</em> sau, din pagina de vizualizare, butonul
+    <strong>Editare</strong> din header. Formularul de editare este identic cu cel de creare.
+    Numărul ofertei rămâne neschimbat.
+  </p>
+
+  <h2>6.5 Vizualizarea unei oferte (View)</h2>
+  <p>
+    Pagina de vizualizare prezintă oferta în format infolist, cu toate detaliile structurate:
+    date ofertă, date client, tabel produse (cu imagini, cantități, prețuri, discounturi, totaluri),
+    și secțiunea de totaluri finale. Din header sunt disponibile două acțiuni:
+  </p>
+  <ul>
+    <li>
+      <strong>Print ofertă</strong> — deschide o pagină dedicată de imprimat, optimizată pentru
+      hârtie A4, cu logo, antet, tabel produse și footer. Pagina se deschide într-un tab nou
+      și inițiază automat dialogul de printare al browserului.
+    </li>
+    <li>
+      <strong>Editare</strong> — navighează la formularul de editare.
+    </li>
+  </ul>
+
+  <h2>6.6 Trimiterea ofertei către client</h2>
+  <p>
+    ERP-ul nu trimite automat emailul ofertei — acesta este un workflow manual intenționat,
+    pentru că fiecare consultant are stilul propriu de comunicare. Fluxul recomandat este:
+  </p>
+  <ol>
+    <li>Creează oferta și verifică totalurile.</li>
+    <li>Apasă <strong>Print ofertă</strong> și salvează ca PDF din browserul de imprimat.</li>
+    <li>Trimite PDF-ul clientului prin email sau WhatsApp.</li>
+    <li>Revino în ERP și schimbă statusul ofertei la <strong>Trimisă</strong>.</li>
+    <li>
+      Când clientul răspunde, actualizează statusul la <strong>Acceptată</strong> sau
+      <strong>Respinsă</strong> corespunzător.
+    </li>
+  </ol>
+
+  <div class="tip">
+    <strong>Sfat:</strong> Discountul se aplică pe fiecare linie în parte, nu global pe ofertă.
+    Dacă vrei să dai un discount uniform, aplică același procent pe toate liniile sau ajustează
+    prețurile unitare direct.
+  </div>
+
+  <div class="warning">
+    <strong>Atenție:</strong> O ofertă nu se șterge automat după expirare. Trebuie să schimbi
+    manual statusul la <em>Expirată</em> sau să setezi un proces periodic de verificare.
+  </div>
+
+  <h2>6.7 Ștergerea ofertelor</h2>
+  <p>
+    Din lista de oferte poți selecta mai multe oferte simultan și le ștergi în bloc prin
+    <strong>Acțiuni în bulk → Șterge selectate</strong>. Operațiunea este ireversibilă.
+    Ștergerea individuală se face din formularul de editare (buton în footer).
+  </p>
+
+  <h2>6.8 Permisiuni și vizibilitate</h2>
+  <p>
+    Fiecare utilizator vede doar ofertele asociate locației (magazinului) sale. Super-administratorii
+    văd toate ofertele din toate locațiile și pot filtra după magazin. Orice utilizator autentificat
+    poate crea și edita oferte pentru locația sa.
+  </p>
+</section>
+
+<!-- =====================================================
+     SECȚIUNEA 7: COMENZI ONLINE (WOOCOMMERCE)
+     ===================================================== -->
+<section id="s7-comenzi-online">
+  <h1>7. Comenzi Online (WooCommerce)</h1>
+
+  <p>
+    Modulul <strong>Comenzi Online</strong> (grupul <em>Comenzi</em> din navigare) sincronizează
+    automat comenzile din magazinul WooCommerce în ERP. Comenzile nu pot fi create sau editate
+    manual din ERP — ele provin exclusiv din WooCommerce. ERP-ul oferă vizualizare completă,
+    acțiuni rapide și integrare cu curierul Sameday.
+  </p>
+
+  <h2>7.1 Lista comenzilor</h2>
+  <p>
+    Pagina listei afișează comenzile sortate descrescător după data plasării. Coloanele disponibile:
+  </p>
+  <table>
+    <thead>
+      <tr><th>Coloană</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Comandă</td><td>Numărul comenzii WooCommerce (prefixat cu #).</td></tr>
+      <tr><td>Status</td><td>Starea comenzii ca badge colorat (Processing, Completed, Cancelled etc.).</td></tr>
+      <tr><td>Client</td><td>Numele complet din datele de facturare.</td></tr>
+      <tr><td>Email</td><td>Adresa email a clientului (ascunsă implicit, activabilă).</td></tr>
+      <tr><td>Total</td><td>Valoarea totală a comenzii cu moneda.</td></tr>
+      <tr><td>Plată</td><td>Metoda de plată (card online, ramburs, transfer etc.).</td></tr>
+      <tr><td>Data</td><td>Data și ora plasării comenzii.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>7.2 Filtrare și căutare</h2>
+  <p>
+    Bara de filtre permite:
+  </p>
+  <ul>
+    <li><strong>Filtrare după status</strong> — selectezi una sau mai multe stări din lista derulantă.</li>
+    <li>
+      <strong>Filtrare după dată comandă</strong> — interval „De la" / „Până la" cu date picker.
+    </li>
+    <li>
+      <strong>Căutare globală</strong> — caută simultan în numărul comenzii, numele clientului
+      și emailul clientului.
+    </li>
+  </ul>
+  <p>
+    Din lista de comenzi există și o <strong>acțiune în bulk</strong>: <em>Resync selectate</em>
+    — sincronizează mai multe comenzi simultan din WooCommerce. Util după o pauană de sincronizare
+    sau când vrei să verifici mai multe comenzi deodată.
+  </p>
+
+  <h2>7.3 Vizualizarea unei comenzi</h2>
+  <p>
+    La deschiderea unei comenzi (click pe rând sau acțiunea View), pagina de detalii se
+    <strong>resincronizează automat</strong> din WooCommerce — datele afișate sunt întotdeauna
+    cele mai recente. Pagina este structurată în secțiuni:
+  </p>
+
+  <h3>7.3.1 Secțiunea „Comandă"</h3>
+  <ul>
+    <li>Numărul comenzii, statusul (badge colorat), data comenzii.</li>
+    <li>Metoda de plată și data plății (dacă comanda a fost plătită).</li>
+    <li>Nota lăsată de client la plasarea comenzii.</li>
+  </ul>
+
+  <h3>7.3.2 Secțiunea „Client"</h3>
+  <ul>
+    <li>
+      <strong>Adresă facturare</strong> — toate câmpurile din adresa de billing: nume, companie,
+      stradă, cod poștal, oraș, județ, țară.
+    </li>
+    <li>
+      <strong>Adresă livrare</strong> — dacă este diferită de cea de facturare; altfel
+      afișează „La fel ca facturarea".
+    </li>
+    <li>Telefonul și emailul clientului.</li>
+  </ul>
+
+  <h3>7.3.3 Secțiunea „Produse"</h3>
+  <p>
+    Tabel cu toate produsele comandate. Fiecare linie conține: denumire produs, SKU, cantitate,
+    <strong>Stoc ERP</strong> (verificat în timp real față de stocul din ERP),
+    prețul unitar și totalul liniei.
+  </p>
+  <p>
+    Coloana <strong>Stoc ERP</strong> este esențială pentru procesarea comenzilor:
+  </p>
+  <ul>
+    <li>
+      <strong>Badge verde</strong> — stocul ERP acoperă cantitatea comandată. Produsul poate
+      fi expediat imediat.
+    </li>
+    <li>
+      <strong>Badge roșu</strong> — stocul insuficient. Trebuie să verifici disponibilitatea
+      sau să comanzi de la furnizor.
+    </li>
+    <li>
+      <strong>Badge gri (–)</strong> — produsul nu a putut fi asociat în ERP (SKU lipsă sau
+      produs nelocaliat).
+    </li>
+  </ul>
+
+  <h3>7.3.4 Secțiunea „Totale"</h3>
+  <p>
+    Subtotal, cost livrare, discount total, TVA și totalul final (afișat cu font bold și
+    dimensiune mare).
+  </p>
+
+  <h3>7.3.5 Secțiunea „AWB-uri Sameday"</h3>
+  <p>
+    Afișează toate AWB-urile generate pentru această comandă, cu: numărul AWB (copiabil cu
+    un click), statusul (created / cancelled / failed) și data creării.
+  </p>
+
+  <h2>7.4 Acțiuni disponibile pe o comandă</h2>
+  <p>
+    În header-ul paginii de vizualizare există patru butoane de acțiune:
+  </p>
+
+  <h3>7.4.1 Schimbă status</h3>
+  <p>
+    Apasă butonul portocaliu <strong>Schimbă status</strong>. Se deschide un modal cu o listă
+    derulantă cu toate statusurile WooCommerce disponibile. Status-ul curent al comenzii
+    este preselectat. Selectează noul status și confirmă — ERP-ul apelează API-ul WooCommerce
+    și actualizează comanda atât în WooCommerce cât și local. Statusurile disponibile:
+  </p>
+  <ul>
+    <li><strong>pending</strong> — în așteptarea plății</li>
+    <li><strong>processing</strong> — plătit, în procesare</li>
+    <li><strong>on-hold</strong> — în așteptare</li>
+    <li><strong>completed</strong> — finalizat (livrat)</li>
+    <li><strong>cancelled</strong> — anulat</li>
+    <li><strong>refunded</strong> — rambursat</li>
+    <li><strong>failed</strong> — eșuat</li>
+  </ul>
+
+  <h3>7.4.2 Adaugă notă</h3>
+  <p>
+    Butonul gri <strong>Adaugă notă</strong> deschide un modal cu un câmp de text și un toggle
+    „Vizibil pentru client". Notele interne (toggle dezactivat) sunt vizibile doar în WooCommerce
+    admin. Notele pentru client apar și în emailurile trimise clientului din WooCommerce.
+    Nota se salvează direct în WooCommerce prin API.
+  </p>
+
+  <div class="tip">
+    <strong>Sfat:</strong> Folosiți notele pentru a documenta discuțiile telefonice cu clientul,
+    problemele de stoc sau acordurile speciale de livrare. Echipa de depozit va putea vedea
+    notele interne în WooCommerce admin.
+  </div>
+
+  <h3>7.4.3 Resync</h3>
+  <p>
+    Butonul albastru <strong>Resync</strong> sincronizează manual comanda din WooCommerce.
+    Util când știi că a apărut o modificare recentă (plată confirmată, returnare parțială etc.)
+    și vrei să reflecte imediat în ERP fără să aștepți sincronizarea automată. Se afișează
+    o notificare de confirmare la final.
+  </p>
+
+  <h3>7.4.4 Creare AWB Sameday</h3>
+  <p>
+    Butonul verde <strong>Creare AWB Sameday</strong> te redirecționează la formularul de
+    creare AWB, completat automat cu datele comenzii:
+  </p>
+  <ul>
+    <li>Numele destinatarului (din datele de shipping sau billing).</li>
+    <li>Telefonul și emailul clientului.</li>
+    <li>Adresa completă de livrare (stradă, oraș, județ, cod poștal).</li>
+    <li>
+      Suma de rambursat (câmpul <em>cod_amount</em>) — completat automat cu totalul comenzii
+      dacă metoda de plată este „ramburs" (cod); altfel rămâne gol.
+    </li>
+    <li>Referința (numărul comenzii WooCommerce).</li>
+  </ul>
+  <p>
+    Completezi orice câmpuri lipsă sau corectezi cele precompletate, apoi generezi AWB-ul.
+    AWB-ul creat apare imediat în secțiunea „AWB-uri Sameday" din pagina comenzii.
+  </p>
+
+  <div class="warning">
+    <strong>Atenție:</strong> Schimbarea statusului sau adăugarea notei comunică în timp real
+    cu WooCommerce prin API. Dacă site-ul WooCommerce este offline sau API-ul returnează eroare,
+    vei vedea un mesaj de eroare roșu în colțul ecranului și operațiunea nu se va finaliza.
+    Verifică conexiunea înainte de a reîncerca.
+  </div>
+
+  <h2>7.5 Sincronizarea automată</h2>
+  <p>
+    Comenzile din WooCommerce se sincronizează automat în ERP prin job-ul <code>SyncWooOrdersCommand</code>,
+    care rulează periodic. La deschiderea oricărei comenzi individuale, datele sunt reîmprospătate
+    automat din WooCommerce — nu trebuie să apeși manual Resync pentru consultare.
+    Resync-ul manual este util doar când ai nevoie de date imediat actualizate înainte de
+    sincronizarea automată.
+  </p>
+</section>
+
+<!-- =====================================================
+     SECȚIUNEA 8: RAPOARTE ȘI BUSINESS INTELLIGENCE
+     ===================================================== -->
+<section id="s8-rapoarte-bi">
+  <h1>8. Rapoarte și Business Intelligence</h1>
+
+  <p>
+    ERP Malinco include un set complet de rapoarte operative și de business intelligence,
+    accesibile din grupul <strong>Rapoarte</strong> și din modulul <strong>Achiziții</strong>.
+    Rapoartele sunt concepute pentru decizii rapide — fiecare pagină afișează statistici
+    sintetice (stat cards) urmate de detalii granulare.
+  </p>
+
+  <h2>8.1 Raportul „Necesar de marfă"</h2>
+  <p>
+    Accesibil din <strong>Rapoarte → Necesar de marfă</strong>. Este raportul central pentru
+    managementul stocurilor — arată ce produse urmează să se epuizeze și ce cantitate trebuie
+    comandată.
+  </p>
+
+  <h3>8.1.1 Ce calculează raportul</h3>
+  <p>
+    Raportul nu se bazează pe un stoc minim fix. El calculează dinamic, pentru fiecare produs,
+    rata medie zilnică de vânzare pe trei perioade (7 zile, 30 zile, 90 zile) și estimează
+    câte zile de stoc mai sunt disponibile. Logica de calcul:
+  </p>
+  <ol>
+    <li>
+      <strong>Baseline</strong> — se ia maximul dintre cele trei medii zilnice (avg_7d, avg_30d, avg_90d).
+      Aceasta protejează împotriva subestimării când o perioadă are date insuficiente
+      (ex: un produs vândut recent are avg_90d mic, dar avg_7d mare).
+    </li>
+    <li>
+      <strong>Factor trend</strong> — dacă vânzările din ultimele 7 zile sunt cu mai mult de
+      15% sub media din 30 de zile, factorul de trend scade conservator (max 50% atenuare).
+      Dacă vânzările cresc sau sunt stabile, factorul rămâne 1.0 (fără amplificare).
+    </li>
+    <li>
+      <strong>Safety stock</strong> — se adaugă un tampon de 3 zile de consum ajustat.
+    </li>
+    <li>
+      <strong>Cantitate recomandată</strong> = consum_zilnic_ajustat × zile_acoperire + safety_stock − stoc_curent.
+    </li>
+  </ol>
+
+  <h3>8.1.2 Configurarea perioadei de acoperire</h3>
+  <p>
+    Câmpul <strong>Zile acoperire</strong> (implicit 14 zile) controlează pentru câte zile
+    calculezi necesarul. Poți seta între 7 și 60 de zile. La modificare, raportul se
+    recalculează automat. Valoarea 14 este potrivită pentru comenzi săptămânale la furnizori;
+    dacă furnizorii tăi au timp de livrare de 7+ zile, mărește la 21 sau 30.
+  </p>
+
+  <h3>8.1.3 Stat cards</h3>
+  <ul>
+    <li><strong>Furnizori</strong> — câți furnizori activi au produse în pericol de epuizare.</li>
+    <li><strong>Produse</strong> — numărul total de produse cu stoc insuficient.</li>
+    <li><strong>Stoc zero</strong> — câte produse sunt complet epuizate.</li>
+    <li><strong>Urgente (&lt;7 zile)</strong> — produse care se epuizează în mai puțin de 7 zile.</li>
+    <li><strong>Curând (7-14 zile)</strong> — produse care se epuizează în 7-14 zile.</li>
+  </ul>
+
+  <h3>8.1.4 Tab-urile raportului</h3>
+  <ul>
+    <li>
+      <strong>Urgente (&lt;7 zile)</strong> — lista produselor critice, un rând per produs,
+      sortate după zile până la epuizare (cel mai urgent primul). Afișează stocul curent,
+      media zilnică și zilele estimate.
+    </li>
+    <li>
+      <strong>Curând (7-14 zile)</strong> — similar, pentru produse cu orizont mai lung.
+    </li>
+    <li>
+      <strong>Pe furnizor</strong> — produsele grupate pe furnizor, cu logo furnizor,
+      numărul de produse urgente și numărul de produse care se vor epuiza curând.
+      Fiecare furnizor poate fi expandat pentru a vedea lista detaliată de produse.
+    </li>
+  </ul>
+
+  <h3>8.1.5 Indicatorul de trend</h3>
+  <p>Lângă fiecare produs apare o săgeată indicând direcția cererii:</p>
+  <ul>
+    <li><strong>↑ (săgeată sus)</strong> — cererea din ultima săptămână este cu &gt;15% mai mare față de media lunii. Comandă mai mult.</li>
+    <li><strong>→ (stabil)</strong> — cererea este constantă.</li>
+    <li><strong>↓ (săgeată jos)</strong> — cererea a scăzut cu &gt;15%. Cantitatea recomandată este atenuată.</li>
+  </ul>
+
+  <h3>8.1.6 Generarea necesarului din raport</h3>
+  <p>
+    La finalul raportului există un panou de selecție. Selectează produsele pentru care
+    vrei să generezi necesare de aprovizionare (PNR-uri), ajustează cantitățile recomandate
+    dacă e necesar, și apasă <strong>Generează necesare</strong>. Sistemul creează automat
+    câte un PNR per furnizor, cu statusul <em>Submitted</em>, gata de procesare de buyer.
+    Ești redirecționat apoi la <strong>Dashboard Achiziții</strong>.
+  </p>
+  <p>
+    Produsele fără furnizor activ sunt omise din generarea automată; o notificare de avertisment
+    îți spune câte produse au fost sărite.
+  </p>
+
+  <h2>8.2 Dashboard Achiziții (Generează comandă)</h2>
+  <p>
+    Accesibil din <strong>Achiziții → Generează comandă</strong>. Vizibil pentru manageri
+    achiziții, manageri generali și super-administratori. Badge-ul roșu din navigare afișează
+    numărul curent de articole pending necomandăte.
+  </p>
+  <p>
+    Dashboard-ul centralizează toate articolele din necesarele aprobate (status Submitted sau
+    Partially Ordered) care nu au fost încă comandate. Articolele sunt grupate pe furnizor.
+  </p>
+
+  <h3>8.2.1 Filtrele disponibile</h3>
+  <ul>
+    <li><strong>Furnizor</strong> — filtrează articolele unui singur furnizor.</li>
+    <li><strong>Locație</strong> — filtrează după depozit/magazin sursă al necesarului.</li>
+    <li><strong>Consultant</strong> — filtrează după persoana care a creat necesarul.</li>
+    <li><strong>Necesar până la (de la / până la)</strong> — filtrează după deadline urgența.</li>
+    <li><strong>Doar urgente</strong> — toggle pentru a afișa numai articolele marcate urgente.</li>
+    <li><strong>Doar rezervate</strong> — toggle pentru articolele rezervate pentru un client.</li>
+  </ul>
+
+  <h3>8.2.2 Stat cards</h3>
+  <ul>
+    <li><strong>Total pending</strong> — articole necomandăte în total.</li>
+    <li><strong>Urgente</strong> — articole marcate urgente.</li>
+    <li><strong>Rezervate</strong> — articole rezervate pentru clienți specifici.</li>
+    <li><strong>Furnizori activi</strong> — câți furnizori au articole pending.</li>
+  </ul>
+
+  <h3>8.2.3 Grupele pe furnizor</h3>
+  <p>
+    Fiecare grup de furnizor afișează: numele furnizorului, numărul total de articole
+    și numărul de articole urgente. La expandare vezi lista de articole cu: denumire produs,
+    SKU, cantitate rămasă de comandat, cantitate deja comandată parțial, referința clientului,
+    notele consultantului, consultantul și locația sursă.
+  </p>
+  <p>
+    Butonul <strong>Generează PO</strong> de lângă fiecare furnizor te redirecționează la
+    formularul de creare Comandă de Achiziție (PO), precompletând furnizorul și articolele.
+  </p>
+
+  <h3>8.2.4 Comenzi WooCommerce cu produse „la comandă"</h3>
+  <p>
+    Dacă un client a comandat online un produs configurat ca „la comandă", sistemul generează
+    automat un necesar (PNR) legat de comanda WooCommerce. Aceste necesare apar într-o secțiune
+    separată a dashboard-ului, cu link direct la comanda WooCommerce.
+  </p>
+
+  <h2>8.3 Raportul „Mișcări stocuri"</h2>
+  <p>
+    Accesibil din <strong>Rapoarte → Mișcări stocuri</strong> (disponibil pentru super-admin
+    și manageri). Analizează intrările și ieșirile de stoc pe o perioadă selectabilă.
+  </p>
+
+  <h3>8.3.1 Selectarea perioadei</h3>
+  <p>
+    Butoanele din header permit selectarea rapidă a perioadei: <strong>7 zile</strong>,
+    <strong>14 zile</strong>, <strong>30 zile</strong> sau <strong>90 zile</strong>.
+    Toate calculele și graficele se actualizează instant.
+  </p>
+
+  <h3>8.3.2 Stat cards</h3>
+  <ul>
+    <li><strong>Intrări cantitate</strong> — total unități intrate (aprovizionări).</li>
+    <li><strong>Ieșiri cantitate</strong> — total unități ieșite (vânzări).</li>
+    <li><strong>Valoare intrări</strong> — valoarea estimată a aprovizionărilor (la prețul de vânzare).</li>
+    <li><strong>Valoare ieșiri</strong> — valoarea estimată a vânzărilor.</li>
+    <li><strong>Produse cu mișcare</strong> — câte produse distincte au avut intrări sau ieșiri.</li>
+    <li><strong>Produse cu modificare preț</strong> — câte produse și-au schimbat prețul.</li>
+  </ul>
+
+  <h3>8.3.3 Filtre suplimentare</h3>
+  <ul>
+    <li><strong>Furnizor</strong> — restrânge raportul la produsele unui singur furnizor.</li>
+    <li><strong>Categorie</strong> — filtrare după categoria principală (top-level) din WooCommerce.</li>
+  </ul>
+
+  <h3>8.3.4 Statistici pe furnizori și categorii</h3>
+  <p>
+    Sub stat cards apar două tabele secundare:
+  </p>
+  <ul>
+    <li>
+      <strong>Top furnizori după valoare mișcare</strong> — primii 10 furnizori după valoarea
+      totală a mișcărilor de stoc în perioada selectată.
+    </li>
+    <li>
+      <strong>Mișcări pe categorii</strong> — fiecare categorie principală cu cantitățile
+      de intrare/ieșire și valoarea totală.
+    </li>
+  </ul>
+
+  <h3>8.3.5 Tabelul detaliat de produse</h3>
+  <p>
+    Lista primelor 100 de produse după mișcare totală, cu: denumire, SKU, mișcare totală
+    (intrări + ieșiri), variație netă (+/- unități, colorat verde/roșu), stoc curent,
+    prețul actual și variația de preț față de începutul perioadei.
+    Un click pe orice produs deschide fișa produsului.
+  </p>
+
+  <h2>8.4 Raportul „Discrepanțe SKU"</h2>
+  <p>
+    Accesibil din <strong>Administrare magazin → Discrepanțe SKU</strong>. Identifică
+    problemele de sincronizare între catalogul WooCommerce și ERP.
+  </p>
+  <p>Raportul este organizat în trei tab-uri:</p>
+  <ul>
+    <li>
+      <strong>Placeholder</strong> — produse create în ERP ca „placeholder" (fără corespondent
+      real în WooCommerce). Afișează câte au stoc &gt;0 — acestea sunt cele mai urgente de rezolvat.
+    </li>
+    <li>
+      <strong>Fără SKU</strong> — produse active în WooCommerce dar fără cod SKU setat.
+      Fără SKU, sincronizarea cu WinMentor nu funcționează.
+    </li>
+    <li>
+      <strong>Pe site, fără WinMentor</strong> — produse cu SKU dar fără niciun stoc sincronizat
+      din WinMentor. Înseamnă că produsul există în WooCommerce dar nu a fost găsit în
+      nomenclatorul din sistemul de contabilitate.
+    </li>
+  </ul>
+
+  <h2>8.5 Raportul „Magazin Online"</h2>
+  <p>
+    Accesibil din <strong>Rapoarte → Raport Magazin Online</strong>. Analizează performanța
+    comercială a magazinului WooCommerce.
+  </p>
+  <ul>
+    <li>
+      <strong>Selectarea perioadei</strong> — alegi anul (butoane) și opțional luna.
+      La selectarea lunii, raportul se restrânge automat.
+    </li>
+    <li><strong>Stat cards</strong>: venituri totale, număr comenzi, valoare medie comandă,
+      comenzi finalizate, comenzi în procesare.</li>
+    <li><strong>Distribuție pe status</strong> — câte comenzi și ce valoare per status.</li>
+    <li><strong>Top categorii</strong> — top categorii după venituri.</li>
+    <li><strong>Top furnizori</strong> — primii 10 furnizori după venituri generate din comenzi.</li>
+    <li><strong>Top branduri</strong> — primele 10 branduri după venituri.</li>
+  </ul>
+
+  <h2>8.6 Rapoarte Business Intelligence (BI)</h2>
+  <p>
+    Sistemul BI analizează velocity-ul produselor (viteza de rotație a stocului) și generează
+    rapoarte textuale automate cu ajutorul Claude AI. Aceste rapoarte sunt accesibile din
+    <strong>BI → Analiză BI</strong> și <strong>BI → Dashboard BI</strong>.
+  </p>
+  <p>
+    Rapoartele BI se generează automat prin comenzile:
+  </p>
+  <ul>
+    <li><code>bi:generate-weekly</code> — raport săptămânal (rulează automat luni dimineața).</li>
+    <li><code>bi:generate-monthly</code> — raport lunar (rulează în prima zi a lunii).</li>
+    <li><code>bi:generate-period</code> — raport pentru orice perioadă personalizată.</li>
+  </ul>
+  <p>
+    Datele brute pentru BI sunt calculate zilnic prin:
+  </p>
+  <ul>
+    <li><code>bi:compute-daily</code> — calculează metricile zilnice de stoc (DailyStockMetric).</li>
+    <li><code>bi:compute-velocity</code> — calculează viteza de vânzare per produs (bi_product_velocity_current).</li>
+    <li><code>bi:compute-kpi</code> — calculează KPI-urile globale.</li>
+    <li><code>bi:compute-alerts</code> — generează alertele automate (stoc critic, creșteri bruște de cerere).</li>
+  </ul>
+  <p>
+    Dashboard-ul BI afișează grafice de trend pentru vânzări, stocuri și prețuri. Analiza textuală
+    generată de AI oferă interpretări în limbaj natural, identificând tendințe, anomalii și
+    recomandări de acțiune.
+  </p>
+
+  <div class="tip">
+    <strong>Sfat:</strong> Raportul „Necesar de marfă" este cel mai acționabil — generează
+    direct necesarele de achiziție. Rapoartele BI sunt mai potrivite pentru analize strategice
+    săptămânale sau lunare cu managementul.
+  </div>
+</section>
+
+<!-- =====================================================
+     SECȚIUNEA 9: CHAT AI ȘI LEADS
+     ===================================================== -->
+<section id="s9-chat-ai">
+  <h1>9. Chat AI și Leads</h1>
+
+  <p>
+    ERP Malinco include un chatbot AI complet integrat cu catalogul de produse și cu comenzile
+    WooCommerce. Chatbot-ul funcționează pe site-ul public (<em>malinco.ro</em>) și toate
+    conversațiile sunt înregistrate și accesibile în ERP prin pagina <strong>Comunicare →
+    Chat Clienți</strong>.
+  </p>
+
+  <h2>9.1 Cum funcționează chatbot-ul pentru clienți</h2>
+  <p>
+    Vizitatorii site-ului văd un buton rotund portocaliu în colțul dreapta-jos al paginii.
+    La click, se deschide fereastra de chat. Clientul poate pune întrebări libere în română,
+    iar botul răspunde în timp real.
+  </p>
+
+  <h3>9.1.1 Ce poate face botul</h3>
+  <p>
+    Botul folosește modelul Claude AI (claude-haiku-4-5) cu un sistem de unelte (<em>Tool Use</em>)
+    care îi permit să acceseze date reale din ERP:
+  </p>
+  <ul>
+    <li>
+      <strong>searchProducts</strong> — caută produse în catalogul ERP după cuvinte cheie.
+      Returnează carduri cu imagine, preț, disponibilitate și link direct la produs pe site.
+    </li>
+    <li>
+      <strong>checkQuantityAvailability</strong> — verifică dacă un produs specificat este
+      disponibil în stoc.
+    </li>
+    <li>
+      <strong>getOrderStatus</strong> — verifică statusul unei comenzi WooCommerce după
+      numărul comenzii și emailul clientului.
+    </li>
+    <li>
+      <strong>getCompanyInfo</strong> — furnizează informații generale despre companie
+      (adresă, program, contact), preluate din setările ERP.
+    </li>
+  </ul>
+  <p>
+    Botul nu divulgă niciodată cantități exacte de stoc — răspunde doar „disponibil" sau
+    „indisponibil". Pentru comenzi comerciale mari sau reclamații, redirecționează clientul
+    la telefonul companiei.
+  </p>
+
+  <h3>9.1.2 Istoricul conversației</h3>
+  <p>
+    Istoricul conversației se păstrează local în browser-ul clientului (localStorage) cu o
+    durată de 15 minute. Dacă clientul revine pe site în mai puțin de 15 minute, conversația
+    continuă de unde a rămas. La expirarea celor 15 minute, sesiunea se resetează.
+    Pe server, istoricul recent (ultimele 20 de mesaje text) este păstrat în cache pentru
+    contextul conversației AI.
+  </p>
+
+  <h3>9.1.3 Colectarea datelor de contact (lead capture)</h3>
+  <p>
+    Dacă clientul menționează că vrea să fie contactat de un specialist sau lasă explicit
+    datele de contact (email, telefon), botul le salvează automat într-o înregistrare de
+    tip <strong>ChatContact</strong>, legată de sesiunea respectivă. Această înregistrare
+    include și un rezumat AI al conversației și produsele de interes ale clientului.
+  </p>
+
+  <h2>9.2 Pagina „Chat Clienți" din ERP</h2>
+  <p>
+    Accesibilă din <strong>Comunicare → Chat Clienți</strong> (vizibilă doar pentru
+    super-administratori). Oferă acces complet la toate conversațiile și lead-urile.
+  </p>
+
+  <h3>9.2.1 Stat cards</h3>
+  <ul>
+    <li><strong>Total sesiuni</strong> — numărul total de sesiuni de chat din toată istoria.</li>
+    <li><strong>Mesaje azi</strong> — numărul de mesaje din ziua curentă.</li>
+    <li><strong>Sesiuni azi</strong> — numărul de conversații distincte din ziua curentă.</li>
+  </ul>
+
+  <h3>9.2.2 Lista sesiunilor recente</h3>
+  <p>
+    Se afișează ultimele 50 de sesiuni, sortate descrescător după ultima activitate. Pentru
+    fiecare sesiune sunt vizibile:
+  </p>
+  <ul>
+    <li>ID sesiune și adresa IP.</li>
+    <li>Ora primului și ultimului mesaj.</li>
+    <li>Numărul total de mesaje și mesajele clientului.</li>
+    <li>Primul mesaj al clientului (preview 90 caractere).</li>
+    <li>
+      Pagina de pe site de pe care a venit (URL și titlu) — util pentru a înțelege contextul
+      conversației.
+    </li>
+    <li>Dacă botul a returnat carduri de produse în sesiune.</li>
+    <li>Costul estimat al sesiunii în USD (bazat pe tokenurile AI consumate).</li>
+  </ul>
+
+  <h3>9.2.3 Vizualizarea conversației complete</h3>
+  <p>
+    La expandarea unei sesiuni, se afișează toate mesajele în ordine cronologică, cu
+    buloane distincte pentru client (dreapta) și bot (stânga), exact ca în interfața de chat.
+  </p>
+
+  <h3>9.2.4 Secțiunea Lead-uri necontactate</h3>
+  <p>
+    În partea de sus a paginii apare o secțiune dedicată lead-urilor — sesiunile din care
+    clientul a lăsat date de contact (email sau telefon) dar nu a fost contactat încă.
+    Pentru fiecare lead sunt afișate:
+  </p>
+  <ul>
+    <li>Email și/sau telefon lăsate de client.</li>
+    <li>Dacă clientul a solicitat explicit un specialist.</li>
+    <li>Rezumatul conversației generat de AI.</li>
+    <li>Produsele de interes identificate de AI.</li>
+    <li>Ora la care s-a înregistrat lead-ul.</li>
+  </ul>
+  <p>
+    Butonul <strong>Marchează ca și contactat</strong> înregistrează că un operator a preluat
+    lead-ul, salvând ora și utilizatorul care l-a marcat. Lead-ul dispare din lista de
+    necontactate.
+  </p>
+
+  <div class="tip">
+    <strong>Sfat:</strong> Verificați lead-urile dimineața și la prânz. Un client care a lăsat
+    datele noaptea sau în weekend trebuie contactat cât mai repede în programul următor.
+  </div>
+
+  <h2>9.3 Setările chatbot-ului</h2>
+  <p>
+    Din pagina Chat Clienți, apasă butonul <strong>Setări Widget</strong> din header.
+    Se deschide un modal cu trei secțiuni:
+  </p>
+
+  <h3>9.3.1 Aspect widget</h3>
+  <ul>
+    <li><strong>Culoare principală</strong> — culoarea butonului, header-ului și prețurilor din widget (color picker).</li>
+    <li><strong>Numele botului</strong> — afișat în header-ul ferestrei de chat (ex: „Malinco").</li>
+    <li><strong>Subtitlu</strong> — textul mic sub nume (ex: „Asistent virtual", „Online acum").</li>
+    <li><strong>Mesaj de bun-venit</strong> — primul mesaj afișat automat la deschiderea chat-ului.</li>
+  </ul>
+
+  <h3>9.3.2 Notificări Telegram</h3>
+  <p>
+    Când un client lasă date de contact, sistemul poate trimite automat o notificare în
+    timp real pe un grup Telegram. Configurează:
+  </p>
+  <ul>
+    <li><strong>Bot Token</strong> — tokenul botului Telegram (creat cu @BotFather).</li>
+    <li>
+      <strong>Chat ID grup</strong> — ID-ul grupului unde se trimit notificările
+      (format: -100xxxxxxxxx).
+    </li>
+  </ul>
+  <p>
+    Apasă butonul <strong>Test Telegram</strong> din header pentru a verifica că conexiunea
+    funcționează înainte de a salva setările.
+  </p>
+
+  <h3>9.3.3 Limite AI</h3>
+  <p>
+    Câmpul <strong>Cost maxim per sesiune (USD)</strong> limitează cât se cheltuie per
+    conversație. Când limita este atinsă, botul informează politicos clientul că l-a depășit
+    și îl redirecționează la telefon. Setează 0 pentru fără limită. Un cost tipic per sesiune
+    activă este de 0.01-0.05 USD.
+  </p>
+
+  <h2>9.4 Integrarea widget-ului pe site</h2>
+  <p>
+    Pentru a adăuga chatbot-ul pe un site WordPress/WooCommerce, adaugă în footer-ul temei
+    (sau printr-un plugin de header/footer) următorul cod:
+  </p>
+  <pre><code>&lt;script&gt;window.MalincoChat = { apiUrl: 'https://erp.malinco.ro' };&lt;/script&gt;
+&lt;script src="https://erp.malinco.ro/chat/widget.js?v=4" defer&gt;&lt;/script&gt;</code></pre>
+  <p>
+    Widgetul se auto-configurează: la prima încărcare face o cerere la
+    <code>/chat/config</code> pentru a prelua culorile și textele setate în ERP.
+    Configurația este cache-uită local în browser pentru 5 minute — schimbările din ERP
+    se propagă în câteva minute.
+  </p>
+  <p>
+    Dacă site-ul WooCommerce are coșul de cumpărături activ și dorești integrare cu el,
+    adaugă și parametrii <code>wcUrl</code> și <code>wcNonce</code>:
+  </p>
+  <pre><code>&lt;script&gt;
+window.MalincoChat = {
+  apiUrl: 'https://erp.malinco.ro',
+  wcUrl: 'https://malinco.ro',
+  wcNonce: '&lt;?php echo wp_create_nonce("wc_store_api"); ?&gt;'
+};
+&lt;/script&gt;</code></pre>
+</section>
+
+<!-- =====================================================
+     SECȚIUNEA 10: INTELLIGENCE EMAIL ȘI COMUNICARE FURNIZORI
+     ===================================================== -->
+<section id="s10-email-intelligence">
+  <h1>10. Intelligence Email și Comunicare Furnizori</h1>
+
+  <p>
+    Modulul de Intelligence Email sincronizează cutia poștală a companiei direct în ERP,
+    procesează automat emailurile cu Claude AI pentru a extrage informații relevante
+    (tipul emailului, urgența, prețuri, date livrare), și le asociază furnizorilor.
+    Toate funcțiile sunt accesibile din grupul <strong>Comunicare</strong>.
+  </p>
+
+  <h2>10.1 Inbox Email</h2>
+  <p>
+    Accesibil din <strong>Comunicare → Inbox Email</strong> (vizibil doar super-admini).
+    Prezintă o interfață de tip client email cu trei panouri: lista folderelor (stânga),
+    lista emailurilor (centru) și vizualizarea emailului selectat (dreapta).
+  </p>
+
+  <h3>10.1.1 Folderele disponibile</h3>
+  <p>
+    Coloana stângă listează toate folderele IMAP cu numărul de emailuri din fiecare:
+    <em>Inbox</em>, <em>Trimise</em>, <em>Arhivă</em> (cu sub-foldere per an: Arhivă 2024,
+    Arhivă 2023 etc.), <em>Ciorne</em>, <em>Coș</em>, <em>Spam</em>. Click pe un folder
+    filtrează lista de emailuri.
+  </p>
+
+  <h3>10.1.2 Filtrarea emailurilor</h3>
+  <p>
+    Deasupra listei de emailuri sunt filtre rapide:
+  </p>
+  <ul>
+    <li><strong>Toate / Necitite / Citite</strong> — filtrare după starea de citire.</li>
+    <li>
+      <strong>Filtre AI</strong> — active doar pentru emailurile procesate de AI:
+      <ul>
+        <li><em>Necesită răspuns</em> — emailuri marcate de AI ca necompletate/fără răspuns.</li>
+        <li><em>Urgente</em> — emailuri cu urgență „high" detectată de AI.</li>
+        <li><em>Oferte</em> — emailuri de tip „offer".</li>
+        <li><em>Facturi</em> — emailuri de tip „invoice".</li>
+        <li><em>Liste prețuri</em> — emailuri de tip „price_list".</li>
+      </ul>
+      Lângă fiecare filtru apare numărul de emailuri din categoria respectivă.
+    </li>
+    <li>
+      <strong>Căutare</strong> — caută în subiect, adresa email expeditor și numele expeditorului.
+    </li>
+  </ul>
+
+  <h3>10.1.3 Lista emailurilor</h3>
+  <p>
+    Fiecare email din listă afișează:
+  </p>
+  <ul>
+    <li>Numele/adresa expeditorului.</li>
+    <li>Subiectul emailului.</li>
+    <li>Data trimiterii.</li>
+    <li>Badge-ul furnizorului asociat (dacă există).</li>
+    <li>Iconița de atașament (dacă emailul are fișiere atașate).</li>
+    <li>Steagul de marcat (dacă emailul e flagged).</li>
+    <li>
+      Badge-uri AI: tipul detectat (ofertă, factură, etc.) și urgența (roșu=high,
+      galben=medium, verde=low).
+    </li>
+  </ul>
+
+  <h3>10.1.4 Vizualizarea unui email</h3>
+  <p>
+    Click pe un email din listă îl deschide în panoul din dreapta. Afișează header-ul complet
+    (De la, Către, CC, Data, Subiect), corpul emailului (HTML randat sau text simplu)
+    și lista atașamentelor.
+  </p>
+  <p>
+    Dacă emailul a fost procesat de AI, apare o secțiune <strong>Analiză AI</strong> cu:
+    tipul emailului, rezumatul, urgența, acțiunile recomandate, dacă necesită răspuns și
+    prețurile extrase.
+  </p>
+
+  <h3>10.1.5 Acțiuni din header pe emailul selectat</h3>
+  <ul>
+    <li>
+      <strong>Sincronizează</strong> — lansează manual job-ul de sincronizare IMAP.
+      Emailurile noi apar în câteva secunde. (Sincronizarea automată rulează la fiecare
+      5 minute în background.)
+    </li>
+    <li>
+      <strong>Salvează notă</strong> — adaugă sau editează o notă internă pe emailul selectat.
+      Nota nu este vizibilă expeditorului — este pentru uz intern al echipei.
+    </li>
+    <li>
+      <strong>Asociază furnizor</strong> — asociază manual emailul la un furnizor din baza
+      de date. Useful pentru emailurile de la contacte noi sau adrese de domenii necunoscute.
+    </li>
+  </ul>
+
+  <h2>10.2 Procesarea AI automată a emailurilor</h2>
+  <p>
+    Job-ul <code>email:process-ai</code> rulează automat la fiecare 30 de minute și procesează
+    câte 100 de emailuri neprocesate. Pentru fiecare email, Claude AI (modelul claude-haiku-4-5)
+    extrage:
+  </p>
+  <ul>
+    <li>
+      <strong>Tipul emailului</strong>: <em>offer</em> (ofertă de prețuri de la furnizor),
+      <em>invoice</em> (factură sau aviz), <em>order_confirmation</em> (confirmare comandă),
+      <em>price_list</em> (lista de prețuri), <em>inquiry</em> (întrebare/solicitare),
+      <em>general</em> (comunicare generală).
+    </li>
+    <li>
+      <strong>Rezumat</strong> — un rezumat în 1-2 propoziții a conținutului emailului.
+    </li>
+    <li>
+      <strong>Urgență</strong>: high / medium / low — bazată pe conținut și cuvinte cheie
+      (ex: „urgent", date limită, „blocat").
+    </li>
+    <li>
+      <strong>Necesită răspuns</strong> — boolean care indică dacă emailul necesită o acțiune
+      din partea companiei.
+    </li>
+    <li>
+      <strong>Prețuri extrase</strong> — dacă emailul conține prețuri pentru produse
+      (ex: ofertă furnizor), acestea sunt extrase și salvate în tabelul <em>SupplierPriceQuote</em>
+      cu produsul, prețul unitar și data cotației.
+    </li>
+    <li>
+      <strong>Entități extrase</strong> — date structurate din email: date livrare promise,
+      numere facturi, termene de plată, discounturi.
+    </li>
+  </ul>
+
+  <h2>10.3 Asocierea automată a emailurilor la furnizori</h2>
+  <p>
+    Sistemul are două mecanisme de asociere automată a emailurilor la furnizori:
+  </p>
+
+  <h3>10.3.1 Potrivire după domeniu</h3>
+  <p>
+    Dacă un furnizor are setată adresa de email sau domeniu web, sistemul asociază automat
+    toate emailurile de la acel domeniu la furnizor. Ex: emailuri de la <em>@furnizor.ro</em>
+    sunt asociate automat furnizorului cu site-ul <em>furnizor.ro</em>.
+  </p>
+
+  <h3>10.3.2 Potrivire AI (AutoMatchSupplierDomains)</h3>
+  <p>
+    Comanda <code>supplier:auto-match-domains</code> (rulează zilnic la 03:00) analizează
+    expeditorii necunoscuți și încearcă să îi asocieze la furnizori folosind trei strategii:
+  </p>
+  <ol>
+    <li>Potrivire exactă domeniu email cu domeniu furnizor.</li>
+    <li>Potrivire după similaritate de nume (ex: „Wienerberger SRL" ≈ furnizorul „Wienerberger").</li>
+    <li>Potrivire AI cu Claude — pentru cazurile ambigue.</li>
+  </ol>
+  <p>
+    Doar asocierile cu confidență mare sunt aplicate automat. Cele cu confidență medie
+    sunt înregistrate pentru aprobare manuală.
+  </p>
+
+  <h3>10.3.3 Descoperire contacte</h3>
+  <p>
+    Comanda <code>supplier:discover-contacts</code> (zilnic la 03:00) extrage automat
+    contacte noi din emailurile procesate: dacă un email vine de la o persoană necunoscută
+    la un furnizor deja asociat, persoana este adăugată automat ca contact al furnizorului
+    cu sursa <em>email_discovery</em>.
+  </p>
+
+  <h2>10.4 Statistici Comunicare</h2>
+  <p>
+    Accesibil din <strong>Comunicare → Statistici Comunicare</strong>. Oferă o perspectivă
+    agregată asupra comunicării cu furnizorii.
+  </p>
+
+  <h3>10.4.1 Carduri sumar</h3>
+  <ul>
+    <li><strong>Total emailuri</strong> — numărul total de emailuri importate în ERP.</li>
+    <li><strong>Procesate AI</strong> — câte au fost analizate de AI.</li>
+    <li><strong>Neprocesate</strong> — emailuri din INBOX și Trimise care nu au primit analiză AI încă.</li>
+    <li><strong>Total contacte</strong> — numărul de contacte furnizori din baza de date.</li>
+    <li><strong>Descoperite auto</strong> — contacte identificate automat din emailuri (nu adăugate manual).</li>
+    <li><strong>Expeditori necunoscuți</strong> — adrese email care apar în emailuri dar nu sunt asociate niciunui furnizor.</li>
+  </ul>
+
+  <h3>10.4.2 Top furnizori după volum emailuri</h3>
+  <p>
+    Tabel cu primii 15 furnizori după numărul total de emailuri schimbate, cu:
+  </p>
+  <ul>
+    <li>Număr emailuri primite și trimise.</li>
+    <li>Număr emailuri cu atașamente.</li>
+    <li>Data primului și ultimului email.</li>
+    <li>Frecvența comunicării (emailuri/lună).</li>
+    <li>Zile de la ultimul email — un număr mare poate indica o relație comercială inactivă.</li>
+  </ul>
+
+  <h3>10.4.3 Furnizori tăcuți</h3>
+  <p>
+    Lista furnizorilor activi care nu au trimis sau primit niciun email în ultimele 60 de zile.
+    Sortată descrescător după numărul de zile de tăcere. Util pentru a identifica furnizorii
+    cu care relația comercială s-ar putea să se fi deteriorat sau care nu mai sunt activi.
+  </p>
+
+  <h3>10.4.4 Volum lunar</h3>
+  <p>
+    Grafic (sau tabel) cu volumul de emailuri per lună în ultimele 15 luni, cu split
+    între emailuri primite și trimise.
+  </p>
+
+  <h3>10.4.5 Distribuție pe tipuri AI</h3>
+  <p>
+    Câte emailuri din fiecare tip (ofertă, factură, confirmare comandă etc.) au fost procesate.
+    Util pentru a înțelege natura comunicărilor cu furnizorii.
+  </p>
+
+  <h3>10.4.6 Expeditori necunoscuți (candidați asociere)</h3>
+  <p>
+    Lista adreselor de email cu minim 2 emailuri care nu sunt asociate niciunui furnizor.
+    Sortată după frecvență. Acestea sunt candidatele prioritare pentru asociere manuală
+    sau pentru rularea unui nou ciclu de auto-match.
+  </p>
+
+  <h2>10.5 Emailurile în contextul Comenzilor și Necesarelor</h2>
+  <p>
+    O funcție importantă este vizualizarea contextului de comunicare direct în paginile de
+    Comandă de Achiziție (PO) și Necesar de Aprovizionare (PNR):
+  </p>
+
+  <h3>10.5.1 Secțiunea „Comunicare furnizor" din ViewPurchaseOrder</h3>
+  <p>
+    Pe pagina de vizualizare a unei Comenzi de Achiziție (PO), apare o secțiune
+    <strong>Comunicare furnizor</strong> care afișează emailurile din intervalul
+    ±30 zile și +60 zile față de data PO-ului, filtrând pe furnizorul comenzii.
+    Astfel, buyerul poate vedea dintr-o privire toate comunicările relevante cu furnizorul
+    în jurul perioadei comenzii: confirmări, modificări, facturi etc.
+  </p>
+
+  <h3>10.5.2 Secțiunea similară din ViewPurchaseRequest</h3>
+  <p>
+    Similar, și pe pagina unui Necesar de Aprovizionare (PNR) există o secțiune care afișează
+    emailurile relevante cu furnizorii implicați, pentru contextul complet al solicitării.
+  </p>
+
+  <h2>10.6 Configurarea conexiunii IMAP</h2>
+  <p>
+    Conexiunea la serverul de email se configurează din <strong>Setări aplicație</strong>
+    (vezi Secțiunea 11). Sistemul se conectează în mod <em>read-only</em> — nu modifică, nu
+    șterge și nu marchează niciun email ca citit în cutia poștală reală. Outlook-ul sau
+    webmail-ul rămâne complet nemodificat.
+  </p>
+</section>
+
+<!-- =====================================================
+     SECȚIUNEA 11: SOCIAL MEDIA, EDITOR GRAFIC ȘI SETĂRI
+     ===================================================== -->
+<section id="s11-social-media-setari">
+  <h1>11. Social Media, Editor Grafic și Setări</h1>
+
+  <p>
+    Modulul <strong>Social Media</strong> permite generarea automată cu AI a postărilor
+    pentru Facebook, personalizarea grafică a imaginilor cu un editor vizual bazat pe
+    Fabric.js, și publicarea sau programarea automată a postărilor. Setările aplicației
+    centralizează toate cheile API și configurațiile globale.
+  </p>
+
+  <h2>11.1 Conectarea conturilor Social Media</h2>
+  <p>
+    Accesibil din <strong>Social Media → Conturi</strong> (vizibil doar super-admini).
+    Pagina afișează lista conturilor Facebook conectate și oferă uneltele de administrare.
+  </p>
+
+  <h3>11.1.1 Adăugarea unui cont Facebook</h3>
+  <p>
+    Apasă butonul <strong>Adaugă cont</strong> din header. Se deschide un modal cu:
+  </p>
+  <ul>
+    <li>
+      <strong>Nume cont</strong> — un nume descriptiv intern (ex: „Malinco Facebook Page").
+    </li>
+    <li>
+      <strong>Facebook Page ID</strong> — ID-ul paginii Facebook. Se găsește în
+      <em>Facebook Business Manager → Pagini → About</em>.
+    </li>
+    <li>
+      <strong>Page Access Token</strong> — token-ul de acces permanent pentru pagina.
+      Se generează în <em>Facebook Developer Console → Graph API Explorer</em> cu permisiunile
+      <em>pages_manage_posts</em> și <em>pages_read_engagement</em>.
+    </li>
+    <li>
+      <strong>Expiră la</strong> (opțional) — data de expirare a token-ului, pentru
+      monitorizare.
+    </li>
+  </ul>
+
+  <h3>11.1.2 Actualizarea token-ului</h3>
+  <p>
+    Token-urile Facebook expiră la 60 de zile dacă nu sunt permanente. La expirare,
+    publisarea postărilor eșuează. Din lista conturilor poți actualiza token-ul pentru
+    fiecare cont fără a reface întreaga configurare. Token-ul este stocat criptat în baza
+    de date.
+  </p>
+
+  <h3>11.1.3 Fetch posturi istorice</h3>
+  <p>
+    Butonul <strong>Fetch posturi</strong> de lângă un cont lansează un job în background
+    care descarcă postările istorice ale paginii Facebook (ultimele sute de posturi).
+    Aceste posturi sunt folosite de AI pentru a înțelege stilul și tonul comunicării
+    companiei — esențial pentru generarea de conținut consistent.
+  </p>
+
+  <h3>11.1.4 Analiza stilului paginii</h3>
+  <p>
+    Butonul <strong>Analizează stil</strong> lansează un job care procesează postările
+    istorice descărcate și construiește un profil de stil al paginii (<em>SocialStyleProfile</em>).
+    Profilul include: ton de comunicare, teme frecvente, structura captionurilor, tipuri de
+    conținut preferate. Acest profil este folosit la fiecare generare de postare nouă pentru
+    a menține consistența brandului.
+  </p>
+
+  <h3>11.1.5 Referințe vizuale și generarea template-urilor</h3>
+  <p>
+    Butonul <strong>Încarcă referințe vizuale</strong> permite încărcarea de imagini
+    (PNG/JPG/WEBP, max 20 fișiere, max 5MB fiecare) ca exemplare de stil grafic.
+    Acestea sunt analizate de AI pentru a genera template-uri grafice potrivite brandului.
+  </p>
+  <p>
+    După încărcare, selectează imaginile dorite din galeria de referințe și apasă
+    <strong>Generează template-uri</strong>. Job-ul <code>AnalyzeReferenceImagesJob</code>
+    analizează imaginile cu Claude AI și creează automat configurații de template-uri.
+    Vei fi notificat prin notificare în ERP când procesul este finalizat.
+  </p>
+
+  <h3>11.1.6 Configurarea cheilor API pentru Social Media</h3>
+  <p>
+    Butonul <strong>Setează Gemini API Key</strong> deschide un modal pentru:
+  </p>
+  <ul>
+    <li>
+      <strong>Gemini API Key</strong> — cheia Google Gemini pentru generarea imaginilor
+      grafice. Se obține de pe <em>aistudio.google.com/app/apikey</em>.
+    </li>
+    <li>
+      <strong>Meta App ID</strong> (opțional) — ID-ul aplicației Meta/Facebook pentru
+      generarea token-urilor de lungă durată.
+    </li>
+    <li>
+      <strong>Meta App Secret</strong> (opțional) — secretul aplicației Meta pentru
+      conversia token-urilor temporare în permanente.
+    </li>
+  </ul>
+
+  <h2>11.2 Crearea și gestionarea postărilor Social Media</h2>
+  <p>
+    Accesibil din <strong>Social Media → Postări</strong>. Lista afișează toate postările
+    cu miniatură imagine, tipul, brief-ul, statusul, data programată și data publicării.
+  </p>
+
+  <h3>11.2.1 Tipurile de postări</h3>
+  <table>
+    <thead>
+      <tr><th>Tip</th><th>Descriere</th><th>Comportament</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Produs (product)</td>
+        <td>Promovarea unui produs specific din catalog</td>
+        <td>Se poate selecta produsul; imaginea produsului este inclusă în grafică</td>
+      </tr>
+      <tr>
+        <td>Brand (brand)</td>
+        <td>Promovarea unui brand din portofoliu</td>
+        <td>Se poate selecta brandul; logo-ul brandului este afișat prominent</td>
+      </tr>
+      <tr>
+        <td>Promo (promo)</td>
+        <td>Promoții, reduceri, evenimente</td>
+        <td>Generare liberă după brief</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>11.2.2 Crearea unei postări noi</h3>
+  <p>
+    Apasă <strong>Postare nouă</strong>. Formularul conține:
+  </p>
+  <ul>
+    <li>
+      <strong>Cont Facebook</strong> — selectezi contul pe care se va publica. Se preselectează
+      primul cont activ.
+    </li>
+    <li>
+      <strong>Tip postare</strong> — alegi tipul (produs, brand, promo). La schimbare, apar
+      câmpuri suplimentare relevante.
+    </li>
+    <li>
+      <strong>Produs</strong> (pentru tipul Produs) — câmp de căutare în catalogul WooCommerce.
+    </li>
+    <li>
+      <strong>Brand</strong> (pentru tipul Brand) — câmp de căutare în lista de branduri.
+    </li>
+    <li>
+      <strong>Template grafic</strong> — selectezi un template sau lași „Auto" pentru ca
+      sistemul să aleagă template-ul potrivit tipului de postare. Template-ul determină
+      layout-ul imaginii generate.
+    </li>
+    <li>
+      <strong>Direcție / Brief</strong> — instrucțiunile pentru AI. Ex: „Promovează cărămizile
+      Wienerberger pentru construcții rezidențiale. Accent pe durabilitate și izolație termică."
+      Cu cât brief-ul este mai specific, cu atât conținutul generat este mai relevant.
+    </li>
+  </ul>
+  <p>
+    La salvare, se lansează automat job-ul <code>GenerateSocialPostJob</code> care:
+  </p>
+  <ol>
+    <li>Generează captionul (textul postării) cu Claude AI, în stilul paginii.</li>
+    <li>Generează textele pentru grafica (label, titlu, subtitlu) tot cu Claude AI.</li>
+    <li>
+      Generează imaginea grafică cu Gemini AI, folosind template-ul selectat și imaginile
+      de referință vizuală încărcate.
+    </li>
+    <li>Salvează imaginea în storage și actualizează postarea.</li>
+  </ol>
+  <p>
+    Statusul postării evoluează: <em>draft</em> → <em>generating</em> → <em>ready</em>
+    (sau <em>failed</em> dacă ceva nu a mers). Reîmprospătează pagina pentru a vedea statusul final.
+  </p>
+
+  <h3>11.2.3 Stările postărilor</h3>
+  <table>
+    <thead>
+      <tr><th>Status</th><th>Semnificație</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>draft</td><td>Postare creată, generarea nu a început.</td></tr>
+      <tr><td>generating</td><td>AI generează conținut în background.</td></tr>
+      <tr><td>ready</td><td>Conținut generat, gata de revizuire și publicare.</td></tr>
+      <tr><td>scheduled</td><td>Programată pentru publicare la o oră specificată.</td></tr>
+      <tr><td>published</td><td>Publicată pe Facebook.</td></tr>
+      <tr><td>failed</td><td>Generarea sau publicarea a eșuat. Vezi detaliile erorii.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>11.2.4 Vizualizarea și publicarea postării</h3>
+  <p>
+    Pe pagina de vizualizare a postării găsești:
+  </p>
+  <ul>
+    <li>
+      <strong>Preview imagine generată</strong> — imaginea grafică la dimensiune mare.
+    </li>
+    <li>
+      <strong>Conținut generat</strong> — captionul complet al postării, cu formatare.
+    </li>
+    <li>
+      <strong>Texte grafică</strong> — label (eyebrow text), titlu și subtitlu care apar
+      pe imagine.
+    </li>
+    <li>
+      <strong>Brief</strong> — instrucțiunile originale și promptul de imagine.
+    </li>
+    <li>
+      <strong>Eroare</strong> (dacă status=failed) — detaliile complete ale erorii pentru
+      diagnosticare.
+    </li>
+    <li>
+      <strong>Link postare</strong> — după publicare, apare URL-ul direct la postarea de
+      pe Facebook.
+    </li>
+  </ul>
+  <p>
+    Din pagina de vizualizare poți publica postarea manual sau o poți programa. Postările
+    programate sunt publicate automat de comanda <code>social:publish-scheduled</code>
+    (rulează la fiecare 5 minute).
+  </p>
+
+  <h2>11.3 Template-uri grafice</h2>
+  <p>
+    Accesibil din <strong>Social Media → Template-uri grafice</strong>. Template-urile
+    definesc layout-ul și stilul vizual al imaginilor generate pentru postările social media.
+  </p>
+
+  <h3>11.3.1 Configurarea unui template</h3>
+  <p>
+    Fiecare template are următoarele configurații:
+  </p>
+  <ul>
+    <li>
+      <strong>Nume și slug</strong> — identificatorul intern unic (ex: <em>product-clasic</em>).
+      Slug-ul este folosit pentru referențierea template-ului în postări.
+    </li>
+    <li>
+      <strong>Layout</strong>: <em>Product</em> (imagine produs în dreapta) sau
+      <em>Brand</em> (logo brand mare în dreapta).
+    </li>
+    <li>
+      <strong>Culoare principală</strong> — culoarea de brand pentru barele și elementele
+      grafice (ex: roșu brand <em>#a52a3f</em>).
+    </li>
+    <li>
+      <strong>Text bara de jos</strong> — textul principal din bara colorată din josul imaginii
+      (ex: „ASIGURĂM TRANSPORT ȘI DESCĂRCARE CU MACARA", afișat automat în uppercase).
+    </li>
+    <li>
+      <strong>Text secundar</strong> — adresa și contactul (ex: „Sântandrei, Nr. 311 | www.malinco.ro").
+    </li>
+    <li>
+      <strong>Iconița camion</strong> — toggle pentru afișarea/ascunderea iconului de transport.
+    </li>
+    <li>
+      <strong>Bara curcubeu</strong> — toggle pentru bara decorativă din josul imaginii.
+    </li>
+    <li>
+      <strong>Text buton CTA</strong> — textul butonului de call-to-action din imagine.
+    </li>
+    <li>
+      <strong>Proporții și fonturi</strong> — control avansat (colapsibil) pentru dimensiunile
+      logo-ului, titlului și subtitlului, exprimate ca proporții din lățimea imaginii (1080px = 1.0).
+    </li>
+  </ul>
+
+  <h3>11.3.2 Editorul vizual (Fabric.js)</h3>
+  <p>
+    Butonul <strong>Editor vizual</strong> de lângă fiecare template deschide editorul
+    grafic interactiv bazat pe Fabric.js, într-un tab nou. Editorul permite:
+  </p>
+  <ul>
+    <li>Modificarea vizuală a elementelor grafice prin drag-and-drop.</li>
+    <li>
+      <strong>CanvasManager</strong> — gestionarea canvas-ului cu zoom (scroll sau Ctrl+scroll),
+      pan (drag cu click mijlociu sau Alt+drag), reset la dimensiunile standard.
+    </li>
+    <li>
+      <strong>LayersPanel</strong> — panoul straturilor din stânga, care afișează ierarhia
+      elementelor canvas-ului. Straturile pot fi reordonate prin drag-and-drop.
+    </li>
+    <li>
+      <strong>Toolbar role-driven</strong> — bara de instrumente din dreapta se adaptează
+      la elementul selectat (text, imagine, formă), afișând doar opțiunile relevante.
+    </li>
+    <li>
+      <strong>StateManager</strong> — sistem de undo/redo cu Ctrl+Z / Ctrl+Y pentru
+      revenirea la stări anterioare.
+    </li>
+    <li>
+      <strong>ElementFactory</strong> — adăugarea de elemente noi: text, imagini, forme
+      geometrice, direct pe canvas.
+    </li>
+  </ul>
+
+  <div class="tip">
+    <strong>Sfat:</strong> Editorul vizual este disponibil la URL-ul
+    <code>https://erp.malinco.ro/template-editor/{slug}</code> sau din acțiunea
+    „Editor vizual" din lista de template-uri.
+  </div>
+
+  <h3>11.3.3 Preview template</h3>
+  <p>
+    Coloana <strong>Preview</strong> din lista de template-uri afișează o miniatură 80×80 px
+    a ultimei imagini generate cu template-ul respectiv. Astfel poți vedea rapid cum arată
+    fiecare template în producție.
+  </p>
+
+  <h2>11.4 Setări aplicație</h2>
+  <p>
+    Accesibil din navigarea principală (iconița de roată), <strong>Setări aplicație</strong>
+    este vizibil pentru toți utilizatorii administratori. Conține patru secțiuni:
+  </p>
+
+  <h3>11.4.1 Branding</h3>
+  <ul>
+    <li>
+      <strong>Nume aplicație</strong> — denumirea afișată în titlul paginii și în antetul
+      PDF-urilor (ex: „Malinco ERP").
+    </li>
+    <li>
+      <strong>Logo</strong> — imaginea logo (recomandat PNG transparent, minim 200px înălțime).
+      Se afișează în PDF-urile generate (oferte, comenzi achiziție) și în antetul panelului.
+    </li>
+  </ul>
+
+  <h3>11.4.2 Email inbox (IMAP)</h3>
+  <p>
+    Configurația conexiunii IMAP pentru importul emailurilor. Câmpurile disponibile:
+  </p>
+  <ul>
+    <li><strong>Server IMAP</strong> — hostname-ul serverului (ex: <em>mail.malinco.ro</em>).</li>
+    <li><strong>Port</strong> — implicit 993 pentru SSL.</li>
+    <li>
+      <strong>Criptare</strong> — SSL (port 993), TLS (port 143), STARTTLS sau fără criptare.
+      Recomandăm SSL.
+    </li>
+    <li><strong>Adresă email</strong> — adresa contului IMAP (ex: <em>office@malinco.ro</em>).</li>
+    <li>
+      <strong>Parolă</strong> — parola contului. Câmpul este de tip password; lasă gol
+      dacă nu dorești să schimbi parola existentă. Parola este stocată criptat în baza
+      de date (nu în plaintext).
+    </li>
+  </ul>
+  <p>
+    Conexiunea IMAP este <strong>read-only</strong> — sistemul nu modifică, nu șterge și
+    nu marchează emailuri în căsuța poștală. Webmail-ul și Outlook-ul tău rămân neatinse.
+  </p>
+
+  <h3>11.4.3 WooCommerce Plugin Bridge</h3>
+  <p>
+    Câmpul <strong>API Key plugin</strong> este cheia secretă de autentificare pentru
+    plugin-ul <em>malinco-erp-bridge</em> instalat pe WordPress. Această cheie trebuie
+    să fie identică cu cea setată în <em>WP Admin → Settings → ERP Bridge → API Key</em>.
+    Plugin-ul permite sincronizarea metadatelor produselor (furnizori, SKU-uri) direct
+    din ERP în WooCommerce.
+  </p>
+  <p>
+    Câmpul este de tip password; lasă gol pentru a păstra cheia existentă. Se recomandă
+    o cheie de minim 32 caractere alfanumerice aleatorii.
+  </p>
+
+  <h3>11.4.4 Inteligență Artificială (Claude)</h3>
+  <p>
+    Câmpul <strong>Anthropic API Key</strong> este cheia API pentru modelele Claude.
+    Aceasta este folosită pentru:
+  </p>
+  <ul>
+    <li>Procesarea AI a emailurilor (clasificare, rezumare, extragere prețuri).</li>
+    <li>Chatbot-ul de pe site.</li>
+    <li>Generarea rapoartelor BI textuale.</li>
+    <li>Auto-match furnizori din domenii email.</li>
+    <li>Analiza imaginilor de referință vizuală pentru template-uri.</li>
+    <li>Generarea conținutului postărilor Social Media.</li>
+  </ul>
+  <p>
+    Cheia se obține de pe <em>console.anthropic.com → API Keys</em>.
+    Format: <code>sk-ant-api03-...</code>. Lasă câmpul gol pentru a păstra cheia existentă.
+    Cheia este stocată criptat.
+  </p>
+  <p>
+    Sistemul are un fallback: dacă cheia nu este setată în baza de date, se folosește
+    variabila de mediu <code>ANTHROPIC_API_KEY</code> din fișierul <code>.env</code>.
+  </p>
+
+  <div class="warning">
+    <strong>Atenție:</strong> Cheia API Anthropic generează costuri bazate pe utilizare.
+    Monitorizați costurile pe <em>console.anthropic.com → Usage</em>. Funcționalitățile
+    care consumă cel mai mult sunt procesarea emailurilor în masă și chatbot-ul activ.
+    Puteți limita costul chatbot-ului din <strong>Chat Clienți → Setări Widget → Limite AI</strong>.
+  </div>
+
+  <h2>11.5 Utilizarea AI — jurnal de costuri</h2>
+  <p>
+    Pagina <strong>Utilizare AI</strong> (accesibilă din navigare pentru super-admini)
+    afișează un jurnal detaliat al tuturor apelurilor API Anthropic efectuate de sistem:
+    timestamp, feature-ul care a generat cererea, modelul folosit, tokenurile consumate
+    (input și output) și costul estimat în USD.
+  </p>
+  <p>
+    Aceasta permite monitorizarea utilizării și identificarea feature-urilor cu cel mai
+    mare consum pentru optimizarea costurilor.
+  </p>
+
+  <h2>11.6 Salvarea setărilor</h2>
+  <p>
+    Pagina de setări nu are un buton „Salvează" în footer standard — butonul
+    <strong>Salvează setările</strong> apare fix în josul formularului. Apasă-l după
+    orice modificare. O notificare verde confirmă salvarea cu succes.
+  </p>
+  <p>
+    Setările sunt salvate în tabelul <code>app_settings</code> din baza de date, nu în
+    fișierul <code>.env</code> — aceasta înseamnă că sunt persistente între deploy-uri
+    și accesibile fără a reporni aplicația.
+  </p>
+</section>

@@ -37,7 +37,7 @@ class VerifyProductImagesCommand extends Command
         }
 
         $this->claude = new AnthropicClient(apiKey: $apiKey);
-        $this->model  = config('services.anthropic.model', 'claude-haiku-4-5-20251001');
+        $this->model  = config('app.malinco.ai.models.haiku', 'claude-haiku-4-5-20251001');
         $limit        = (int) $this->option('limit');
         $dryRun       = (bool) $this->option('dry-run');
 

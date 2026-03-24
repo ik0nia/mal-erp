@@ -18,19 +18,22 @@ Schedule::job(new \App\Jobs\FetchEmailsJob())
     ->everyFiveMinutes()
     ->withoutOverlapping();
 
-// Procesare AI emailuri neprocesate — la fiecare 30 minute, batch de 100.
-// Necesită cheia Anthropic API configurată în Setări aplicație.
-Schedule::command('email:process-ai --limit=100')
-    ->everyThirtyMinutes()
-    ->withoutOverlapping()
-    ->runInBackground();
+// Procesare AI emailuri neprocesate — DEZACTIVAT temporar (consum API).
+// Schedule::command('email:process-ai --limit=100')
+//     ->everyThirtyMinutes()
+//     ->withoutOverlapping()
+//     ->runInBackground();
 
-// Redescoperire contacte furnizori — zilnic la 03:00.
-// Actualizează statistici și descoperă contacte noi din emailurile importate.
-Schedule::command('supplier:discover-contacts')
-    ->dailyAt('03:00')
-    ->withoutOverlapping()
-    ->runInBackground();
+// Redescoperire contacte furnizori — DEZACTIVAT temporar (consum API).
+// Schedule::command('supplier:discover-contacts')
+//     ->dailyAt('03:00')
+//     ->withoutOverlapping()
+//     ->runInBackground();
+
+// Social Media — publică postările programate la timp.
+Schedule::command('social:publish-scheduled')
+    ->everyMinute()
+    ->withoutOverlapping();
 
 // Fallback sync comenzi — prinde orice a ratat webhook-ul.
 Schedule::command('woo:sync-orders')
@@ -45,11 +48,18 @@ Schedule::command('woo:sync-categories')
 // BI data layer — zilnic la 00:30 (Europe/Bucharest).
 // Procesează ziua de ieri (complet înghețată după miezul nopții).
 // Ordinea internă: KPI → Velocity → Alerts.
+// NOTE: fără withoutOverlapping() — comanda e idempotentă (UPDATE ON DUPLICATE KEY).
 Schedule::command('bi:compute-daily')
     ->dailyAt('00:30')
     ->timezone('Europe/Bucharest')
-    ->withoutOverlapping()
     ->runInBackground();
+
+// Watchdog BI — zilnic la 09:00 (Europe/Bucharest).
+// Dacă bi:compute-daily nu a rulat (sau a eșuat) noaptea trecută, îl rulează acum.
+// Auto-healing: detectează și repară singur dacă lipsesc date din ziua anterioară.
+Schedule::command('bi:health-check')
+    ->dailyAt('09:00')
+    ->timezone('Europe/Bucharest');
 
 // Raport săptămânal BI — în fiecare duminică la 05:00 (Europe/Bucharest).
 // Acoperă ultimele 7 zile complete (luni–sâmbătă).
@@ -97,4 +107,9 @@ Schedule::command('bi:generate-period-report --type=annual')
     ->timezone('Europe/Bucharest')
     ->withoutOverlapping()
     ->runInBackground();
+
+// GDPR — anonimizare IP-uri chat_logs mai vechi de 90 de zile.
+Schedule::command('gdpr:cleanup-chat-logs')
+    ->weekly()
+    ->at('03:00');
 

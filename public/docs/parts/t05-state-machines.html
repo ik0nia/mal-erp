@@ -1,0 +1,1253 @@
+<section id="state-machines">
+
+  <h2>State Machines — Modulul Achiziții</h2>
+
+  <p>
+    Documentul descrie complet automatele de stări (state machines) pentru cele patru entități principale ale
+    modulului de achiziții: <code>PurchaseRequest</code>, <code>PurchaseOrder</code>,
+    <code>PurchaseRequestItem</code> și <code>PurchaseOrderItem</code>. Sunt documentate și algoritmul FIFO
+    de alocare cantități, logica <code>needsApproval()</code>, algoritmul <code>recalculateStatus()</code>
+    și toate notificările emise.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════════════════ -->
+  <h3 id="sm-purchase-request">1. State Machine — PurchaseRequest</h3>
+
+  <h4>1.1 Stări disponibile</h4>
+  <table>
+    <thead>
+      <tr>
+        <th>Constantă PHP</th>
+        <th>Valoare DB</th>
+        <th>Etichetă UI</th>
+        <th>Culoare badge</th>
+        <th>Semnificație</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>STATUS_DRAFT</code></td>
+        <td><code>draft</code></td>
+        <td>Draft</td>
+        <td>gray</td>
+        <td>Necesar creat dar netrimis; editabil de creator</td>
+      </tr>
+      <tr>
+        <td><code>STATUS_SUBMITTED</code></td>
+        <td><code>submitted</code></td>
+        <td>Trimis</td>
+        <td>info</td>
+        <td>Trimis spre buyer; nu mai este editabil de consultant</td>
+      </tr>
+      <tr>
+        <td><code>STATUS_PARTIALLY_ORDERED</code></td>
+        <td><code>partially_ordered</code></td>
+        <td>Parțial comandat</td>
+        <td>warning</td>
+        <td>Cel puțin un item are <code>ordered_quantity &gt; 0</code>, dar niciunul nu e complet acoperit</td>
+      </tr>
+      <tr>
+        <td><code>STATUS_FULLY_ORDERED</code></td>
+        <td><code>fully_ordered</code></td>
+        <td>Complet comandat</td>
+        <td>success</td>
+        <td>Toți itemii activi au <code>ordered_quantity &gt;= quantity</code></td>
+      </tr>
+      <tr>
+        <td><code>STATUS_CANCELLED</code></td>
+        <td><code>cancelled</code></td>
+        <td>Anulat</td>
+        <td>danger</td>
+        <td>Toți itemii activi au fost anulați individual, sau a fost anulat manual</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>1.2 Diagrama tranzițiilor (ASCII)</h4>
+  <pre>
+  ┌──────────────────────────────────────────────────────────────────────────────────────┐
+  │                         PurchaseRequest — State Machine                              │
+  └──────────────────────────────────────────────────────────────────────────────────────┘
+
+   [creare]
+       │
+       ▼
+   ┌───────┐   acțiunea "Trimite" (UI)     ┌───────────┐
+   │ DRAFT │ ─────────────────────────────▶│ SUBMITTED │
+   └───────┘                               └───────────┘
+       │                                        │   ▲
+       │ ștergere                               │   │ revertRequestItemsToPending()
+       ▼                                        │   │ + recalculateStatus() → 0 items ordered
+   [deleted]                                    │   │
+                               afterCreate() PO │   │ PO cancelled / rejected
+                               (primul item     │   │
+                               comandat parțial)│   │
+                                                ▼   │
+                                   ┌─────────────────────────┐
+                                   │   PARTIALLY_ORDERED     │
+                                   └─────────────────────────┘
+                                        │
+                                        │ recalculateStatus()
+                                        │ toți itemii activi: ordered_qty >= qty
+                                        ▼
+                                   ┌─────────────────────────┐
+                                   │    FULLY_ORDERED        │
+                                   └─────────────────────────┘
+                                        │
+                                        │ (stare finală pozitivă)
+                                        │
+
+   ┌───────┐   toți itemii activi anulați  ┌───────────┐
+   │orice  │ ─────────────────────────────▶│ CANCELLED │
+   │stare  │   (recalculateStatus)         └───────────┘
+   └───────┘
+  </pre>
+
+  <h4>1.3 Tabel complet al tranzițiilor</h4>
+  <table>
+    <thead>
+      <tr>
+        <th>Stare sursă</th>
+        <th>Stare destinație</th>
+        <th>Trigger / Condiție</th>
+        <th>Actor</th>
+        <th>Efecte secundare</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>—</td>
+        <td><code>draft</code></td>
+        <td>Creare nouă (<code>booted::creating</code>)</td>
+        <td>Orice utilizator autentificat</td>
+        <td>
+          Generare automată număr serie (ex: <code>PNR-0001</code>); auto-fill <code>user_id</code>,
+          <code>location_id</code>
+        </td>
+      </tr>
+      <tr>
+        <td><code>draft</code></td>
+        <td><code>submitted</code></td>
+        <td>Acțiunea "Trimite" din UI (<code>PurchaseRequestResource::table → action('submit')</code>)</td>
+        <td>Consultantul creator (sau admin)</td>
+        <td>
+          <code>$record-&gt;update(['status' =&gt; STATUS_SUBMITTED])</code>;
+          emit <code>PurchaseRequestSubmittedNotification</code> → toți buyers relevanți (DB + email)
+        </td>
+      </tr>
+      <tr>
+        <td>—</td>
+        <td><code>submitted</code></td>
+        <td>Creare automată din comandă WooCommerce (<code>createFromWooOrder()</code>)</td>
+        <td>Job/sistem automat</td>
+        <td>
+          PNR generat automat cu status deja <code>submitted</code>; items create cu <code>is_urgent=true</code>
+        </td>
+      </tr>
+      <tr>
+        <td><code>submitted</code></td>
+        <td><code>partially_ordered</code></td>
+        <td><code>recalculateStatus()</code> — cel puțin un item are <code>ordered_quantity &gt; 0</code>, dar nu toți sunt complet acoperiți</td>
+        <td>Apel automat din <code>afterCreate()</code> al CreatePurchaseOrder</td>
+        <td>Salvare silențioasă (<code>saveQuietly()</code>), fără notificări suplimentare</td>
+      </tr>
+      <tr>
+        <td><code>submitted</code> / <code>partially_ordered</code></td>
+        <td><code>fully_ordered</code></td>
+        <td><code>recalculateStatus()</code> — toți itemii activi: <code>ordered_quantity &gt;= quantity</code></td>
+        <td>Apel automat din <code>markRequestItemsAsOrdered()</code> sau <code>afterCreate()</code></td>
+        <td>Salvare silențioasă; PNR nu mai apare în dashboard buyer</td>
+      </tr>
+      <tr>
+        <td><code>partially_ordered</code> / <code>fully_ordered</code></td>
+        <td><code>submitted</code></td>
+        <td><code>recalculateStatus()</code> — PO anulat/respins, niciun item nu mai are <code>ordered_quantity &gt; 0</code></td>
+        <td>Apel din <code>revertRequestItemsToPending()</code></td>
+        <td>PNR reintră în coada de procesare a buyer-ului</td>
+      </tr>
+      <tr>
+        <td><code>partially_ordered</code></td>
+        <td><code>submitted</code></td>
+        <td><code>recalculateStatus()</code> — după recepție parțială cu shortfall returnat</td>
+        <td>Apel din <code>revertShortfallToRequestItems()</code></td>
+        <td>Items afectate revin la <code>pending</code> cu <code>ordered_quantity</code> redus</td>
+      </tr>
+      <tr>
+        <td>orice</td>
+        <td><code>cancelled</code></td>
+        <td><code>recalculateStatus()</code> — toți itemii activi au status <code>cancelled</code></td>
+        <td>Acțiunea "Anulează item" aplicată succesiv pe toți itemii</td>
+        <td>Salvare silențioasă; PNR devine terminal</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>1.4 Restricții de editare și ștergere</h4>
+  <ul>
+    <li><strong>Editare</strong> (<code>canEdit()</code>): permisă doar dacă <code>status = draft</code> și utilizatorul este creator sau admin/super_admin.</li>
+    <li><strong>Ștergere</strong> (<code>canDelete()</code>): permisă doar din statusurile <code>draft</code> sau <code>cancelled</code>; adminii pot șterge orice, ceilalți doar înregistrările proprii.</li>
+    <li><strong>Creare</strong>: orice utilizator autentificat (<code>canCreate() → auth()->check()</code>).</li>
+  </ul>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════════════════ -->
+  <h3 id="sm-purchase-order">2. State Machine — PurchaseOrder</h3>
+
+  <h4>2.1 Stări disponibile</h4>
+  <table>
+    <thead>
+      <tr>
+        <th>Constantă PHP</th>
+        <th>Valoare DB</th>
+        <th>Etichetă UI</th>
+        <th>Culoare badge</th>
+        <th>Semnificație</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>STATUS_DRAFT</code></td>
+        <td><code>draft</code></td>
+        <td>Draft</td>
+        <td>gray</td>
+        <td>PO creat, editabil, neplasat</td>
+      </tr>
+      <tr>
+        <td><code>STATUS_PENDING_APPROVAL</code></td>
+        <td><code>pending_approval</code></td>
+        <td>În așteptare aprobare</td>
+        <td>warning</td>
+        <td>Necesită aprobare manuală (depășit plafon valoric sau cantitate maximă produs)</td>
+      </tr>
+      <tr>
+        <td><code>STATUS_APPROVED</code></td>
+        <td><code>approved</code></td>
+        <td>Aprobat</td>
+        <td>success</td>
+        <td>Aprobat — gata de trimis la furnizor</td>
+      </tr>
+      <tr>
+        <td><code>STATUS_REJECTED</code></td>
+        <td><code>rejected</code></td>
+        <td>Respins</td>
+        <td>danger</td>
+        <td>Respins de manager/director; request items revenite la <code>pending</code></td>
+      </tr>
+      <tr>
+        <td><code>STATUS_SENT</code></td>
+        <td><code>sent</code></td>
+        <td>Trimis</td>
+        <td>info</td>
+        <td>Comunicat furnizorului (email sau manual); așteptare livrare</td>
+      </tr>
+      <tr>
+        <td><code>STATUS_RECEIVED</code></td>
+        <td><code>received</code></td>
+        <td>Recepționat</td>
+        <td>success</td>
+        <td>Marfă recepționată (complet sau parțial)</td>
+      </tr>
+      <tr>
+        <td><code>STATUS_CANCELLED</code></td>
+        <td><code>cancelled</code></td>
+        <td>Anulat</td>
+        <td>gray</td>
+        <td>Anulat; request items revenite la <code>pending</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>2.2 Diagrama tranzițiilor (ASCII)</h4>
+  <pre>
+  ┌──────────────────────────────────────────────────────────────────────────────────────────┐
+  │                           PurchaseOrder — State Machine                                  │
+  └──────────────────────────────────────────────────────────────────────────────────────────┘
+
+   [creare PO]
+       │
+       ▼
+   ┌───────┐
+   │ DRAFT │ ◀─────────────────────────────────────────────────────────────┐
+   └───────┘                                                               │
+       │  "Plasează comanda"                                               │ (draft rămâne dacă
+       │  needsApproval() = true                                           │  se modifică și se
+       ▼                                                                   │  replasează)
+   ┌──────────────────┐   "Aprobă" (manager/director)   ┌──────────────┐  │
+   │ PENDING_APPROVAL │ ─────────────────────────────▶  │   APPROVED   │  │
+   └──────────────────┘                                 └──────────────┘  │
+       │                                                      │           │
+       │ "Respinge" (manager/director)          "Trimite email furnizor"  │
+       │ + revertRequestItemsToPending()         sau "Marchează trimis"   │
+       ▼                                                      │           │
+   ┌──────────┐                                               ▼           │
+   │ REJECTED │                                        ┌──────────┐       │
+   └──────────┘                                        │   SENT   │       │
+                                                       └──────────┘       │
+                                                            │             │
+   ┌───────┐                                                │             │
+   │ DRAFT │ ──── needsApproval() = false ────▶ APPROVED ──┘             │
+   └───────┘  "Plasează comanda" (auto-aprobare)                         │
+                                                                          │
+   ┌──────────────────┐  "Recepție marfă"  ┌──────────────┐             │
+   │      SENT        │ ──────────────────▶│   RECEIVED   │             │
+   └──────────────────┘                    └──────────────┘             │
+                                                                          │
+   ┌─────────────────────────────────────────────────────────┐           │
+   │ "Anulează" disponibil din: DRAFT, PENDING_APPROVAL,     │           │
+   │  APPROVED, REJECTED (nu din SENT, RECEIVED, CANCELLED)  │           │
+   │  → revertRequestItemsToPending() → STATUS_CANCELLED     │           │
+   └─────────────────────────────────────────────────────────┘           │
+  </pre>
+
+  <h4>2.3 Tabel complet al tranzițiilor</h4>
+  <table>
+    <thead>
+      <tr>
+        <th>Stare sursă</th>
+        <th>Stare destinație</th>
+        <th>Trigger / Condiție</th>
+        <th>Actor</th>
+        <th>Câmpuri actualizate</th>
+        <th>Efecte secundare</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>—</td>
+        <td><code>draft</code></td>
+        <td>Creare (<code>booted::creating</code>)</td>
+        <td>Buyer / manager achiziții</td>
+        <td><code>number</code>, <code>status</code>, <code>currency='RON'</code>, <code>buyer_id</code></td>
+        <td>Alocare FIFO request items în <code>afterCreate()</code></td>
+      </tr>
+      <tr>
+        <td><code>draft</code></td>
+        <td><code>pending_approval</code></td>
+        <td>"Plasează comanda" — <code>needsApproval() = true</code></td>
+        <td>Buyer</td>
+        <td><code>status</code></td>
+        <td>Emit <code>PurchaseOrderNeedsApprovalNotification</code> → manageri + directori + super_admin (DB + email)</td>
+      </tr>
+      <tr>
+        <td><code>draft</code></td>
+        <td><code>approved</code></td>
+        <td>"Plasează comanda" — <code>needsApproval() = false</code> (auto-aprobare)</td>
+        <td>Buyer</td>
+        <td><code>status</code>, <code>approved_at=now()</code>, <code>approved_by=auth()->id()</code></td>
+        <td>Nicio notificare; PO gata de trimis imediat</td>
+      </tr>
+      <tr>
+        <td><code>pending_approval</code></td>
+        <td><code>approved</code></td>
+        <td>Acțiunea "Aprobă" (vizibilă doar pentru manager/director/super_admin)</td>
+        <td>Manager / Director financiar / Director vânzări / Super admin</td>
+        <td><code>status</code>, <code>approved_by</code>, <code>approved_at</code></td>
+        <td>Nicio notificare suplimentară</td>
+      </tr>
+      <tr>
+        <td><code>pending_approval</code></td>
+        <td><code>rejected</code></td>
+        <td>Acțiunea "Respinge" cu câmpul <code>rejection_reason</code> completat</td>
+        <td>Manager / Director financiar / Director vânzări / Super admin</td>
+        <td><code>status</code>, <code>rejected_by</code>, <code>rejected_at</code>, <code>rejection_reason</code></td>
+        <td>
+          1. <code>revertRequestItemsToPending()</code> — request items revin la <code>pending</code><br>
+          2. <code>recalculateStatus()</code> pe fiecare PurchaseRequest afectat<br>
+          3. Emit <code>PurchaseOrderRejectedNotification</code> → buyer-ul PO-ului (DB + email)
+        </td>
+      </tr>
+      <tr>
+        <td><code>approved</code></td>
+        <td><code>sent</code></td>
+        <td>Trimitere email furnizor (acțiunea "Trimite email furnizor")</td>
+        <td>Buyer</td>
+        <td><code>status</code>, <code>sent_at=now()</code></td>
+        <td><code>markRequestItemsAsOrdered()</code> + <code>recalculateStatus()</code> pe PNR-uri</td>
+      </tr>
+      <tr>
+        <td><code>approved</code></td>
+        <td><code>sent</code></td>
+        <td>Acțiunea "Marchează trimis" (fără email, comunicare prin alt canal)</td>
+        <td>Buyer</td>
+        <td><code>status</code>, <code>sent_at=now()</code></td>
+        <td><code>markRequestItemsAsOrdered()</code> + <code>recalculateStatus()</code> pe PNR-uri</td>
+      </tr>
+      <tr>
+        <td><code>sent</code></td>
+        <td><code>received</code></td>
+        <td>Acțiunea "Recepție marfă" cu cantitățile efectiv recepționate</td>
+        <td>Buyer / gestionar</td>
+        <td>
+          <code>status</code>, <code>received_at</code>, <code>received_by</code>, <code>received_notes</code>;
+          fiecare <code>PurchaseOrderItem.received_quantity</code>
+        </td>
+        <td>
+          Dacă există shortfall: <code>revertShortfallToRequestItems()</code> → scade <code>ordered_quantity</code>
+          pe request items, <code>recalculateStatus()</code> pe PNR-uri;
+          emit <code>PurchaseOrderReceivedPartialNotification</code> → consultanții afectați (DB + email)
+        </td>
+      </tr>
+      <tr>
+        <td><code>draft</code> / <code>pending_approval</code> / <code>approved</code> / <code>rejected</code></td>
+        <td><code>cancelled</code></td>
+        <td>Acțiunea "Anulează" (nu este disponibilă din <code>sent</code>, <code>received</code>, <code>cancelled</code>)</td>
+        <td>Buyer / admin</td>
+        <td><code>status</code></td>
+        <td>
+          1. <code>revertRequestItemsToPending()</code> — scade <code>allocated_qty</code> din <code>ordered_quantity</code><br>
+          2. <code>recalculateStatus()</code> pe fiecare PurchaseRequest afectat
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>2.4 Restricții de acces pe acțiuni</h4>
+  <table>
+    <thead>
+      <tr>
+        <th>Acțiune</th>
+        <th>Roluri permise</th>
+        <th>Condiție suplimentară</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Creare PO</td>
+        <td>super_admin, admin, manager_achizitii, manager</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td>Editare PO</td>
+        <td>oricine poate crea</td>
+        <td>Numai dacă <code>status = draft</code></td>
+      </tr>
+      <tr>
+        <td>Ștergere PO</td>
+        <td>super_admin, admin, manager_achizitii, manager</td>
+        <td>Numai dacă <code>status ∈ {draft, cancelled, rejected}</code></td>
+      </tr>
+      <tr>
+        <td>Aprobare / Respingere</td>
+        <td>super_admin, manager, director_financiar, director_vanzari</td>
+        <td>Numai dacă <code>status = pending_approval</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════════════════ -->
+  <h3 id="sm-request-item">3. State Machine — PurchaseRequestItem</h3>
+
+  <h4>3.1 Stări disponibile</h4>
+  <table>
+    <thead>
+      <tr>
+        <th>Constantă PHP</th>
+        <th>Valoare DB</th>
+        <th>Etichetă UI</th>
+        <th>Culoare badge</th>
+        <th>Semnificație</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>STATUS_PENDING</code></td>
+        <td><code>pending</code></td>
+        <td>În așteptare</td>
+        <td>warning</td>
+        <td>Necesită comandare; <code>ordered_quantity</code> poate fi 0 sau parțial</td>
+      </tr>
+      <tr>
+        <td><code>STATUS_ORDERED</code></td>
+        <td><code>ordered</code></td>
+        <td>Comandat</td>
+        <td>success</td>
+        <td><code>ordered_quantity &gt;= quantity</code>; acoperit complet de PO</td>
+      </tr>
+      <tr>
+        <td><code>STATUS_CANCELLED</code></td>
+        <td><code>cancelled</code></td>
+        <td>Anulat</td>
+        <td>danger</td>
+        <td>Eliminat din necesarul activ; exclus din <code>recalculateStatus()</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>3.2 Diagrama tranzițiilor (ASCII)</h4>
+  <pre>
+  ┌──────────────────────────────────────────────────────────────────────────────────┐
+  │                     PurchaseRequestItem — State Machine                          │
+  └──────────────────────────────────────────────────────────────────────────────────┘
+
+   [creare item]
+       │
+       ▼
+   ┌─────────┐
+   │ PENDING │ ◀──────────────────────────────────────────────────────────────────┐
+   └─────────┘                                                                    │
+       │  afterCreate() PO:                                                       │
+       │  increment ordered_quantity + isFullyOrdered()=true                      │
+       ▼                                                                           │
+   ┌─────────┐                                                                    │
+   │ ORDERED │ ───── PO rejected / cancelled / shortfall recepție ───────────────▶│
+   └─────────┘       revertRequestItemsToPending() /                              │
+       │             revertShortfallToRequestItems()                               │
+       │             (status=pending, ordered_quantity scăzut)                    │
+       │                                                                           │
+       │  (stare finală pozitivă — item complet acoperit)                          │
+
+   ┌─────────┐  "Anulează item" (UI infolist)  ┌───────────┐
+   │ PENDING │ ──────────────────────────────▶ │ CANCELLED │
+   └─────────┘                                 └───────────┘
+                                                    │
+                                                    │ (terminal — nu mai poate fi modificat)
+
+  Notă: un item PENDING cu ordered_quantity > 0 (parțial comandat)
+  rămâne în status PENDING până la acoperire completă.
+  </pre>
+
+  <h4>3.3 Tabel complet al tranzițiilor</h4>
+  <table>
+    <thead>
+      <tr>
+        <th>Stare sursă</th>
+        <th>Stare destinație</th>
+        <th>Trigger</th>
+        <th>Câmpuri actualizate</th>
+        <th>Efecte secundare</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>—</td>
+        <td><code>pending</code></td>
+        <td>Creare item (manual sau auto din WooOrder)</td>
+        <td>
+          <code>status='pending'</code>, auto-fill <code>product_name</code>, <code>sku</code>,
+          <code>supplier_id</code> (furnizor preferat, dacă există)
+        </td>
+        <td>Hook <code>booted::saving</code> — auto-populare câmpuri din WooProduct</td>
+      </tr>
+      <tr>
+        <td><code>pending</code></td>
+        <td><code>ordered</code></td>
+        <td>
+          <code>afterCreate()</code> din CreatePurchaseOrder: <code>isFullyOrdered()</code> = true
+          după incrementare <code>ordered_quantity</code>
+        </td>
+        <td>
+          <code>status='ordered'</code>, <code>purchase_order_item_id</code>,
+          <code>ordered_quantity</code> (incrementat prin <code>increment()</code>)
+        </td>
+        <td>Declanșează <code>recalculateStatus()</code> pe PurchaseRequest părinte</td>
+      </tr>
+      <tr>
+        <td><code>pending</code></td>
+        <td><code>ordered</code></td>
+        <td>
+          <code>markRequestItemsAsOrdered()</code> — la tranzitia PO la <code>sent</code>,
+          dacă <code>isFullyOrdered()</code> = true
+        </td>
+        <td><code>status='ordered'</code></td>
+        <td><code>recalculateStatus()</code> pe PurchaseRequest</td>
+      </tr>
+      <tr>
+        <td><code>ordered</code></td>
+        <td><code>pending</code></td>
+        <td>
+          PO respins sau anulat: <code>revertRequestItemsToPending()</code> — scade
+          <code>allocated_qty</code> din <code>ordered_quantity</code>
+        </td>
+        <td>
+          <code>status='pending'</code>, <code>ordered_quantity</code> decrementat;
+          dacă <code>ordered_quantity &lt;= 0</code>: <code>purchase_order_item_id=null</code>
+        </td>
+        <td><code>recalculateStatus()</code> pe PurchaseRequest → PNR revine la <code>submitted</code></td>
+      </tr>
+      <tr>
+        <td><code>ordered</code></td>
+        <td><code>pending</code></td>
+        <td>
+          Recepție parțială: <code>revertShortfallToRequestItems()</code> — returnează
+          cantitatea nelirată în coada de cumpărare (backorder)
+        </td>
+        <td>
+          <code>status='pending'</code>, <code>ordered_quantity</code> redus cu shortfall-ul;
+          dacă ajunge la 0: <code>purchase_order_item_id=null</code>
+        </td>
+        <td><code>recalculateStatus()</code> pe PurchaseRequest</td>
+      </tr>
+      <tr>
+        <td><code>pending</code></td>
+        <td><code>cancelled</code></td>
+        <td>Acțiunea "Anulează item" din infolist-ul PurchaseRequest (confirmare obligatorie)</td>
+        <td><code>status='cancelled'</code></td>
+        <td>
+          <code>recalculateStatus()</code> pe PurchaseRequest imediat;
+          dacă toți itemii activi sunt anulați → PurchaseRequest devine <code>cancelled</code>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>3.4 Câmpuri cheie</h4>
+  <table>
+    <thead>
+      <tr><th>Câmp</th><th>Tip</th><th>Semnificație</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>quantity</code></td>
+        <td><code>decimal:3</code></td>
+        <td>Cantitatea totală solicitată în necesarul original</td>
+      </tr>
+      <tr>
+        <td><code>ordered_quantity</code></td>
+        <td><code>decimal:3</code></td>
+        <td>Cantitatea deja acoperită de PO-uri existente; incrementată atomic prin <code>increment()</code></td>
+      </tr>
+      <tr>
+        <td><code>remaining_quantity</code></td>
+        <td>accessor calculat</td>
+        <td><code>max(0, quantity - ordered_quantity)</code> — cantitatea ce mai trebuie comandată</td>
+      </tr>
+      <tr>
+        <td><code>purchase_order_item_id</code></td>
+        <td>FK nullable</td>
+        <td>Referință la primul <code>PurchaseOrderItem</code> care acoperă itemul; <code>nullOnDelete</code></td>
+      </tr>
+      <tr>
+        <td><code>sources_json</code></td>
+        <td>—</td>
+        <td>Nu există pe PurchaseRequestItem; câmpul <code>sources_json</code> se află pe <code>PurchaseOrderItem</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════════════════ -->
+  <h3 id="fifo-allocation">4. Algoritmul FIFO de alocare cantități (afterCreate)</h3>
+
+  <p>
+    Când un <code>PurchaseOrder</code> este creat, metoda <code>afterCreate()</code> din
+    <code>CreatePurchaseOrder</code> leagă fiecare <code>PurchaseOrderItem</code> de sursele sale
+    (<code>PurchaseRequestItem</code>-uri) din <code>sources_json</code>. Algoritmul alocă cantitățile
+    parțial sau complet, respectând ordinea FIFO (urgente întâi, apoi data limită crescătoare).
+  </p>
+
+  <h4>4.1 Preprocesare — buildItemsForSupplier()</h4>
+  <p>
+    Înainte de creare, dacă PO-ul este inițiat din BuyerDashboard cu parametrul <code>?supplier_id=X</code>,
+    formularul este pre-populat de <code>buildItemsForSupplier()</code>:
+  </p>
+  <ol>
+    <li>
+      Selectează toate <code>PurchaseRequestItem</code>-urile cu:
+      <ul>
+        <li><code>supplier_id = $supplierId</code></li>
+        <li><code>status = pending</code></li>
+        <li>PNR-ul părinte în status <code>submitted</code> sau <code>partially_ordered</code></li>
+        <li><code>quantity &gt; COALESCE(ordered_quantity, 0)</code> (exclude complet comandate)</li>
+      </ul>
+    </li>
+    <li>
+      Sortează: <code>is_urgent DESC</code>, <code>needed_by ASC</code> (FIFO).
+    </li>
+    <li>
+      Grupează după <code>woo_product_id</code> (sau <code>product_name</code> pentru produse fără WooID).
+    </li>
+    <li>
+      Pentru fiecare grup: sumează cantitățile <em>rămase</em> (<code>quantity - ordered_quantity</code>),
+      construiește un array <code>sources</code> cu câmpurile:
+      <code>request_item_id</code>, <code>request_number</code>, <code>consultant</code>,
+      <code>location</code>, <code>quantity</code> (cantitate rămasă), <code>is_urgent</code>,
+      <code>needed_by</code>, <code>client_reference</code>, <code>allocated_qty=0.0</code>.
+    </li>
+    <li>Serialzează <code>sources</code> ca JSON în câmpul <code>sources_json</code> al formularului.</li>
+  </ol>
+
+  <h4>4.2 Execuția afterCreate() — pas cu pas</h4>
+  <p>
+    Întreaga logică este învelită în <code>DB::transaction()</code> cu <code>lockForUpdate()</code>
+    pe fiecare <code>PurchaseRequestItem</code> (previne race condition la creare simultană de PO-uri).
+  </p>
+
+  <pre><code>// Pseudocod simplificat al afterCreate()
+foreach ($this->record->items as $orderItem) {
+    $sources = json_decode($orderItem->sources_json);  // array de surse
+
+    // 1. FIFO sort: urgent first, then earliest needed_by
+    usort($sources, fn($a, $b) =>
+        ($b['is_urgent'] - $a['is_urgent'])
+        ?: strcmp($a['needed_by'], $b['needed_by'])
+    );
+
+    $remaining = (float) $orderItem->quantity;  // cantitatea totală a liniei PO
+
+    foreach ($sources as $source) {
+        $requestItem = PurchaseRequestItem::lockForUpdate()->find($source['request_item_id']);
+
+        // Calculăm cât putem aloca din această sursă
+        $alreadyOrdered  = $requestItem->ordered_quantity;
+        $availableInItem = $requestItem->quantity - $alreadyOrdered;  // max disponibil în sursă
+        $canAllocate     = min($remaining, $source['quantity'], $availableInItem);
+
+        if ($canAllocate <= 0) { ... skip ... }
+
+        $remaining -= $canAllocate;
+
+        // Incrementare atomică ordered_quantity
+        PurchaseRequestItem::where('id', $requestItem->id)
+            ->increment('ordered_quantity', $canAllocate);
+
+        $requestItem->refresh();  // actualizăm valorile post-increment
+
+        if ($requestItem->isFullyOrdered()) {
+            // Item complet acoperit → STATUS_ORDERED
+            $requestItem->update([
+                'status'                 => PurchaseRequestItem::STATUS_ORDERED,
+                'purchase_order_item_id' => $orderItem->id,
+            ]);
+        } else {
+            // Item parțial comandat → rămâne PENDING, dar cu referința PO
+            $requestItem->update([
+                'purchase_order_item_id' => $orderItem->id,
+            ]);
+        }
+
+        $source['allocated_qty'] = $canAllocate;  // înregistrăm cât s-a alocat
+    }
+
+    // Salvăm sources_json cu allocated_qty completat
+    $orderItem->updateQuietly([
+        'sources_json'             => json_encode($updatedSources),
+        'purchase_order_item_id'   => $primaryRequestItem,
+    ]);
+}
+
+// Recalculăm statusul fiecărui PurchaseRequest afectat (în afara tranzacției)
+foreach (array_unique($affectedRequestIds) as $requestId) {
+    PurchaseRequest::find($requestId)->recalculateStatus();
+}</code></pre>
+
+  <h4>4.3 Structura sources_json</h4>
+  <p>
+    Câmpul <code>sources_json</code> de pe <code>PurchaseOrderItem</code> este un array JSON cu un
+    element pentru fiecare <code>PurchaseRequestItem</code> sursă. Câmpul este scris la creare
+    (pre-populat în formular) și actualizat în <code>afterCreate()</code> cu <code>allocated_qty</code>.
+  </p>
+  <pre><code>[
+  {
+    "request_item_id": 42,
+    "request_number":  "PNR-0012",
+    "request_id":      7,
+    "consultant":      "Ion Popescu",
+    "location":        "Depozit Cluj",
+    "quantity":        5.0,       // cantitatea rămasă la momentul creării PO
+    "is_urgent":       true,
+    "needed_by":       "2026-03-20",
+    "client_reference":"Oferta #123",
+    "allocated_qty":   5.0        // completat în afterCreate(); 0 dacă nu s-a alocat
+  },
+  {
+    "request_item_id": 57,
+    "request_number":  "PNR-0015",
+    ...
+    "allocated_qty":   3.0
+  }
+]</code></pre>
+
+  <h4>4.4 Decizia STATUS_ORDERED vs rămâne PENDING</h4>
+  <table>
+    <thead>
+      <tr>
+        <th>Condiție post-increment</th>
+        <th>Status item</th>
+        <th>ordered_quantity</th>
+        <th>purchase_order_item_id</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>ordered_quantity &gt;= quantity</code> (<code>isFullyOrdered() = true</code>)</td>
+        <td><code>ordered</code></td>
+        <td>Egal cu <code>quantity</code></td>
+        <td>Setat la ID-ul <code>PurchaseOrderItem</code></td>
+      </tr>
+      <tr>
+        <td><code>ordered_quantity &lt; quantity</code> (parțial acoperit)</td>
+        <td><code>pending</code> (neschimbat)</td>
+        <td>Incrementat parțial</td>
+        <td>Setat la ID-ul <code>PurchaseOrderItem</code> (referință primară)</td>
+      </tr>
+      <tr>
+        <td><code>canAllocate &lt;= 0</code> (PO epuizat sau item deja complet)</td>
+        <td>Neschimbat</td>
+        <td>Neschimbat</td>
+        <td>Neschimbat</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>4.5 Protecție race condition</h4>
+  <p>
+    Crearea simultană a două PO-uri pentru același furnizor ar putea supra-aloca cantitățile.
+    Protecția se face pe trei niveluri:
+  </p>
+  <ol>
+    <li>
+      <strong>DB::transaction()</strong> — toate incrementările și actualizările sunt atomice.
+    </li>
+    <li>
+      <strong>lockForUpdate()</strong> pe <code>PurchaseRequestItem</code> — blochează rândul
+      DB pentru citire și scriere până la finalul tranzacției.
+    </li>
+    <li>
+      <strong>Recalcul post-lock</strong> — <code>alreadyOrdered</code> se citește <em>după</em>
+      obținerea lock-ului (<code>$requestItem->ordered_quantity</code> la momentul lock-ului),
+      nu din datele formularului.
+    </li>
+    <li>
+      <strong>firstOrCreate()</strong> în <code>getOrCreateDraft()</code> — previne duplicate
+      de drafturi per user.
+    </li>
+  </ol>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════════════════ -->
+  <h3 id="needs-approval">5. Logica needsApproval()</h3>
+
+  <p>
+    Metoda <code>PurchaseOrder::needsApproval()</code> este apelată în acțiunea "Plasează comanda"
+    pentru a decide dacă PO-ul se aprobă automat (→ <code>approved</code>) sau necesită aprobare
+    manuală (→ <code>pending_approval</code>).
+  </p>
+
+  <pre><code>public function needsApproval(): bool
+{
+    $this->loadMissing(['supplier', 'items']);
+
+    // Regula 1: valoare totală PO > plafon furnizor
+    if ($this->supplier->po_approval_threshold &&
+        (float) $this->total_value > (float) $this->supplier->po_approval_threshold) {
+        return true;
+    }
+
+    // Regula 2: oricare item depășește cantitatea maximă per produs
+    $productIds = $this->items->pluck('woo_product_id')->filter()->unique()->values();
+
+    if ($productIds->isEmpty()) {
+        return false;
+    }
+
+    // Query unic pentru toate ProductSupplier-urile relevante (evitare N+1)
+    $productSupplierMap = ProductSupplier::query()
+        ->where('supplier_id', $this->supplier_id)
+        ->whereIn('woo_product_id', $productIds)
+        ->get(['woo_product_id', 'po_max_qty'])
+        ->keyBy('woo_product_id');
+
+    foreach ($this->items as $item) {
+        if (! $item->woo_product_id) continue;
+
+        $ps = $productSupplierMap->get($item->woo_product_id);
+
+        if ($ps && $ps->po_max_qty && (float) $item->quantity > (float) $ps->po_max_qty) {
+            return true;
+        }
+    }
+
+    return false;
+}</code></pre>
+
+  <h4>5.1 Tabel cu condițiile de aprobare</h4>
+  <table>
+    <thead>
+      <tr>
+        <th>Regulă</th>
+        <th>Condiție</th>
+        <th>Sursă date</th>
+        <th>Rezultat</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Regula 1 — Plafon valoric</td>
+        <td>
+          <code>supplier.po_approval_threshold</code> este setat (non-null, non-zero) ȘI
+          <code>total_value &gt; po_approval_threshold</code>
+        </td>
+        <td>Câmp <code>suppliers.po_approval_threshold</code></td>
+        <td>Returnează <code>true</code> → <code>pending_approval</code></td>
+      </tr>
+      <tr>
+        <td>Regula 2 — Cantitate maximă produs</td>
+        <td>
+          Cel puțin un item are <code>quantity &gt; ProductSupplier.po_max_qty</code>
+          (pentru perechea supplier+product)
+        </td>
+        <td>Câmp <code>product_supplier.po_max_qty</code></td>
+        <td>Returnează <code>true</code> → <code>pending_approval</code></td>
+      </tr>
+      <tr>
+        <td>Nicio regulă declanșată</td>
+        <td>
+          <code>po_approval_threshold</code> absent/zero SAU valoare în limită; niciun item nu
+          depășește <code>po_max_qty</code>
+        </td>
+        <td>—</td>
+        <td>Returnează <code>false</code> → auto-aprobare (<code>approved</code>)</td>
+      </tr>
+      <tr>
+        <td>Niciun produs cu WooID</td>
+        <td>Toate itemele au <code>woo_product_id = null</code> (produse fără corespondent WooCommerce)</td>
+        <td>—</td>
+        <td>Returnează <code>false</code> după verificarea regulii 1 (se aplică doar regula 1)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════════════════ -->
+  <h3 id="recalculate-status">6. Algoritmul recalculateStatus() pe PurchaseRequest</h3>
+
+  <p>
+    Metoda <code>PurchaseRequest::recalculateStatus()</code> este apelată de fiecare dată când starea
+    unui <code>PurchaseRequestItem</code> sau <code>ordered_quantity</code> se modifică. Folosește
+    <code>saveQuietly()</code> pentru a evita declanșarea evenimentelor Eloquent recurente.
+  </p>
+
+  <pre><code>public function recalculateStatus(): void
+{
+    $items = $this->items()->get(['status', 'quantity', 'ordered_quantity']);
+
+    // Guard: fără items → nu face nimic
+    if ($items->isEmpty()) {
+        return;
+    }
+
+    // Excludem itemii anulați din calcul
+    $active = $items->where('status', '!=', PurchaseRequestItem::STATUS_CANCELLED);
+
+    // Branch 1: toți itemii sunt anulați
+    if ($active->isEmpty()) {
+        $this->forceFill(['status' => self::STATUS_CANCELLED])->saveQuietly();
+        return;
+    }
+
+    $total = $active->count();
+
+    // Un item "complet comandat" = ordered_quantity >= quantity
+    $fullyOrdered = $active->filter(
+        fn ($i) => (float) $i->ordered_quantity >= (float) $i->quantity
+    )->count();
+
+    // "Are cel puțin un item parțial comandat" = ordered_quantity > 0
+    $hasAnyOrdered = $active->filter(
+        fn ($i) => (float) $i->ordered_quantity > 0
+    )->count() > 0;
+
+    // Branch 2: toți itemii activi sunt complet acoperiți
+    if ($fullyOrdered >= $total) {
+        $this->forceFill(['status' => self::STATUS_FULLY_ORDERED])->saveQuietly();
+
+    // Branch 3: cel puțin un item are ordered_quantity > 0 (dar nu toți sunt complet)
+    } elseif ($hasAnyOrdered) {
+        $this->forceFill(['status' => self::STATUS_PARTIALLY_ORDERED])->saveQuietly();
+
+    // Branch 4: niciun item nu are cantitate comandată → revenire la submitted
+    } else {
+        $this->forceFill(['status' => self::STATUS_SUBMITTED])->saveQuietly();
+    }
+}</code></pre>
+
+  <h4>6.1 Arbore de decizie</h4>
+  <table>
+    <thead>
+      <tr>
+        <th>Condiție evaluată</th>
+        <th>Status rezultat</th>
+        <th>Cazuri tipice</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>$items.isEmpty()</code></td>
+        <td>Fără modificare (return timpuriu)</td>
+        <td>PNR fără niciun item (caz degenerat)</td>
+      </tr>
+      <tr>
+        <td><code>$active.isEmpty()</code> (toți itemii = cancelled)</td>
+        <td><code>cancelled</code></td>
+        <td>Consultantul a anulat manual toți itemii</td>
+      </tr>
+      <tr>
+        <td><code>$fullyOrdered &gt;= $total</code> (toți activi: ordered_qty ≥ qty)</td>
+        <td><code>fully_ordered</code></td>
+        <td>PO creat și trimis acoperă tot necesarul</td>
+      </tr>
+      <tr>
+        <td><code>$hasAnyOrdered = true</code> (cel puțin un item parțial sau complet acoperit)</td>
+        <td><code>partially_ordered</code></td>
+        <td>PO acoperă o parte din itemi/cantități; restul rămâne în așteptare</td>
+      </tr>
+      <tr>
+        <td>Niciuna din cele de mai sus (toți activi cu ordered_qty = 0)</td>
+        <td><code>submitted</code></td>
+        <td>PO anulat/respins → toate alocările revenite; PNR reintră în coadă</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>6.2 Contexte de apel</h4>
+  <ul>
+    <li><strong>afterCreate() din CreatePurchaseOrder</strong> — după alocarea FIFO, pentru fiecare PNR afectat</li>
+    <li><strong>markRequestItemsAsOrdered()</strong> — la tranzitia PO la <code>sent</code></li>
+    <li><strong>revertRequestItemsToPending()</strong> — la CANCELLED sau REJECTED al PO-ului</li>
+    <li><strong>revertShortfallToRequestItems()</strong> — la recepție parțială cu lipsuri</li>
+    <li><strong>cancel_item action</strong> din infolist PurchaseRequest — la anularea manuală a unui item</li>
+  </ul>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════════════════ -->
+  <h3 id="notifications">7. Notificări — Cine primește ce și când</h3>
+
+  <p>
+    Toate notificările implementează <code>via() = ['database', 'mail']</code> — sunt trimise simultan
+    în baza de date (vizibile în clopotul Filament) și prin email.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Eveniment declanșator</th>
+        <th>Clasa notificare</th>
+        <th>Destinatari</th>
+        <th>Canal</th>
+        <th>Subiect email</th>
+        <th>Conținut cheie</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          PNR trimis (acțiunea "Trimite" din
+          <code>PurchaseRequestResource</code>)
+        </td>
+        <td><code>PurchaseRequestSubmittedNotification</code></td>
+        <td>
+          Buyers care gestionează furnizorii din necesar
+          (<code>managedSuppliers</code>) + toți <code>ROLE_MANAGER_ACHIZITII</code>;
+          fallback: toți <code>ROLE_MANAGER_ACHIZITII</code> dacă nu există buyers specifici;
+          <em>exclude</em> userul curent
+        </td>
+        <td>DB + Email</td>
+        <td><code>Necesar nou de achiziție: {number}</code></td>
+        <td>
+          Consultant, locație, număr produse, număr urgente,
+          observații, link vers PNR
+        </td>
+      </tr>
+      <tr>
+        <td>
+          PO plasat cu <code>needsApproval() = true</code>
+          (acțiunea "Plasează comanda")
+        </td>
+        <td><code>PurchaseOrderNeedsApprovalNotification</code></td>
+        <td>
+          Toți userii cu rol <code>ROLE_MANAGER</code>,
+          <code>ROLE_DIRECTOR_FINANCIAR</code>, <code>ROLE_DIRECTOR_VANZARI</code>
+          + toți <code>is_super_admin = true</code>;
+          <em>exclude</em> userul curent
+        </td>
+        <td>DB + Email</td>
+        <td><code>Comanda {number} necesită aprobare</code></td>
+        <td>
+          Furnizor, valoare totală, creat de (buyer),
+          link spre pagina de aprobare/respingere
+        </td>
+      </tr>
+      <tr>
+        <td>
+          PO respins (acțiunea "Respinge" cu <code>rejection_reason</code>)
+        </td>
+        <td><code>PurchaseOrderRejectedNotification</code></td>
+        <td>
+          Buyerul care a creat PO-ul (<code>buyer_id</code>);
+          <em>exclude</em> userul curent (aprobatorul nu se notifică pe sine)
+        </td>
+        <td>DB + Email</td>
+        <td><code>Comanda {number} a fost respinsă</code></td>
+        <td>
+          Furnizor, motiv respingere, link spre PO,
+          instrucțiuni pentru corecție și retrimitere
+        </td>
+      </tr>
+      <tr>
+        <td>
+          Recepție parțială (acțiunea "Recepție marfă" cu lipsuri)
+        </td>
+        <td><code>PurchaseOrderReceivedPartialNotification</code></td>
+        <td>
+          Consultanții care au creat PNR-urile afectate de shortfall
+          (<code>PurchaseRequest.user_id</code> pentru fiecare PNR cu items returnate);
+          <em>exclude</em> userul curent
+        </td>
+        <td>DB + Email</td>
+        <td><code>Lipsuri la recepție — {number}</code></td>
+        <td>
+          Furnizor, lista produselor cu lipsuri (max 5 + "și altele"),
+          mesaj că produsele au fost returnate automat în coada de achiziții
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>7.1 Detalii suplimentare per notificare</h4>
+
+  <h5>PurchaseRequestSubmittedNotification</h5>
+  <ul>
+    <li>
+      <strong>Logica de selectare destinatari</strong>: se iau mai întâi buyers care gestionează
+      explicit furnizorii din necesar (relația <code>User::managedSuppliers</code>). Dacă aceștia
+      lipsesc, fallback la toți userii cu <code>role = ROLE_MANAGER_ACHIZITII</code>.
+    </li>
+    <li>
+      <strong>Badge DB</strong>: icon <code>heroicon-o-clipboard-document-list</code>,
+      culoare <code>warning</code> dacă există urgente, altfel <code>info</code>.
+    </li>
+  </ul>
+
+  <h5>PurchaseOrderNeedsApprovalNotification</h5>
+  <ul>
+    <li>
+      <strong>Logica de selectare destinatari</strong>: query cu <code>whereIn('role', [MANAGER, DIRECTOR_FINANCIAR, DIRECTOR_VANZARI])</code>
+      <code>orWhere('is_super_admin', true)</code>, exclude userul curent.
+    </li>
+    <li>
+      <strong>Badge DB</strong>: icon <code>heroicon-o-clock</code>, culoare <code>warning</code>.
+    </li>
+    <li>
+      <strong>Link acțiune</strong>: <code>/app/purchase-orders/{id}</code> — pagina ViewPurchaseOrder
+      unde sunt vizibile butoanele "Aprobă" și "Respinge" (dacă rolul este suficient).
+    </li>
+  </ul>
+
+  <h5>PurchaseOrderRejectedNotification</h5>
+  <ul>
+    <li>
+      <strong>Transmite</strong>: <code>$rejectedByName</code> — numele celui care a respins, afișat în email.
+    </li>
+    <li>
+      <strong>Efecte anterioare notificării</strong>: <code>revertRequestItemsToPending()</code> este apelat
+      <em>înainte</em> de <code>update(['status' => REJECTED])</code>, astfel request items sunt deja
+      revenite la <code>pending</code> la momentul trimiterii notificării.
+    </li>
+    <li>
+      <strong>Badge DB</strong>: icon <code>heroicon-o-x-circle</code>, culoare <code>danger</code>.
+    </li>
+  </ul>
+
+  <h5>PurchaseOrderReceivedPartialNotification</h5>
+  <ul>
+    <li>
+      <strong>Destinatari</strong>: colectați din <code>affectedRequestIds</code> (PNR-urile cu items
+      returnate) → <code>PurchaseRequest.user_id</code> → deduplicare → exclude userul curent.
+    </li>
+    <li>
+      <strong>shortfallProducts</strong>: array de <code>product_name</code> string-uri; în email
+      se afișează max 5, urmate de "și altele" dacă sunt mai multe.
+    </li>
+    <li>
+      <strong>Badge DB</strong>: icon <code>heroicon-o-exclamation-triangle</code>, culoare <code>warning</code>.
+    </li>
+  </ul>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════════════════ -->
+  <h3 id="order-item-lifecycle">8. PurchaseOrderItem — Lifecycle și calcule automate</h3>
+
+  <p>
+    <code>PurchaseOrderItem</code> nu are o state machine proprie, dar conține logică importantă în
+    <code>booted()</code>:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Hook Eloquent</th>
+        <th>Acțiune</th>
+        <th>Formulă</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>saving</code></td>
+        <td>Recalculare automată <code>line_total</code></td>
+        <td><code>line_total = max(0, quantity) × max(0, unit_price)</code>, format <code>decimal:4</code></td>
+      </tr>
+      <tr>
+        <td><code>saved</code></td>
+        <td>Declanșare <code>PurchaseOrder::recalculateTotals()</code></td>
+        <td><code>total_value = SUM(line_total)</code> pe toate itemele PO-ului</td>
+      </tr>
+      <tr>
+        <td><code>deleted</code></td>
+        <td>Declanșare <code>PurchaseOrder::recalculateTotals()</code></td>
+        <td>Idem — totalul PO se recalculează și la ștergere item</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>8.1 Câmpul received_quantity</h4>
+  <p>
+    Câmpul <code>received_quantity</code> (nullable <code>decimal:3</code>) este completat în
+    acțiunea "Recepție marfă". Default în UI: egal cu cantitatea comandată (<code>quantity</code>).
+    Dacă <code>received_quantity &lt; quantity</code>:
+  </p>
+  <ul>
+    <li>UI afișează <code>"X / Y ⚠"</code> cu badge <code>warning</code></li>
+    <li>Shortfall-ul (<code>quantity - received_quantity</code>) este returnat în coada de cumpărare</li>
+    <li>Coloana <code>reception_status</code> din tabel devine <code>"Parțială ⚠"</code></li>
+  </ul>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════════════════ -->
+  <h3 id="flow-summary">9. Flux end-to-end rezumat</h3>
+
+  <pre>
+  CONSULTANT                    BUYER                         MANAGER/DIRECTOR
+  ──────────                    ──────                        ────────────────────
+  Creează PNR (draft)
+  Adaugă produse + furnizori
+  Acțiunea "Trimite" ──────────▶ PNR = submitted
+                                 Notificare primită
+                                 Deschide BuyerDashboard
+                                 Selectează furnizor →
+                                 formular PO pre-populat
+                                 (FIFO din PNR-uri)
+                                 Salvează PO ──────────────────────────────────┐
+                                 afterCreate() FIFO allocation                 │
+                                 PNR = partially_ordered                       │
+                                                                               │
+                                 "Plasează comanda":                           │
+                                   needsApproval()=true ────────────────────▶ Notificare primită
+                                     PO = pending_approval                     │
+                                                                               │ "Aprobă"
+                                                                               │ PO = approved
+                                   needsApproval()=false                       │
+                                     PO = approved (auto)                      │
+                                                                               │
+                                 "Trimite email furnizor"
+                                   sau "Marchează trimis"
+                                   PO = sent
+                                   markRequestItemsAsOrdered()
+                                   PNR = fully_ordered (dacă tot e acoperit)
+                                                                               │
+                                 ──── (așteptare livrare) ────
+                                                                               │
+                                 "Recepție marfă"
+                                   PO = received
+                                   Dacă lipsuri:
+                                     revertShortfall()
+                                     PNR = partially_ordered
+  Notificare lipsuri primită ◀─────── PurchaseOrderReceivedPartialNotification
+  Consultă PNR actualizat
+  Items cu lipsuri = pending
+  (reintră în coada buyer)
+  </pre>
+
+</section>

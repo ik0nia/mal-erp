@@ -3,13 +3,15 @@
 namespace App\Filament\Pages;
 
 use App\Models\AppSetting;
+use App\Models\IntegrationConnection;
+use App\Services\WooCommerce\WooClient;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 
@@ -17,11 +19,11 @@ class AppSettingsPage extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected static ?string $navigationIcon  = 'heroicon-o-cog-6-tooth';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-cog-6-tooth';
     protected static ?string $navigationLabel = 'Setări aplicație';
     protected static ?string $title           = 'Setări aplicație';
     protected static ?int    $navigationSort  = 100;
-    protected static string  $view            = 'filament.pages.app-settings';
+    protected string  $view            = 'filament.pages.app-settings';
 
     public ?string $brand_name = null;
     public ?string $logo_path  = null;
@@ -29,6 +31,12 @@ class AppSettingsPage extends Page implements HasForms
     public function mount(): void
     {
         $this->form->fill([
+            'company_name'      => AppSetting::get(AppSetting::KEY_COMPANY_NAME, 'SC Malinco SRL'),
+            'company_cui'       => AppSetting::get(AppSetting::KEY_COMPANY_CUI),
+            'company_reg_com'   => AppSetting::get(AppSetting::KEY_COMPANY_REG_COM),
+            'company_address'   => AppSetting::get(AppSetting::KEY_COMPANY_ADDRESS),
+            'company_email'     => AppSetting::get(AppSetting::KEY_COMPANY_EMAIL),
+            'company_phone'     => AppSetting::get(AppSetting::KEY_COMPANY_PHONE),
             'brand_name'        => AppSetting::get(AppSetting::KEY_BRAND_NAME, 'Malinco ERP'),
             'logo_path'         => AppSetting::get(AppSetting::KEY_LOGO_PATH) ? [AppSetting::get(AppSetting::KEY_LOGO_PATH)] : [],
             'imap_host'         => AppSetting::get(AppSetting::KEY_IMAP_HOST, 'mail.malinco.ro'),
@@ -36,13 +44,14 @@ class AppSettingsPage extends Page implements HasForms
             'imap_encryption'   => AppSetting::get(AppSetting::KEY_IMAP_ENCRYPTION, 'ssl'),
             'imap_username'     => AppSetting::get(AppSetting::KEY_IMAP_USERNAME),
             'imap_password'     => null,
-            'anthropic_api_key' => null, // nu preîncărcăm cheia în formular
+            'anthropic_api_key'    => null, // nu preîncărcăm cheia în formular
+            'woo_plugin_api_key'   => null,
         ]);
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Section::make('Branding')
                     ->schema([
@@ -94,6 +103,19 @@ class AppSettingsPage extends Page implements HasForms
                     ])
                     ->columns(2),
 
+                Section::make('WooCommerce Plugin Bridge')
+                    ->description('Cheia secretă de autentificare pentru plugin-ul malinco-erp-bridge instalat pe WordPress.')
+                    ->schema([
+                        TextInput::make('woo_plugin_api_key')
+                            ->label('API Key plugin')
+                            ->password()
+                            ->revealable()
+                            ->placeholder('Lasă gol pentru a păstra cheia existentă')
+                            ->helperText('Trebuie să coincidă cu cheia setată în WP Admin → Settings → ERP Bridge')
+                            ->maxLength(500)
+                            ->columnSpanFull(),
+                    ]),
+
                 Section::make('Inteligență Artificială (Claude)')
                     ->description('Cheia API Anthropic pentru procesarea automată a emailurilor.')
                     ->schema([
@@ -134,6 +156,11 @@ class AppSettingsPage extends Page implements HasForms
         // AI
         if (filled($state['anthropic_api_key'] ?? null)) {
             AppSetting::setEncrypted(AppSetting::KEY_ANTHROPIC_API_KEY, $state['anthropic_api_key']);
+        }
+
+        // WooCommerce Plugin Bridge
+        if (filled($state['woo_plugin_api_key'] ?? null)) {
+            AppSetting::setEncrypted(AppSetting::KEY_WOO_PLUGIN_API_KEY, $state['woo_plugin_api_key']);
         }
 
         Notification::make()

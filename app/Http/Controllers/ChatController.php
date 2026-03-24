@@ -35,10 +35,13 @@ class ChatController extends Controller
     public function message(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'message'    => ['required', 'string', 'max:500'],
-            'session_id' => ['nullable', 'string', 'max:64'],
-            'page_url'   => ['nullable', 'string', 'max:500'],
-            'page_title' => ['nullable', 'string', 'max:200'],
+            'message'      => ['required', 'string', 'max:500'],
+            'session_id'   => ['nullable', 'string', 'max:64'],
+            'page_url'     => ['nullable', 'string', 'max:500'],
+            'page_title'   => ['nullable', 'string', 'max:200'],
+            'page_history' => ['nullable', 'array', 'max:5'],
+            'page_history.*.url'   => ['required', 'string', 'max:500'],
+            'page_history.*.title' => ['nullable', 'string', 'max:200'],
         ]);
 
         $sessionId = filled($validated['session_id'] ?? '')
@@ -48,15 +51,23 @@ class ChatController extends Controller
         $ip = $request->ip();
 
         try {
-            // Log mesajul clientului
-            ChatLog::log($sessionId, 'user', $validated['message'], $ip);
+            // Log mesajul clientului (cu pagina curentă dacă e disponibilă)
+            ChatLog::log(
+                sessionId:  $sessionId,
+                role:       'user',
+                content:    $validated['message'],
+                ip:         $ip,
+                pageUrl:    $validated['page_url']   ?? null,
+                pageTitle:  $validated['page_title'] ?? null,
+            );
 
             // Apelăm serviciul AI
             $pageContext = filled($validated['page_url'] ?? '') ? [
                 'url'   => $validated['page_url'],
                 'title' => $validated['page_title'] ?? '',
             ] : null;
-            $result       = $this->chatService->chat($sessionId, trim($validated['message']), $pageContext);
+            $pageHistory = ! empty($validated['page_history']) ? $validated['page_history'] : null;
+            $result       = $this->chatService->chat($sessionId, trim($validated['message']), $pageContext, $pageHistory);
             $reply        = $result['reply'];
             $products     = $result['products'];
             $inputTokens  = $result['input_tokens']  ?? 0;
@@ -66,12 +77,14 @@ class ChatController extends Controller
             ChatLog::log($sessionId, 'assistant', $reply, $ip, count($products) > 0, $inputTokens, $outputTokens);
 
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('ChatController: eroare neașteptată', [
+            \Illuminate\Support\Facades\Log::error('[ChatService] FALLBACK_ERROR controller', [
                 'session_id' => $sessionId,
                 'error'      => $e->getMessage(),
             ]);
             $reply    = 'Îmi pare rău, am întâmpinat o problemă tehnică. Vă rugăm să reîncercați.';
             $products = [];
+            // Asigură logarea răspunsului de fallback chiar și la eroare excepțională
+            ChatLog::log($sessionId, 'assistant', $reply, $ip);
         }
 
         $response = response()->json([
@@ -117,8 +130,24 @@ class ChatController extends Controller
     /** @param \Illuminate\Http\Response|\Illuminate\Http\JsonResponse $response */
     private function corsResponse($response)
     {
+        $origin = request()->headers->get('Origin', '');
+
+        $siteUrl        = rtrim(config('app.malinco.site_url', 'https://malinco.ro'), '/');
+        $allowedOrigins = [
+            $siteUrl,
+            str_replace('://', '://www.', $siteUrl),
+        ];
+
+        if (app()->isLocal()) {
+            $allowedOrigins[] = 'http://localhost:3000';
+            $allowedOrigins[] = 'http://127.0.0.1:8000';
+        }
+
+        if (in_array($origin, $allowedOrigins, true)) {
+            $response->header('Access-Control-Allow-Origin', $origin);
+        }
+
         return $response
-            ->header('Access-Control-Allow-Origin', '*')
             ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
             ->header('Access-Control-Allow-Headers', 'Content-Type, Accept');
     }

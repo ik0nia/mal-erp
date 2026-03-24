@@ -1,0 +1,920 @@
+<h2>T07 — Jobs și Procesare Asincronă</h2>
+
+<p>Documentație completă a tuturor job-urilor Laravel din <code>app/Jobs/</code>, a claselor de bază și a schedule-ului definit în <code>routes/console.php</code>.</p>
+
+<hr>
+
+<h2>1. Tabel general — toate job-urile</h2>
+
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%">
+  <thead>
+    <tr style="background:#f0f0f0">
+      <th>Job</th>
+      <th>Queue</th>
+      <th>Timeout</th>
+      <th>Tries / Backoff</th>
+      <th>Dispatch când</th>
+      <th>Scop</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>BaseAiJob</strong></td>
+      <td>default</td>
+      <td>120 s</td>
+      <td>2 / 30 s</td>
+      <td>Clasă abstractă — nu se dispatchează direct</td>
+      <td>Clasă de bază pentru toate job-urile AI: furnizează API key Anthropic și logging consum tokens</td>
+    </tr>
+    <tr>
+      <td><strong>FetchEmailsJob</strong></td>
+      <td>default</td>
+      <td>300 s</td>
+      <td>1 / —</td>
+      <td>Schedule: la fiecare 5 minute (<code>withoutOverlapping</code>)</td>
+      <td>Import emailuri noi via IMAP; auto-asociere la furnizori și contacte</td>
+    </tr>
+    <tr>
+      <td><strong>ProcessEmailAIJob</strong></td>
+      <td>default</td>
+      <td>60 s</td>
+      <td>2 / 30 s</td>
+      <td>Manual: <code>email:process-ai</code> (schedule dezactivat); anterior automat din FetchEmailsJob</td>
+      <td>Clasificare email cu Claude Haiku; extrage tip, rezumat, prețuri, entități</td>
+    </tr>
+    <tr>
+      <td><strong>GenerateBiAnalysisJob</strong></td>
+      <td>default</td>
+      <td>300 s</td>
+      <td>1 / —</td>
+      <td>Manual din <code>BiAnalysisPage</code> (Filament); sau automat din comenzile BI (<code>bi:generate-weekly-report</code> etc.)</td>
+      <td>Generează raport BI narativ cu Claude Sonnet pe baza datelor de stoc și comenzi</td>
+    </tr>
+    <tr>
+      <td><strong>GenerateChatSummaryJob</strong></td>
+      <td>default</td>
+      <td>30 s</td>
+      <td>2 / —</td>
+      <td>Automat după fiecare conversație chat (POST <code>/chat/contact</code>), <code>afterResponse()</code></td>
+      <td>Generează rezumat AI al conversației chat + extrage produsele de interes</td>
+    </tr>
+    <tr>
+      <td><strong>ImportWooCategoriesJob</strong></td>
+      <td>default</td>
+      <td>1800 s</td>
+      <td>1 / —</td>
+      <td>Manual din <code>IntegrationConnectionResource</code>; schedule <code>woo:sync-categories</code> la fiecare 6 ore</td>
+      <td>Importă toate categoriile WooCommerce pentru o conexiune</td>
+    </tr>
+    <tr>
+      <td><strong>ImportWooProductsJob</strong></td>
+      <td>default</td>
+      <td>1800 s</td>
+      <td>1 / —</td>
+      <td>Manual din <code>IntegrationConnectionResource</code>; declanșat de <code>woo:sync-orders</code> indirect</td>
+      <td>Importă/actualizează toate produsele WooCommerce pentru o conexiune</td>
+    </tr>
+    <tr>
+      <td><strong>PopulateWinmentorNamesBatchJob</strong></td>
+      <td>default</td>
+      <td>120 s</td>
+      <td>3 / —</td>
+      <td>Automat din <code>ImportWinmentorCsvAction</code> în batch-uri</td>
+      <td>Populează câmpul <code>winmentor_name</code> pe produse WooCommerce în bulk (CASE WHEN SQL)</td>
+    </tr>
+    <tr>
+      <td><strong>ImportWinmentorCsvJob</strong></td>
+      <td>default</td>
+      <td>1800 s</td>
+      <td>3 / —</td>
+      <td>Schedule: <code>stock:dispatch-scheduled-winmentor</code> (în fiecare minut, bazat pe setările conexiunii)</td>
+      <td>Importă CSV Winmentor pentru o conexiune; stocuri, prețuri, date produse</td>
+    </tr>
+    <tr>
+      <td><strong>PushWinmentorPricesToWooJob</strong></td>
+      <td>default</td>
+      <td>1200 s</td>
+      <td>3 / —</td>
+      <td>Automat din <code>ImportWinmentorCsvAction</code> după procesarea CSV</td>
+      <td>Push prețuri din Winmentor → WooCommerce REST API în batch; fallback la update individual</td>
+    </tr>
+    <tr>
+      <td><strong>SendTelegramLeadJob</strong></td>
+      <td>default</td>
+      <td>15 s</td>
+      <td>3 / —</td>
+      <td>Automat după fiecare conversație chat care furnizează date de contact (POST <code>/chat/contact</code>)</td>
+      <td>Trimite notificare Telegram cu datele lead-ului (email, telefon, interes)</td>
+    </tr>
+    <tr>
+      <td><strong>SyncProductSupplierMetaJob</strong></td>
+      <td>default</td>
+      <td>30 s</td>
+      <td>3 / —</td>
+      <td>Automat din <code>EditWooProduct::afterSave()</code> când produsul are <code>woo_id</code>; manual: <code>woo:sync-supplier-meta</code></td>
+      <td>Scrie <code>_furnizor_nume</code> și <code>_furnizor_sku</code> în meta WooCommerce pentru un produs</td>
+    </tr>
+    <tr>
+      <td><strong>SyncWooProductStatusesJob</strong></td>
+      <td>default</td>
+      <td>600 s</td>
+      <td>3 / —</td>
+      <td>Manual: <code>woo:sync-product-statuses</code> (lansează mai multe job-uri în paralel pe pagini)</td>
+      <td>Sincronizează statusul publish/draft/private al produselor din WooCommerce în ERP (worker pe range de pagini)</td>
+    </tr>
+    <tr>
+      <td><strong>FetchSocialPostsJob</strong></td>
+      <td>default</td>
+      <td>120 s</td>
+      <td>2 / 30 s</td>
+      <td>Manual din <code>SocialAccountsPage</code> (buton "Fetch postări")</td>
+      <td>Fetchează ultimele 200 de postări de pe pagina Meta Graph; upsert în <code>social_fetched_posts</code></td>
+    </tr>
+    <tr>
+      <td><strong>AnalyzeSocialStyleJob</strong></td>
+      <td>default</td>
+      <td>90 s</td>
+      <td>1 / —</td>
+      <td>Automat la finalul <code>FetchSocialPostsJob</code> dacă există ≥10 postări; sau manual din <code>SocialAccountsPage</code></td>
+      <td>Analizează stilul postărilor cu AI (<code>StyleAnalysisService</code>); salvează profil stil în <code>social_style_profiles</code></td>
+    </tr>
+    <tr>
+      <td><strong>AnalyzeReferenceImagesJob</strong></td>
+      <td>default</td>
+      <td>180 s</td>
+      <td>2 / 30 s</td>
+      <td>Manual din <code>SocialAccountsPage</code> (upload imagini de referință)</td>
+      <td>Analizează imagini vizuale cu Claude AI; generează template-uri Fabric.js; notifică utilizatorul în Filament</td>
+    </tr>
+    <tr>
+      <td><strong>GenerateSocialPostJob</strong></td>
+      <td>default</td>
+      <td>400 s</td>
+      <td>2 / 15 s</td>
+      <td>Automat la crearea unei postări sociale; sau manual (buton "Regenerează") din <code>ViewSocialPost</code></td>
+      <td>Generează caption + hashtag-uri cu Claude; randează imaginea grafică via Node.js canvas</td>
+    </tr>
+    <tr>
+      <td><strong>RegenerateImageJob</strong></td>
+      <td>default</td>
+      <td>120 s</td>
+      <td>2 / —</td>
+      <td>Manual (buton "Regenerează imagine") din <code>ViewSocialPost</code></td>
+      <td>Re-randează doar imaginea grafică a unei postări, cu titlu/subtitle existent sau regenerat</td>
+    </tr>
+    <tr>
+      <td><strong>PublishSocialPostJob</strong></td>
+      <td>default</td>
+      <td>60 s</td>
+      <td>3 / 60 s</td>
+      <td>Schedule: <code>social:publish-scheduled</code> (în fiecare minut); sau manual din <code>ViewSocialPost</code></td>
+      <td>Publică o postare pe Meta Graph (Facebook Page); protecție anti-dublă-publicare cu <code>lockForUpdate</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+
+<h2>2. Documentație detaliată per job</h2>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h3>BaseAiJob</h3>
+<p><strong>Fișier:</strong> <code>app/Jobs/BaseAiJob.php</code></p>
+<p>Clasă abstractă. Nu se dispatchează direct. Toate job-urile AI din Social Media și unele din email extind această clasă.</p>
+
+<h4>Metode utilitare oferite subclaselor:</h4>
+<ul>
+  <li><code>getApiKey(): string</code> — citește cheia Anthropic din <code>AppSetting</code> (criptat), cu fallback pe <code>env('ANTHROPIC_API_KEY')</code>; aruncă <code>RuntimeException</code> dacă lipsește.</li>
+  <li><code>recordUsage(type, model, inputTokens, outputTokens, context)</code> — înregistrează consumul AI în tabelul <code>ai_usage_logs</code> prin <code>AiUsageLog::record()</code>; erorile la scriere sunt doar logate (nu opresc job-ul).</li>
+  <li><code>failed(Throwable)</code> — handler implicit: loghează eroarea în <code>Log::error</code> cu clasa concretă și stack trace.</li>
+</ul>
+
+<h4>Defaults moștenite:</h4>
+<ul>
+  <li><code>$tries = 2</code>, <code>$timeout = 120</code>, <code>$backoff = 30</code> (suprascribile în subclase)</li>
+</ul>
+
+<h4>Condiții de eșec:</h4>
+<p>Prin sine nu eșuează — erorile reale sunt în subclase.</p>
+
+<h4>Efecte secundare:</h4>
+<p>Scriere în <code>ai_usage_logs</code> (opțional, prin subclase).</p>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h3>FetchEmailsJob</h3>
+<p><strong>Fișier:</strong> <code>app/Jobs/FetchEmailsJob.php</code></p>
+
+<h4>Constructor (parametri):</h4>
+<p>Fără parametri. Configurația IMAP se citește din <code>AppSetting</code> la runtime.</p>
+
+<h4>Ce face handle():</h4>
+<ol>
+  <li>Citește credențialele IMAP (<code>KEY_IMAP_HOST</code>, <code>KEY_IMAP_PORT</code>, <code>KEY_IMAP_ENCRYPTION</code>, <code>KEY_IMAP_USERNAME</code>, <code>KEY_IMAP_PASSWORD</code>); dacă lipsesc, iese silențios.</li>
+  <li>Construiește două index-uri pentru auto-asociere: <code>suppliers.email → supplier_id</code> și <code>supplier_contacts.email → supplier_id</code>; plus <code>email → contact_id</code>.</li>
+  <li>Calculează data de căutare: <code>SINCE N-3 zile</code> (toleranță la scheduler oprit max. 3 zile).</li>
+  <li>Obține lista tuturor folder-elor IMAP (recursiv), excluzând <em>trash</em>, <em>spam</em>, <em>junk</em>, <em>drafts</em>.</li>
+  <li>Pentru fiecare folder: reconectare IMAP proaspătă (prevenție scurgeri de memorie), apoi:
+    <ul>
+      <li><strong>PASS 1</strong>: <code>UID SEARCH SINCE &lt;data&gt;</code> — returnează lista de UID-uri (nu face FETCH ALL).</li>
+      <li>Filtrare UID-uri deja existente în <code>email_messages</code> (după <code>imap_folder + imap_uid</code>).</li>
+      <li><strong>PASS 2</strong>: Fetch individual al fiecărui UID nou; extrage: <code>from</code>, <code>subject</code> (decode MIME), <code>to</code>, <code>cc</code>, atașamente (doar metadata), <code>body_html</code>, <code>body_text</code>, <code>sent_at</code>.</li>
+      <li>Rezolvare furnizor: mai întâi după <code>suppliers.email</code>, apoi după <code>supplier_contacts.email</code>.</li>
+      <li>Creare <code>EmailMessage</code> în DB (cu <code>leaveUnread()</code> — nu marchează ca citit).</li>
+    </ul>
+  </li>
+  <li>Loghează totalul emailurilor noi importate.</li>
+</ol>
+
+<h4>Condiții de eșec:</h4>
+<ul>
+  <li>Credențiale IMAP lipsă → exit silențios (nu fail).</li>
+  <li>Eroare SEARCH pe un folder → skip folder (warning în log), continuă cu următorul.</li>
+  <li>Eroare <code>Duplicate entry</code> la INSERT → ignorată silențios (race condition la re-run).</li>
+  <li><code>$tries = 1</code> — nu re-încearcă: dacă serverul IMAP e down, se re-rulează la cronul de 5 min.</li>
+</ul>
+
+<h4>Efecte secundare (DB writes):</h4>
+<ul>
+  <li>INSERT în <code>email_messages</code> (cu <code>supplier_id</code> și <code>supplier_contact_id</code> dacă sunt rezolvați).</li>
+  <li><em>Nu</em> dispatchează <code>ProcessEmailAIJob</code> (codul există, dar e comentat — dezactivat temporar).</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h3>ProcessEmailAIJob</h3>
+<p><strong>Fișier:</strong> <code>app/Jobs/ProcessEmailAIJob.php</code></p>
+
+<h4>Constructor (parametri):</h4>
+<ul>
+  <li><code>int $emailId</code> — ID-ul înregistrării din <code>email_messages</code></li>
+</ul>
+
+<h4>Ce face handle():</h4>
+<ol>
+  <li>Încarcă emailul cu relațiile <code>supplier</code> și <code>supplierContact</code>; dacă nu există sau e deja procesat (<code>agent_processed_at</code> not null), iese.</li>
+  <li>Verifică prezența <code>KEY_ANTHROPIC_API_KEY</code>; dacă lipsește, skip cu warning.</li>
+  <li>Construiește textul emailului: subiect + expeditor + corp text (preferat) sau HTML stripped, maxim 4000 caractere; adaugă lista de atașamente.</li>
+  <li>Apelează Claude Haiku (<code>max_tokens: 1024</code>) cu un prompt care cere JSON structurat: <code>type</code>, <code>summary</code>, <code>urgency</code>, <code>needs_reply</code>, <code>sentiment</code>, <code>products_mentioned</code>, <code>prices_mentioned</code>, <code>invoice_number</code>, <code>delivery_date</code>, <code>payment_terms</code>, <code>discount_mentioned</code>, <code>action_items</code>, <code>key_info</code>.</li>
+  <li>Parsează răspunsul JSON (curăță eventualul markdown <code>```json```</code>).</li>
+  <li>Salvează <code>agent_actions</code> (JSON complet) și <code>agent_processed_at = now()</code> pe email.</li>
+  <li>Salvează entitățile în <code>email_entities</code>: prețuri (tip <code>product_price</code>), dată livrare, număr factură, termeni plată, reducere.</li>
+  <li>Salvează cotațiile de preț în <code>supplier_price_quotes</code>: doar dacă emailul are <code>supplier_id</code> și tipul nu e <code>automated</code>/<code>general</code>; încearcă să potrivească produsul cu catalogul WooCommerce prin <code>matchProduct()</code>.</li>
+  <li>La excepție: marchează emailul cu <code>agent_processed_at = now()</code> și <code>agent_actions = {error: ...}</code> (previne retry-uri infinite), then rethrows.</li>
+</ol>
+
+<h4>Condiții de eșec:</h4>
+<ul>
+  <li>API Anthropic down sau status non-2xx → returnează null (nu aruncă), emailul rămâne neprocesat.</li>
+  <li>JSON invalid în răspuns Claude → warning în log, returnează null.</li>
+  <li>Excepție generală → marchează emailul procesat cu eroare și rethrows pentru retry (max 2).</li>
+</ul>
+
+<h4>Efecte secundare (DB writes):</h4>
+<ul>
+  <li>UPDATE <code>email_messages</code> (<code>agent_actions</code>, <code>agent_processed_at</code>).</li>
+  <li>INSERT în <code>email_entities</code> (prețuri, date livrare, facturi, termeni plată, reduceri).</li>
+  <li>INSERT în <code>supplier_price_quotes</code>.</li>
+  <li>INSERT în <code>ai_usage_logs</code> via <code>AiUsageLog::record()</code>.</li>
+</ul>
+
+<h4>Metodă auxiliară publică: <code>matchProduct(string $rawName, ?string $sku)</code></h4>
+<p>Algoritm de potrivire produs din email cu catalogul WooCommerce. Strategii în ordine:</p>
+<ol>
+  <li>Potrivire exactă după SKU (dacă AI a extras codul explicit, ≥4 caractere).</li>
+  <li>Potrivire exactă după <code>LOWER(name)</code>.</li>
+  <li>Scoring pe cuvinte distinctive (≥4 litere, fără stopwords, non-numerice): calculează câte cuvinte din <code>rawName</code> apar în titlul candidaților; prag minim 60% sau bonus +10 pentru potrivire completă a frazei.</li>
+</ol>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h3>GenerateBiAnalysisJob</h3>
+<p><strong>Fișier:</strong> <code>app/Jobs/GenerateBiAnalysisJob.php</code></p>
+
+<h4>Constructor (parametri):</h4>
+<ul>
+  <li><code>int $analysisId</code> — ID înregistrare <code>bi_analyses</code></li>
+  <li><code>string $sections</code> — <code>'both'</code> | <code>'stock'</code> | <code>'online'</code> (default: <code>'both'</code>)</li>
+  <li><code>Carbon $dateFrom</code> — start perioadă (default: 30 zile în urmă)</li>
+  <li><code>Carbon $dateTo</code> — end perioadă (default: acum)</li>
+</ul>
+
+<h4>Ce face handle():</h4>
+<ol>
+  <li>Încarcă <code>BiAnalysis</code> sau aruncă 404.</li>
+  <li>Verifică <code>ANTHROPIC_API_KEY</code> din config (nu AppSetting — diferit față de celelalte job-uri AI).</li>
+  <li><strong>Adună metrici</strong> (<code>gatherMetrics()</code>):
+    <ul>
+      <li>Stoc: <code>daily_stock_metrics</code> groupat zilnic/săptămânal/lunar în funcție de interval (≤30 / ≤180 / >180 zile); top 15 produse cu scăderi stoc; număr produse în stoc/fără stoc; modificări prețuri cu top 10 creșteri și top 10 scăderi. Filtrare exclusivă pe <code>product_type = 'shop'</code>.</li>
+      <li>Online: <code>woo_orders</code> groupate la aceeași granularitate; breakdown pe status; top 15 produse vândute din <code>woo_order_items</code>.</li>
+      <li>Context precedent (singur zi): ultimele 30 de zile din <code>daily_stock_metrics</code> și comenzi.</li>
+    </ul>
+  </li>
+  <li><strong>Adună context</strong> (<code>fetchPastAnalyses()</code>): rapoarte BI anterioare din perioada curentă (max 2 lunar, max 4 săptămânal, max 2 manual) — truncate la 3000/2500/1500 caractere.</li>
+  <li><strong>Construiește prompt</strong> (<code>buildPrompt()</code>): context business Malinco (canal principal fizic, problema produse voluminoase online), date stoc + prețuri + comenzi, instrucțiuni raport în română (secțiuni diferite per <code>$sections</code>), inclusiv recomandări aprovizionare și sezonalitate.</li>
+  <li>Apelează Claude Sonnet (<code>max_tokens: 12000</code>).</li>
+  <li>Calculează costul estimat USD (3$/M input + 15$/M output).</li>
+  <li>Salvează <code>content</code>, <code>metrics_snapshot</code> (cu tokens și cost), <code>status = 'done'</code>, <code>generated_at</code>.</li>
+  <li>La excepție: <code>status = 'failed'</code> + <code>error_message</code>.</li>
+</ol>
+
+<h4>Condiții de eșec:</h4>
+<ul>
+  <li><code>ANTHROPIC_API_KEY</code> lipsă → RuntimeException → status failed.</li>
+  <li>Claude returnează conținut gol → RuntimeException → status failed.</li>
+  <li><code>$tries = 1</code> — fără retry.</li>
+</ul>
+
+<h4>Efecte secundare (DB writes):</h4>
+<ul>
+  <li>UPDATE <code>bi_analyses</code> (<code>content</code>, <code>metrics_snapshot</code>, <code>status</code>, <code>generated_at</code>).</li>
+  <li>INSERT în <code>ai_usage_logs</code>.</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h3>GenerateChatSummaryJob</h3>
+<p><strong>Fișier:</strong> <code>app/Jobs/GenerateChatSummaryJob.php</code></p>
+
+<h4>Constructor (parametri):</h4>
+<ul>
+  <li><code>string $sessionId</code> — ID-ul sesiunii de chat</li>
+</ul>
+
+<h4>Ce face handle():</h4>
+<ol>
+  <li>Caută <code>ChatContact</code> după <code>session_id</code>; dacă nu există, iese.</li>
+  <li>Încarcă ultimele 30 de mesaje din <code>chat_logs</code> (ordonat cronologic).</li>
+  <li>Dacă sunt mai puțin de 2 mesaje, iese.</li>
+  <li>Verifică <code>KEY_ANTHROPIC_API_KEY</code>.</li>
+  <li>Formatează conversația: fiecare mesaj truncat la 250 caractere, prefix <em>Client</em>/<em>Bot</em>.</li>
+  <li>Apelează Claude Haiku (<code>max_tokens: 200</code>) cu prompt care cere JSON: <code>{"interested_in": "...", "summary": "..."}</code>.</li>
+  <li>Actualizează <code>ChatContact</code> cu <code>summary</code> și <code>interested_in</code>.</li>
+  <li>Înregistrează consumul în <code>ai_usage_logs</code>.</li>
+</ol>
+
+<h4>Condiții de eșec:</h4>
+<ul>
+  <li>API error → warning în log, iese silențios (nu rethrows).</li>
+  <li>JSON invalid → iese silențios.</li>
+</ul>
+
+<h4>Efecte secundare (DB writes):</h4>
+<ul>
+  <li>UPDATE <code>chat_contacts</code> (<code>summary</code>, <code>interested_in</code>).</li>
+  <li>INSERT în <code>ai_usage_logs</code>.</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h3>ImportWooCategoriesJob</h3>
+<p><strong>Fișier:</strong> <code>app/Jobs/ImportWooCategoriesJob.php</code></p>
+
+<h4>Constructor (parametri):</h4>
+<ul>
+  <li><code>int $connectionId</code> — ID-ul <code>integration_connections</code></li>
+</ul>
+
+<h4>Ce face handle():</h4>
+<ol>
+  <li>Încarcă conexiunea (<code>findOrFail</code>).</li>
+  <li>Deleghează execuția la <code>ImportWooCategoriesAction::execute($connection)</code>.</li>
+</ol>
+
+<h4>Middleware:</h4>
+<p><code>WithoutOverlapping('import-woo-categories-{connectionId}')</code> cu <code>expireAfter(1800s)</code> și <code>dontRelease()</code> — dacă un alt job pentru aceeași conexiune rulează deja, job-ul curent este abandonat (nu pus înapoi în coadă).</p>
+
+<h4>Condiții de eșec:</h4>
+<ul>
+  <li>Conexiune inexistentă → ModelNotFoundException.</li>
+  <li>Erori API WooCommerce → propagate din action.</li>
+</ul>
+
+<h4>Efecte secundare (DB writes):</h4>
+<ul>
+  <li>Upsert în <code>woo_categories</code> (prin <code>ImportWooCategoriesAction</code>).</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h3>ImportWooProductsJob</h3>
+<p><strong>Fișier:</strong> <code>app/Jobs/ImportWooProductsJob.php</code></p>
+
+<h4>Constructor (parametri):</h4>
+<ul>
+  <li><code>int $connectionId</code> — ID-ul <code>integration_connections</code></li>
+</ul>
+
+<h4>Ce face handle():</h4>
+<ol>
+  <li>Încarcă conexiunea (<code>findOrFail</code>).</li>
+  <li>Deleghează execuția la <code>ImportWooProductsAction::execute($connection)</code>.</li>
+</ol>
+
+<h4>Middleware:</h4>
+<p><code>WithoutOverlapping('import-woo-products-{connectionId}')</code> — identic cu <code>ImportWooCategoriesJob</code>.</p>
+
+<h4>Condiții de eșec:</h4>
+<ul>
+  <li>Identice cu <code>ImportWooCategoriesJob</code>.</li>
+</ul>
+
+<h4>Efecte secundare (DB writes):</h4>
+<ul>
+  <li>Upsert în <code>woo_products</code>, <code>woo_product_category</code>, <code>product_price_logs</code> (prin action).</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h3>PopulateWinmentorNamesBatchJob</h3>
+<p><strong>Fișier:</strong> <code>app/Jobs/PopulateWinmentorNamesBatchJob.php</code></p>
+
+<h4>Constructor (parametri):</h4>
+<ul>
+  <li><code>array $skuToName</code> — map <code>[sku => winmentor_name]</code></li>
+  <li><code>array $wooConnectionIds</code> — lista de conexiuni pentru filtrare</li>
+</ul>
+
+<h4>Ce face handle():</h4>
+<ol>
+  <li>Dacă array-urile sunt goale, iese.</li>
+  <li>Găsește produsele din <code>woo_products</code> care au SKU-urile din batch și aparțin conexiunilor specificate.</li>
+  <li>Construiește o instrucțiune SQL <code>UPDATE ... SET winmentor_name = CASE WHEN id=? THEN ? ... END WHERE id IN (...)</code> pentru actualizare în bloc.</li>
+  <li>Execută UPDATE-ul cu <code>DB::statement()</code>.</li>
+</ol>
+
+<h4>Condiții de eșec:</h4>
+<ul>
+  <li>Eroare SQL → logată, rethrown; <code>$tries = 3</code>.</li>
+</ul>
+
+<h4>Efecte secundare (DB writes):</h4>
+<ul>
+  <li>UPDATE bulk pe <code>woo_products.winmentor_name</code>.</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h3>ImportWinmentorCsvJob</h3>
+<p><strong>Fișier:</strong> <code>app/Jobs/ImportWinmentorCsvJob.php</code></p>
+
+<h4>Constructor (parametri):</h4>
+<ul>
+  <li><code>int $connectionId</code></li>
+  <li><code>?int $syncRunId</code> — ID-ul <code>sync_runs</code> asociat (opțional)</li>
+</ul>
+
+<h4>Ce face handle():</h4>
+<ol>
+  <li>Validare <code>connectionId</code> (safe getter, nu aruncă dacă e 0).</li>
+  <li>Încarcă conexiunea și opțional run-ul de sincronizare.</li>
+  <li>Deleghează la <code>ImportWinmentorCsvAction::execute($connection, $run)</code>.</li>
+</ol>
+
+<h4>Condiții de eșec:</h4>
+<ul>
+  <li>La eșec definitiv (<code>failed()</code>): marchează <code>SyncRun</code> cu <code>status = failed</code> + <code>finished_at</code> + adaugă eroarea în <code>sync_runs.errors</code>.</li>
+</ul>
+
+<h4>Efecte secundare (DB writes):</h4>
+<ul>
+  <li>Stocuri, prețuri, produse — prin acțiunea delegată.</li>
+  <li>Lansează <code>PushWinmentorPricesToWooJob</code> (din acțiune).</li>
+  <li>Lansează <code>PopulateWinmentorNamesBatchJob</code> (din acțiune) în batch-uri.</li>
+  <li>UPDATE <code>sync_runs</code> la eșec.</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h3>PushWinmentorPricesToWooJob</h3>
+<p><strong>Fișier:</strong> <code>app/Jobs/PushWinmentorPricesToWooJob.php</code></p>
+
+<h4>Constructor (parametri):</h4>
+<ul>
+  <li><code>int $syncRunId</code></li>
+  <li><code>int $wooConnectionId</code></li>
+  <li><code>array $updates</code> — lista de <code>{row, sku, woo_id, regular_price}</code></li>
+</ul>
+
+<h4>Ce face handle():</h4>
+<ol>
+  <li>Verifică că <code>SyncRun</code> există și nu e cancelat; altfel iese.</li>
+  <li>Verifică că <code>IntegrationConnection</code> este WooCommerce activă.</li>
+  <li>Construiește payload batch și apelează <code>WooClient::updateProductPricesBatch()</code>.</li>
+  <li>La eșec batch: fallback la actualizare individuală produs cu produs (<code>updateProductPrice()</code>).</li>
+  <li>Înregistrează progresul în <code>SyncRun</code> (cu <code>lockForUpdate</code> în tranzacție): contoare <code>site_price_updates</code>, <code>site_price_update_failures</code>, <code>site_price_push_queued</code>.</li>
+  <li>Dacă <code>site_price_push_queued</code> ajunge la 0: finalizează run-ul (<code>success</code> sau <code>failed</code> dacă au existat erori).</li>
+</ol>
+
+<h4>Condiții de eșec:</h4>
+<ul>
+  <li>Conexiune WooCommerce invalidă → înregistrează eșecul și iese (fără retry).</li>
+  <li>Erori API pe produs individual → acumulate în <code>newErrors</code>, continuat cu restul.</li>
+  <li>La eșec definitiv job (<code>failed()</code>): înregistrează toate update-urile ca eșuate în SyncRun.</li>
+</ul>
+
+<h4>Efecte secundare (DB writes):</h4>
+<ul>
+  <li>UPDATE prețuri pe WooCommerce via REST API.</li>
+  <li>UPDATE <code>sync_runs.stats</code> și <code>sync_runs.errors</code> (atomic cu <code>lockForUpdate</code>).</li>
+  <li>UPDATE <code>sync_runs.status</code> și <code>finished_at</code> la finalizare.</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h3>SendTelegramLeadJob</h3>
+<p><strong>Fișier:</strong> <code>app/Jobs/SendTelegramLeadJob.php</code></p>
+
+<h4>Constructor (parametri):</h4>
+<ul>
+  <li><code>string $sessionId</code> — ID sesiune chat</li>
+</ul>
+
+<h4>Ce face handle():</h4>
+<ol>
+  <li>Verifică că <code>TelegramService</code> e configurat; dacă nu, iese.</li>
+  <li>Caută <code>ChatContact</code> după <code>session_id</code>.</li>
+  <li>Apelează <code>TelegramService::sendLeadNotification()</code> cu email, telefon, flag <code>wants_specialist</code>, <code>interested_in</code>, <code>summary</code>, <code>sessionId</code>.</li>
+</ol>
+
+<h4>Condiții de eșec:</h4>
+<ul>
+  <li>Telegram API error → rethrown; <code>$tries = 3</code> cu backoff implicit.</li>
+  <li>Contact negăsit → iese silențios.</li>
+</ul>
+
+<h4>Efecte secundare:</h4>
+<ul>
+  <li>Trimite mesaj Telegram (efect extern — nu DB).</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h3>SyncProductSupplierMetaJob</h3>
+<p><strong>Fișier:</strong> <code>app/Jobs/SyncProductSupplierMetaJob.php</code></p>
+
+<h4>Constructor (parametri):</h4>
+<ul>
+  <li><code>int $wooProductId</code> — ID local din <code>woo_products</code></li>
+</ul>
+
+<h4>Ce face handle():</h4>
+<ol>
+  <li>Încarcă produsul cu furnizorii preferați (<code>wherePivot('is_preferred', true)</code>).</li>
+  <li>Dacă produsul nu există, nu are <code>woo_id</code> sau e placeholder, iese.</li>
+  <li>Verifică existența conexiunii WooCommerce.</li>
+  <li>Apelează <code>WooClient::updateProduct($woo_id, {meta_data: [{key: '_furnizor_nume', value: ...}, {key: '_furnizor_sku', value: ...}]})</code>.</li>
+  <li>Dacă furnizorul preferat lipsește, scrie string gol în ambele meta.</li>
+</ol>
+
+<h4>Condiții de eșec:</h4>
+<ul>
+  <li>WooCommerce API error → loghează și rethrows; <code>$tries = 3</code>.</li>
+</ul>
+
+<h4>Efecte secundare:</h4>
+<ul>
+  <li>UPDATE meta WooCommerce via REST API (<code>_furnizor_nume</code>, <code>_furnizor_sku</code>).</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h3>SyncWooProductStatusesJob</h3>
+<p><strong>Fișier:</strong> <code>app/Jobs/SyncWooProductStatusesJob.php</code></p>
+
+<h4>Constructor (parametri):</h4>
+<ul>
+  <li><code>int $connectionId</code></li>
+  <li><code>int $startPage</code> — prima pagină de procesare (indexare 1)</li>
+  <li><code>int $endPage</code> — ultima pagină de procesare</li>
+  <li><code>int $workerIndex</code> — index worker pentru logging</li>
+</ul>
+
+<h4>Ce face handle():</h4>
+<ol>
+  <li>Verifică că conexiunea există.</li>
+  <li>Iterează paginile de la <code>startPage</code> la <code>endPage</code> (100 produse/pagină):</li>
+  <li>Apelează <code>WooClient::getProductStatuses($page)</code> → returnează <code>[{id, status}]</code>.</li>
+  <li>Compară statusul WooCommerce cu cel local; dacă diferă și produsul nu e <em>trash</em>, face UPDATE local.</li>
+  <li>Oprire la prima pagină goală sau pagină parțială (ultima pagină).</li>
+  <li>Loghează: pages range, produse verificate, produse actualizate.</li>
+</ol>
+
+<p><strong>Notă:</strong> Comanda <code>woo:sync-product-statuses</code> lansează mai mulți workeri în paralel, fiecare cu un range de pagini distinct.</p>
+
+<h4>Condiții de eșec:</h4>
+<ul>
+  <li>Eroare API pe pagină → break din loop + log error; <code>$tries = 3</code>.</li>
+</ul>
+
+<h4>Efecte secundare (DB writes):</h4>
+<ul>
+  <li>UPDATE <code>woo_products.status</code> pentru produsele cu status schimbat.</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h3>FetchSocialPostsJob</h3>
+<p><strong>Fișier:</strong> <code>app/Jobs/FetchSocialPostsJob.php</code></p>
+
+<h4>Constructor (parametri):</h4>
+<ul>
+  <li><code>int $accountId</code> — ID din <code>social_accounts</code></li>
+</ul>
+
+<h4>Ce face handle():</h4>
+<ol>
+  <li>Verifică că contul există și este activ; dacă nu, iese.</li>
+  <li>Obține token-ul de acces (<code>$account->getAccessToken()</code>).</li>
+  <li>Apelează <code>MetaGraphClient::fetchPagePosts($account_id, 200)</code> — ultimele 200 de postări.</li>
+  <li>Upsert în <code>social_fetched_posts</code> pentru fiecare postare: <code>message</code>, <code>created_time</code>, <code>likes_count</code>, <code>comments_count</code>, <code>raw_data</code>.</li>
+  <li>Dacă totalul postărilor cu text ≥ 10, dispatchează <code>AnalyzeSocialStyleJob</code>.</li>
+</ol>
+
+<h4>Condiții de eșec:</h4>
+<ul>
+  <li>Token lipsă → warning, iese.</li>
+  <li>Eroare Meta Graph API → propagată; <code>$tries = 2</code>.</li>
+</ul>
+
+<h4>Efecte secundare (DB writes):</h4>
+<ul>
+  <li>Upsert în <code>social_fetched_posts</code>.</li>
+  <li>Dispatch <code>AnalyzeSocialStyleJob</code> (condiționat).</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h3>AnalyzeSocialStyleJob</h3>
+<p><strong>Fișier:</strong> <code>app/Jobs/AnalyzeSocialStyleJob.php</code></p>
+
+<h4>Constructor (parametri):</h4>
+<ul>
+  <li><code>int $accountId</code> — ID din <code>social_accounts</code></li>
+</ul>
+
+<h4>Ce face handle():</h4>
+<ol>
+  <li>Verifică că contul există.</li>
+  <li>Încarcă ultimele 50 de postări cu text din <code>social_fetched_posts</code>.</li>
+  <li>Dacă nu există postări, iese.</li>
+  <li>Apelează <code>StyleAnalysisService::analyzeAndSave($account, $posts)</code> — analizează stilul cu AI și salvează profil în <code>social_style_profiles</code>.</li>
+</ol>
+
+<h4>Condiții de eșec:</h4>
+<ul>
+  <li>Erori din <code>StyleAnalysisService</code> → loghează și rethrows (fără retry — <code>$tries = 1</code>).</li>
+</ul>
+
+<h4>Efecte secundare (DB writes):</h4>
+<ul>
+  <li>INSERT/UPDATE în <code>social_style_profiles</code>.</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h3>AnalyzeReferenceImagesJob</h3>
+<p><strong>Fișier:</strong> <code>app/Jobs/AnalyzeReferenceImagesJob.php</code></p>
+
+<h4>Constructor (parametri):</h4>
+<ul>
+  <li><code>array $imagePaths</code> — căi locale ale imaginilor de referință (upload-uite de utilizator)</li>
+  <li><code>int $userId</code> — utilizatorul care a inițiat analiza (pentru notificare)</li>
+</ul>
+
+<h4>Ce face handle():</h4>
+<ol>
+  <li>Apelează <code>TemplateGeneratorService::analyzeAndGenerate($imagePaths)</code> — trimite imaginile la Claude AI pentru analiză vizuală; generează structuri de template Fabric.js.</li>
+  <li>La succes: trimite notificare Filament DB utilizatorului cu numărul de template-uri generate și link către <code>graphic-templates.index</code>.</li>
+  <li>La eșec: trimite notificare Filament DB cu mesajul de eroare (tip <em>danger</em>).</li>
+</ol>
+
+<h4>Condiții de eșec:</h4>
+<ul>
+  <li>Erori Claude API sau procesare imagini → notificare danger trimisă utilizatorului; <code>$tries = 2</code>.</li>
+</ul>
+
+<h4>Efecte secundare (DB writes):</h4>
+<ul>
+  <li>INSERT în <code>graphic_templates</code> (prin service).</li>
+  <li>INSERT în <code>notifications</code> Filament (pentru utilizator).</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h3>GenerateSocialPostJob</h3>
+<p><strong>Fișier:</strong> <code>app/Jobs/GenerateSocialPostJob.php</code></p>
+
+<h4>Constructor (parametri):</h4>
+<ul>
+  <li><code>int $postId</code> — ID din <code>social_posts</code></li>
+</ul>
+
+<h4>Ce face handle():</h4>
+<ol>
+  <li>Încarcă postarea cu relațiile <code>product</code>, <code>account</code>, <code>brand</code>.</li>
+  <li>Setează status <code>generating</code> pe postare.</li>
+  <li><strong>Generare caption</strong>: <code>SocialCaptionService::generate($post, $styleProfile)</code> cu Claude AI — returnează <code>caption</code>, <code>hashtags</code>, <code>image_prompt</code>, <code>graphic_title</code>, <code>graphic_subtitle</code>.</li>
+  <li>Rezolvă titlul graficii: din răspunsul AI sau fallback la numele produsului (fără codul de catalog) sau brand.</li>
+  <li>Rezolvă subtitle: prima linie din caption (fără emoji leading), trunchiat la 70 de caractere.</li>
+  <li>Rezolvă label-ul: bazat pe <code>brief_type</code> (<em>brand</em>, <em>promo</em>, <em>product</em>).</li>
+  <li>Salvează câmpurile generate pe postare.</li>
+  <li><strong>Randare imagine</strong>: <code>NodeImageRenderer::render()</code> — apelează serviciul Node.js canvas local cu imaginea produsului (URL), logo brand (local dacă există), titlu, subtitle, label și config template.</li>
+  <li>Salvează <code>image_path</code> și setează status <code>ready</code>.</li>
+  <li>La eșec: status <code>failed</code> + <code>error_message</code>.</li>
+</ol>
+
+<h4>Rezolvare template:</h4>
+<p>Caută template în ordine: slug explicit → template activ cu același layout → template default (<code>GraphicTemplate::default()</code>).</p>
+
+<h4>Condiții de eșec:</h4>
+<ul>
+  <li>Claude API down → status failed.</li>
+  <li>Node.js renderer down sau timeout → status failed.</li>
+  <li><code>$tries = 2</code>, <code>$backoff = 15 s</code>.</li>
+</ul>
+
+<h4>Efecte secundare (DB writes):</h4>
+<ul>
+  <li>UPDATE <code>social_posts</code> (<code>status</code>, <code>caption</code>, <code>hashtags</code>, <code>image_prompt</code>, <code>graphic_title</code>, <code>graphic_subtitle</code>, <code>graphic_label</code>, <code>image_path</code>).</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h3>RegenerateImageJob</h3>
+<p><strong>Fișier:</strong> <code>app/Jobs/RegenerateImageJob.php</code></p>
+
+<h4>Constructor (parametri):</h4>
+<ul>
+  <li><code>int $postId</code> — ID din <code>social_posts</code></li>
+</ul>
+
+<h4>Ce face handle():</h4>
+<ol>
+  <li>Încarcă postarea; dacă nu există, iese.</li>
+  <li>Setează status <code>generating</code>.</li>
+  <li>Dacă <code>graphic_title</code> e gol: apelează <code>SocialCaptionService::generateGraphicTextsOnly()</code> pentru a obține titlu+subtitle; la eșec, fallback la brand/produs.</li>
+  <li>Dacă <code>graphic_title</code> există deja: îl folosește direct.</li>
+  <li>Apelează <code>NodeImageRenderer::render()</code> cu aceiași parametri ca în <code>GenerateSocialPostJob</code>.</li>
+  <li>Salvează <code>image_path</code> și status <code>ready</code>.</li>
+  <li>La eșec: status <code>failed</code> + <code>error_message</code>.</li>
+</ol>
+
+<p><strong>Diferență față de GenerateSocialPostJob:</strong> Nu regenerează caption/hashtag-uri — doar imaginea grafică.</p>
+
+<h4>Condiții de eșec:</h4>
+<ul>
+  <li>Node.js renderer → status failed; <code>$tries = 2</code>.</li>
+</ul>
+
+<h4>Efecte secundare (DB writes):</h4>
+<ul>
+  <li>UPDATE <code>social_posts</code> (<code>status</code>, <code>image_path</code>, opțional <code>graphic_title</code>, <code>graphic_subtitle</code>, <code>graphic_label</code>).</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h3>PublishSocialPostJob</h3>
+<p><strong>Fișier:</strong> <code>app/Jobs/PublishSocialPostJob.php</code></p>
+
+<h4>Constructor (parametri):</h4>
+<ul>
+  <li><code>int $postId</code> — ID din <code>social_posts</code></li>
+</ul>
+
+<h4>Ce face handle():</h4>
+<ol>
+  <li>Deschide tranzacție DB cu <code>lockForUpdate</code> pe postare — protecție anti-dublă-publicare.</li>
+  <li>Dacă postarea e deja <code>published</code> → iese din tranzacție.</li>
+  <li>Dacă postarea nu e <code>scheduled</code> → warning în log, iese.</li>
+  <li>Setează status <code>publishing</code>.</li>
+  <li>Obține token Meta pentru contul asociat.</li>
+  <li>Apelează <code>MetaGraphClient::publishPost($account_id, $message, $imageUrl)</code> unde <code>$message = $post->getFullCaption()</code> (caption + hashtag-uri) și <code>$imageUrl = $post->getImageUrl()</code>.</li>
+  <li>Salvează <code>platform_post_id</code>, <code>platform_url</code> (URL Facebook), <code>published_at</code>, status <code>published</code>.</li>
+</ol>
+
+<h4>Condiții de eșec:</h4>
+<ul>
+  <li>Token lipsă → RuntimeException → retry; <code>$tries = 3</code>, <code>$backoff = 60 s</code>.</li>
+  <li>Meta Graph API error → rethrown → retry.</li>
+  <li>La eșec definitiv (<code>failed()</code>): status <code>failed</code> + <code>error_message</code> pe postare.</li>
+</ul>
+
+<h4>Efecte secundare:</h4>
+<ul>
+  <li>UPDATE <code>social_posts</code> (<code>status</code>, <code>platform_post_id</code>, <code>platform_url</code>, <code>published_at</code>).</li>
+  <li>Publicare pe Facebook Page via Meta Graph API (efect extern permanent).</li>
+</ul>
+
+<hr>
+
+<h2>3. Schedule complet — <code>routes/console.php</code></h2>
+
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%">
+  <thead>
+    <tr style="background:#f0f0f0">
+      <th>Comandă / Job</th>
+      <th>Frecvență</th>
+      <th>Timezone</th>
+      <th>Flags</th>
+      <th>Scop</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>stock:dispatch-scheduled-winmentor</code></td>
+      <td>La fiecare minut</td>
+      <td>UTC</td>
+      <td><code>withoutOverlapping</code></td>
+      <td>Verifică conexiunile Winmentor și dispatchează <code>ImportWinmentorCsvJob</code> pentru cele cu import programat datorat</td>
+    </tr>
+    <tr>
+      <td><code>FetchEmailsJob</code> (job direct)</td>
+      <td>La fiecare 5 minute</td>
+      <td>UTC</td>
+      <td><code>withoutOverlapping</code></td>
+      <td>Import incremental emailuri noi din IMAP (SINCE 3 zile)</td>
+    </tr>
+    <tr>
+      <td><code>email:process-ai --limit=100</code></td>
+      <td>La fiecare 30 minute</td>
+      <td>UTC</td>
+      <td><code>withoutOverlapping</code>, <code>runInBackground</code></td>
+      <td><strong>DEZACTIVAT temporar</strong> — procesare AI emailuri neprocesate (consum API)</td>
+    </tr>
+    <tr>
+      <td><code>supplier:discover-contacts</code></td>
+      <td>Zilnic la 03:00</td>
+      <td>UTC</td>
+      <td><code>withoutOverlapping</code>, <code>runInBackground</code></td>
+      <td><strong>DEZACTIVAT temporar</strong> — redescoperire contacte furnizori din emailuri (consum API)</td>
+    </tr>
+    <tr>
+      <td><code>social:publish-scheduled</code></td>
+      <td>La fiecare minut</td>
+      <td>UTC</td>
+      <td><code>withoutOverlapping</code></td>
+      <td>Publică postările sociale cu <code>status = scheduled</code> și <code>scheduled_at &lt;= now()</code></td>
+    </tr>
+    <tr>
+      <td><code>woo:sync-orders</code></td>
+      <td>La fiecare 15 minute</td>
+      <td>UTC</td>
+      <td><code>withoutOverlapping</code></td>
+      <td>Fallback sync comenzi WooCommerce — prinde comenzile care au ratat webhook-ul</td>
+    </tr>
+    <tr>
+      <td><code>woo:sync-categories</code></td>
+      <td>La fiecare 6 ore</td>
+      <td>UTC</td>
+      <td><code>withoutOverlapping</code></td>
+      <td>Sincronizare categorii WooCommerce (categoriile nu au webhook în WooCommerce)</td>
+    </tr>
+    <tr>
+      <td><code>bi:compute-daily</code></td>
+      <td>Zilnic la 00:30</td>
+      <td>Europe/Bucharest</td>
+      <td><code>runInBackground</code> (fără <code>withoutOverlapping</code>)</td>
+      <td>Calculează metricele BI pentru ziua de ieri (idempotent: UPDATE ON DUPLICATE KEY). Ordinea internă: KPI → Velocity → Alerts</td>
+    </tr>
+    <tr>
+      <td><code>bi:health-check</code></td>
+      <td>Zilnic la 09:00</td>
+      <td>Europe/Bucharest</td>
+      <td>—</td>
+      <td>Watchdog BI: dacă <code>bi:compute-daily</code> nu a rulat noaptea trecută (date lipsă), îl rulează acum. Auto-healing</td>
+    </tr>
+    <tr>
+      <td><code>bi:generate-weekly-report</code></td>
+      <td>Duminică la 05:00</td>
+      <td>Europe/Bucharest</td>
+      <td><code>withoutOverlapping</code>, <code>runInBackground</code></td>
+      <td>Raport săptămânal BI cu Claude Sonnet — acoperă ultimele 7 zile complete (luni–sâmbătă)</td>
+    </tr>
+    <tr>
+      <td><code>bi:generate-monthly-report</code></td>
+      <td>1 ale fiecărei luni la 11:00</td>
+      <td>Europe/Bucharest</td>
+      <td><code>withoutOverlapping</code>, <code>runInBackground</code></td>
+      <td>Raport lunar BI — acoperă ultimele 30 de zile, grupat săptămânal; context: rapoarte zilnice + săptămânale din perioadă</td>
+    </tr>
+    <tr>
+      <td><code>bi:generate-period-report --type=quarterly</code></td>
+      <td>1 ian, 1 apr, 1 iul, 1 oct la 06:00</td>
+      <td>Europe/Bucharest</td>
+      <td><code>withoutOverlapping</code>, <code>runInBackground</code>, condiție <code>when(month in [1,4,7,10])</code></td>
+      <td>Raport trimestrial BI — 90 de zile, grupat săptămânal; context: rapoarte lunare + săptămânale</td>
+    </tr>
+    <tr>
+      <td><code>bi:generate-period-report --type=semiannual</code></td>
+      <td>1 ian și 1 iul la 08:00</td>
+      <td>Europe/Bucharest</td>
+      <td><code>withoutOverlapping</code>, <code>runInBackground</code>, condiție <code>when(month in [1,7])</code></td>
+      <td>Raport semestrial BI — 180 de zile, grupat lunar; context: rapoarte trimestriale + lunare</td>
+    </tr>
+    <tr>
+      <td><code>bi:generate-period-report --type=annual</code></td>
+      <td>1 ianuarie la 10:00</td>
+      <td>Europe/Bucharest</td>
+      <td><code>withoutOverlapping</code>, <code>runInBackground</code></td>
+      <td>Raport anual BI — 365 de zile, 12 rânduri KPI grupate lunar; context: rapoarte semestriale + trimestriale + lunare</td>
+    </tr>
+    <tr>
+      <td><code>gdpr:cleanup-chat-logs</code></td>
+      <td>Săptămânal (zi nedeterminată) la 03:00</td>
+      <td>UTC</td>
+      <td>—</td>
+      <td>Anonimizare IP-uri din <code>chat_logs</code> mai vechi de 90 de zile (conformitate GDPR)</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Note despre schedule</h3>
+<ul>
+  <li>Comenzile BI pentru rapoarte cu AI (<code>bi:generate-*</code>) folosesc Claude Sonnet și pot dura câteva minute — de aceea sunt marcate cu <code>runInBackground</code>.</li>
+  <li><code>bi:compute-daily</code> este idempotent (poate fi rulat de mai multe ori fără efecte negative), de aceea nu are <code>withoutOverlapping</code>.</li>
+  <li>Procesarea AI a emailurilor și redescoperirea contactelor sunt <strong>dezactivate temporar</strong> din motive de consum API; pot fi reactivate prin decomentarea liniilor din schedule.</li>
+  <li>Rapoartele trimestriale și semestriale sunt definite ca <em>monthly</em> în Laravel Scheduler cu o condiție <code>when()</code> suplimentară pentru a rula doar în lunile corecte.</li>
+</ul>

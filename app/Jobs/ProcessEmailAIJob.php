@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\AiUsageLog;
 use App\Models\AppSetting;
 use App\Models\EmailEntity;
 use App\Models\EmailMessage;
@@ -43,48 +44,74 @@ class ProcessEmailAIJob implements ShouldQueue
 
     public function handle(): void
     {
-        $email = EmailMessage::with(['supplier', 'supplierContact'])->find($this->emailId);
+        try {
+            $email = EmailMessage::with(['supplier', 'supplierContact'])->find($this->emailId);
 
-        if (! $email) {
-            return;
+            if (! $email) {
+                return;
+            }
+
+            // Nu reprocessăm emailuri deja procesate
+            if ($email->agent_processed_at) {
+                return;
+            }
+
+            $apiKey = AppSetting::getEncrypted(AppSetting::KEY_ANTHROPIC_API_KEY);
+
+            if (blank($apiKey)) {
+                Log::warning("ProcessEmailAIJob: API key Anthropic lipsă, skip email #{$this->emailId}");
+                return;
+            }
+
+            // Construim textul emailului pentru analiză
+            $emailText = $this->buildEmailText($email);
+
+            if (blank(trim($emailText))) {
+                $email->update(['agent_processed_at' => now()]);
+                return;
+            }
+
+            // Apelăm Claude
+            $result = $this->callClaude($apiKey, $email, $emailText);
+
+            if (! $result) {
+                return;
+            }
+
+            // Salvăm rezultatul principal
+            $email->update([
+                'agent_actions'      => $result,
+                'agent_processed_at' => now(),
+            ]);
+
+            // Extragem entitățile și prețurile în tabele dedicate
+            $this->saveEntities($email, $result);
+            $this->savePriceQuotes($email, $result);
+
+        } catch (\Throwable $e) {
+            Log::error('ProcessEmailAIJob: eroare la procesarea emailului', [
+                'email_id' => $this->emailId,
+                'error'    => $e->getMessage(),
+            ]);
+
+            // Marchează emailul ca procesat cu eroare pentru a evita retry-uri infinite
+            EmailMessage::where('id', $this->emailId)
+                ->whereNull('agent_processed_at')
+                ->update([
+                    'agent_processed_at' => now(),
+                    'agent_actions'      => ['error' => $e->getMessage()],
+                ]);
+
+            throw $e;
         }
+    }
 
-        // Nu reprocessăm emailuri deja procesate
-        if ($email->agent_processed_at) {
-            return;
-        }
-
-        $apiKey = AppSetting::getEncrypted(AppSetting::KEY_ANTHROPIC_API_KEY);
-
-        if (blank($apiKey)) {
-            Log::warning("ProcessEmailAIJob: API key Anthropic lipsă, skip email #{$this->emailId}");
-            return;
-        }
-
-        // Construim textul emailului pentru analiză
-        $emailText = $this->buildEmailText($email);
-
-        if (blank(trim($emailText))) {
-            $email->update(['agent_processed_at' => now()]);
-            return;
-        }
-
-        // Apelăm Claude
-        $result = $this->callClaude($apiKey, $email, $emailText);
-
-        if (! $result) {
-            return;
-        }
-
-        // Salvăm rezultatul principal
-        $email->update([
-            'agent_actions'      => $result,
-            'agent_processed_at' => now(),
+    public function failed(\Throwable $exception): void
+    {
+        Log::error(class_basename(static::class) . ' failed', [
+            'exception' => $exception->getMessage(),
+            'trace'     => $exception->getTraceAsString(),
         ]);
-
-        // Extragem entitățile și prețurile în tabele dedicate
-        $this->saveEntities($email, $result);
-        $this->savePriceQuotes($email, $result);
     }
 
     private function buildEmailText(EmailMessage $email): string
@@ -181,7 +208,7 @@ PROMPT;
                 'anthropic-version' => '2023-06-01',
                 'content-type'      => 'application/json',
             ])->timeout(30)->post('https://api.anthropic.com/v1/messages', [
-                'model'      => 'claude-haiku-4-5-20251001',
+                'model'      => config('app.malinco.ai.models.haiku', 'claude-haiku-4-5-20251001'),
                 'max_tokens' => 1024,
                 'messages'   => [
                     ['role' => 'user', 'content' => $prompt],
@@ -192,6 +219,12 @@ PROMPT;
                 Log::warning("ProcessEmailAIJob: API error {$response->status()} pentru email #{$this->emailId}: " . $response->body());
                 return null;
             }
+
+            AiUsageLog::record('email_ai', config('app.malinco.ai.models.haiku', 'claude-haiku-4-5-20251001'),
+                (int) $response->json('usage.input_tokens', 0),
+                (int) $response->json('usage.output_tokens', 0),
+                ['email_id' => $this->emailId]
+            );
 
             $content = $response->json('content.0.text', '');
             $content = trim($content);

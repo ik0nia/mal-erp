@@ -6,7 +6,7 @@ use Filament\Pages\Page;
 
 class ErrorPage extends Page
 {
-    protected static string  $view             = 'filament.app.pages.error-page';
+    protected string  $view             = 'filament.app.pages.error-page';
     protected static bool    $shouldRegisterNavigation = false;
 
     public int    $code    = 403;

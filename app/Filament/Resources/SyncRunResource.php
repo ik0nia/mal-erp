@@ -17,9 +17,9 @@ class SyncRunResource extends Resource
 {
     protected static ?string $model = SyncRun::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-clock';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-clock';
 
-    protected static ?string $navigationGroup = 'Integrări';
+    protected static string|\UnitEnum|null $navigationGroup = 'Integrări';
 
     protected static ?string $navigationLabel = 'Sync Runs';
 
@@ -189,7 +189,8 @@ class SyncRunResource extends Resource
                         SyncRun::STATUS_CANCELLED => 'cancelled',
                     ]),
             ])
-            ->actions([
+            ->deferFilters(false)
+            ->recordActions([
                 Tables\Actions\Action::make('stop')
                     ->label('Stop')
                     ->icon('heroicon-o-stop')

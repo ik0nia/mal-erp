@@ -6,23 +6,19 @@ use App\Filament\App\Concerns\EnforcesLocationScope;
 use App\Filament\App\Concerns\ChecksRolePermissions;
 use App\Filament\App\Concerns\HasDynamicNavSort;
 use App\Filament\App\Resources\PurchaseRequestResource\Pages;
+use App\Filament\App\Resources\PurchaseOrderResource;
+use App\Filament\App\Forms\Components\PurchaseItemsTable;
 use App\Models\Location;
-use App\Models\ProductSupplier;
 use App\Models\PurchaseRequest;
-use App\Models\Supplier;
+use App\Models\PurchaseRequestItem;
 use App\Models\User;
 use App\Models\WooProduct;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Repeater;
+use App\Notifications\PurchaseRequestSubmittedNotification;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\Toggle;
-use Filament\Forms\Form;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
-use App\Models\PurchaseRequestItem;
+use Filament\Schemas\Schema;
 use Filament\Infolists\Components\Actions;
 use Filament\Infolists\Components\Actions\Action as InfolistAction;
 use Filament\Infolists\Components\IconEntry;
@@ -30,7 +26,6 @@ use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\Section as InfolistSection;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
-use Filament\Infolists\Infolist;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -46,8 +41,8 @@ class PurchaseRequestResource extends Resource
 
     protected static ?string $model = PurchaseRequest::class;
 
-    protected static ?string $navigationIcon   = 'heroicon-o-clipboard-document-list';
-    protected static ?string $navigationGroup  = 'Achiziții';
+    protected static string|\BackedEnum|null $navigationIcon   = 'heroicon-o-clipboard-document-list';
+    protected static string|\UnitEnum|null $navigationGroup  = 'Achiziții';
     protected static ?string $navigationLabel  = 'Necesare';
     protected static ?string $modelLabel       = 'Necesar';
     protected static ?string $pluralModelLabel = 'Necesare';
@@ -67,10 +62,11 @@ class PurchaseRequestResource extends Resource
         return 'warning';
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Section::make('Informații necesar')
+                ->columnSpanFull()
                 ->columns(3)
                 ->schema([
                     TextInput::make('number')
@@ -110,111 +106,10 @@ class PurchaseRequestResource extends Resource
                 ]),
 
             Section::make('Produse solicitate')
+                ->columnSpanFull()
                 ->schema([
-                    Repeater::make('items')
-                        ->label('')
-                        ->relationship('items')
-                        ->columns(['default' => 1, 'sm' => 2])
-                        ->schema([
-                            Select::make('woo_product_id')
-                                ->label('Produs')
-                                ->searchable()
-                                ->columnSpanFull()
-                                ->getSearchResultsUsing(function (string $search): array {
-                                    return WooProduct::query()
-                                        ->where(function (Builder $q) use ($search): void {
-                                            $q->where('name', 'like', "%{$search}%")
-                                                ->orWhere('sku', 'like', "%{$search}%");
-                                        })
-                                        ->limit(30)
-                                        ->get()
-                                        ->mapWithKeys(fn (WooProduct $p): array => [
-                                            $p->id => "[{$p->sku}] ".($p->decoded_name ?? $p->name),
-                                        ])
-                                        ->all();
-                                })
-                                ->getOptionLabelUsing(function ($value): ?string {
-                                    $p = WooProduct::query()->find($value, ['id', 'name', 'sku']);
-                                    return $p ? "[{$p->sku}] ".($p->decoded_name ?? $p->name) : null;
-                                })
-                                ->live()
-                                ->afterStateUpdated(function ($state, Set $set): void {
-                                    if (! $state) return;
-
-                                    $ps = ProductSupplier::where('woo_product_id', $state)
-                                        ->orderByDesc('is_preferred')
-                                        ->first();
-
-                                    if ($ps) {
-                                        $set('supplier_id', $ps->supplier_id);
-                                    }
-                                }),
-
-                            Select::make('supplier_id')
-                                ->label('Furnizor')
-                                ->options(fn (): array => Supplier::query()
-                                    ->where('is_active', true)
-                                    ->orderBy('name')
-                                    ->pluck('name', 'id')
-                                    ->all()
-                                )
-                                ->columnSpanFull()
-                                ->searchable()
-                                ->nullable(),
-
-                            TextInput::make('quantity')
-                                ->label('Cantitate')
-                                ->numeric()
-                                ->minValue(0.001)
-                                ->required()
-                                ->default(1),
-
-                            DatePicker::make('needed_by')
-                                ->label('Necesar până la')
-                                ->nullable()
-                                ->displayFormat('d.m.Y'),
-
-                            Toggle::make('is_urgent')
-                                ->label('Urgent')
-                                ->default(false),
-
-                            Toggle::make('is_reserved')
-                                ->label('Rezervat')
-                                ->live()
-                                ->default(false),
-
-                            Select::make('customer_id')
-                                ->label('Client rezervare')
-                                ->searchable()
-                                ->columnSpanFull()
-                                ->getSearchResultsUsing(fn (string $search): array => \App\Models\Customer::query()
-                                    ->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search): void {
-                                        $q->where('name', 'like', "%{$search}%")
-                                            ->orWhere('phone', 'like', "%{$search}%")
-                                            ->orWhere('email', 'like', "%{$search}%");
-                                    })
-                                    ->limit(30)
-                                    ->pluck('name', 'id')
-                                    ->all()
-                                )
-                                ->getOptionLabelUsing(fn ($value): ?string => \App\Models\Customer::query()->find($value)?->name)
-                                ->disabled(fn (Get $get): bool => ! (bool) $get('is_reserved'))
-                                ->nullable(),
-
-                            TextInput::make('notes')
-                                ->label('Notițe')
-                                ->nullable(),
-                        ])
-                        ->itemLabel(function (array $state): string {
-                            if (empty($state['woo_product_id'])) {
-                                return 'Produs nou';
-                            }
-                            $p = WooProduct::query()->whereKey($state['woo_product_id'])->first(['name', 'sku']);
-                            return $p ? ($p->sku ? "[{$p->sku}] " : '') . ($p->decoded_name ?? $p->name) : 'Produs';
-                        })
-                        ->collapsible()
-                        ->defaultItems(1)
-                        ->addActionLabel('+ Adaugă produs'),
+                    PurchaseItemsTable::make('items')
+                        ->label(''),
                 ]),
         ]);
     }
@@ -272,10 +167,14 @@ class PurchaseRequestResource extends Resource
                         false: fn (Builder $q) => $q->whereDoesntHave('items', fn ($i) => $i->where('is_urgent', true)),
                     ),
             ])
-            ->actions([
+            ->deferFilters(false)
+            ->recordActions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make()
                     ->visible(fn (PurchaseRequest $record): bool => static::canEdit($record)),
+                Tables\Actions\DeleteAction::make()
+                    ->visible(fn (PurchaseRequest $record): bool => static::canDelete($record))
+                    ->requiresConfirmation(),
                 Tables\Actions\Action::make('submit')
                     ->label('Trimite')
                     ->icon('heroicon-o-paper-airplane')
@@ -288,13 +187,39 @@ class PurchaseRequestResource extends Resource
                     ->action(function (PurchaseRequest $record): void {
                         $record->update(['status' => PurchaseRequest::STATUS_SUBMITTED]);
                         Notification::make()->success()->title('Necesarul a fost trimis spre buyer.')->send();
+
+                        // Notificăm buyer-ii responsabili pentru furnizorii din necesar
+                        $record->loadMissing('items');
+                        $supplierIds = $record->items->pluck('supplier_id')->filter()->unique();
+
+                        $buyers = User::query()
+                            ->where(function ($q) use ($supplierIds): void {
+                                if ($supplierIds->isNotEmpty()) {
+                                    $q->whereHas('managedSuppliers', fn ($s) => $s->whereIn('id', $supplierIds));
+                                }
+                                $q->orWhere('role', User::ROLE_MANAGER_ACHIZITII);
+                            })
+                            ->where('id', '!=', auth()->id())
+                            ->get();
+
+                        // Fallback: dacă nu s-au găsit buyers specifici, notificăm toți managerii de achiziții
+                        if ($buyers->isEmpty()) {
+                            $buyers = User::query()
+                                ->where('role', User::ROLE_MANAGER_ACHIZITII)
+                                ->where('id', '!=', auth()->id())
+                                ->get();
+                        }
+
+                        foreach ($buyers as $buyer) {
+                            $buyer->notify(new PurchaseRequestSubmittedNotification($record));
+                        }
                     }),
             ]);
     }
 
-    public static function infolist(Infolist $infolist): Infolist
+    public static function infolist(Schema $schema): Schema
     {
-        return $infolist->schema([
+        return $schema->schema([
             InfolistSection::make('Informații necesar')
                 ->columns(3)
                 ->schema([
@@ -326,11 +251,30 @@ class PurchaseRequestResource extends Resource
                         ->schema([
                             TextEntry::make('product_name')->label('Produs'),
                             TextEntry::make('supplier.name')->label('Furnizor')->placeholder('—'),
-                            TextEntry::make('quantity')->label('Cantitate'),
+                            TextEntry::make('quantity')->label('Cant. cerută'),
+                            TextEntry::make('ordered_quantity')
+                                ->label('Cant. comandată')
+                                ->formatStateUsing(fn ($state, PurchaseRequestItem $record): string =>
+                                    (float) $state > 0
+                                        ? number_format((float) $state, 0, ',', '.') . ' / ' . number_format((float) $record->quantity, 0, ',', '.')
+                                        : '—'
+                                )
+                                ->color(fn (PurchaseRequestItem $record): string =>
+                                    (float) $record->ordered_quantity <= 0 ? 'gray' :
+                                    ($record->isFullyOrdered() ? 'success' : 'warning')
+                                )
+                                ->badge(),
                             TextEntry::make('needed_by')->label('Necesar până la')->date('d.m.Y')->placeholder('—'),
                             IconEntry::make('is_urgent')->label('Urgent')->boolean(),
                             IconEntry::make('is_reserved')->label('Rezervat')->boolean(),
                             TextEntry::make('customer.name')->label('Client rezervare')->placeholder('—'),
+                            TextEntry::make('offer.number')->label('Ofertă rezervare')->placeholder('—')
+                                ->badge()->color('info')
+                                ->url(fn (PurchaseRequestItem $record): ?string =>
+                                    $record->offer_id
+                                        ? \App\Filament\App\Resources\OfferResource::getUrl('view', ['record' => $record->offer_id])
+                                        : null
+                                ),
                             TextEntry::make('status')
                                 ->label('Status')
                                 ->badge()
@@ -346,10 +290,45 @@ class PurchaseRequestResource extends Resource
                                     'cancelled' => 'Anulat',
                                     default     => $state,
                                 }),
+                            TextEntry::make('purchaseOrderItem.purchaseOrder.number')
+                                ->label('PO')
+                                ->placeholder('—')
+                                ->badge()
+                                ->color('info')
+                                ->url(fn (PurchaseRequestItem $record): ?string =>
+                                    $record->purchaseOrderItem?->purchaseOrder?->id
+                                        ? PurchaseOrderResource::getUrl('view', ['record' => $record->purchaseOrderItem->purchaseOrder->id])
+                                        : null
+                                ),
                             TextEntry::make('notes')->label('Notițe')->placeholder('—'),
                             Actions::make([
+                                InfolistAction::make('edit_quantity')
+                                    ->label('Modifică cantitate')
+                                    ->icon('heroicon-o-pencil-square')
+                                    ->color('warning')
+                                    ->size(\Filament\Support\Enums\ActionSize::Small)
+                                    ->visible(fn (PurchaseRequestItem $record): bool =>
+                                        $record->status === PurchaseRequestItem::STATUS_PENDING
+                                    )
+                                    ->form([
+                                        TextInput::make('quantity')
+                                            ->label('Cantitate nouă')
+                                            ->numeric()
+                                            ->minValue(0.001)
+                                            ->step('any')
+                                            ->required()
+                                            ->default(fn (PurchaseRequestItem $record): float => $record->quantity),
+                                    ])
+                                    ->fillForm(fn (PurchaseRequestItem $record): array => [
+                                        'quantity' => $record->quantity,
+                                    ])
+                                    ->action(function (PurchaseRequestItem $record, array $data): void {
+                                        $record->update(['quantity' => max(0.001, (float) $data['quantity'])]);
+                                        Notification::make()->success()->title('Cantitatea a fost actualizată.')->send();
+                                    }),
+
                                 InfolistAction::make('cancel_item')
-                                    ->label('Anulează item')
+                                    ->label('Șterge produs')
                                     ->icon('heroicon-o-x-circle')
                                     ->color('danger')
                                     ->size(\Filament\Support\Enums\ActionSize::Small)
@@ -357,15 +336,15 @@ class PurchaseRequestResource extends Resource
                                         $record->status === PurchaseRequestItem::STATUS_PENDING
                                     )
                                     ->requiresConfirmation()
-                                    ->modalHeading('Anulezi acest produs din necesar?')
+                                    ->modalHeading('Ștergi acest produs din necesar?')
                                     ->modalDescription(fn (PurchaseRequestItem $record): string =>
                                         'Produsul "' . $record->product_name . '" va fi marcat ca anulat.'
                                     )
-                                    ->modalSubmitActionLabel('Da, anulează')
+                                    ->modalSubmitActionLabel('Da, șterge')
                                     ->action(function (PurchaseRequestItem $record): void {
                                         $record->update(['status' => PurchaseRequestItem::STATUS_CANCELLED]);
                                         $record->purchaseRequest->recalculateStatus();
-                                        Notification::make()->success()->title('Produsul a fost anulat din necesar.')->send();
+                                        Notification::make()->success()->title('Produsul a fost șters din necesar.')->send();
                                     }),
                             ]),
                         ]),
@@ -376,7 +355,7 @@ class PurchaseRequestResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $query = static::applyLocationFilter(
-            parent::getEloquentQuery()->with(['user', 'location', 'items'])
+            parent::getEloquentQuery()->with(['user', 'location', 'items.purchaseOrderItem.purchaseOrder'])
         );
 
         if (auth()->user()?->role === \App\Models\User::ROLE_CONSULTANT_VANZARI) {
@@ -406,12 +385,19 @@ class PurchaseRequestResource extends Resource
         $user = static::currentUser();
         if (! $user) return false;
 
-        // Admin și super_admin pot șterge orice necesar (indiferent de status)
+        // Nimeni nu poate șterge necesare în statusuri active (submitted, parțial/complet comandat)
+        if (! in_array($record->status, [
+            PurchaseRequest::STATUS_DRAFT,
+            PurchaseRequest::STATUS_CANCELLED,
+        ], true)) {
+            return false;
+        }
+
+        // Din draft/cancelled: admin și super_admin pot șterge orice
         if ($user->isSuperAdmin() || $user->isAdmin()) return true;
 
-        // Ceilalți doar draft-urile proprii
-        return $record->status === PurchaseRequest::STATUS_DRAFT
-            && $record->user_id === $user->id;
+        // Ceilalți doar înregistrările proprii
+        return $record->user_id === $user->id;
     }
 
     public static function getPages(): array

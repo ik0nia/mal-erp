@@ -15,14 +15,7 @@ class RecentPriceChangesWidget extends BaseWidget
 
     protected int|string|array $columnSpan = 'full';
 
-    protected static ?string $pollingInterval = null;
-
-    protected static string $view = 'filament.widgets.recent-price-changes-widget';
-
-    protected function getTableHeading(): ?string
-    {
-        return null;
-    }
+    protected string $view = 'filament.widgets.recent-price-changes-widget';
 
     public function table(Table $table): Table
     {
@@ -35,7 +28,7 @@ class RecentPriceChangesWidget extends BaseWidget
                     ->limit(50)
             )
             ->recordUrl(fn (ProductPriceLog $record): ?string => $record->woo_product_id
-                ? route('filament.app.resources.woo-products.view', ['record' => $record->woo_product_id])
+                ? \App\Filament\App\Resources\WooProductResource::getUrl('view', ['record' => $record->woo_product_id])
                 : null
             )
             ->columns([

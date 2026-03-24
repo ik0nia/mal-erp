@@ -7,7 +7,7 @@ use App\Models\CompanyApiSetting;
 use App\Models\User;
 use App\Services\CompanyData\OpenApiCompanyLookupService;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -19,9 +19,9 @@ class CompanyApiSettingResource extends Resource
 {
     protected static ?string $model = CompanyApiSetting::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-building-office-2';
 
-    protected static ?string $navigationGroup = 'Setări';
+    protected static string|\UnitEnum|null $navigationGroup = 'Setări';
 
     protected static ?string $navigationLabel = 'API date firmă';
 
@@ -67,9 +67,9 @@ class CompanyApiSettingResource extends Resource
         return static::currentUser()?->isAdmin() ?? false;
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\Hidden::make('provider')
                     ->default(CompanyApiSetting::PROVIDER_OPENAPI)
@@ -130,7 +130,7 @@ class CompanyApiSettingResource extends Resource
                     ->dateTime('d.m.Y H:i')
                     ->sortable(),
             ])
-            ->actions([
+            ->recordActions([
                 Tables\Actions\Action::make('test')
                     ->label('Test API')
                     ->icon('heroicon-o-signal')

@@ -32,7 +32,7 @@ class SetProductDimensionsCommand extends Command
     protected $description = 'Setează greutate, dimensiuni și shipping_class (volum-atipic) pentru toate produsele';
 
     private AnthropicClient $claude;
-    private string $model = 'claude-haiku-4-5-20251001';
+    private string $model = '';
 
     public function handle(): int
     {
@@ -42,6 +42,7 @@ class SetProductDimensionsCommand extends Command
             return self::FAILURE;
         }
 
+        $this->model   = config('app.malinco.ai.models.haiku', 'claude-haiku-4-5-20251001');
         $this->claude  = new AnthropicClient(apiKey: $apiKey);
         $limit         = $this->option('limit')     ? (int) $this->option('limit') : null;
         $force         = (bool) $this->option('force');

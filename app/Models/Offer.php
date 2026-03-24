@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Concerns\HasLocationScope;
+use App\Enums\HasStatusEnum;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Offer extends Model
 {
-    use HasLocationScope;
+    use HasLocationScope, HasStatusEnum;
 
     public const STATUS_DRAFT = 'draft';
     public const STATUS_SENT = 'sent';
@@ -76,7 +77,7 @@ class Offer extends Model
         });
     }
 
-    public static function statusOptions(): array
+    public static function statusLabels(): array
     {
         return [
             self::STATUS_DRAFT => 'Draft',

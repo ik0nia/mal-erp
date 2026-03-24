@@ -1,0 +1,640 @@
+<section id="m10-social-editor">
+
+  <h2>Modulul 10 — Social Media &amp; Editor Grafic</h2>
+
+  <p>
+    Modulul Social Media din ERP Malinco permite crearea, generarea automată prin AI și publicarea postărilor pe Facebook
+    direct din interfața ERP. Sistemul integrează un motor de generare a imaginilor grafice bazat pe template-uri
+    configurabile, un pipeline AI (Claude + Gemini) pentru producerea automată a conținutului și un mecanism de
+    programare a publicării fără intervenție manuală.
+  </p>
+
+  <p>
+    Toate funcționalitățile modulului sunt accesibile din grupul de navigare <strong>Social Media</strong> din panoul
+    App. Grupul conține: <em>Postări</em>, <em>Conturi</em>, <em>Template-uri grafice</em>, <em>Editor Template</em>
+    și <em>Editor Vizual</em>.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h3 id="m10-1">1. Conectarea conturilor de Social Media</h3>
+
+  <p>
+    Pagina <strong>Conturi</strong> (Social Media &rarr; Conturi) este rezervată utilizatorilor cu rol
+    <code>super_admin</code>. De aici se gestionează toate conturile Facebook conectate la ERP și se configurează
+    cheile API necesare pentru generarea imaginilor.
+  </p>
+
+  <h4>1.1 Adăugarea unui cont Facebook</h4>
+  <p>
+    Apăsați butonul <strong>Adaugă cont</strong> din header-ul paginii. Va apărea un formular cu câmpurile:
+  </p>
+  <ul>
+    <li><strong>Nume cont</strong> — eticheta afișată în ERP (ex: <em>Malinco Facebook</em>).</li>
+    <li><strong>Facebook Page ID</strong> — ID-ul numeric al paginii de Facebook (se găsește în setările paginii sau
+      prin Facebook Business Manager).</li>
+    <li><strong>Page Access Token</strong> — token-ul de acces al paginii generat din Meta Developer Console.
+      Câmpul este de tip parolă; valoarea se stochează criptat în baza de date.</li>
+    <li><strong>Expiră la</strong> (opțional) — data de expirare a token-ului. Sistemul afișează avertisment când
+      token-ul expiră în mai puțin de 7 zile.</li>
+  </ul>
+  <p>
+    Sistemul suportă atât platforma <strong>Facebook</strong> cât și <strong>Instagram</strong>. Token-ul de acces
+    este stocat criptat (Laravel <code>encrypt()</code>) — nu este niciodată vizibil în text clar în baza de date.
+  </p>
+
+  <h4>1.2 Gestionarea token-urilor</h4>
+  <p>
+    Token-urile de acces Meta expiră periodic (de obicei la 60 de zile pentru token-uri de lungă durată).
+    Pe fiecare card de cont din pagina Conturi există posibilitatea de a actualiza token-ul fără a recrea contul.
+    Dacă introduceți un <strong>Meta App ID</strong> și un <strong>Meta App Secret</strong> prin butonul
+    <em>Setează Gemini API Key</em>, sistemul poate genera automat token-uri permanente (non-expirabile).
+  </p>
+  <p>
+    Activarea/dezactivarea unui cont se face prin toggle-ul de pe cardul contului. Un cont dezactivat nu mai apare
+    ca opțiune la crearea postărilor noi.
+  </p>
+
+  <h4>1.3 Configurarea cheilor API</h4>
+  <p>
+    Butonul <strong>Setează Gemini API Key</strong> deschide un formular pentru configurarea:
+  </p>
+  <ul>
+    <li><strong>Gemini API Key</strong> — cheia Google Gemini folosită pentru generarea imaginilor grafice.
+      Se stochează criptat în <code>AppSetting</code>.</li>
+    <li><strong>Meta App ID</strong> și <strong>Meta App Secret</strong> — opționale, necesare pentru generarea
+      token-urilor permanente prin OAuth.</li>
+  </ul>
+  <p>
+    Cheia Anthropic (Claude) folosită pentru generarea caption-urilor este configurată separat în
+    <em>Setări aplicație</em> sub cheia <code>anthropic_api_key</code>.
+  </p>
+
+  <h4>1.4 Descărcarea postărilor istorice</h4>
+  <p>
+    Pentru fiecare cont există un buton <strong>Fetch posturi</strong> care pornește job-ul
+    <code>FetchSocialPostsJob</code> în background. Acesta descarcă postările publicate anterior pe pagina Facebook
+    și le salvează local ca <em>postări fetched</em> — acestea servesc drept material de analiză pentru profilul
+    de stil al brandului.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h3 id="m10-2">2. Crearea unei postări sociale — manual</h3>
+
+  <p>
+    Postările sociale se gestionează din <strong>Social Media &rarr; Postări</strong>. Lista afișează toate
+    postările cu imagine preview, tip, brief, status, data programată și data publicată.
+  </p>
+
+  <h4>2.1 Formularul de creare</h4>
+  <p>
+    Apăsați <strong>Postare nouă</strong> și completați formularul:
+  </p>
+  <ul>
+    <li>
+      <strong>Cont Facebook</strong> — selectați contul pe care va fi publicată postarea. Implicit este selectat
+      primul cont activ din sistem.
+    </li>
+    <li>
+      <strong>Tip postare</strong> — alege dintre:
+      <ul>
+        <li><em>Produs</em> — postare centrată pe un produs din catalogul WooCommerce.</li>
+        <li><em>Brand</em> — postare de promovare a unui brand partener (cu logo-ul brandului în grafică).</li>
+        <li><em>Promoție</em> — postare de tip ofertă sau reducere.</li>
+        <li><em>General</em> — postare de informare sau comunicare generală.</li>
+      </ul>
+    </li>
+    <li>
+      <strong>Produs</strong> (vizibil doar pentru tipul <em>Produs</em>) — căutare în catalogul de produse
+      sincronizate cu WooCommerce. Câmpul este opțional; dacă nu se alege un produs, AI-ul va genera conținut
+      conform briefului liber.
+    </li>
+    <li>
+      <strong>Brand</strong> (vizibil doar pentru tipul <em>Brand</em>) — selectarea brandului din baza de date.
+    </li>
+    <li>
+      <strong>Template grafic</strong> — alegerea opțională a unui template vizual predefinit. Dacă nu se alege,
+      sistemul selectează automat template-ul potrivit tipului de postare sau template-ul implicit
+      (<code>malinco-default</code>).
+    </li>
+    <li>
+      <strong>Direcție / Brief</strong> — câmp text liber obligatoriu, unde descrieți ce doriți să comunice
+      postarea. Exemplu: <em>Promovează cărămizile Wienerberger pentru construcții rezidențiale. Accent pe
+      durabilitate și izolație termică.</em>
+    </li>
+  </ul>
+
+  <h4>2.2 Ce se întâmplă după salvare</h4>
+  <p>
+    Imediat după salvarea formularului, sistemul dispatch-ează automat job-ul <code>GenerateSocialPostJob</code>
+    și redirectează la pagina de vizualizare a postării. O notificare informativă confirmă că generarea a pornit:
+    <em>"Claude și Gemini generează caption-ul și imaginea. Pagina se actualizează automat."</em>
+  </p>
+  <p>
+    Pagina de vizualizare face polling automat la fiecare 3 secunde cât timp postarea are statusul
+    <em>Se generează...</em> sau <em>Se publică...</em>, astfel că nu este necesar să reîncărcați manual pagina.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h3 id="m10-3">3. Generarea automată a conținutului prin AI</h3>
+
+  <p>
+    Întregul pipeline de generare a conținutului este automatizat și rulează în background prin sistemul de queue
+    Laravel. Procesul are două etape principale: generarea textului (caption + hashtag-uri) și generarea imaginii
+    grafice.
+  </p>
+
+  <h4>3.1 Generarea caption-ului cu Claude AI</h4>
+  <p>
+    Serviciul <code>SocialCaptionService</code> folosește <strong>Claude AI</strong> (Anthropic) pentru a produce:
+  </p>
+  <ul>
+    <li><strong>Caption</strong> — textul principal al postării, adaptat stilului brandului și briefului furnizat.</li>
+    <li><strong>Hashtag-uri</strong> — set de hashtag-uri relevante pentru platforma Facebook.</li>
+    <li><strong>Prompt imagine</strong> — instrucțiunile pentru Gemini, descrivând imaginea ce urmează a fi generată.</li>
+    <li><strong>Titlu grafică</strong> — titlul mare afișat în imaginea grafică (max. ~40 caractere).</li>
+    <li><strong>Subtitlu grafică</strong> — linia secundară din grafică (max. 70 caractere).</li>
+  </ul>
+  <p>
+    Dacă contul are un <strong>profil de stil activ</strong> (<em>SocialStyleProfile</em>), acesta este injectat
+    în promptul Claude ca context suplimentar — sistemul va genera conținut respectând tonul, vocabularul,
+    structura caption-ului și hashtag-urile uzuale identificate anterior din postările istorice ale paginii.
+  </p>
+
+  <h4>3.2 Popularea automată a textelor grafice</h4>
+  <p>
+    După generarea caption-ului, job-ul rezolvă automat cele trei texte afișate în imagine:
+  </p>
+  <ul>
+    <li>
+      <strong>Titlul graficii</strong> — dacă AI-ul a generat un titlu explicit, acesta este folosit. Altfel,
+      sistemul preia automat numele produsului (eliminând codul de catalog numeric de la final) sau numele brandului.
+    </li>
+    <li>
+      <strong>Subtitlul graficii</strong> — dacă AI-ul nu a generat subtitlu, se folosește prima linie
+      semnificativă din caption (cu emoji-ul de la început eliminat dacă există, și trunchiată la 70 caractere).
+    </li>
+    <li>
+      <strong>Label-ul (eyebrow)</strong> — generat automat în funcție de tipul postării:
+      <em>DIN CATALOGUL NOSTRU</em> (produs), <em>BRAND PARTENER</em> (brand),
+      <em>OFERTĂ SPECIALĂ</em> (promoție) sau <em>MATERIALE DE CALITATE</em> (general).
+    </li>
+  </ul>
+
+  <h4>3.3 Generarea imaginii grafice cu Node.js</h4>
+  <p>
+    Imaginea grafică este produsă de serviciul <code>NodeImageRenderer</code>, care rulează un renderer
+    Node.js local pe server. Renderer-ul primește configurația template-ului, textele generate și URL-ul
+    imaginii produsului (sau calea locală a logo-ului brandului) și produce o imagine finalizată în format PNG,
+    de dimensiune 1080&times;1080 pixeli (format pătrat, optim pentru Facebook/Instagram).
+  </p>
+  <p>
+    Imaginea produsă este salvată pe disk-ul public Laravel și calea sa este stocată în câmpul
+    <code>image_path</code> al postării.
+  </p>
+
+  <h4>3.4 Statusurile postării</h4>
+  <p>O postare parcurge următoarele stări:</p>
+  <ul>
+    <li><strong>Draft</strong> — postarea tocmai a fost creată, generarea nu a pornit încă.</li>
+    <li><strong>Se generează...</strong> — job-ul de generare rulează în background.</li>
+    <li><strong>Gata de programare</strong> — caption-ul și imaginea au fost generate cu succes; postarea
+      poate fi programată sau publicată imediat.</li>
+    <li><strong>Programată</strong> — postarea are o dată de publicare stabilită.</li>
+    <li><strong>Se publică...</strong> — job-ul de publicare rulează.</li>
+    <li><strong>Publicată</strong> — postarea a fost trimisă cu succes pe Facebook.</li>
+    <li><strong>Eșuată</strong> — a apărut o eroare la generare sau publicare; detaliile erorii sunt afișate
+      în secțiunea <em>Eroare</em> din pagina de vizualizare.</li>
+  </ul>
+
+  <h4>3.5 Acțiuni disponibile pe o postare</h4>
+  <p>Din pagina de vizualizare a postării, în funcție de statusul curent, sunt disponibile:</p>
+  <ul>
+    <li><strong>Editează brief</strong> (draft/gata/eșuat) — modifică direcția postării fără a regenera.</li>
+    <li><strong>Regenerează</strong> (gata/eșuat) — regenerează complet caption-ul și imaginea, cu posibilitate
+      de a alege un alt template grafic.</li>
+    <li><strong>Regenerează grafică</strong> (gata/eșuat) — regenerează doar imaginea, păstrând caption-ul
+      existent.</li>
+    <li><strong>Editează caption</strong> (gata) — editare manuală a caption-ului și hashtag-urilor generate.</li>
+    <li><strong>Programează</strong> (gata) — setează data și ora publicării.</li>
+    <li><strong>Reprogramează</strong> (programat) — modifică data de publicare.</li>
+    <li><strong>Anulează programarea</strong> (programat) — revine la statusul <em>Gata</em>.</li>
+    <li><strong>Publică acum</strong> (gata) — publică imediat pe Facebook, fără programare.</li>
+  </ul>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h3 id="m10-4">4. Editorul grafic de template-uri</h3>
+
+  <p>
+    Template-urile grafice definesc aspectul vizual al imaginilor generate. Un template controlează culorile,
+    fonturile, elementele afișate și pozițiile lor. ERP-ul oferă două interfețe complementare pentru
+    gestionarea template-urilor: <strong>Editorul de setări</strong> (configurare prin câmpuri de formular) și
+    <strong>Editorul Vizual</strong> (ajustare vizuală cu drag-and-drop).
+  </p>
+
+  <h4>4.1 Crearea unui template nou</h4>
+  <p>
+    Navigați la <strong>Social Media &rarr; Template-uri grafice</strong> și apăsați <strong>Template nou</strong>.
+    Completați câmpurile din secțiunea <em>Informații generale</em>:
+  </p>
+  <ul>
+    <li><strong>Nume template</strong> — denumire descriptivă (ex: <em>Produs Standard Malinco</em>).</li>
+    <li><strong>Slug</strong> — identificatorul unic intern, folosit în cod și în postări
+      (ex: <code>malinco-default</code>). Trebuie să fie unic în sistem.</li>
+    <li>
+      <strong>Layout</strong> — tipul de compoziție vizuală:
+      <ul>
+        <li><em>Product</em> — imaginea produsului apare în dreapta; textele (titlu, subtitlu, label) în stânga.</li>
+        <li><em>Brand</em> — logo-ul brandului partener apare mare în dreapta.</li>
+      </ul>
+    </li>
+    <li><strong>Activ</strong> — template-urile inactive nu apar ca opțiune la crearea postărilor.</li>
+  </ul>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h3 id="m10-5">5. Elementele disponibile în editor</h3>
+
+  <p>
+    Configurația unui template se împarte în mai multe categorii de elemente, accesibile din formularul de editare
+    a template-ului (secțiunile colapsabile) sau din <strong>Editorul Template</strong> (pagina dedicată cu
+    preview live).
+  </p>
+
+  <h4>5.1 Culori și identitate de brand</h4>
+  <ul>
+    <li>
+      <strong>Culoare principală</strong> — culoarea dominantă a template-ului, folosită pentru bara de jos,
+      fundalul label-ului și elementele de accent. Valoarea implicită este <code>#a52a3f</code> (roșu Malinco).
+      Se configurează prin color picker.
+    </li>
+  </ul>
+
+  <h4>5.2 Bara de jos</h4>
+  <p>Bara colorată din partea inferioară a imaginii afișează informații de contact și transport:</p>
+  <ul>
+    <li><strong>Text principal</strong> — text scurt în majuscule (ex: <em>ASIGURĂM TRANSPORT ȘI DESCĂRCARE
+      CU MACARA</em>). Max. 120 caractere.</li>
+    <li><strong>Text secundar</strong> — adresa și datele de contact (ex: <em>Sântandrei, Nr. 311 | www.malinco.ro
+      | 0359 444 999</em>). Max. 200 caractere.</li>
+    <li><strong>Iconița camion</strong> (toggle) — afișează sau ascunde o pictogramă camion în bara de jos.</li>
+    <li><strong>Bara curcubeu</strong> (toggle) — activează/dezactivează o bandă decorativă în culorile
+      spectrului, plasată la baza imaginii.</li>
+  </ul>
+
+  <h4>5.3 Butonul CTA (Call to Action)</h4>
+  <ul>
+    <li>
+      <strong>Text buton CTA</strong> — textul butonului de acțiune suprapus pe imagine
+      (ex: <em>malinco.ro &rarr;</em>). Max. 60 caractere.
+    </li>
+  </ul>
+
+  <h4>5.4 Logo și proporții</h4>
+  <p>
+    Secțiunea <em>Proporții &amp; Fonturi</em> (colapsată implicit) permite ajustarea fină a scărilor și
+    mărimilor de font — toate exprimate ca proporție față de lățimea imaginii (1080px = 1.0):
+  </p>
+  <ul>
+    <li><strong>Scală logo Malinco</strong> — proporția lățimii logo-ului față de lățimea imaginii.
+      Implicit: <code>0.36</code> (36% din lățime, adică ~389px). Interval: 0.15–0.60.</li>
+    <li><strong>Mărime font titlu</strong> — proporția dimensiunii fontului titlului principal.
+      Implicit: <code>0.075</code> (~81px la 1080px lățime). Interval: 0.04–0.12.</li>
+    <li><strong>Mărime font subtitlu</strong> — proporția dimensiunii fontului subtitlului.
+      Implicit: <code>0.029</code> (~31px). Interval: 0.015–0.06.</li>
+  </ul>
+
+  <h4>5.5 Imaginea produsului sau logo-ul brandului</h4>
+  <p>
+    Imaginea principală din dreapta graficii este populată automat la generare:
+  </p>
+  <ul>
+    <li>
+      Pentru layout <em>Product</em>: se folosește URL-ul imaginii principale a produsului din WooCommerce
+      (<code>main_image_url</code>).
+    </li>
+    <li>
+      Pentru layout <em>Brand</em>: se caută logo-ul brandului în directorul local
+      <code>storage/app/public/brand-logos/</code>. Fișierul trebuie să fie denumit după slug-ul brandului
+      (ex: <code>wienerberger.png</code>).
+    </li>
+  </ul>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h3 id="m10-6">6. Salvarea și reutilizarea template-urilor</h3>
+
+  <h4>6.1 Salvarea setărilor</h4>
+  <p>
+    Din <strong>Editorul Template</strong> (Social Media &rarr; Editor Template), modificările sunt salvate
+    prin butonul <strong>Salvează</strong>. Configurația completă se stochează în câmpul JSON <code>config</code>
+    al modelului <code>GraphicTemplate</code>, incluzând: culorile, textele barei de jos, toggle-urile,
+    scala logo-ului, proporțiile fonturilor și pozițiile elementelor.
+  </p>
+
+  <h4>6.2 Preview live</h4>
+  <p>
+    Butonul <strong>Generează preview</strong> din Editorul Template salvează mai întâi setările curente, apoi
+    apelează renderer-ul Node.js pentru a produce o imagine de previzualizare cu texte demonstrative
+    (<em>Izolație Termică Superioară</em> / <em>Parteneri de încredere pentru construcții solide</em>).
+    Preview-ul este actualizat imediat în pagină fără reîncărcare.
+  </p>
+  <p>
+    Imaginea de preview este salvată și în câmpul <code>preview_image</code> al template-ului — aceasta apare
+    ca thumbnail în lista de template-uri din <em>Social Media &rarr; Template-uri grafice</em>.
+  </p>
+
+  <h4>6.3 Template implicit</h4>
+  <p>
+    Sistemul caută template-ul implicit în ordinea:
+    <ol>
+      <li>Template-ul cu slug-ul <code>malinco-default</code>.</li>
+      <li>Primul template activ din baza de date (în ordine de creare).</li>
+    </ol>
+    Template-ul implicit este folosit când o postare nu are un template explicit ales și nu există niciun template
+    activ corespunzător tipului postării.
+  </p>
+
+  <h4>6.4 Selecția automată a template-ului pe tip de postare</h4>
+  <p>
+    La generarea unei postări, sistemul caută automat template-ul potrivit după câmpul <code>layout</code>:
+    template-urile cu <code>layout = 'product'</code> sunt folosite pentru postările de tip produs, iar cele cu
+    <code>layout = 'brand'</code> pentru postările de brand. Dacă nu există un template specific tipului, se
+    folosește template-ul implicit.
+  </p>
+
+  <h4>6.5 Acțiunea Editor Vizual</h4>
+  <p>
+    Din lista de template-uri, butonul <strong>Editor vizual</strong> deschide editorul Fabric.js într-o fereastră
+    nouă (ruta <code>/template-editor/{id}</code>). Acesta permite ajustarea pozițiilor elementelor pe canvas
+    prin drag-and-drop, direct pe imaginea randată — fără a fi necesară editarea numerică a proporțiilor.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h3 id="m10-7">7. Popularea automată a template-ului cu date produs (AI)</h3>
+
+  <p>
+    Când o postare de tip <em>Produs</em> este generată, sistemul populează automat grafică cu datele din
+    WooCommerce, fără intervenție manuală:
+  </p>
+
+  <h4>7.1 Titlul produsului</h4>
+  <p>
+    Numele produsului este procesat înainte de a fi afișat în grafică:
+    codul numeric de catalog de la finalul numelui este eliminat automat prin regex
+    (ex: <em>Cărămidă Porotherm 30 P+W 123/456</em> devine <em>Cărămidă Porotherm 30 P+W</em>).
+    Aceasta previne afișarea codurilor tehnice irelevante publicului.
+  </p>
+
+  <h4>7.2 Imaginea produsului</h4>
+  <p>
+    URL-ul imaginii principale a produsului (<code>main_image_url</code>) este transmis direct renderer-ului
+    Node.js, care o descarcă și o compozitează în grafică. Dacă produsul nu are imagine, slot-ul rămâne gol
+    (renderer-ul gestionează lipsa imaginii fără eroare).
+  </p>
+
+  <h4>7.3 Subtitlul generat din caption</h4>
+  <p>
+    Dacă AI-ul (Claude) nu a generat explicit un subtitlu pentru grafică, sistemul extrage prima linie
+    semnificativă din caption generat și o folosește ca subtitlu. Procesul include:
+  </p>
+  <ul>
+    <li>Eliminarea emoji-urilor de la începutul liniei.</li>
+    <li>Trunchiere la 70 de caractere dacă linia este prea lungă.</li>
+    <li>Folosirea primei linii non-vide din caption.</li>
+  </ul>
+
+  <h4>7.4 Logo brand în postările de tip Brand</h4>
+  <p>
+    Pentru postările de brand, sistemul caută automat logo-ul în două locuri:
+  </p>
+  <ol>
+    <li>
+      Dacă brandul are un <code>logo_url</code> setat, se extrage numele fișierului din URL și se caută
+      fișierul local în <code>storage/app/public/brand-logos/</code>.
+    </li>
+    <li>
+      Dacă produsul are un câmp <code>brand</code> completat, se construiește un slug din numele brandului
+      (minuscule, fără caractere speciale) și se caută fișierul
+      <code>brand-logos/{slug}.png</code>.
+    </li>
+  </ol>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h3 id="m10-8">8. Programarea postărilor</h3>
+
+  <p>
+    Modulul include un sistem complet de programare a publicării, cu protecție împotriva dublei publicări și
+    suport pentru reprogramare.
+  </p>
+
+  <h4>8.1 Programarea unei postări</h4>
+  <p>
+    Din pagina de vizualizare a unei postări cu statusul <em>Gata de programare</em>, apăsați butonul
+    <strong>Programează</strong>. Va apărea un dialog cu un câmp date-time pentru selectarea momentului publicării.
+    Data minimă acceptată este cu 5 minute în viitor. Valoarea implicită propusă este ora rotundă imediat
+    următoare (<em>now + 1 oră, rotunjit la oră întreagă</em>).
+  </p>
+  <p>
+    La confirmare, postarea trece în statusul <strong>Programată</strong> și data este salvată în câmpul
+    <code>scheduled_at</code>.
+  </p>
+
+  <h4>8.2 Publicarea automată la momentul programat</h4>
+  <p>
+    Job-ul <code>SocialPublishScheduledCommand</code> (rulat din schedule-ul Laravel) verifică periodic
+    postările cu statusul <em>Programată</em> și <code>scheduled_at &le; now()</code> și dispatch-ează
+    pentru fiecare <code>PublishSocialPostJob</code>.
+  </p>
+  <p>
+    Job-ul de publicare folosește <strong>Meta Graph API</strong> prin clientul <code>MetaGraphClient</code>
+    pentru a posta imaginea și caption-ul complet (caption + hashtag-uri separate prin linie goală) pe pagina
+    Facebook. Procesul este învelit în tranzacție cu <code>lockForUpdate()</code> pentru a preveni dubla publicare
+    în caz de retry.
+  </p>
+  <p>
+    La publicare cu succes, se salvează:
+  </p>
+  <ul>
+    <li><strong>platform_post_id</strong> — ID-ul postării pe Facebook.</li>
+    <li><strong>platform_url</strong> — URL-ul direct al postării pe Facebook
+      (<code>https://www.facebook.com/{page_id}/posts/{post_id}</code>).</li>
+    <li><strong>published_at</strong> — timestamp-ul publicării.</li>
+  </ul>
+  <p>
+    Job-ul are 3 încercări cu un interval de 60 de secunde între ele. Dacă toate eșuează, postarea
+    trece în statusul <em>Eșuată</em> cu mesajul de eroare salvat.
+  </p>
+
+  <h4>8.3 Publicarea imediată</h4>
+  <p>
+    Dacă nu doriți să programați, butonul <strong>Publică acum</strong> setează <code>scheduled_at = now()</code>
+    și dispatch-ează imediat <code>PublishSocialPostJob</code>. Postarea trece din statusul <em>Gata</em>
+    în <em>Se publică...</em> și în câteva secunde devine <em>Publicată</em> (pagina face polling automat la 3s).
+  </p>
+
+  <h4>8.4 Reprogramarea și anularea</h4>
+  <ul>
+    <li>
+      <strong>Reprogramează</strong> — disponibil pe postările cu statusul <em>Programată</em>; modifică
+      <code>scheduled_at</code> fără a schimba statusul.
+    </li>
+    <li>
+      <strong>Anulează programarea</strong> — revine postarea la statusul <em>Gata de programare</em> și
+      șterge <code>scheduled_at</code>. Necesită confirmare.
+    </li>
+  </ul>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h3 id="m10-9">9. Gestionarea stilului vizual al brandului</h3>
+
+  <p>
+    Sistemul poate analiza automat stilul vizual și editorial al paginilor de Facebook conectate și poate
+    construi un <strong>profil de stil</strong> (<code>SocialStyleProfile</code>) care ghidează generarea
+    viitoare a conținutului.
+  </p>
+
+  <h4>9.1 Descărcarea postărilor istorice</h4>
+  <p>
+    Primul pas este descărcarea postărilor publicate anterior pe pagina Facebook prin butonul
+    <strong>Fetch posturi</strong> de pe cardul contului (pagina Conturi). Job-ul <code>FetchSocialPostsJob</code>
+    accesează Meta Graph API și salvează postările istorice local ca modele <code>SocialFetchedPost</code>.
+  </p>
+
+  <h4>9.2 Analiza stilului editorial</h4>
+  <p>
+    Butonul <strong>Analizează stil</strong> de pe cardul contului dispatch-ează <code>AnalyzeSocialStyleJob</code>
+    în background. Acest job trimite postările istorice la Claude AI pentru analiză și extrage:
+  </p>
+  <ul>
+    <li><strong>Ton</strong> — tonul editorial predominant (profesional, prietenos, entuziast, tehnic etc.).</li>
+    <li><strong>Vocabular și stil</strong> — tipul de cuvinte folosite, nivelul de formalitate, structuri
+      sintactice preferate.</li>
+    <li><strong>Hashtag-uri uzuale</strong> — pattern-urile de hashtag-uri din postările anterioare.</li>
+    <li><strong>Structura caption-ului</strong> — cum sunt organizate textele (intro + corp + CTA, liste,
+      întrebări etc.).</li>
+    <li><strong>Stil vizual</strong> — observații despre compoziție, culori și stilul grafic al postărilor.</li>
+  </ul>
+  <p>
+    Profilul rezultat este salvat ca <code>SocialStyleProfile</code> activ pentru cont și este injectat
+    automat în promptul Claude la generarea oricărei postări noi pentru acel cont, asigurând coerența
+    comunicării în timp.
+  </p>
+
+  <h4>9.3 Referințe vizuale și generarea template-urilor din imagini</h4>
+  <p>
+    Pagina Conturi permite încărcarea de <strong>imagini de referință vizuală</strong> prin butonul
+    <strong>Încarcă referințe vizuale</strong>. Imaginile (PNG/JPG/WEBP, max. 5MB fiecare, max. 20 fișiere)
+    sunt stocate în <code>storage/app/public/social/style-references/</code>.
+  </p>
+  <p>
+    Aceste imagini reprezintă materiale grafice cu stilul vizual dorit pentru brand — pot fi postări
+    anterioare de succes, materiale de la agenții partenere sau orice referință grafică relevantă.
+  </p>
+  <p>
+    Selectând una sau mai multe imagini de referință și apăsând <strong>Generează template-uri</strong>,
+    se dispatch-ează <code>AnalyzeReferenceImagesJob</code> cu imaginile selectate. Job-ul trimite imaginile
+    la <strong>Claude AI</strong> pentru analiză vizuală și generează automat configurații de template-uri
+    inspirate din stilul detectat. Utilizatorul este notificat prin Filament Notification la finalul analizei.
+  </p>
+
+  <h4>9.4 Profil de stil activ</h4>
+  <p>
+    Un cont poate avea mai multe profile de stil generate de-a lungul timpului. La orice moment, doar unul
+    este marcat ca <code>is_active = true</code> și este utilizat la generarea postărilor. Profilul activ
+    este cel mai recent generat. Câmpul <code>style_analyzed_at</code> din contul social înregistrează
+    momentul ultimei analize, util pentru a ști dacă profilul este actualizat.
+  </p>
+
+  <h4>9.5 Editorul Vizual (Fabric.js)</h4>
+  <p>
+    Pe lângă editorul de setări bazat pe formulare, sistemul include un <strong>Editor Vizual</strong> cu
+    canvas interactiv Fabric.js, accesibil din butonul <em>Editor vizual</em> al unui template sau din
+    meniul <strong>Social Media &rarr; Editor Vizual</strong>.
+  </p>
+  <p>
+    Editorul vizual afișează imaginea de preview a template-ului randată și permite ajustarea pozițiilor
+    elementelor prin drag-and-drop direct pe canvas. Pozițiile ajustate sunt salvate în câmpul
+    <code>config.element_positions</code> al template-ului (structură JSON).
+  </p>
+  <p>
+    La apăsarea butonului de salvare, editorul:
+  </p>
+  <ol>
+    <li>Trimite pozițiile curente ale elementelor (JSON) la server prin Livewire.</li>
+    <li>Serverul actualizează <code>config.element_positions</code> în baza de date.</li>
+    <li>Se apelează imediat renderer-ul Node.js pentru a genera un preview actualizat cu noile poziții.</li>
+    <li>Preview-ul nou este afișat în editor fără a reîncărca pagina.</li>
+  </ol>
+  <p>
+    Editorul vizual suportă comutarea între template-uri prin dropdown fără a reîncărca pagina —
+    evenimentul Livewire <code>template-loaded</code> actualizează canvas-ul Alpine.js cu pozițiile
+    și preview-ul noului template.
+  </p>
+
+  <h4>9.6 Arhitectura editorului Fabric.js (detalii tehnice)</h4>
+  <p>
+    Editorul este implementat ca o aplicație JavaScript modulară, structurată în mai multe module specializate:
+  </p>
+  <ul>
+    <li><strong>CanvasManager</strong> + <strong>ZoomManager</strong> — gestionează canvas-ul Fabric.js și
+      nivelul de zoom (stabilizate, stabile în producție).</li>
+    <li><strong>StateManager</strong> + <strong>ElementFactory</strong> — gestionează starea editorului și
+      crearea elementelor noi (text, imagini, forme geometrice, background).</li>
+    <li><strong>EditorCore</strong> + <strong>Toolbar</strong> — logica centrală a editorului și toolbar-ul
+      cu acțiuni contextuale bazate pe tipul elementului selectat.</li>
+    <li><strong>LayersPanel</strong> — panoul de straturi (layers) cu drag-and-drop pentru reordonarea
+      elementelor, complet driven de state.</li>
+  </ul>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h3 id="m10-10">10. Fluxul complet — de la brief la publicare</h3>
+
+  <p>
+    Mai jos este rezumatul fluxului end-to-end pentru o postare tipică de produs:</p>
+
+  <ol>
+    <li>
+      <strong>Configurare inițială</strong> (o singură dată per brand): conectare cont Facebook, setare
+      Gemini API Key, încărcare referințe vizuale, analiză stil, creare/configurare template.
+    </li>
+    <li>
+      <strong>Creare postare</strong>: Social Media &rarr; Postări &rarr; Postare nouă &rarr; alege cont,
+      tip <em>Produs</em>, selectează produsul, completează brief-ul &rarr; Salvează.
+    </li>
+    <li>
+      <strong>Generare automată</strong>: sistemul dispatch-ează <code>GenerateSocialPostJob</code>;
+      Claude generează caption + texte grafice; Node.js renderer produce imaginea 1080&times;1080;
+      postarea trece în statusul <em>Gata de programare</em>.
+    </li>
+    <li>
+      <strong>Revizuire</strong>: pagina se actualizează automat (polling 3s); revizuiți imaginea și
+      caption-ul generat; dacă este necesar, editați caption-ul sau regenerați integral.
+    </li>
+    <li>
+      <strong>Programare sau publicare imediată</strong>: apăsați <em>Programează</em> și alegeți momentul
+      optim sau <em>Publică acum</em> pentru publicare imediată.
+    </li>
+    <li>
+      <strong>Publicare</strong>: <code>PublishSocialPostJob</code> trimite postarea pe Facebook prin
+      Meta Graph API; se salvează URL-ul și ID-ul postării publicate.
+    </li>
+  </ol>
+
+  <h3 id="m10-11">11. Filtrare și căutare în lista de postări</h3>
+
+  <p>
+    Lista de postări (<em>Social Media &rarr; Postări</em>) include filtre rapide pentru:
+  </p>
+  <ul>
+    <li><strong>Status</strong> — filtrare după oricare din cele 7 stări ale postării.</li>
+    <li><strong>Tip postare</strong> — filtrare după Produs, Brand, Promoție sau General.</li>
+  </ul>
+  <p>
+    Sortarea implicită este descrescătoare după data creării (cele mai noi primele). Coloana
+    <em>Creat la</em> este disponibilă ca coloană toggleabilă ascunsă implicit. Coloanele
+    <em>Programată</em> și <em>Publicată</em> sunt sortabile.
+  </p>
+  <p>
+    Preview-ul imaginii este afișat direct în tabel ca thumbnail pătrat de 60&times;60 pixeli,
+    permițând o scanare vizuală rapidă a conținutului.
+  </p>
+
+</section>

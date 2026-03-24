@@ -40,7 +40,7 @@ class AssignProductCategoriesCommand extends Command
         }
 
         $this->claude = new AnthropicClient(apiKey: $apiKey);
-        $this->model  = config('services.anthropic.model', 'claude-haiku-4-5-20251001');
+        $this->model  = config('app.malinco.ai.models.haiku', 'claude-haiku-4-5-20251001');
 
         $limit     = $this->option('limit') ? (int) $this->option('limit') : null;
         $batchSize = max(1, min(50, (int) $this->option('batch-size')));

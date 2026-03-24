@@ -6,7 +6,7 @@ use App\Filament\Resources\WooProductResource\Pages;
 use App\Models\IntegrationConnection;
 use App\Models\User;
 use App\Models\WooProduct;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -17,9 +17,9 @@ class WooProductResource extends Resource
 {
     protected static ?string $model = WooProduct::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-shopping-bag';
 
-    protected static ?string $navigationGroup = 'Integrări';
+    protected static string|\UnitEnum|null $navigationGroup = 'Integrări';
 
     protected static ?string $navigationLabel = 'Woo Produse';
 
@@ -59,9 +59,9 @@ class WooProductResource extends Resource
         return false;
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 //
             ]);
@@ -138,7 +138,8 @@ class WooProductResource extends Resource
                         ->pluck('status', 'status')
                         ->all()),
             ])
-            ->actions([
+            ->deferFilters(false)
+            ->recordActions([
                 Tables\Actions\Action::make('details')
                     ->label('Detalii')
                     ->icon('heroicon-o-eye')

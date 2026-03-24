@@ -18,7 +18,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms;
 use Filament\Forms\Get;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -34,9 +34,9 @@ class IntegrationConnectionResource extends Resource
 {
     protected static ?string $model = IntegrationConnection::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-link';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-link';
 
-    protected static ?string $navigationGroup = 'Integrări';
+    protected static string|\UnitEnum|null $navigationGroup = 'Integrări';
 
     protected static ?string $navigationLabel = 'Conexiuni';
 
@@ -76,9 +76,9 @@ class IntegrationConnectionResource extends Resource
         return static::currentUser()?->isAdmin() ?? false;
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Select::make('location_id')
                     ->label('Magazin')
@@ -91,6 +91,7 @@ class IntegrationConnectionResource extends Resource
                     )
                     ->required(fn (Get $get): bool => in_array($get('provider'), [
                         IntegrationConnection::PROVIDER_WINMENTOR_CSV,
+                        IntegrationConnection::PROVIDER_WINMENTOR_BRIDGE,
                         IntegrationConnection::PROVIDER_SAMEDAY,
                     ], true))
                     ->helperText(fn (Get $get): ?string => $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE
@@ -142,6 +143,7 @@ class IntegrationConnectionResource extends Resource
                     ->label('Activă')
                     ->default(true),
                 Section::make('Setări WooCommerce')
+                    ->columnSpanFull()
                     ->schema([
                         TextInput::make('settings.per_page')
                             ->label('Per page')
@@ -158,6 +160,7 @@ class IntegrationConnectionResource extends Resource
                     ->visible(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WOOCOMMERCE)
                     ->columns(2),
                 Section::make('Setări WinMentor CSV')
+                    ->columnSpanFull()
                     ->schema([
                         TextInput::make('settings.csv_url')
                             ->label('CSV URL')
@@ -212,7 +215,59 @@ class IntegrationConnectionResource extends Resource
                     ])
                     ->visible(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WINMENTOR_CSV)
                     ->columns(2),
+                Section::make('Setări WinMentor Bridge')
+                    ->columnSpanFull()
+                    ->description('Conexiune directă prin API cu WinMentor Bridge — rulează pe serverul Windows unde e instalat WinMentor.')
+                    ->schema([
+                        TextInput::make('base_url')
+                            ->label('Bridge URL')
+                            ->required(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WINMENTOR_BRIDGE)
+                            ->url()
+                            ->placeholder('http://192.168.1.x:8500')
+                            ->helperText('ex: http://192.168.1.x:8500 — portul implicit al Bridge-ului')
+                            ->maxLength(255)
+                            ->columnSpanFull(),
+                        TextInput::make('consumer_key')
+                            ->label('API Key')
+                            ->password()
+                            ->revealable()
+                            ->required(fn (Get $get, string $operation): bool => $operation === 'create' && $get('provider') === IntegrationConnection::PROVIDER_WINMENTOR_BRIDGE)
+                            ->dehydrated(fn (Get $get, ?string $state): bool => $get('provider') === IntegrationConnection::PROVIDER_WINMENTOR_BRIDGE ? filled($state) : false)
+                            ->placeholder('Lasă gol pentru a păstra cheia existentă')
+                            ->helperText('Cheia generată automat la prima pornire a Bridge-ului (din appsettings.json).')
+                            ->maxLength(255)
+                            ->columnSpanFull(),
+                        TextInput::make('settings.firma')
+                            ->label('Firmă WinMentor')
+                            ->required(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WINMENTOR_BRIDGE)
+                            ->placeholder('ex: MALINCO SRL')
+                            ->helperText('Numele exact al firmei, ca în WinMentor (sensibil la majuscule).')
+                            ->maxLength(255)
+                            ->columnSpanFull(),
+                        TextInput::make('settings.an')
+                            ->label('An contabil')
+                            ->numeric()
+                            ->required(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WINMENTOR_BRIDGE)
+                            ->default(now()->year)
+                            ->minValue(2020)
+                            ->maxValue(2030),
+                        TextInput::make('settings.luna')
+                            ->label('Lună contabilă')
+                            ->numeric()
+                            ->required(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WINMENTOR_BRIDGE)
+                            ->default(now()->month)
+                            ->minValue(1)
+                            ->maxValue(12),
+                        TextInput::make('settings.timeout')
+                            ->label('Timeout (sec)')
+                            ->numeric()
+                            ->default(15)
+                            ->minValue(5),
+                    ])
+                    ->visible(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WINMENTOR_BRIDGE)
+                    ->columns(2),
                 Section::make('Setări Sameday')
+                    ->columnSpanFull()
                     ->schema([
                         Select::make('settings.environment')
                             ->label('Mediu API')
@@ -244,6 +299,7 @@ class IntegrationConnectionResource extends Resource
                     ->visible(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_SAMEDAY)
                     ->columns(2),
                 Section::make('Webhook WooCommerce')
+                    ->columnSpanFull()
                     ->description('Configurează în WooCommerce → Settings → Advanced → Webhooks un webhook de tip "Product updated" cu URL-ul și secretul de mai jos.')
                     ->schema([
                         TextInput::make('webhook_url_display')
@@ -377,8 +433,9 @@ class IntegrationConnectionResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Activă'),
             ])
+            ->deferFilters(false)
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('latestSyncRun'))
-            ->actions([
+            ->recordActions([
                 Tables\Actions\Action::make('view')
                     ->label('View')
                     ->icon('heroicon-o-eye')
@@ -420,6 +477,30 @@ class IntegrationConnectionResource extends Resource
                                     ->get($csvUrl);
 
                                 $response->throw();
+                            } elseif ($record->isWinmentorBridge()) {
+                                $url     = $record->bridgeUrl();
+                                $timeout = $record->resolveTimeoutSeconds(15);
+
+                                if ($url === '') {
+                                    throw new \RuntimeException('Bridge URL lipsește în setări.');
+                                }
+
+                                $response = Http::timeout($timeout)
+                                    ->withOptions(['verify' => $record->verify_ssl])
+                                    ->get("{$url}/api/health");
+
+                                $response->throw();
+
+                                $data = $response->json('data');
+                                $com  = ($data['comConnected'] ?? false) ? 'COM conectat ✓' : 'COM deconectat (normal la idle)';
+
+                                Notification::make()
+                                    ->success()
+                                    ->title('Bridge funcționează')
+                                    ->body("Bridge running · {$com}")
+                                    ->send();
+
+                                return;
                             } elseif ($record->isSameday()) {
                                 app(SamedayConnectionTester::class)->testConnection($record);
                             }

@@ -55,11 +55,36 @@ class WooClient
     public function getProducts(int $page, int $perPage = 100): array
     {
         return $this->get('products', [
-            'page' => $page,
+            'page'     => $page,
             'per_page' => max(1, min(100, $perPage)),
-            'orderby' => 'id',
-            'order' => 'asc',
+            'orderby'  => 'id',
+            'order'    => 'asc',
         ]);
+    }
+
+    /**
+     * Fetch only id+status for all products (any status) — lightweight, for status sync.
+     *
+     * @return array<int, array{id: int, status: string}>
+     */
+    public function getProductStatuses(int $page, int $perPage = 100): array
+    {
+        return $this->get('products', [
+            'page'     => $page,
+            'per_page' => max(1, min(100, $perPage)),
+            'orderby'  => 'id',
+            'order'    => 'asc',
+            'status'   => 'any',
+            '_fields'  => 'id,status',
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function getProduct(int $id): array
+    {
+        return $this->get("products/{$id}");
     }
 
     /**
@@ -84,11 +109,11 @@ class WooClient
      */
     public function updateProductPrice(int $productId, string $regularPrice): array
     {
-        $response = $this->http->put(
-            $this->apiBase.'/products/'.max(1, $productId),
-            [
-                'regular_price' => $regularPrice,
-            ],
+        $response = $this->retryRequest(
+            fn () => $this->http->put(
+                $this->apiBase.'/products/'.max(1, $productId),
+                ['regular_price' => $regularPrice],
+            )
         );
         $response->throw();
 
@@ -123,11 +148,11 @@ class WooClient
             return [];
         }
 
-        $response = $this->http->post(
-            $this->apiBase.'/products/batch',
-            [
-                'update' => $payload,
-            ],
+        $response = $this->retryRequest(
+            fn () => $this->http->post(
+                $this->apiBase.'/products/batch',
+                ['update' => $payload],
+            )
         );
         $response->throw();
 
@@ -144,11 +169,11 @@ class WooClient
      */
     public function sideloadProductImage(int $wooProductId, string $imageUrl): string
     {
-        $response = $this->http->put(
-            $this->apiBase.'/products/'.max(1, $wooProductId),
-            [
-                'images' => [['src' => $imageUrl]],
-            ],
+        $response = $this->retryRequest(
+            fn () => $this->http->put(
+                $this->apiBase.'/products/'.max(1, $wooProductId),
+                ['images' => [['src' => $imageUrl]]],
+            )
         );
         $response->throw();
 
@@ -178,9 +203,11 @@ class WooClient
             return ['created' => [], 'errors' => []];
         }
 
-        $response = $this->http->post(
-            $this->apiBase.'/products/batch',
-            ['create' => $products],
+        $response = $this->retryRequest(
+            fn () => $this->http->post(
+                $this->apiBase.'/products/batch',
+                ['create' => $products],
+            )
         );
         $response->throw();
 
@@ -221,7 +248,46 @@ class WooClient
      */
     public function getOrder(int $orderId): array
     {
-        $response = $this->http->get($this->apiBase.'/orders/'.max(1, $orderId));
+        $response = $this->retryRequest(
+            fn () => $this->http->get($this->apiBase.'/orders/'.max(1, $orderId))
+        );
+        $response->throw();
+
+        $payload = $response->json();
+
+        return is_array($payload) ? $payload : [];
+    }
+
+    /**
+     * @param  array<string, mixed>  $fields
+     * @return array<string, mixed>
+     */
+    public function updateProduct(int $productId, array $fields): array
+    {
+        $response = $this->retryRequest(
+            fn () => $this->http->put(
+                $this->apiBase.'/products/'.max(1, $productId),
+                $fields,
+            )
+        );
+        $response->throw();
+
+        $payload = $response->json();
+
+        return is_array($payload) ? $payload : [];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function updateProductStatus(int $productId, string $status): array
+    {
+        $response = $this->retryRequest(
+            fn () => $this->http->put(
+                $this->apiBase.'/products/'.max(1, $productId),
+                ['status' => $status],
+            )
+        );
         $response->throw();
 
         $payload = $response->json();
@@ -234,9 +300,11 @@ class WooClient
      */
     public function updateOrderStatus(int $orderId, string $status): array
     {
-        $response = $this->http->put(
-            $this->apiBase.'/orders/'.max(1, $orderId),
-            ['status' => $status],
+        $response = $this->retryRequest(
+            fn () => $this->http->put(
+                $this->apiBase.'/orders/'.max(1, $orderId),
+                ['status' => $status],
+            )
         );
         $response->throw();
 
@@ -250,12 +318,14 @@ class WooClient
      */
     public function addOrderNote(int $orderId, string $note, bool $customerNote = false): array
     {
-        $response = $this->http->post(
-            $this->apiBase.'/orders/'.max(1, $orderId).'/notes',
-            [
-                'note'             => $note,
-                'customer_note'    => $customerNote,
-            ],
+        $response = $this->retryRequest(
+            fn () => $this->http->post(
+                $this->apiBase.'/orders/'.max(1, $orderId).'/notes',
+                [
+                    'note'          => $note,
+                    'customer_note' => $customerNote,
+                ],
+            )
         );
         $response->throw();
 
@@ -269,11 +339,11 @@ class WooClient
      */
     public function updateOrderMeta(int $orderId, string $key, string $value): array
     {
-        $response = $this->http->put(
-            $this->apiBase.'/orders/'.max(1, $orderId),
-            [
-                'meta_data' => [['key' => $key, 'value' => $value]],
-            ],
+        $response = $this->retryRequest(
+            fn () => $this->http->put(
+                $this->apiBase.'/orders/'.max(1, $orderId),
+                ['meta_data' => [['key' => $key, 'value' => $value]]],
+            )
         );
         $response->throw();
 
@@ -283,16 +353,93 @@ class WooClient
     }
 
     /**
+     * Creează o categorie nouă în WooCommerce.
+     * Returnează payload-ul complet (inclusiv `id` = woo_id).
+     *
+     * @return array<string, mixed>
+     */
+    public function createCategory(string $name, string $slug, ?int $parentWooId = null): array
+    {
+        $payload = ['name' => $name, 'slug' => $slug];
+
+        if ($parentWooId) {
+            $payload['parent'] = $parentWooId;
+        }
+
+        $response = $this->retryRequest(
+            fn () => $this->http->post(
+                $this->apiBase.'/products/categories',
+                $payload,
+            )
+        );
+        $response->throw();
+
+        $result = $response->json();
+
+        return is_array($result) ? $result : [];
+    }
+
+    /**
      * @param  array<string, mixed>  $query
      * @return array<int, array<string, mixed>>
      */
+    /**
+     * Returnează setările generale WooCommerce (store name, address, email etc.)
+     * ca array asociativ id => value.
+     */
+    public function getStoreSettings(): array
+    {
+        $items = $this->get('settings/general');
+        $map   = [];
+        foreach ($items as $item) {
+            if (isset($item['id'], $item['value'])) {
+                $map[$item['id']] = $item['value'];
+            }
+        }
+        return $map;
+    }
+
     private function get(string $endpoint, array $query = []): array
     {
-        $response = $this->http->get($this->apiBase.'/'.ltrim($endpoint, '/'), $query);
+        $response = $this->retryRequest(
+            fn () => $this->http->get($this->apiBase.'/'.ltrim($endpoint, '/'), $query)
+        );
         $response->throw();
 
         $payload = $response->json();
 
         return is_array($payload) ? $payload : [];
+    }
+
+    /**
+     * Retry a callable up to $tries times on transient errors (cURL timeout or 503).
+     * On other exceptions, rethrows immediately.
+     *
+     * @throws \Throwable
+     */
+    private function retryRequest(callable $fn, int $tries = 3): mixed
+    {
+        $last = null;
+
+        for ($attempt = 1; $attempt <= $tries; $attempt++) {
+            try {
+                return $fn();
+            } catch (\Throwable $e) {
+                $msg = $e->getMessage();
+                $isTransient = str_contains($msg, 'cURL error 28') || str_contains($msg, '503');
+
+                if (! $isTransient) {
+                    throw $e;
+                }
+
+                $last = $e;
+
+                if ($attempt < $tries) {
+                    usleep(500_000 * $attempt);
+                }
+            }
+        }
+
+        throw $last;
     }
 }

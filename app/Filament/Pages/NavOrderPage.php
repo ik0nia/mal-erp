@@ -8,11 +8,11 @@ use Filament\Pages\Page;
 
 class NavOrderPage extends Page
 {
-    protected static ?string $navigationIcon  = 'heroicon-o-bars-3';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-bars-3';
     protected static ?string $navigationLabel = 'Ordine meniuri';
     protected static ?string $title           = 'Ordine meniu navigare';
     protected static ?int    $navigationSort  = 97;
-    protected static string  $view            = 'filament.pages.nav-order';
+    protected string  $view            = 'filament.pages.nav-order';
 
     public array $groups = [];
 

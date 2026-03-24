@@ -1,0 +1,1284 @@
+<!-- =========================================================
+     ERP Malinco — Manual de utilizare
+     Partea I: Secțiunile 1–5
+     Generat automat — 2026-03-15
+     ========================================================= -->
+
+<!-- =========================================================
+     SECȚIUNEA 1 — Introducere și Dashboard
+     ========================================================= -->
+<section id="s1-introducere">
+  <h1>1. Introducere și Dashboard</h1>
+
+  <h2>1.1 Despre ERP Malinco</h2>
+  <p>
+    ERP Malinco este platforma internă de gestionare a activității comerciale a companiei Malinco. Aplicația este
+    accesibilă la adresa <strong>https://erp.malinco.ro</strong> și funcționează pe orice browser modern (Chrome,
+    Firefox, Edge, Safari) atât pe calculator, cât și pe tabletă sau telefon. Nu este necesară instalarea niciunui
+    program — totul rulează în browser.
+  </p>
+  <p>
+    Sistemul este construit pe platforma <strong>Laravel 11</strong> cu interfața <strong>Filament v3</strong> și
+    gestionează în timp real: catalogul de produse sincronizat cu magazinul online WooCommerce, furnizorii și
+    condițiile comerciale ale acestora, procesul complet de achiziții (de la necesarul de marfă până la recepția
+    fizică a mărfii), analiza stocurilor și rapoarte de business intelligence, comunicarea cu clienții prin chat
+    integrat și prelucrarea inteligentă a emailurilor de la furnizori cu ajutorul inteligenței artificiale.
+  </p>
+  <p>
+    Această documentație acoperă funcționalitățile disponibile în <strong>panelul App</strong>
+    (https://erp.malinco.ro/app), care este panelul principal de lucru zilnic pentru toți utilizatorii.
+  </p>
+
+  <h2>1.2 Autentificarea în sistem</h2>
+  <p>
+    Accesați adresa <strong>https://erp.malinco.ro/app/login</strong>. Introduceți adresa de email și parola
+    furnizate de administratorul de sistem, apoi apăsați butonul <strong>Intră în cont</strong>. Dacă ați uitat
+    parola, contactați administratorul de sistem — nu există funcție de resetare autonomă prin email în versiunea
+    curentă.
+  </p>
+  <div class="tip">
+    <strong>Sfat:</strong> Browserul vă poate salva parola în managerul de parole integrat. Folosiți această
+    facilitate pentru a vă autentifica mai rapid la fiecare deschidere de sesiune.
+  </div>
+  <p>
+    După autentificare cu succes, sistemul vă redirecționează automat către pagina de pornire a panelului App.
+    Dacă primiți mesajul <em>„Acces interzis"</em> sau <em>403</em>, înseamnă că rolul dumneavoastră nu are
+    permisiunea de a accesa acea pagină specifică. Contactați un administrator.
+  </p>
+
+  <h2>1.3 Interfața generală</h2>
+  <p>
+    Interfața ERP este împărțită în trei zone principale:
+  </p>
+  <ul>
+    <li>
+      <strong>Bara de navigare laterală (sidebar)</strong> — în stânga ecranului, conține toate modulele
+      grupate pe categorii: Achiziții, Administrare magazin, Rapoarte, Comunicare. Pe mobil, sidebar-ul se
+      ascunde și apare un buton de meniu în colțul din stânga sus.
+    </li>
+    <li>
+      <strong>Zona de conținut principal</strong> — ocupă restul ecranului și afișează pagina curentă:
+      liste de înregistrări, formulare, dashboard-uri sau rapoarte.
+    </li>
+    <li>
+      <strong>Bara de sus (topbar)</strong> — conține notificările (clopoțelul din dreapta sus),
+      meniul de utilizator (avatar/nume în dreapta sus) și breadcrumb-ul de navigare.
+    </li>
+  </ul>
+  <p>
+    Notificările din sistem apar sub forma unui clopoțel în bara superioară. Numărul roșu de lângă clopoțel
+    indică câte notificări necitite aveți. Faceți clic pe clopoțel pentru a vedea lista notificărilor recente
+    (necesare trimise, comenzi în așteptare de aprobare, recepții parțiale, etc.).
+  </p>
+
+  <h2>1.4 Roluri și permisiuni</h2>
+  <p>
+    Fiecare utilizator din sistem are un <strong>rol</strong> care determină ce module poate accesa și ce acțiuni
+    poate efectua. Există șapte roluri principale:
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th>Rol intern</th>
+        <th>Denumire afișată</th>
+        <th>Descriere principală</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>super_admin</code></td>
+        <td>Super Administrator</td>
+        <td>Acces complet la toate modulele și setările sistemului. Poate gestiona utilizatori, integrări și setări globale.</td>
+      </tr>
+      <tr>
+        <td><code>manager</code></td>
+        <td>Manager</td>
+        <td>Acces larg: poate edita produse, aproba comenzi de achiziție, accesa toate rapoartele. Nu poate modifica setările de sistem.</td>
+      </tr>
+      <tr>
+        <td><code>manager_achizitii</code></td>
+        <td>Manager Achiziții</td>
+        <td>Rol specializat pentru procesul de achiziții: vede dashboard-ul Buyer, generează comenzi de achiziție, gestionează furnizorii alocați.</td>
+      </tr>
+      <tr>
+        <td><code>consultant_vanzari</code></td>
+        <td>Consultant Vânzări</td>
+        <td>Poate vizualiza produse, crea necesare de marfă și le poate trimite spre buyer. Nu poate aproba sau crea comenzi de achiziție.</td>
+      </tr>
+      <tr>
+        <td><code>director_vanzari</code></td>
+        <td>Director Magazin</td>
+        <td>Acces la rapoarte de vânzări, statistici, comenzi. Poate aproba comenzi de achiziție.</td>
+      </tr>
+      <tr>
+        <td><code>director_financiar</code></td>
+        <td>Director Financiar</td>
+        <td>Poate aproba comenzi de achiziție și accesa rapoartele financiare.</td>
+      </tr>
+      <tr>
+        <td><code>director_economic</code></td>
+        <td>Director Economic</td>
+        <td>Similar cu Director Financiar.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="warning">
+    <strong>Atenție:</strong> Dacă observați că anumite butoane sau pagini nu sunt vizibile pentru dumneavoastră,
+    cel mai probabil rolul curent nu include acea permisiune. Nu este o eroare a sistemului.
+    Contactați administratorul dacă aveți nevoie de acces suplimentar.
+  </div>
+
+  <h2>1.5 Dashboard-ul principal</h2>
+  <p>
+    La accesarea adresei https://erp.malinco.ro/app, sistemul vă redirecționează automat la prima pagină
+    din bara de navigare la care aveți acces. Pentru utilizatorii cu rolul <strong>Consultant Vânzări</strong>,
+    prima pagină va fi de obicei lista de produse sau lista de necesare. Pentru utilizatorii cu roluri de
+    achiziții și management, prima pagină accesibilă poate fi dashboard-ul de achiziții.
+  </p>
+  <p>
+    Sistemul nu are un dashboard generic cu widgeturi globale — fiecare modul are propriile statistici și
+    vizualizări integrate. Principalul punct de pornire pentru activitatea zilnică este:
+  </p>
+  <ul>
+    <li>
+      <strong>Consultanți:</strong> modulul Produse (pentru a adăuga la necesar) și lista Necesare (pentru a
+      urmări starea necesarelor trimise)
+    </li>
+    <li>
+      <strong>Buyers (Manager Achiziții):</strong> pagina <em>Generează comandă</em> din grupul Achiziții,
+      care afișează toate necesarele pendinte grupate pe furnizor
+    </li>
+    <li>
+      <strong>Manageri / Directori:</strong> lista Comenzi furnizori pentru a aproba comenzile în așteptare
+      și rapoartele BI pentru analiza performanței
+    </li>
+  </ul>
+
+  <h2>1.6 Dashboard-ul Buyer — „Generează comandă"</h2>
+  <p>
+    Pagina <strong>Generează comandă</strong> (accesibilă din meniul lateral, grupul Achiziții, sort 3) este
+    centrul de operațiuni pentru managerii de achiziții. Această pagină afișează în timp real toate produsele
+    din necesarele aprobate care nu au fost încă comandate, grupate pe furnizor.
+  </p>
+  <p>
+    Pagina este accesibilă <strong>doar</strong> utilizatorilor cu rol de <em>Manager Achiziții</em>,
+    <em>Manager</em>, <em>Admin</em> sau <em>Super Admin</em>. Un badge roșu în bara laterală indică
+    numărul total de articole pendinte din necesare.
+  </p>
+
+  <h3>1.6.1 Statisticile de sus</h3>
+  <p>
+    În partea de sus a paginii apar patru carduri cu statistici calculate în timp real:
+  </p>
+  <ul>
+    <li><strong>Total pendinte</strong> — numărul total de linii de produs din necesare care mai trebuie comandate</li>
+    <li><strong>Urgente</strong> — linii marcate ca urgente (roșu)</li>
+    <li><strong>Rezervate</strong> — linii cu produs rezervat pentru un client specific</li>
+    <li><strong>Furnizori activi</strong> — numărul de furnizori diferiți pentru care există comenzi pendinte</li>
+  </ul>
+
+  <h3>1.6.2 Filtrele de vizualizare</h3>
+  <p>
+    Sub statistici se găsește un bloc de filtre care vă permite să restrângeți lista de necesare vizibilă:
+  </p>
+  <ul>
+    <li><strong>Furnizor</strong> — afișați doar necesarele pentru un furnizor specific</li>
+    <li><strong>Locație</strong> — filtrați după depozitul/locația care a creat necesarul</li>
+    <li><strong>Consultant</strong> — vedeți doar necesarele unui anumit consultant de vânzări</li>
+    <li><strong>Necesar până la (de la / până la)</strong> — filtrați după termenul de livrare solicitat</li>
+    <li><strong>Doar urgente</strong> / <strong>Doar rezervate</strong> — toggle-uri rapide</li>
+  </ul>
+  <p>
+    Butonul <strong>Resetează filtre</strong> șterge toate filtrele active și afișează din nou toate necesarele.
+  </p>
+  <div class="tip">
+    <strong>Sfat:</strong> Dacă sunteți buyer și aveți furnizori alocați, sistemul afișează automat doar
+    furnizorii pentru care sunteți responsabil. Super Admin și Admin văd toți furnizorii activi.
+  </div>
+
+  <h3>1.6.3 Grupurile pe furnizor și butonul „Creează PO"</h3>
+  <p>
+    Fiecare furnizor apare ca un card expandabil care listează toate produsele pendinte din necesarele aprobate.
+    Pentru fiecare produs se afișează: denumirea și SKU-ul, cantitatea rămasă de comandat, termenul solicitat,
+    dacă este urgent sau rezervat, referința clientului (dacă există), consultantul care a cerut produsul și
+    locația.
+  </p>
+  <p>
+    Produsele marcate ca <strong>Urgente</strong> apar cu un badge roșu și sunt sortate primele în lista
+    furnizorului. Produsele discontinue sunt excluse automat.
+  </p>
+  <p>
+    La finalul cardului fiecărui furnizor se găsește butonul <strong>Creează comandă de achiziție (PO)</strong>.
+    Apăsând acest buton, sistemul deschide automat formularul de creare PO pre-completat cu toate produsele
+    pendinte ale acelui furnizor, cu cantitățile cumulate din toate necesarele și cu prețurile de achiziție
+    din configurația furnizorului.
+  </p>
+
+  <h3>1.6.4 Comenzile WooCommerce cu produse „la comandă"</h3>
+  <p>
+    La baza paginii există o secțiune dedicată comenzilor WooCommerce care au generat automat un necesar
+    de marfă (pentru produsele de tip „la comandă" / backorder). Aceste necesare au statusul <em>submitted</em>
+    și sunt tratate identic cu necesarele create manual de consultanți.
+  </p>
+</section>
+
+
+<!-- =========================================================
+     SECȚIUNEA 2 — Modulul Produse (WooProducts)
+     ========================================================= -->
+<section id="s2-produse">
+  <h1>2. Modulul Produse</h1>
+
+  <h2>2.1 Prezentare generală</h2>
+  <p>
+    Modulul <strong>Produse</strong> (accesibil din bara laterală, grupul <em>Administrare magazin</em>,
+    iconița de geantă de cumpărături, URL: <code>/app/produse</code>) este catalogul central al tuturor
+    produselor din sistem. Produsele sunt sincronizate cu magazinul online WooCommerce și reflectă în timp
+    real prețurile, stocurile și statusul de publicare.
+  </p>
+  <p>
+    Modulul este accesibil tuturor utilizatorilor autentificați, dar dreptul de editare este rezervat
+    utilizatorilor cu rol de <strong>Manager</strong> sau <strong>Super Admin</strong>. Consultanții și ceilalți
+    utilizatori pot vizualiza produsele și le pot adăuga la necesare de marfă.
+  </p>
+
+  <h2>2.2 Lista produselor</h2>
+  <p>
+    La accesarea modulului Produse, se deschide lista tabelară a tuturor produselor disponibile. Lista
+    este sortată implicit după denumire (A–Z) și afișează:
+  </p>
+  <ul>
+    <li><strong>Imagine</strong> — miniatura principală a produsului (56×56px); dacă nu există imagine, se afișează un placeholder gri</li>
+    <li><strong>Produs</strong> — denumirea completă decodificată (caracterele HTML sunt traduse automat, ex: &amp;amp; → &amp;)</li>
+    <li><strong>SKU</strong> — codul unic intern al produsului</li>
+    <li><strong>Furnizor</strong> — furnizorul preferat (sau primul furnizor activ asociat), afișat ca badge gri</li>
+    <li><strong>Preț</strong> — prețul curent de vânzare (din WooCommerce)</li>
+    <li><strong>Stoc</strong> — statusul stocului: <em>În stoc</em> (verde), <em>Fără stoc</em> (roșu), <em>Precomandă</em> (galben)</li>
+    <li><strong>Actualizat</strong> — data și ora ultimei sincronizări cu WooCommerce</li>
+  </ul>
+  <p>
+    Coloanele cu badge-uri și coloane secundare (Sursă, Denumire WinMentor, Tip produs, Categorii,
+    Aprovizionare, Fără reaprovizionare) pot fi afișate sau ascunse folosind butonul
+    <strong>Coloane</strong> din dreapta sus a tabelului.
+  </p>
+
+  <h2>2.3 Căutarea produselor</h2>
+  <p>
+    Câmpul de căutare din dreapta sus acceptă căutare după <strong>denumire</strong>, <strong>SKU</strong>,
+    <strong>slug</strong> (URL-ul produsului în WooCommerce) sau <strong>categorie</strong>. Căutarea are
+    un delay de 800ms pentru a evita interogări prea frecvente la baza de date. Sistemul folosește indexare
+    FULLTEXT pentru performanță ridicată chiar și cu zeci de mii de produse.
+  </p>
+  <p>
+    Exemple de căutare:
+  </p>
+  <ul>
+    <li>Tastați <em>„led"</em> pentru a găsi toate produsele care conțin cuvântul LED în denumire</li>
+    <li>Tastați <em>„LM-2034"</em> pentru a găsi produsul după SKU exact</li>
+    <li>Tastați <em>„becuri-led"</em> pentru a găsi produse după slug/URL</li>
+  </ul>
+
+  <h2>2.4 Filtrele de produs</h2>
+  <p>
+    Deasupra tabelului se găsesc filtrele rapide, afișate pe mai multe coloane în funcție de lățimea ecranului.
+    Filtrele disponibile sunt:
+  </p>
+  <table>
+    <thead>
+      <tr><th>Filtru</th><th>Valori posibile</th><th>Utilitate</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Tip produs</td>
+        <td>Produs magazin, Producție, Garanție palet, etc.</td>
+        <td>Clasificare pentru modulul BI; produsele de Producție și Garanție palet sunt excluse din rapoarte.</td>
+      </tr>
+      <tr>
+        <td>Sursă</td>
+        <td>WooCommerce / ERP (contabilitate)</td>
+        <td>Produsele din ERP (contabilitate) sunt importate din WinMentor și nu sunt publicate pe site.</td>
+      </tr>
+      <tr>
+        <td>Stoc</td>
+        <td>În stoc / Fără stoc / Precomandă</td>
+        <td>Filtrare după statusul curent de stoc WooCommerce.</td>
+      </tr>
+      <tr>
+        <td>Reaprovizionare</td>
+        <td>Toate / Fără reaprovizionare / Cu reaprovizionare</td>
+        <td>Produsele „fără reaprovizionare" sunt vândute din stocul existent dar nu se mai achiziționează.</td>
+      </tr>
+      <tr>
+        <td>La comandă</td>
+        <td>Toate / Doar la comandă / Fără „la comandă"</td>
+        <td>Produsele „la comandă" nu au stoc fizic — se comandă de la furnizor la momentul vânzării.</td>
+      </tr>
+      <tr>
+        <td>Îmbogățit web</td>
+        <td>Da / Nu</td>
+        <td>Produse la care au fost adăugate date tehnice prin lookup web (EAN, specificații).</td>
+      </tr>
+      <tr>
+        <td>Imagine</td>
+        <td>Cu imagine / Fără imagine</td>
+        <td>Identificați rapid produsele fără fotografie.</td>
+      </tr>
+      <tr>
+        <td>Categorie</td>
+        <td>Dropdown cu toate categoriile WooCommerce</td>
+        <td>Filtrați produsele dintr-o categorie specifică.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    Filtrele sunt <strong>persistente per sesiune</strong> — dacă navigați la altă pagină și reveniți la
+    lista de produse, filtrele anterioare sunt păstrate. Apăsați butonul <strong>Resetează filtre</strong>
+    (apare când sunt active filtre) pentru a le șterge.
+  </p>
+
+  <h2>2.5 Acțiunile din tabel — Butonul „Necesar"</h2>
+  <p>
+    Fiecare rând din lista de produse are un buton portocaliu <strong>Necesar</strong> (iconița de coș)
+    în prima coloană. Apăsând acest buton, se deschide un modal în care puteți adăuga produsul la
+    necesarul de marfă curent (draft), fără a părăsi lista de produse.
+  </p>
+  <p>
+    Modalul de adăugare conține:
+  </p>
+  <ul>
+    <li><strong>Cantitate</strong> — câmpul numeric cu cantitatea dorită (obligatoriu)</li>
+    <li><strong>Urgent</strong> — toggle pentru marcare ca urgentă</li>
+    <li><strong>Notițe</strong> — câmp opțional de text liber</li>
+  </ul>
+  <p>
+    Dacă produsul există deja în necesarul draft, cantitatea introdusă se <strong>adaugă</strong> la cantitatea
+    existentă (nu o înlocuiește). După adăugare, apare o notificare de succes cu un link
+    <em>„Deschide coșul →"</em> care navighează direct la necesarul draft pentru editare suplimentară.
+  </p>
+  <div class="tip">
+    <strong>Sfat:</strong> Puteți adăuga rapid mai multe produse la necesar navigând prin lista de produse
+    și apăsând butonul portocaliu pentru fiecare produs dorit. Toate se acumulează în același necesar draft
+    până când îl trimiteți spre buyer.
+  </div>
+
+  <h2>2.6 Vizualizarea unui produs (View)</h2>
+  <p>
+    Faceți clic pe rândul unui produs din tabel pentru a deschide pagina de detalii (View). Această pagină
+    afișează toate informațiile produsului organizate în secțiuni:
+  </p>
+
+  <h3>2.6.1 Informații generale</h3>
+  <ul>
+    <li>Denumire completă și SKU intern</li>
+    <li>Denumire WinMentor (din sistemul de contabilitate)</li>
+    <li>Brand / Producător</li>
+    <li>Unitate de măsură (buc, kg, m, m², l, etc.)</li>
+    <li>Dimensiuni fizice: greutate (kg), lungime, lățime, înălțime (cm)</li>
+    <li>Notițe interne ERP (vizibile doar în ERP, nu pe site)</li>
+  </ul>
+
+  <h3>2.6.2 Status publicare și stoc</h3>
+  <p>
+    Statusul de publicare (<em>publish / draft / private</em>) și statusul de stoc
+    (<em>instock / outofstock / onbackorder</em>) sunt preluate direct din WooCommerce la ultima sincronizare.
+  </p>
+
+  <h3>2.6.3 Prețuri</h3>
+  <ul>
+    <li><strong>Preț regular</strong> — prețul de bază afișat pe site</li>
+    <li><strong>Preț promoțional</strong> — prețul redus (dacă este activă o promoție)</li>
+    <li><strong>Preț curent</strong> — prețul efectiv afișat clientului (regular sau promoțional)</li>
+  </ul>
+
+  <h3>2.6.4 Imagini</h3>
+  <p>
+    Imaginea principală a produsului este afișată în secțiunea dedicată. Imaginile sunt stocate în
+    WooCommerce și sincronizate în ERP pentru vizualizare rapidă.
+  </p>
+
+  <h3>2.6.5 Atribute tehnice</h3>
+  <p>
+    Lista atributelor tehnice vizibile pe fișa produsului din magazinul online (ex: Material, Putere (W),
+    Dulie, Culoare, Clasa IP, etc.). Fiecare atribut are un <strong>Nume</strong> și o <strong>Valoare</strong>.
+  </p>
+
+  <h3>2.6.6 Furnizori asociați</h3>
+  <p>
+    Lista furnizorilor de la care se poate achiziționa produsul, cu detaliile fiecăruia:
+    SKU furnizor, prețul de achiziție, moneda, zilele de livrare (lead time), cantitatea minimă de comandă
+    și cantitatea maximă per PO fără aprobare. Furnizorul marcat ca <strong>Preferat</strong> este cel
+    afișat implicit în lista produselor și în sugestiile de achiziție.
+  </p>
+
+  <h3>2.6.7 Mod de aprovizionare</h3>
+  <ul>
+    <li>
+      <strong>La comandă</strong> — produsul nu are stoc fizic; backorders sunt permise în WooCommerce;
+      la primirea unei comenzi online se generează automat un necesar de marfă.
+    </li>
+    <li>
+      <strong>Fără reaprovizionare</strong> — produsul este în curs de discontinuare; se vinde din stocul
+      existent, dar nu mai apare în sugestiile de reaprovizionare și este exclus din dashboard-ul Buyer.
+    </li>
+  </ul>
+
+  <h3>2.6.8 Acțiunile din header-ul paginii View</h3>
+  <p>
+    Pagina de vizualizare are butoane de acțiune în dreapta sus:
+  </p>
+  <ul>
+    <li>
+      <strong>Adaugă la necesar</strong> (roșu) — deschide modalul de adăugare la necesarul draft
+    </li>
+    <li>
+      <strong>Resync WooCommerce</strong> (gri) — disponibil doar pentru Manager și Super Admin; permite
+      re-sincronizarea selectivă a câmpurilor din WooCommerce (imagine, prețuri, status, stoc, denumire,
+      descriere, dimensiuni, categorii). Selectați câmpurile dorite și apăsați „Sincronizează".
+    </li>
+  </ul>
+
+  <h2>2.7 Editarea unui produs</h2>
+  <p>
+    Butonul <strong>Editează</strong> este disponibil în pagina View (și ca acțiune de rând în tabel)
+    doar pentru utilizatorii cu rol de <strong>Manager</strong> sau <strong>Super Admin</strong>. Consultanții
+    și alți utilizatori nu pot modifica datele produselor.
+  </p>
+  <p>
+    Formularul de editare conține aceleași secțiuni ca pagina View, dar câmpurile sunt editabile.
+    Câmpul <strong>Denumire WinMentor</strong> este dezactivat (completat automat din importul contabil).
+  </p>
+
+  <h3>2.7.1 Editarea atributelor tehnice</h3>
+  <p>
+    Atributele tehnice se editează printr-un tabel repetor (Repeater). Puteți:
+  </p>
+  <ol>
+    <li>Apăsa butonul <strong>Adaugă atribut</strong> pentru a adăuga un rând nou</li>
+    <li>Completa câmpul <strong>Atribut</strong> (cu sugestii automate: Material, Putere (W), Dulie, etc.)</li>
+    <li>Completa câmpul <strong>Valoare</strong> (ex: Cupru, 4.5W, E14)</li>
+    <li>Reordona atributele prin drag &amp; drop (glisați iconița din stânga rândului)</li>
+    <li>Șterge un atribut apăsând iconița de ștergere din dreapta rândului</li>
+  </ol>
+
+  <h3>2.7.2 Editarea furnizorilor asociați</h3>
+  <p>
+    Secțiunea Furnizori folosește același mecanism Repeater. Pentru a adăuga un furnizor nou:
+  </p>
+  <ol>
+    <li>Apăsați butonul <strong>Adaugă furnizor</strong></li>
+    <li>Selectați furnizorul din lista derulantă (afișează doar furnizorii activi)</li>
+    <li>Completați: SKU furnizor, prețul de achiziție, moneda, zilele de livrare, cantitatea minimă de comandă</li>
+    <li>Opțional: introduceți <strong>Cant. max PO (fără aprobare)</strong> — dacă se comandă mai mult, PO necesită aprobare</li>
+    <li>Bifați <strong>Furnizor preferat</strong> dacă acesta este furnizorul principal</li>
+  </ol>
+  <div class="warning">
+    <strong>Atenție:</strong> Modificările la prețul de achiziție din secțiunea Furnizori sunt salvate
+    local în ERP. Prețurile nu sunt trimise automat înapoi în WooCommerce.
+    Prețul de vânzare se modifică separat, direct în WooCommerce sau prin funcțiile de push preț.
+  </div>
+
+  <h3>2.7.3 Salvarea modificărilor</h3>
+  <p>
+    Apăsați butonul verde <strong>Salvează</strong> din dreapta jos a paginii pentru a salva modificările.
+    Sistemul validează câmpurile obligatorii și afișează erorile de validare cu roșu sub câmpurile problematice.
+    Dacă produsul are un <code>woo_id</code> (este sincronizat cu WooCommerce), modificările la furnizori
+    declanșează automat sincronizarea meta-datelor furnizorului în WooCommerce (câmpurile
+    <code>_furnizor_nume</code> și <code>_furnizor_sku</code>).
+  </p>
+
+  <h2>2.8 Toggle status publicare</h2>
+  <p>
+    Produsele sincronizate cu WooCommerce (care au un WooCommerce ID) pot fi publicate sau ascunse direct
+    din ERP. Această funcție este disponibilă în pagina de editare a produsului. Sistemul apelează API-ul
+    WooCommerce, actualizează statusul și confirmă prin notificare starea efectiv aplicată în WooCommerce.
+  </p>
+  <div class="tip">
+    <strong>Sfat:</strong> Statusul afișat în ERP reflectă ultima sincronizare. Dacă ați modificat statusul
+    direct în WooCommerce, folosiți butonul <em>Resync WooCommerce → Status publicare</em> pentru a actualiza
+    ERP-ul.
+  </div>
+
+  <h2>2.9 Coloane toggleable și persistența filtrelor</h2>
+  <p>
+    Lista de produse permite personalizarea coloanelor vizibile. Apăsați butonul <strong>Coloane</strong>
+    (iconița de tabel) din dreapta barei de acțiuni pentru a afișa/ascunde coloane individuale. Preferințele
+    dumneavoastră de coloane sunt salvate per utilizator.
+  </p>
+  <p>
+    Filtrele active sunt, de asemenea, salvate în sesiunea de browser. La revenirea pe pagina de produse,
+    filtrele anterioare sunt restaurate automat.
+  </p>
+</section>
+
+
+<!-- =========================================================
+     SECȚIUNEA 3 — Modulul Furnizori
+     ========================================================= -->
+<section id="s3-furnizori">
+  <h1>3. Modulul Furnizori</h1>
+
+  <h2>3.1 Prezentare generală</h2>
+  <p>
+    Modulul <strong>Furnizori</strong> (bara laterală, grupul <em>Achiziții</em>, iconița de camion)
+    centralizează toate informațiile despre furnizorii companiei: date de contact, date fiscale și bancare,
+    condiții comerciale detaliate, persoanele de contact și produsele furnizate.
+  </p>
+  <p>
+    Accesul la modulul Furnizori este disponibil utilizatorilor cu roluri de Achiziții, Management și
+    Super Admin. Consultanții de vânzări pot vedea furnizorii asociați produselor, dar de obicei nu au
+    acces la editarea fișei de furnizor.
+  </p>
+
+  <h2>3.2 Lista furnizorilor</h2>
+  <p>
+    Lista afișează toți furnizorii înregistrați în sistem cu coloanele principale:
+  </p>
+  <ul>
+    <li><strong>Nume furnizor</strong> — denumirea comercială</li>
+    <li><strong>Website</strong> — link clickabil către site-ul furnizorului</li>
+    <li><strong>Email</strong> — adresa de email principală</li>
+    <li><strong>Activ</strong> — badge verde (activ) sau gri (inactiv)</li>
+    <li><strong>Buyer responsabil</strong> — utilizatorul ERP responsabil de achiziții de la acest furnizor</li>
+    <li><strong>Nr. produse</strong> — câte produse din catalog sunt asociate acestui furnizor</li>
+  </ul>
+  <p>
+    Furnizorii inactivi nu apar în sugestiile de achiziție și nu sunt incluși în dashboard-ul Buyer.
+    Dezactivarea unui furnizor (toggle-ul <em>Activ</em>) nu șterge datele — le păstrează pentru referință istorică.
+  </p>
+
+  <h2>3.3 Crearea unui furnizor nou</h2>
+  <p>
+    Apăsați butonul <strong>+ Adaugă furnizor</strong> din dreapta sus a listei. Se deschide formularul
+    de creare cu secțiunile:
+  </p>
+
+  <h3>3.3.1 Informații generale</h3>
+  <ul>
+    <li><strong>Nume furnizor</strong> (obligatoriu) — denumirea completă a firmei</li>
+    <li><strong>Website</strong> — URL-ul site-ului (cu prefix https://)</li>
+    <li><strong>Adresă</strong> — adresa sediului/depozitului</li>
+    <li><strong>Activ</strong> — toggle implicit activat</li>
+  </ul>
+
+  <h3>3.3.2 Date fiscale și bancare</h3>
+  <ul>
+    <li><strong>CUI / CIF</strong> — codul unic de identificare fiscală</li>
+    <li><strong>Nr. Reg. Com.</strong> — numărul din Registrul Comerțului</li>
+    <li><strong>IBAN</strong> — contul bancar pentru plăți</li>
+    <li><strong>Bancă</strong> — denumirea băncii</li>
+  </ul>
+
+  <h3>3.3.3 Configurare achiziții</h3>
+  <p>
+    Această secțiune definește parametrii specifici procesului de achiziții pentru furnizorul respectiv:
+  </p>
+  <ul>
+    <li>
+      <strong>Responsabil achiziții (Buyer)</strong> — selectați utilizatorul ERP (cu rolul Manager Achiziții)
+      care gestionează comenzile la acest furnizor. Acest buyer va vedea necesarele pentru furnizor în
+      dashboard-ul său și va fi notificat la trimiterea necesarelor.
+    </li>
+    <li>
+      <strong>Plafon maxim PO fără aprobare (RON)</strong> — valoarea maximă a unei comenzi de achiziție
+      care poate fi plasată fără aprobare managerială. Lăsați gol pentru aprobare automată indiferent de
+      valoare. Dacă o comandă depășește plafonul, aceasta intră în fluxul de aprobare.
+    </li>
+  </ul>
+  <div class="tip">
+    <strong>Exemplu:</strong> Dacă setați plafonul la 5.000 RON pentru un furnizor, o comandă de 4.800 RON
+    se aprobă automat, iar una de 5.200 RON va necesita aprobarea unui manager sau director.
+  </div>
+
+  <h3>3.3.4 Notițe</h3>
+  <p>
+    Câmp text liber pentru orice informații relevante despre furnizor: istoric colaborare, observații
+    despre calitate, persoane cheie, instrucțiuni speciale de comandă, etc.
+  </p>
+
+  <h2>3.4 Condiții comerciale detaliate</h2>
+  <p>
+    Secțiunea <strong>Condiții comerciale</strong> este colapsibilă (implicit închisă) și conține patru
+    tab-uri cu informații structurate despre cum se lucrează cu furnizorul:
+  </p>
+
+  <h3>3.4.1 Tab Livrare</h3>
+  <ul>
+    <li><strong>Lead time standard (zile)</strong> — câte zile lucrătoare de la comandă până la livrare în condiții normale</li>
+    <li><strong>Lead time urgent (zile)</strong> — termenul de livrare accelerată</li>
+    <li><strong>Oră limită comandă</strong> — ora până la care o comandă plasată azi este procesată tot azi (ex: 14:00)</li>
+    <li><strong>Zile preluare comenzi</strong> — zilele din săptămână în care furnizorul acceptă comenzi noi</li>
+    <li><strong>Zile livrare</strong> — zilele în care furnizorul efectuează livrări fizice</li>
+    <li><strong>Ridicare din depozit propriu</strong> — dacă poate fi ridicată marfa direct de la furnizor, cu adresa depozitului</li>
+  </ul>
+
+  <h3>3.4.2 Tab Comandă</h3>
+  <ul>
+    <li><strong>Metode de plasare comenzi</strong> — Email, Telefon, Portal web, WhatsApp, Față în față, EDI</li>
+    <li><strong>Metodă preferată</strong> — metoda recomandată de furnizor</li>
+    <li><strong>Email comenzi</strong> — adresa dedicată pentru comenzi (poate fi diferită de emailul general)</li>
+    <li><strong>URL portal comenzi</strong> — link direct la platforma online de comenzi</li>
+    <li><strong>User portal</strong> — credențialele de acces la portal</li>
+    <li><strong>Valoare minimă comandă (RON)</strong> — sub această valoare, furnizorul poate refuza comanda</li>
+    <li><strong>Nr. minim linii</strong> — numărul minim de produse distincte per comandă</li>
+    <li><strong>Suprataxă sub minim (RON)</strong> — suma fixă adăugată dacă comanda nu atinge minimul</li>
+  </ul>
+
+  <h3>3.4.3 Tab Transport</h3>
+  <ul>
+    <li><strong>Incoterm</strong> — condiția comercială care stabilește responsabilitatea transportului (EXW, DAP, DDP, FOB, etc.) cu explicații detaliate pentru fiecare</li>
+    <li><strong>Transport plătit de</strong> — Furnizor / Cumpărător (noi) / Împărțit</li>
+    <li><strong>Prag transport gratuit (RON)</strong> — valoarea minimă de la care transportul este gratuit</li>
+    <li><strong>Cost fix transport (RON)</strong> — suma fixă de transport sub pragul de gratuitate</li>
+    <li><strong>Curier / Transportator</strong> — firma de transport folosită</li>
+    <li><strong>Asigurare marfă inclusă</strong> — dacă marfa este asigurată pe durata transportului</li>
+  </ul>
+
+  <h3>3.4.4 Tab Plată</h3>
+  <ul>
+    <li><strong>Metode plată acceptate</strong> — Transfer bancar, Numerar, Card, Filă CEC, Bilet la ordin, Debitare directă, Compensare, Factoring (cu explicații pentru termeni tehnici)</li>
+    <li><strong>Termen de plată (zile)</strong> — câte zile credit comercial acordă furnizorul</li>
+    <li><strong>Discount comercial (%)</strong> — rabatul procentual negociat</li>
+    <li><strong>Valută factură</strong> — RON, EUR sau USD</li>
+  </ul>
+
+  <h2>3.5 Vizualizarea fișei unui furnizor (View)</h2>
+  <p>
+    Faceți clic pe un furnizor din lista pentru a deschide pagina de detalii. Pagina View afișează toate
+    informațiile structurate în infolist-uri (panouri de informații), fără câmpuri editabile. Conține
+    trei tab-uri cu Relation Managers:
+  </p>
+
+  <h3>3.5.1 Tab Persoane de contact</h3>
+  <p>
+    Listează toate persoanele de contact asociate furnizorului. Pentru fiecare contact se afișează:
+    <strong>Nume</strong> (îngroșat, cu funcția ca descriere), <strong>Departament</strong> (badge colorat),
+    <strong>Email</strong> și <strong>Telefon</strong>.
+  </p>
+  <p>
+    Departamentele disponibile sunt: Comercial, Comenzi, Director, Contabilitate/Financiar, Logistică,
+    Tehnic/Service, Marketing, Altul. Contactul marcat ca <em>Principal</em> este cel utilizat implicit
+    pentru trimiterea emailurilor din modulul Achiziții.
+  </p>
+  <p>
+    Puteți <strong>adăuga</strong> un contact nou direct din acest tab apăsând butonul
+    <strong>+ Adaugă persoană de contact</strong>. Câmpurile disponibile sunt: Nume (obligatoriu),
+    Funcție/Titlu, Departament, toggle Contact principal, Email, Telefon, Notițe.
+  </p>
+  <div class="tip">
+    <strong>Sfat:</strong> Contactele pot fi descoperite automat din emailurile primite de la furnizor
+    prin funcția de inteligență email (comandă <code>supplier:discover-contacts</code>). Contactele
+    descoperite automat au sursa <em>email_discovery</em> afișată în detalii.
+  </div>
+
+  <h3>3.5.2 Tab Produse asociate</h3>
+  <p>
+    Listează toate produsele din catalogul ERP care sunt asociate acestui furnizor (prin tabelul
+    <code>product_suppliers</code>). Pentru fiecare produs se afișează: miniatura, SKU, denumirea,
+    SKU-ul furnizorului, prețul de achiziție și dacă este furnizorul preferat pentru acel produs.
+  </p>
+
+  <h3>3.5.3 Tab Emailuri (Comunicare furnizor)</h3>
+  <p>
+    Afișează istoricul emailurilor schimbate cu furnizorul (importate din contul de email al companiei),
+    cu data, subiectul, tipul (primit/trimis), rezumatul generat de AI și entitățile extrase
+    (prețuri cotate, date de livrare, numere de factură, etc.).
+  </p>
+
+  <h2>3.6 Editarea unui furnizor</h2>
+  <p>
+    Butonul <strong>Editează</strong> din dreapta sus a paginii View deschide formularul complet de editare.
+    Toate secțiunile descrise mai sus sunt editabile. Apăsați <strong>Salvează</strong> pentru a confirma
+    modificările.
+  </p>
+  <div class="warning">
+    <strong>Atenție:</strong> Dezactivarea unui furnizor (toggle-ul Activ = OFF) face ca produsele sale
+    să nu mai apară în dashboard-ul Buyer și în sugestiile de reaprovizionare. Verificați că există
+    un furnizor alternativ pentru produsele respective înainte de dezactivare.
+  </div>
+</section>
+
+
+<!-- =========================================================
+     SECȚIUNEA 4 — Necesare de Marfă (PNR)
+     ========================================================= -->
+<section id="s4-necesare">
+  <h1>4. Necesare de Marfă (PNR)</h1>
+
+  <h2>4.1 Ce este un Necesar de Marfă</h2>
+  <p>
+    Un <strong>Necesar de Marfă</strong> (PNR — Purchase Need Request) este documentul prin care un
+    consultant de vânzări sau alt utilizator semnalează departamentului de achiziții că are nevoie de
+    anumite produse achiziționate de la furnizori. PNR-urile sunt numerotate automat în formatul
+    <strong>PNR-YYYYMMDD-XXXX</strong> (ex: PNR-20260315-0042).
+  </p>
+  <p>
+    Fluxul complet al unui PNR este:
+  </p>
+  <ol>
+    <li><strong>Draft</strong> — necesarul este în lucru, poate fi editat, nu este vizibil pentru buyer</li>
+    <li><strong>Submitted</strong> — trimis spre buyer; consultantul nu mai poate edita</li>
+    <li><strong>Partially Ordered</strong> — o parte din produse au fost comandate (PO generat), altele sunt încă pendinte</li>
+    <li><strong>Fully Ordered</strong> — toate produsele au fost acoperite de comenzi de achiziție</li>
+    <li><strong>Cancelled</strong> — necesarul a fost anulat (rar folosit)</li>
+  </ol>
+
+  <h2>4.2 Pagina „Necesar de marfă" (raport inteligent de reaprovizionare)</h2>
+  <p>
+    În bara laterală, grupul <em>Rapoarte</em>, se găsește pagina <strong>Necesar de marfă</strong>
+    (iconița de coș de cumpărături). Aceasta este un <strong>instrument de analiză automată a stocurilor</strong>
+    care identifică ce produse trebuie reaprovizionate și calculează cantitățile recomandate pe baza
+    vitezei de vânzare.
+  </p>
+  <div class="tip">
+    <strong>Atenție la terminologie:</strong> Această pagină „Necesar de marfă" din grupul Rapoarte este
+    diferită de lista „Necesare" din grupul Achiziții. Prima este un raport de analiză; a doua este lista
+    documentelor PNR create.
+  </div>
+
+  <h3>4.2.1 Cum funcționează calculul de reaprovizionare</h3>
+  <p>
+    Sistemul analizează datele istorice de mișcare a stocurilor și calculează pentru fiecare produs:
+  </p>
+  <ul>
+    <li><strong>Medie zilnică 7 zile</strong> (avg_daily_7d) — consumul mediu din ultima săptămână</li>
+    <li><strong>Medie zilnică 30 zile</strong> (avg_daily_30d) — consumul mediu din ultima lună</li>
+    <li><strong>Medie zilnică 90 zile</strong> (avg_daily_90d) — consumul mediu din ultimele 3 luni</li>
+    <li><strong>Baseline</strong> — maximul celor trei medii (pentru a nu subestima cererea)</li>
+    <li><strong>Factor trend</strong> — ajustare dacă cererea scade semnificativ (>15%) față de media 30 zile</li>
+    <li><strong>Safety stock</strong> — buffer de 3 zile de consum ajustat</li>
+    <li><strong>Cantitate recomandată</strong> = (consum ajustat × zile acoperire) + safety stock − stoc curent</li>
+  </ul>
+  <p>
+    Produsele sunt afișate doar dacă stocul curent este mai mic decât consumul proiectat pentru perioada
+    de acoperire configurată.
+  </p>
+
+  <h3>4.2.2 Configurarea perioadei de acoperire</h3>
+  <p>
+    Câmpul <strong>Zile acoperire</strong> (implicit 14 zile, interval 7–60 zile) controlează pentru câte
+    zile în avans se calculează necesarul. De exemplu:
+  </p>
+  <ul>
+    <li><em>14 zile</em> — comand suficient pentru 2 săptămâni</li>
+    <li><em>30 zile</em> — comand suficient pentru o lună (util dacă furnizorul are lead time mare)</li>
+    <li><em>7 zile</em> — reaprovizionare frecventă cu cantități mici</li>
+  </ul>
+
+  <h3>4.2.3 Statisticile de pe pagina Necesar de marfă</h3>
+  <p>
+    Cinci carduri de statistici afișate în partea superioară:
+  </p>
+  <ul>
+    <li><strong>Furnizori afectați</strong> — câți furnizori au cel puțin un produs sub stoc</li>
+    <li><strong>Produse de reaprovizionat</strong> — numărul total de produse identificate</li>
+    <li><strong>Stoc zero</strong> — produse complet epuizate în acest moment</li>
+    <li><strong>Epuizare &lt; 7 zile</strong> — produse critice care se vor epuiza în mai puțin de o săptămână</li>
+    <li><strong>Epuizare 7–14 zile</strong> — produse care necesită atenție în săptămâna curentă</li>
+  </ul>
+
+  <h3>4.2.4 Tab-urile de vizualizare</h3>
+  <p>
+    Pagina are trei tab-uri:
+  </p>
+  <ul>
+    <li>
+      <strong>Epuizare &lt; 7 zile</strong> — lista roșie a produselor critice, indiferent de furnizor,
+      sortate crescător după zilele rămase până la epuizare
+    </li>
+    <li>
+      <strong>Epuizare 7–14 zile</strong> — produse cu urgență medie, afișate similar
+    </li>
+    <li>
+      <strong>Pe furnizori</strong> — produsele grupate pe furnizor, cu posibilitatea de selectare
+      individuală pentru generarea necesarelor
+    </li>
+  </ul>
+
+  <h3>4.2.5 Generarea necesarelor din selecție</h3>
+  <p>
+    În tab-ul <strong>Pe furnizori</strong>, fiecare produs are un câmp de cantitate editabil (pre-completat
+    cu cantitatea recomandată de sistem) și o casetă de bifare pentru selectare. Workflow-ul de utilizare:
+  </p>
+  <ol>
+    <li>Examinați lista produselor pentru fiecare furnizor</li>
+    <li>Ajustați cantitățile recomandate dacă considerați necesar (ex: rotunjiți la multiplu de cutie)</li>
+    <li>Bifați produsele pe care doriți să le includeți în necesare</li>
+    <li>Apăsați butonul <strong>Generează necesare din selecție</strong></li>
+    <li>Sistemul creează automat câte un PNR per furnizor, în status <em>submitted</em>, cu produsele selectate</li>
+    <li>Sunteți redirecționat automat la pagina <em>Generează comandă</em> unde puteți crea PO-urile direct</li>
+  </ol>
+  <div class="warning">
+    <strong>Atenție:</strong> Produsele fără furnizor activ asociat nu pot fi incluse în necesare generate
+    automat. Sistemul afișează un avertisment cu numărul de produse omise. Asociați un furnizor activ
+    produselor respective din modulul Produse, secțiunea Furnizori.
+  </div>
+  <p>
+    Produsele care nu au date istorice de mișcare a stocurilor (coloana <em>Fără istoric</em>) sunt afișate
+    separat în fiecare card de furnizor, sub lista principală, ca referință suplimentară.
+  </p>
+
+  <h2>4.3 Lista necesarelor (modulul PNR)</h2>
+  <p>
+    Din bara laterală, grupul <em>Achiziții</em>, apăsați <strong>Necesare</strong> (iconița de clipboard).
+    Un badge galben indică numărul de necesare cu status <em>submitted</em> (trimise și neacoperite de comenzi).
+  </p>
+  <p>
+    Lista necesarelor afișează toate PNR-urile cu:
+  </p>
+  <ul>
+    <li><strong>Număr PNR</strong> — format PNR-YYYYMMDD-XXXX</li>
+    <li><strong>Locație</strong> — depozitul/locația care a creat necesarul</li>
+    <li><strong>Consultant</strong> — utilizatorul care a creat necesarul</li>
+    <li><strong>Status</strong> — badge colorat (draft=gri, submitted=galben, partially_ordered=portocaliu, fully_ordered=verde, cancelled=roșu)</li>
+    <li><strong>Produse</strong> — numărul de linii de produs din necesar</li>
+    <li><strong>Urgent</strong> — iconița de avertizare dacă există produse marcate ca urgente</li>
+    <li><strong>Data</strong> — data creării</li>
+  </ul>
+  <p>
+    Lista este sortată implicit descrescător după dată (cel mai recent primul). Puteți filtra după
+    <strong>Status</strong> și <strong>Urgent</strong>.
+  </p>
+
+  <h2>4.4 Crearea manuală a unui necesar</h2>
+  <p>
+    Apăsați butonul <strong>+ Adaugă necesar</strong> din dreapta sus a listei. Formularul de creare
+    conține un tabel de produse și un câmp de observații.
+  </p>
+
+  <h3>4.4.1 Adăugarea produselor în necesar</h3>
+  <p>
+    Tabelul de produse permite adăugarea linie cu linie a produselor dorite. Pentru fiecare linie:
+  </p>
+  <ul>
+    <li><strong>Produs</strong> — câmp de căutare cu autocompletare (caută după denumire sau SKU)</li>
+    <li><strong>Cantitate</strong> — numărul de unități solicitate (obligatoriu, minim 0.001)</li>
+    <li><strong>Necesar până la</strong> — data limită (opțional)</li>
+    <li><strong>Urgent</strong> — toggle pentru marcare ca urgentă (va apărea primul în dashboard-ul Buyer)</li>
+    <li><strong>Rezervat</strong> — toggle dacă produsul este rezervat pentru un client specific</li>
+    <li><strong>Client</strong> — selectați clientul dacă produsul este rezervat (afișat în dashboard Buyer)</li>
+    <li><strong>Ofertă</strong> — selectați numărul de ofertă dacă necesarul provine dintr-o ofertă</li>
+    <li><strong>Notițe</strong> — informații suplimentare pentru buyer</li>
+  </ul>
+  <p>
+    Apăsați <strong>Adaugă rând</strong> (sau butonul de plus) pentru a adăuga produse suplimentare.
+    Faceți clic pe iconița de ștergere din dreapta unui rând pentru a-l elimina.
+  </p>
+
+  <h3>4.4.2 Salvarea ca draft sau trimitere directă</h3>
+  <p>
+    Butonul <strong>Salvează necesar</strong> salvează necesarul ca <em>draft</em>. Drafts-urile nu
+    sunt vizibile pentru buyer și nu declanșează notificări. Puteți reveni oricând și adăuga mai
+    multe produse sau modifica cantitățile.
+  </p>
+  <p>
+    Un draft poate fi trimis spre buyer fie din pagina de editare (butonul <em>Trimite</em>), fie
+    din lista de necesare (acțiunea <em>Trimite</em> la rândul respectiv).
+  </p>
+
+  <h2>4.5 Trimiterea necesarului spre buyer</h2>
+  <p>
+    Din lista de necesare sau din pagina de vizualizare a necesarului, apăsați butonul verde
+    <strong>Trimite</strong> (iconița de avion de hârtie). Apare o confirmare:
+    <em>„Trimiți necesarul spre buyer? După trimitere nu mai poți edita necesarul."</em>
+  </p>
+  <p>
+    Apăsați <strong>Da, trimite</strong> pentru a confirma. Sistemul:
+  </p>
+  <ol>
+    <li>Schimbă statusul PNR din <em>draft</em> în <em>submitted</em></li>
+    <li>Identifică buyer-ii responsabili pentru furnizorii din necesar</li>
+    <li>Trimite notificări (în aplicație + email) buyer-ilor responsabili</li>
+    <li>Necesarul apare în dashboard-ul Buyer cu un badge de număr actualizat</li>
+  </ol>
+  <div class="warning">
+    <strong>Atenție:</strong> Odată trimis (<em>submitted</em>), necesarul nu mai poate fi editat de
+    consultant. Dacă ați greșit ceva, contactați buyer-ul sau un administrator pentru a anula sau
+    corecta necesarul.
+  </div>
+
+  <h2>4.6 Vizualizarea unui necesar (View)</h2>
+  <p>
+    Pagina de detalii a unui PNR afișează toate informațiile structurate:
+  </p>
+
+  <h3>4.6.1 Secțiunea Informații necesar</h3>
+  <ul>
+    <li>Numărul PNR, statusul (badge colorat), locația, consultantul creator, data</li>
+    <li>Observațiile generale ale necesarului</li>
+  </ul>
+
+  <h3>4.6.2 Secțiunea Comunicare furnizori</h3>
+  <p>
+    Secțiune colapsibilă care afișează emailurile recente schimbate cu furnizorii pentru produsele
+    din acest necesar (±30 zile / +60 zile). Util pentru context înainte de a crea comanda.
+  </p>
+
+  <h3>4.6.3 Secțiunea Produse solicitate</h3>
+  <p>
+    Tabel cu toate liniile de produs din necesar:
+  </p>
+  <ul>
+    <li><strong>Produs</strong> — denumire și SKU</li>
+    <li><strong>Furnizor</strong> — furnizorul asociat linieinii</li>
+    <li><strong>Cant. cerută</strong> — cantitatea originală solicitată</li>
+    <li>
+      <strong>Cant. comandată</strong> — badge cu progress (ex: „5 / 10") în culori:
+      gri (0 comandat), portocaliu (parțial), verde (complet comandat)
+    </li>
+    <li><strong>Necesar până la</strong> — termenul solicitat</li>
+    <li><strong>Urgent</strong> și <strong>Rezervat</strong> — iconițe de stare</li>
+    <li><strong>Client rezervare</strong> și <strong>Ofertă rezervare</strong> — link clickabil spre ofertă</li>
+    <li><strong>Status</strong> — Pending (galben), Comandat (verde), Anulat (roșu)</li>
+    <li><strong>PO</strong> — link clickabil spre comanda de achiziție aferentă</li>
+  </ul>
+</section>
+
+
+<!-- =========================================================
+     SECȚIUNEA 5 — Comenzi de Achiziție (PO)
+     ========================================================= -->
+<section id="s5-comenzi-achizitii">
+  <h1>5. Comenzi de Achiziție (PO)</h1>
+
+  <h2>5.1 Ce este o Comandă de Achiziție</h2>
+  <p>
+    O <strong>Comandă de Achiziție</strong> (PO — Purchase Order) este documentul formal prin care
+    compania plasează o comandă la un furnizor. PO-urile sunt numerotate automat în formatul
+    <strong>PO-YYYYMMDD-XXXX</strong> (ex: PO-20260315-0015). Fiecare PO este adresat unui singur
+    furnizor și poate agrega produse din mai multe necesare de marfă.
+  </p>
+  <p>
+    Fluxul complet al unui PO este:
+  </p>
+  <ol>
+    <li><strong>Draft</strong> — PO creat, editabil, nu a fost plasat</li>
+    <li><strong>Pending Approval</strong> — PO depășește plafonul de aprobare; în așteptarea aprobării manageriale</li>
+    <li><strong>Approved</strong> — PO aprobat, gata de trimis la furnizor</li>
+    <li><strong>Rejected</strong> — PO respins de manager cu motiv; buyer-ul este notificat</li>
+    <li><strong>Sent</strong> — PO trimis la furnizor (email sau manual)</li>
+    <li><strong>Received</strong> — marfa a fost recepționată (total sau parțial)</li>
+    <li><strong>Cancelled</strong> — PO anulat</li>
+  </ol>
+
+  <h2>5.2 Crearea unui PO din Dashboard-ul Buyer</h2>
+  <p>
+    Calea recomandată de creare a unui PO este prin pagina <strong>Generează comandă</strong> (grupul
+    Achiziții), nu prin butonul <em>+ Adaugă</em> din lista de comenzi. Aceasta asigură că toate
+    necesarele pendinte pentru furnizorul respectiv sunt incluse automat.
+  </p>
+  <p>
+    Din dashboard-ul Buyer, la cardul furnizorului dorit, apăsați butonul
+    <strong>Creează comandă de achiziție (PO)</strong>. Sistemul deschide pagina de creare PO
+    pre-completată cu:
+  </p>
+  <ul>
+    <li><strong>Furnizor</strong> — pre-selectat (câmpul este dezactivat la editare)</li>
+    <li>
+      <strong>Lista de produse</strong> — toate produsele pendinte din necesarele aprobate ale furnizorului,
+      cu cantitățile cumulate din toate necesarele și cu prețurile de achiziție din configurație
+    </li>
+  </ul>
+
+  <h2>5.3 Formularul de creare PO</h2>
+
+  <h3>5.3.1 Secțiunea Informații comandă</h3>
+  <ul>
+    <li><strong>Număr PO</strong> — generat automat după salvare (dezactivat)</li>
+    <li><strong>Furnizor</strong> — selectat din lista furnizorilor activi (obligatoriu)</li>
+    <li><strong>Status</strong> — afișează <em>Draft</em> automat (dezactivat)</li>
+    <li><strong>Notițe interne</strong> — observații vizibile doar intern în ERP</li>
+    <li><strong>Notițe pentru furnizor</strong> — text inclus în emailul trimis furnizorului</li>
+  </ul>
+
+  <h3>5.3.2 Tabelul de produse</h3>
+  <p>
+    Tabelul repetor afișează câte o linie per produs comandat. Fiecare coloană din tabel:
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th>Coloană</th>
+        <th>Descriere</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Imagine (thumbnail)</td>
+        <td>Miniatura produsului (auto-completată la selectarea produsului)</td>
+      </tr>
+      <tr>
+        <td>Caută produs</td>
+        <td>Câmp de căutare live (după denumire sau SKU); filtrează automat după furnizorul selectat</td>
+      </tr>
+      <tr>
+        <td>Denumire produs</td>
+        <td>Auto-completată la selectarea produsului; editabilă manual</td>
+      </tr>
+      <tr>
+        <td>SKU intern</td>
+        <td>Auto-completat; codul produsului din ERP</td>
+      </tr>
+      <tr>
+        <td>SKU furnizor</td>
+        <td>Auto-completat din configurația furnizorului; poate fi editat manual</td>
+      </tr>
+      <tr>
+        <td>Cant.</td>
+        <td>Cantitatea de comandat; auto-completată cu suma cantităților rămase din necesare</td>
+      </tr>
+      <tr>
+        <td>Preț unitar</td>
+        <td>Auto-completat cu prețul de achiziție negociat; editabil manual (în RON)</td>
+      </tr>
+      <tr>
+        <td>Total linie</td>
+        <td>Calculat automat (cantitate × preț unitar), actualizat la modificarea câmpurilor</td>
+      </tr>
+      <tr>
+        <td>Surse</td>
+        <td>Rezumatul necesarelor din care provine linia (număr PNR, consultant, locație, urgență)</td>
+      </tr>
+      <tr>
+        <td>Notițe</td>
+        <td>Observații specifice liniei de produs</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    Sub tabel se afișează <strong>Total comandă</strong> — suma tuturor totalurilor de linii, actualizat
+    în timp real la modificarea cantităților și prețurilor.
+  </p>
+  <p>
+    Puteți adăuga linii suplimentare cu butonul <strong>Adaugă produs</strong> de sub tabel.
+  </p>
+
+  <h3>5.3.3 Salvarea PO-ului</h3>
+  <p>
+    Apăsați butonul <strong>Salvează</strong> pentru a crea PO-ul. Sistemul:
+  </p>
+  <ol>
+    <li>Generează numărul PO (secvențial, nu aleatoriu)</li>
+    <li>Salvează toate liniile de produs</li>
+    <li>
+      Asociază automat liniile PO cu liniile din necesarele sursă (FIFO — urgent mai întâi, apoi
+      în ordinea termenului solicitat), actualizând <em>ordered_quantity</em> și <em>status</em>
+      în fiecare linie de PNR acoperită
+    </li>
+    <li>Recalculează statusul fiecărui PNR afectat (submitted → partially_ordered sau fully_ordered)</li>
+  </ol>
+  <div class="tip">
+    <strong>Exemplu de alocare FIFO:</strong> Aveți un produs cu 10 buc necesare (5 urgente din PNR-001
+    + 5 normale din PNR-002). Creați un PO cu 7 buc. Sistemul alocă: 5 buc la PNR-001 (marcat ca
+    fully_ordered) + 2 buc la PNR-002 (rămâne cu 3 buc pendinte, marcat ca partially_ordered).
+  </div>
+
+  <h2>5.4 Fluxul de aprobare</h2>
+  <p>
+    Odată creat, PO-ul este în status <em>Draft</em>. Puteți edita PO-ul cât timp este draft (butonul
+    <strong>Editează</strong> este vizibil). Când sunteți pregătit să plasați comanda, apăsați
+    butonul <strong>Plasează comanda</strong> din dreapta sus a paginii View.
+  </p>
+
+  <h3>5.4.1 Aprobarea automată</h3>
+  <p>
+    Dacă valoarea totală a PO-ului se încadrează sub plafonul configurat pentru furnizor <strong>și</strong>
+    toate cantitățile sunt sub limita maximă per produs, PO-ul este aprobat automat și trece direct
+    în statusul <em>Approved</em>. Apare o notificare de succes <em>„Comanda a fost aprobată automat."</em>
+  </p>
+
+  <h3>5.4.2 Trimiterea spre aprobare</h3>
+  <p>
+    Dacă valoarea depășește plafonul sau cantitatea unui produs depășește limita maximă per PO,
+    sistemul schimbă statusul în <em>Pending Approval</em> și trimite notificări prin email și
+    în aplicație tuturor managerilor și directorilor cu drept de aprobare
+    (Manager, Director Financiar, Director Vânzări, Super Admin).
+  </p>
+  <p>
+    Managerul care primește notificarea accesează PO-ul și are la dispoziție două butoane:
+  </p>
+  <ul>
+    <li>
+      <strong>Aprobă</strong> (verde) — PO trece în <em>Approved</em>. Buyer-ul poate acum
+      trimite comanda la furnizor.
+    </li>
+    <li>
+      <strong>Respinge</strong> (roșu) — se deschide un modal cu câmpul <em>Motiv respingere</em>
+      (obligatoriu). PO trece în <em>Rejected</em>. Buyer-ul este notificat cu motivul respingerii.
+      Toate necesarele PNR afectate sunt revenite automat la statusul <em>pending</em> pentru a putea
+      fi incluse în alte comenzi.
+    </li>
+  </ul>
+  <div class="warning">
+    <strong>Atenție:</strong> Dacă un PO este respins, liniile de necesar (PNR items) sunt revenite
+    automat la statusul <em>Pending</em> și vor reapărea în dashboard-ul Buyer. Este obligatorie
+    comunicarea cu consultantul/buyer-ul pentru a înțelege motivul respingerii și a corecta PO-ul.
+  </div>
+
+  <h2>5.5 Trimiterea comenzii la furnizor</h2>
+  <p>
+    Odată cu statusul <em>Approved</em>, în dreapta sus a paginii View apar două butoane:
+  </p>
+  <ul>
+    <li>
+      <strong>Trimite email furnizor</strong> (albastru) — deschide un modal cu un email pre-completat
+      ce conține lista de produse, cantitățile, prețurile, totalul comenzii și notițele pentru furnizor.
+      Puteți modifica destinatarul, subiectul și corpul emailului înainte de trimitere. Apăsați
+      <strong>Trimite</strong> pentru a expedia emailul. PO trece automat în statusul <em>Sent</em>.
+    </li>
+    <li>
+      <strong>Marchează trimis</strong> (gri) — pentru cazurile în care comanda a fost comunicată
+      prin alt canal (telefon, WhatsApp, portal web). Marchează PO-ul ca trimis fără a trimite
+      email din ERP.
+    </li>
+  </ul>
+  <p>
+    La trecerea în statusul <em>Sent</em>, liniile de PNR sunt marcate ca <em>Ordered</em> (comandate),
+    necesarele parent sunt actualizate la statusul corespunzător și consultanții pot vedea că
+    produsele lor au intrat în comandă.
+  </p>
+
+  <h2>5.6 Recepția mărfii</h2>
+  <p>
+    Când marfa sosește fizic, buyer-ul (sau persoana care face recepția) înregistrează cantitățile
+    efectiv primite. Din pagina View a PO-ului cu status <em>Sent</em>, apăsați butonul verde
+    <strong>Recepție marfă</strong>.
+  </p>
+  <p>
+    Se deschide un modal cu titlul <em>„Recepție marfă — [numărul PO]"</em> care conține:
+  </p>
+  <ul>
+    <li>
+      Un câmp numeric per produs, cu eticheta „Denumire produs [SKU]" și textul de ajutor
+      <em>„Comandat: X buc. | SKU furnizor: Y"</em>
+    </li>
+    <li>Valoarea implicită a câmpului este <strong>cantitatea comandată</strong> (pentru recepție completă)</li>
+    <li>Reduceți cantitatea dacă au lipsit unele produse la livrare</li>
+    <li>Câmpul <strong>Observații recepție</strong> pentru a nota numărul facturii, lipsuri, produse deteriorate, etc.</li>
+  </ul>
+  <p>
+    Apăsați <strong>Salvează recepția</strong>. Sistemul:
+  </p>
+  <ol>
+    <li>Înregistrează cantitățile efectiv primite (<em>received_quantity</em>) pe fiecare linie PO</li>
+    <li>Calculează lipsurile (cantitate comandată − cantitate primită)</li>
+    <li>
+      Pentru fiecare lipsă, returnează cantitatea nelivrată înapoi în coada de cumpărare
+      (decrementează <em>ordered_quantity</em> din PNR items, revenind la statusul <em>Pending</em>)
+    </li>
+    <li>Recalculează statusurile PNR-urilor afectate</li>
+    <li>Marchează PO-ul ca <em>Received</em></li>
+    <li>Notifică consultanții ale căror produse nu au sosit complet (recepție parțială)</li>
+  </ol>
+  <div class="tip">
+    <strong>Exemplu recepție parțială:</strong> Ați comandat 20 buc dintr-un produs dar au sosit 15 buc.
+    Introduceți 15 în câmpul de recepție. Sistemul va returna automat 5 buc în necesarul original,
+    care va reapărea în dashboard-ul Buyer pentru a fi inclus în comanda următoare.
+  </div>
+
+  <h2>5.7 Exportul PDF al comenzii</h2>
+  <p>
+    Butonul <strong>Descarcă PDF</strong> (iconița de descărcare, gri) este disponibil în orice moment
+    din pagina View a PO-ului. Apăsând butonul, sistemul generează un document PDF în format A4 portret
+    cu:
+  </p>
+  <ul>
+    <li>Header-ul cu numărul PO, data, statusul</li>
+    <li>Datele furnizorului (denumire, adresă, date fiscale)</li>
+    <li>Tabelul produselor cu SKU intern, SKU furnizor, denumire, cantitate, preț unitar, total linie</li>
+    <li>Totalul general al comenzii</li>
+    <li>Notițele pentru furnizor</li>
+    <li>Informații despre buyer și manager aprobator (dacă există)</li>
+  </ul>
+  <p>
+    Fișierul PDF este descărcat automat cu denumirea <em>PO-YYYYMMDD-XXXX.pdf</em>. Poate fi atașat
+    la un email sau trimis prin orice alt canal de comunicare cu furnizorul.
+  </p>
+
+  <h2>5.8 Secțiunea Comunicare furnizor (emailuri)</h2>
+  <p>
+    În pagina View a PO-ului, sub infolist-ul principal, se găsește secțiunea
+    <strong>Comunicare furnizor</strong> (colapsibilă). Aceasta afișează emailurile schimbate cu
+    furnizorul în jurul datei comenzii (±30 zile înainte / +60 zile după data PO), extrase automat
+    din contul de email al companiei.
+  </p>
+  <p>
+    Această secțiune oferă context esențial pentru buyer: puteți vedea ce s-a negociat anterior
+    cu furnizorul (prețuri, termene, disponibilitate) fără a fi nevoie să căutați în emailul
+    separat de ERP.
+  </p>
+  <p>
+    Emailurile afișate includ:
+  </p>
+  <ul>
+    <li>Data și ora trimiterii/primirii</li>
+    <li>Subiectul emailului</li>
+    <li>Direcția (primit de la furnizor / trimis la furnizor)</li>
+    <li>Rezumatul generat de AI (dacă emailul a fost procesat)</li>
+    <li>Entitățile extrase: prețuri cotate, date de livrare menționate, numere de factură, termene de plată</li>
+  </ul>
+
+  <h2>5.9 Lista comenzilor de achiziție</h2>
+  <p>
+    Din bara laterală, grupul <em>Achiziții</em>, apăsați <strong>Comenzi furnizori</strong>. Lista
+    afișează toate PO-urile cu:
+  </p>
+  <ul>
+    <li><strong>Număr PO</strong> — format PO-YYYYMMDD-XXXX, clickabil</li>
+    <li><strong>Furnizor</strong> — numele furnizorului</li>
+    <li><strong>Status</strong> — badge colorat conform fluxului</li>
+    <li><strong>Valoare</strong> — valoarea totală în RON</li>
+    <li><strong>Resp. achiziții</strong> — buyer-ul responsabil</li>
+    <li><strong>Trimis la</strong> — data trimiterii (gol dacă nu a fost trimis)</li>
+    <li>
+      <strong>Recepție</strong> — badge de stare recepție (așteptare / completă / parțial lipsa) pentru
+      PO-urile în status Sent sau Received
+    </li>
+  </ul>
+  <p>
+    Lista poate fi filtrată după <strong>Status</strong>, <strong>Furnizor</strong> și
+    <strong>Buyer responsabil</strong>. Este sortată implicit descrescător după data creării.
+  </p>
+
+  <h2>5.10 Anularea unui PO</h2>
+  <p>
+    Butonul <strong>Anulează</strong> (gri, iconița X) este disponibil în pagina View pentru PO-urile
+    care nu sunt încă în statusul <em>Sent</em>, <em>Received</em> sau <em>Cancelled</em>. La anulare,
+    sistemul cere confirmare și, dacă PO-ul a creat deja alăturări cu PNR items
+    (statusul <em>ordered</em>), acestea sunt revenite la <em>pending</em>, la fel ca la respingere.
+  </p>
+
+  <h2>5.11 Rezumat — Fluxul complet de la necesar la recepție</h2>
+  <p>
+    Diagrama fluxului tipic de achiziție în ERP Malinco:
+  </p>
+  <ol>
+    <li>
+      <strong>Consultant</strong> identifică nevoie → adaugă produs la necesar (butonul portocaliu
+      din lista Produse sau manual din meniul Necesare) → trimite necesarul spre buyer (butonul verde
+      <em>Trimite</em>)
+    </li>
+    <li>
+      <strong>Buyer</strong> primește notificare → accesează pagina <em>Generează comandă</em> →
+      vede produsele grupate pe furnizor → apasă <em>Creează PO</em> pentru furnizorul dorit →
+      verifică produsele și cantitățile pre-completate → salvează PO-ul
+    </li>
+    <li>
+      <strong>Sistem</strong> verifică dacă PO necesită aprobare → dacă DA, trimite spre manageri;
+      dacă NU, aprobă automat
+    </li>
+    <li>
+      <strong>Manager</strong> (dacă este necesar) primește notificare → aprobă sau respinge PO cu motiv
+    </li>
+    <li>
+      <strong>Buyer</strong> trimite PO la furnizor (email din ERP sau manual) → PO trece în <em>Sent</em>
+    </li>
+    <li>
+      <strong>Furnizor</strong> livrează marfa → Buyer/depozit face recepția în ERP (butonul
+      <em>Recepție marfă</em>) → lipsurile revin automat în queue → consultanții sunt notificați
+    </li>
+    <li>
+      <strong>PNR-urile</strong> sunt actualizate automat pe tot parcursul fluxului; consultanții
+      pot urmări starea în lista Necesare
+    </li>
+  </ol>
+</section>

@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Anthropic\Client as AnthropicClient;
+use App\Models\AiUsageLog;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -39,7 +40,7 @@ class ReformatProductTitlesCommand extends Command
         }
 
         $this->claude  = new AnthropicClient(apiKey: $apiKey);
-        $this->model   = config('services.anthropic.model', 'claude-haiku-4-5-20251001');
+        $this->model   = config('app.malinco.ai.models.haiku', 'claude-haiku-4-5-20251001');
         $dryRun        = (bool) $this->option('dry-run');
         $limit         = $this->option('limit') ? (int) $this->option('limit') : null;
         $batchSize     = max(1, min(20, (int) $this->option('batch-size')));
@@ -150,6 +151,12 @@ class ReformatProductTitlesCommand extends Command
             maxTokens: 4000,
             messages:  [['role' => 'user', 'content' => $prompt]],
             model:     $this->model,
+        );
+
+        AiUsageLog::record('product_titles', $this->model,
+            $message->usage->inputTokens  ?? 0,
+            $message->usage->outputTokens ?? 0,
+            ['product_count' => count($products)]
         );
 
         $text = '';

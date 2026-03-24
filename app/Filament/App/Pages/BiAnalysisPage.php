@@ -17,20 +17,25 @@ class BiAnalysisPage extends Page
 {
     use HasDynamicNavSort;
 
-    protected static string $view = 'filament.app.pages.bi-analysis';
+    protected string $view = 'filament.app.pages.bi-analysis';
 
     protected static ?string $navigationLabel = 'Analiză BI';
-    protected static ?string $navigationGroup = 'Rapoarte';
-    protected static ?string $navigationIcon  = 'heroicon-o-chart-bar';
+    protected static string|\UnitEnum|null $navigationGroup = 'Rapoarte';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-chart-bar';
     protected static ?int    $navigationSort  = 99;
     protected static ?string $title           = 'Analiză Business Intelligence';
 
     public ?int $pendingId  = null;
     public ?int $selectedId = null;
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return \App\Models\RolePermission::check(static::class, 'can_access');
+    }
+
     public static function canAccess(): bool
     {
-        return auth()->user()?->isSuperAdmin() ?? false;
+        return \App\Models\RolePermission::check(static::class, 'can_access');
     }
 
     public function mount(): void

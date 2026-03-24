@@ -15,15 +15,20 @@ return Application::configure(basePath: dirname(__DIR__))
                 \Illuminate\Routing\Middleware\SubstituteBindings::class,
             ])->group(base_path('routes/webhooks.php'));
 
-            // Chat routes — publice, cu throttle, fără CSRF/auth
+            // Chat routes — publice, fără CSRF/auth; throttle per-rută în chat.php
             \Illuminate\Support\Facades\Route::middleware([
-                'throttle:30,1',
                 \Illuminate\Routing\Middleware\SubstituteBindings::class,
             ])->group(base_path('routes/chat.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Redirecționează utilizatorii neautentificați spre Filament App login
+        $middleware->redirectGuestsTo('/login');
+
+        // Security headers (CSP, X-Frame-Options, etc.) — doar pe rute web
+        $middleware->web(append: [
+            \App\Http\Middleware\SecurityHeaders::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->renderable(function (

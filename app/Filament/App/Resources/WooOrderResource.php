@@ -13,7 +13,7 @@ use Filament\Infolists\Components\Actions\Action as InfolistAction;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Infolist;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Filters\SelectFilter;
@@ -30,9 +30,9 @@ class WooOrderResource extends Resource
 
     protected static ?string $model = WooOrder::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-shopping-cart';
 
-    protected static ?string $navigationGroup = 'Comenzi';
+    protected static string|\UnitEnum|null $navigationGroup = 'Comenzi';
 
     protected static ?string $navigationLabel = 'Comenzi Online';
 
@@ -133,8 +133,9 @@ class WooOrderResource extends Resource
                             ->when($data['until'], fn (Builder $q, string $d): Builder => $q->whereDate('order_date', '<=', $d));
                     }),
             ])
+            ->deferFilters(false)
             ->searchPlaceholder('Caută număr, client...')
-            ->actions([
+            ->recordActions([
                 Tables\Actions\ViewAction::make(),
             ])
             ->bulkActions([
@@ -163,16 +164,17 @@ class WooOrderResource extends Resource
             ]);
     }
 
-    public static function infolist(Infolist $infolist): Infolist
+    public static function infolist(Schema $schema): Schema
     {
-        return $infolist
+        return $schema
             ->schema([
-                Section::make('Comandă')
-                    ->columns(3)
+                Section::make()
+                    ->columns(6)
                     ->schema([
                         TextEntry::make('number')
-                            ->label('Număr')
-                            ->formatStateUsing(fn (WooOrder $record): string => '#'.$record->number),
+                            ->label('Comandă')
+                            ->formatStateUsing(fn (WooOrder $record): string => '#'.$record->number)
+                            ->weight(\Filament\Support\Enums\FontWeight::Bold),
                         TextEntry::make('status')
                             ->label('Status')
                             ->badge()
@@ -180,68 +182,71 @@ class WooOrderResource extends Resource
                             ->formatStateUsing(fn (string $state): string => WooOrder::STATUS_LABELS[$state] ?? $state),
                         TextEntry::make('order_date')
                             ->label('Data comenzii')
-                            ->dateTime('d.m.Y H:i:s'),
+                            ->dateTime('d.m.Y H:i'),
                         TextEntry::make('payment_method_title')
                             ->label('Metodă plată')
                             ->placeholder('-'),
+                        TextEntry::make('shipping_method')
+                            ->label('Metodă livrare')
+                            ->getStateUsing(fn (WooOrder $record): string => (string) data_get($record->data, 'shipping_lines.0.method_title', '-') ?: '-'),
                         TextEntry::make('date_paid')
                             ->label('Data plății')
-                            ->dateTime('d.m.Y H:i:s')
+                            ->dateTime('d.m.Y H:i')
                             ->placeholder('-'),
                         TextEntry::make('customer_note')
                             ->label('Notă client')
                             ->placeholder('-')
-                            ->columnSpanFull(),
+                            ->columnSpanFull()
+                            ->hidden(fn (WooOrder $record): bool => empty($record->customer_note)),
                     ]),
 
                 Section::make('Client')
-                    ->columns(2)
+                    ->columns(4)
                     ->schema([
+                        TextEntry::make('customer_name')
+                            ->label('Nume')
+                            ->getStateUsing(fn (WooOrder $record): string => $record->customer_name ?: '-'),
+                        TextEntry::make('customer_phone')
+                            ->label('Telefon')
+                            ->getStateUsing(fn (WooOrder $record): string => $record->customer_phone ?: '-'),
+                        TextEntry::make('customer_email')
+                            ->label('Email')
+                            ->getStateUsing(fn (WooOrder $record): string => $record->customer_email ?: '-')
+                            ->columnSpan(2),
                         TextEntry::make('billing_info')
                             ->label('Adresă facturare')
+                            ->columnSpan(2)
                             ->getStateUsing(function (WooOrder $record): string {
                                 $b = $record->billing ?? [];
-                                $lines = array_filter([
-                                    trim(($b['first_name'] ?? '').' '.($b['last_name'] ?? '')),
-                                    $b['company'] ?? '',
+                                $company = $b['company'] ?? '';
+                                $addr = implode(', ', array_filter([
                                     $b['address_1'] ?? '',
                                     $b['address_2'] ?? '',
                                     trim(($b['postcode'] ?? '').' '.($b['city'] ?? '')),
                                     $b['state'] ?? '',
-                                    $b['country'] ?? '',
-                                ]);
+                                ]));
 
-                                return implode(', ', $lines) ?: '-';
-                            })
-                            ->html(false),
-
+                                return implode(' — ', array_filter([$company, $addr])) ?: '-';
+                            }),
                         TextEntry::make('shipping_info')
                             ->label('Adresă livrare')
+                            ->columnSpan(2)
                             ->getStateUsing(function (WooOrder $record): string {
                                 $s = $record->shipping ?? [];
-                                if (empty(array_filter($s))) {
+                                $meaningful = array_filter(array_diff_key($s, ['first_name' => 1, 'last_name' => 1, 'company' => 1]));
+                                if (empty(array_filter($meaningful))) {
                                     return 'La fel ca facturarea';
                                 }
-                                $lines = array_filter([
-                                    trim(($s['first_name'] ?? '').' '.($s['last_name'] ?? '')),
-                                    $s['company'] ?? '',
+                                $company = $s['company'] ?? '';
+                                $addr = implode(', ', array_filter([
                                     $s['address_1'] ?? '',
                                     $s['address_2'] ?? '',
                                     trim(($s['postcode'] ?? '').' '.($s['city'] ?? '')),
                                     $s['state'] ?? '',
-                                    $s['country'] ?? '',
-                                ]);
+                                ]));
 
-                                return implode(', ', $lines) ?: '-';
+                                return implode(' — ', array_filter([$company, $addr])) ?: '-';
                             }),
-
-                        TextEntry::make('customer_phone')
-                            ->label('Telefon')
-                            ->getStateUsing(fn (WooOrder $record): string => $record->customer_phone ?: '-'),
-
-                        TextEntry::make('customer_email')
-                            ->label('Email')
-                            ->getStateUsing(fn (WooOrder $record): string => $record->customer_email ?: '-'),
                     ]),
 
                 Section::make('Produse')
@@ -300,13 +305,13 @@ class WooOrderResource extends Resource
                     ]),
 
                 Section::make('Totale')
-                    ->columns(3)
+                    ->columns(5)
                     ->schema([
                         TextEntry::make('subtotal')
                             ->label('Subtotal')
                             ->formatStateUsing(fn (WooOrder $record): string => number_format((float) $record->subtotal, 2).' '.$record->currency),
                         TextEntry::make('shipping_total')
-                            ->label('Livrare')
+                            ->label('Transport')
                             ->formatStateUsing(fn (WooOrder $record): string => number_format((float) $record->shipping_total, 2).' '.$record->currency),
                         TextEntry::make('discount_total')
                             ->label('Discount')
@@ -322,6 +327,7 @@ class WooOrderResource extends Resource
                     ]),
 
                 Section::make('AWB-uri Sameday')
+                    ->hidden(fn (WooOrder $record): bool => $record->samedayAwbs->isEmpty())
                     ->schema([
                         RepeatableEntry::make('samedayAwbs')
                             ->label('')

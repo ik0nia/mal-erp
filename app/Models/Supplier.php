@@ -11,7 +11,6 @@ class Supplier extends Model
 {
     protected $fillable = [
         'name',
-        'logo_url',
         'website_url',
         'contact_person',
         'email',
@@ -22,23 +21,32 @@ class Supplier extends Model
         'bank_account',
         'bank_name',
         'notes',
+        'conditions',
         'is_active',
         'buyer_id',
         'po_approval_threshold',
+        'default_markup',
     ];
 
     protected function casts(): array
     {
         return [
+            'conditions'            => 'array',
             'is_active'             => 'boolean',
             'buyer_id'              => 'integer',
             'po_approval_threshold' => 'decimal:2',
+            'default_markup'        => 'decimal:2',
         ];
     }
 
     public function buyer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'buyer_id');
+    }
+
+    public function buyers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'supplier_buyers')->orderBy('name');
     }
 
     public function purchaseOrders(): HasMany
@@ -54,6 +62,11 @@ class Supplier extends Model
     public function priceQuotes(): HasMany
     {
         return $this->hasMany(SupplierPriceQuote::class)->orderByDesc('quoted_at');
+    }
+
+    public function feeds(): HasMany
+    {
+        return $this->hasMany(SupplierFeed::class);
     }
 
     public function contacts(): HasMany

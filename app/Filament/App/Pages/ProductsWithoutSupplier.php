@@ -6,8 +6,13 @@ use App\Filament\App\Concerns\HasDynamicNavSort;
 
 use App\Filament\App\Concerns\EnforcesLocationScope;
 use App\Models\IntegrationConnection;
+use App\Models\Supplier;
 use App\Models\WooProduct;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
@@ -20,12 +25,17 @@ class ProductsWithoutSupplier extends Page implements HasTable
     use HasDynamicNavSort, InteractsWithTable;
     use EnforcesLocationScope;
 
-    protected static ?string $navigationIcon  = 'heroicon-o-link-slash';
-    protected static ?string $navigationGroup = 'Achiziții';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-link-slash';
+    protected static string|\UnitEnum|null $navigationGroup = 'Achiziții';
     protected static ?string $navigationLabel = 'Fără furnizor';
     protected static ?int    $navigationSort  = 6;
 
-    protected static string $view = 'filament.app.pages.products-without-supplier';
+    protected string $view = 'filament.app.pages.products-without-supplier';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return \App\Models\RolePermission::check(static::class, 'can_access');
+    }
 
     public static function canAccess(): bool
     {
@@ -42,10 +52,12 @@ class ProductsWithoutSupplier extends Page implements HasTable
         $this->computeStats();
     }
 
-    private function computeStats(): void
+    public function computeStats(): void
     {
         $base = WooProduct::whereDoesntHave('suppliers')
-            ->whereIn('connection_id', $this->getConnectionIds() ?: [0]);
+            ->whereIn('connection_id', $this->getConnectionIds() ?: [0])
+            ->where('product_type', WooProduct::TYPE_SHOP)
+            ->where(fn ($q) => $q->whereNull('is_discontinued')->orWhere('is_discontinued', false));
 
         $this->statTotal       = $base->count();
         $this->statPlaceholder = (clone $base)->where('is_placeholder', true)->count();
@@ -64,7 +76,9 @@ class ProductsWithoutSupplier extends Page implements HasTable
                 WooProduct::query()
                     ->whereDoesntHave('suppliers')
                     ->whereIn('connection_id', $connectionIds ?: [0])
-                    ->with(['stocks'])
+                    ->where('product_type', WooProduct::TYPE_SHOP)
+                    ->where(fn ($q) => $q->whereNull('is_discontinued')->orWhere('is_discontinued', false))
+                    ->withSum('stocks', 'quantity')
             )
             ->columns([
                 TextColumn::make('sku')
@@ -80,7 +94,8 @@ class ProductsWithoutSupplier extends Page implements HasTable
                     ->searchable()
                     ->sortable()
                     ->limit(60)
-                    ->tooltip(fn ($record) => $record->name),
+                    ->tooltip(fn ($record) => $record->name)
+                    ->url(fn ($record) => \App\Filament\App\Resources\WooProductResource::getUrl('view', ['record' => $record]), shouldOpenInNewTab: true),
 
                 TextColumn::make('brand')
                     ->label('Brand')
@@ -91,11 +106,38 @@ class ProductsWithoutSupplier extends Page implements HasTable
 
                 TextColumn::make('stocks_sum_quantity')
                     ->label('Stoc')
-                    ->getStateUsing(fn ($record) => $record->stocks->sum('quantity'))
+                    ->getStateUsing(fn ($record) => $record->stocks_sum_quantity ?? 0)
                     ->numeric(decimalPlaces: 0)
-                    ->sortable(false)
+                    ->sortable(query: fn ($query, $direction) => $query->orderBy('stocks_sum_quantity', $direction))
                     ->alignRight()
                     ->color(fn ($state) => $state > 0 ? 'success' : 'gray'),
+
+                TextColumn::make('product_type')
+                    ->label('Tip')
+                    ->badge()
+                    ->color(fn ($state) => match ($state) {
+                        WooProduct::TYPE_SHOP       => 'gray',
+                        WooProduct::TYPE_PRODUCTION => 'warning',
+                        WooProduct::TYPE_PALLET_FEE => 'info',
+                        default                     => 'gray',
+                    })
+                    ->formatStateUsing(fn ($state) => (WooProduct::productTypeOptions()[$state] ?? $state) . ' ✎')
+                    ->action(
+                        Action::make('change_type')
+                            ->label('Schimbă tip produs')
+                            ->icon('heroicon-o-tag')
+                            ->form([
+                                Select::make('product_type')
+                                    ->label('Tip produs')
+                                    ->options(WooProduct::productTypeOptions())
+                                    ->required()
+                                    ->default(fn ($record) => $record->product_type),
+                            ])
+                            ->action(function ($record, array $data): void {
+                                $record->update(['product_type' => $data['product_type']]);
+                                Notification::make()->success()->title('Tip produs actualizat')->send();
+                            })
+                    ),
 
                 TextColumn::make('source')
                     ->label('Sursă')
@@ -119,6 +161,52 @@ class ProductsWithoutSupplier extends Page implements HasTable
                     ->trueColor('warning')
                     ->falseColor('success'),
             ])
+            ->recordActions([
+                Action::make('assign_supplier')
+                    ->label('Asociază furnizor')
+                    ->icon('heroicon-o-user-plus')
+                    ->modalHeading(fn ($record) => 'Asociază furnizor — ' . $record->name)
+                    ->modalWidth('lg')
+                    ->form([
+                        Select::make('supplier_id')
+                            ->label('Furnizor')
+                            ->options(Supplier::where('is_active', true)->orderBy('name')->pluck('name', 'id'))
+                            ->searchable()
+                            ->required(),
+                        TextInput::make('supplier_sku')
+                            ->label('SKU furnizor')
+                            ->placeholder('opțional'),
+                        TextInput::make('purchase_price')
+                            ->label('Preț achiziție (fără TVA)')
+                            ->numeric()
+                            ->prefix('RON')
+                            ->placeholder('opțional'),
+                    ])
+                    ->action(function ($record, array $data, $livewire): void {
+                        // Dacă produsul are deja furnizori, demarcăm preferred pe ei
+                        if ($record->suppliers()->exists()) {
+                            $record->suppliers()->updateExistingPivot(
+                                $record->suppliers()->pluck('suppliers.id')->all(),
+                                ['is_preferred' => false]
+                            );
+                        }
+
+                        $record->suppliers()->attach($data['supplier_id'], [
+                            'supplier_sku'   => $data['supplier_sku'] ?? null,
+                            'purchase_price' => $data['purchase_price'] ?? null,
+                            'currency'       => 'RON',
+                            'is_preferred'   => true,
+                        ]);
+
+                        $livewire->computeStats();
+
+                        Notification::make()
+                            ->title('Furnizor asociat și marcat ca preferat')
+                            ->success()
+                            ->send();
+                    }),
+            ])
+            ->recordAction('assign_supplier')
             ->filters([
                 SelectFilter::make('source')
                     ->label('Sursă')
@@ -134,6 +222,7 @@ class ProductsWithoutSupplier extends Page implements HasTable
                         '0' => 'Produs real',
                     ]),
             ])
+            ->deferFilters(false)
             ->defaultSort('name')
             ->striped()
             ->paginated([25, 50, 100]);

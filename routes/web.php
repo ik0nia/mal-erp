@@ -1,7 +1,9 @@
 <?php
 
+use App\Models\Customer;
 use App\Models\EanAssociationRequest;
 use App\Models\EmailMessage;
+use App\Models\Offer;
 use App\Models\WooProduct;
 use App\Filament\App\Resources\WooProductResource;
 use Illuminate\Http\Request;
@@ -10,7 +12,116 @@ use Illuminate\Support\Facades\Route;
 // Webhook routes sunt înregistrate în bootstrap/app.php → routes/webhooks.php
 // fără middleware web (CSRF, session, auth).
 
+// Pagină publică progres import Toya (fără autentificare)
+Route::get('/toya-import', \App\Http\Controllers\ToyaImportStatusController::class);
+
+// Redirect permanent de la vechea cale woo-products → produse
+Route::permanentRedirect('/woo-products', '/produse');
+Route::get('/woo-products/{any}', fn (Request $request, string $any) =>
+    redirect('/produse/' . $any . ($request->getQueryString() ? '?' . $request->getQueryString() : ''), 301)
+)->where('any', '.*');
+
 Route::middleware(['web', 'auth'])->group(function () {
+
+    // Raport PDF — furnizori fără persoane de contact
+    Route::get('/rapoarte/furnizori-fara-contact', function () {
+        $suppliers = \App\Models\Supplier::withCount(['contacts', 'products'])
+            ->having('contacts_count', 0)
+            ->where('is_active', true)
+            ->with(['buyer', 'buyers'])
+            ->orderByDesc('products_count')
+            ->orderBy('name')
+            ->get();
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.suppliers-without-contacts', compact('suppliers'))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->stream('furnizori-fara-contact-' . now()->format('Ymd') . '.pdf');
+    })->name('reports.suppliers-without-contacts');
+
+    // Raport PDF — produse discontinued fără furnizor activ
+    Route::get('/rapoarte/produse-discontinued-fara-furnizor', function () {
+        $products = \Illuminate\Support\Facades\DB::table('woo_products as wp')
+            ->leftJoin(
+                \Illuminate\Support\Facades\DB::raw('(SELECT woo_product_id, SUM(quantity) as total FROM product_stocks GROUP BY woo_product_id) stk'),
+                'stk.woo_product_id', '=', 'wp.id'
+            )
+            ->where('wp.product_type', 'shop')
+            ->where('wp.is_discontinued', true)
+            ->whereNotExists(function ($q) {
+                $q->select(\Illuminate\Support\Facades\DB::raw(1))
+                  ->from('product_suppliers as ps')
+                  ->join('suppliers as s', 's.id', '=', 'ps.supplier_id')
+                  ->whereColumn('ps.woo_product_id', 'wp.id')
+                  ->where('s.is_active', true);
+            })
+            ->select(
+                'wp.sku', 'wp.name', 'wp.status', 'wp.brand', 'wp.price',
+                \Illuminate\Support\Facades\DB::raw('COALESCE(stk.total, 0) as stoc'),
+                \Illuminate\Support\Facades\DB::raw('ROUND(COALESCE(stk.total, 0) * wp.price, 2) as valoare')
+            )
+            ->orderByRaw('COALESCE(stk.total, 0) * wp.price DESC')
+            ->orderBy('wp.name')
+            ->get();
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.discontinued-without-supplier', compact('products'))
+            ->setPaper('a4', 'landscape');
+
+        return $pdf->stream('produse-discontinued-fara-furnizor-' . now()->format('Ymd') . '.pdf');
+    })->name('reports.discontinued-without-supplier');
+
+    // ── Propunere aprovizionare Toya (PDF) ───────────────────────────────────
+    Route::get('/rapoarte/propunere-toya', function () {
+        $basePath = storage_path('app/toya-proposal');
+
+        $s1 = json_decode(file_get_contents("{$basePath}/shelf1_final.json"), true);
+        $s2 = json_decode(file_get_contents("{$basePath}/shelf2_final.json"), true);
+        $s3 = json_decode(file_get_contents("{$basePath}/shelf3_final.json"), true);
+
+        $shelves = collect([
+            [
+                'title'    => 'Raftul 1 — Unelte Auto & Impact',
+                'subtitle' => 'Scule pentru mecanici auto: chei de impact, chei dinamometrice, seturi tubulare auto',
+                'story'    => 'Segmentul auto-moto este printre cele mai căutate categorii la un magazin de bricolaj & scule profesionale. Mecanicii auto independenți, atelierele mici și entuziaștii DIY care își repară singuri mașina caută constant unelte de calitate la prețuri accesibile. Toya excelează exact în acest segment — cheile de impact pe baterie (18V brushless) și seturile de tubulare cu adaptor sunt bestseller-uri dovedite. Recomandăm expunerea în zona centrală a raftului, la nivel ochilor, cu prețuri afișate vizibil. ROI estimat: 60-90 zile.',
+                'products' => $s1['products'],
+                'total_ron' => $s1['total_ron'],
+            ],
+            [
+                'title'    => 'Raftul 2 — Truse Complete & Seturi',
+                'subtitle' => 'Truse profesionale 129-224 piese: ideal cadou, echipare atelier, portofoliu complet',
+                'story'    => 'Trusele complete sunt categoria cu cea mai mare valoare adăugată per produs expus. Un set de 224 piese arată impresionant pe raft, justifică prețul și generează vânzări impulsive (achiziție pentru cadou, dotare atelier). Seria YATO Professional acoperă toată gama: de la set entry-level 34 piese pentru uz casnic, până la 224 piese pentru profesionist. Recomandăm poziționarea pe raftul superior, bine iluminat, cu capacul deschis pentru demonstrație. Rotație estimată: 3-4 truse/lună per referință.',
+                'products' => $s2['products'],
+                'total_ron' => $s2['total_ron'],
+            ],
+            [
+                'title'    => 'Raftul 3 — Scule de Mână & Electrice',
+                'subtitle' => 'Chei combinate, tubulare individuale, rulete, clești, OBD, pistol impact electric',
+                'story'    => 'Sculele de mână individuale sunt produse de reaprovizionare constantă — clientul vine să cumpere o cheie fixă de 17mm, un clește sau o ruletă fără să planifice vizita. Cheile combinate satinate YATO (seria YT-03xx) sunt referințe de bază: se vând rapid, nu ocupă mult spațiu și au marjă bună. Recomandăm expunerea în fâșii organizate pe dimensiune (8mm→22mm), cu prețuri per bucată afișate clar. OBD tester-ul și pistolul de impact electric completează secțiunea cu produse "wow" care atrag atenția și cresc valoarea coșului mediu.',
+                'products' => $s3['products'],
+                'total_ron' => $s3['total_ron'],
+            ],
+        ]);
+
+        $grandTotal  = round($shelves->sum('total_ron'), 2);
+        $generatedAt = now()->format('d.m.Y H:i');
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.toya-proposal', [
+            'shelves'      => $shelves,
+            'grand_total'  => $grandTotal,
+            'generated_at' => $generatedAt,
+        ])
+        ->setPaper('a4', 'landscape');
+
+        return $pdf->stream('propunere-toya-' . now()->format('Ymd') . '.pdf');
+    })->name('reports.toya-proposal');
+
+    // ── Editor grafic template (standalone, fără Livewire) ────────────────────
+    Route::get('/template-editor/{template}', [App\Http\Controllers\GraphicTemplateController::class, 'show'])
+        ->name('template-editor.show');
+    Route::post('/template-editor/{template}/save', [App\Http\Controllers\GraphicTemplateController::class, 'save'])
+        ->name('template-editor.save');
+    Route::post('/template-editor/{template}/preview', [App\Http\Controllers\GraphicTemplateController::class, 'preview'])
+        ->name('template-editor.preview');
 
     // Redirect direct la produsul cu SKU-ul dat (scanare cod de bare)
     Route::get('/sku/{sku}', function (string $sku) {
@@ -37,6 +148,72 @@ Route::middleware(['web', 'auth'])->group(function () {
         ]);
     });
 
+    // AJAX: caută produse pentru tabelul de necesare (returnează {id, label})
+    Route::get('/achizirii/products-search', function (Request $request) {
+        $q = trim($request->get('q', ''));
+        if (strlen($q) < 2) return response()->json([]);
+
+        return WooProduct::where(function ($query) use ($q) {
+                $query->where('name', 'like', '%' . $q . '%')
+                      ->orWhere('sku', 'like', '%' . $q . '%');
+            })
+            ->orderByRaw("CASE WHEN sku = ? THEN 0 WHEN sku LIKE ? THEN 1 ELSE 2 END", [strtoupper($q), strtoupper($q).'%'])
+            ->orderBy('name')
+            ->limit(30)
+            ->get(['id', 'name', 'sku', 'price', 'regular_price'])
+            ->map(fn ($p) => [
+                'id'    => $p->id,
+                'label' => ($p->sku ? "[{$p->sku}] " : '') . ($p->decoded_name ?? $p->name),
+                'price' => $p->price ?? $p->regular_price,
+            ]);
+    })->middleware('throttle:search');
+
+    // AJAX: caută clienți pentru popup rezervare necesar
+    Route::get('/achizirii/customers-search', function (Request $request) {
+        $q = trim($request->get('q', ''));
+        if (strlen($q) < 2) return response()->json([]);
+
+        return Customer::where('name', 'like', '%' . $q . '%')
+            ->orWhere('phone', 'like', '%' . $q . '%')
+            ->orderBy('name')
+            ->limit(20)
+            ->get(['id', 'name', 'phone'])
+            ->map(fn ($c) => [
+                'id'    => $c->id,
+                'label' => $c->name . ($c->phone ? " ({$c->phone})" : ''),
+            ]);
+    })->middleware('throttle:search');
+
+    // AJAX: caută oferte pentru popup rezervare necesar
+    Route::get('/achizirii/offers-search', function (Request $request) {
+        $q      = trim($request->get('q', ''));
+        $userId = auth()->id();
+
+        // Fără query: returnează ultimele 5 oferte ale userului curent
+        if (strlen($q) < 2) {
+            return Offer::where('user_id', $userId)
+                ->orderByDesc('created_at')
+                ->limit(5)
+                ->get(['id', 'number', 'client_name'])
+                ->map(fn ($o) => [
+                    'id'    => $o->id,
+                    'label' => "{$o->number} — {$o->client_name}",
+                ]);
+        }
+
+        return Offer::where(function ($q2) use ($q) {
+                $q2->where('number', 'like', '%' . $q . '%')
+                   ->orWhere('client_name', 'like', '%' . $q . '%');
+            })
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get(['id', 'number', 'client_name'])
+            ->map(fn ($o) => [
+                'id'    => $o->id,
+                'label' => "{$o->number} — {$o->client_name}",
+            ]);
+    })->middleware('throttle:search');
+
     // AJAX: caută produse după nume sau SKU (pentru asociere EAN)
     Route::get('/products/search', function (Request $request) {
         $q = trim($request->get('q', ''));
@@ -55,7 +232,33 @@ Route::middleware(['web', 'auth'])->group(function () {
             ->get(['id', 'name', 'sku', 'stock_status', 'price']);
 
         return response()->json($products);
-    });
+    })->middleware('throttle:search');
+
+    // WinMentor Bridge — plan integrare ERP (doar super_admin)
+    Route::get('/docs/winmentor-integrare', function () {
+        abort_unless(auth()->user()?->isSuperAdmin(), 403);
+
+        $md   = file_get_contents(base_path('private/winmentor/INTEGRARE-ERP.md'));
+        $html = \Illuminate\Support\Str::markdown($md, [
+            'html_input'         => 'strip',
+            'allow_unsafe_links' => false,
+        ]);
+
+        return response()->view('docs.winmentor-integrare', ['content' => $html]);
+    })->name('docs.winmentor-integrare');
+
+    // WinMentor Bridge — documentație (doar super_admin)
+    Route::get('/docs/winmentor', function () {
+        abort_unless(auth()->user()?->isSuperAdmin(), 403);
+
+        $md   = file_get_contents(base_path('private/winmentor/README.md'));
+        $html = \Illuminate\Support\Str::markdown($md, [
+            'html_input'         => 'strip',
+            'allow_unsafe_links' => false,
+        ]);
+
+        return response()->view('docs.winmentor', ['content' => $html]);
+    })->name('docs.winmentor');
 
     // Descarcă un atașament de pe IMAP (doar super_admin)
     Route::get('/email-attachment/{id}/{index}', function (int $id, int $index) {
@@ -130,23 +333,37 @@ Route::middleware(['web', 'auth'])->group(function () {
 
         $email = EmailMessage::findOrFail($id);
 
-        $html = $email->body_html ?? '';
+        $rawHtml = $email->body_html ?? '';
 
-        // Dacă nu are body HTML, construim un HTML simplu din text
-        if ($html === '' && $email->body_text) {
+        // Dacă nu are body HTML, construim un HTML simplu din text (body_text e deja escaped)
+        if ($rawHtml === '' && $email->body_text) {
+            $safeText = htmlspecialchars($email->body_text, ENT_QUOTES, 'UTF-8');
             $html = '<html><body><pre style="font-family:sans-serif;white-space:pre-wrap;padding:16px">'
-                . htmlspecialchars($email->body_text, ENT_QUOTES, 'UTF-8')
+                . $safeText
                 . '</pre></body></html>';
+
+            return response($html)
+                ->header('Content-Type', 'text/html; charset=utf-8')
+                ->header('X-Frame-Options', 'SAMEORIGIN')
+                ->header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline';");
         }
 
-        if ($html === '') {
+        if ($rawHtml === '') {
             $html = '<html><body><p style="color:#999;padding:16px">Conținut indisponibil.</p></body></html>';
+
+            return response($html)
+                ->header('Content-Type', 'text/html; charset=utf-8')
+                ->header('X-Frame-Options', 'SAMEORIGIN')
+                ->header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline';");
         }
 
-        return response($html)
+        // Sanitizare HTML pentru a preveni XSS înainte de redare în iframe
+        $cleanHtml = EmailMessage::sanitizeEmailHtml($rawHtml);
+
+        return response($cleanHtml)
             ->header('Content-Type', 'text/html; charset=utf-8')
             ->header('X-Frame-Options', 'SAMEORIGIN')
-            ->header('Content-Security-Policy', "default-src 'self' 'unsafe-inline' data: https:; img-src * data:;");
+            ->header('Content-Security-Policy', "default-src 'self' 'unsafe-inline' data: https:; img-src * data:; script-src 'none';");
     });
 
     // AJAX: trimite cerere de asociere EAN la produs

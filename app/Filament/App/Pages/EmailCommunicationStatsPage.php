@@ -10,20 +10,20 @@ use Illuminate\Support\Facades\DB;
 
 class EmailCommunicationStatsPage extends Page
 {
-    protected static ?string $navigationIcon  = 'heroicon-o-chart-bar';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-chart-bar';
     protected static ?string $navigationLabel = 'Statistici Comunicare';
-    protected static ?string $navigationGroup = 'Comunicare';
+    protected static string|\UnitEnum|null $navigationGroup = 'Comunicare';
     protected static ?int    $navigationSort  = 2;
-    protected static string  $view            = 'filament.app.pages.email-communication-stats';
+    protected string  $view            = 'filament.app.pages.email-communication-stats';
 
     public static function shouldRegisterNavigation(): bool
     {
-        return auth()->user()?->isSuperAdmin() ?? false;
+        return \App\Models\RolePermission::check(static::class, 'can_access');
     }
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isSuperAdmin() ?? false;
+        return \App\Models\RolePermission::check(static::class, 'can_access');
     }
 
     // ── Carduri sumar ──────────────────────────────────────────────────────

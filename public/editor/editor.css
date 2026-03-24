@@ -1,0 +1,555 @@
+/* ============================================================
+   Malinco ERP — Fabric.js Template Editor
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body { margin: 0; overflow: hidden; font-family: system-ui, -apple-system, sans-serif; }
+
+/* ── Root layout ─────────────────────────────────────────── */
+#editor-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* ── Toolbar ─────────────────────────────────────────────── */
+#toolbar {
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  overflow-x: auto;
+}
+
+.tb-btn {
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: #334155;
+  color: #e2e8f0;
+  white-space: nowrap;
+  transition: background .15s;
+  flex-shrink: 0;
+}
+.tb-btn:hover { background: #475569; }
+
+.tb-btn.tb-danger { background: #7f1d1d; color: #fca5a5; }
+.tb-btn.tb-danger:hover { background: #991b1b; }
+
+.tb-btn.tb-save { background: #15803d; color: #fff; }
+.tb-btn.tb-save:hover { background: #166534; }
+
+.tb-btn.tb-preview { background: #1d4ed8; color: #fff; }
+.tb-btn.tb-preview:hover { background: #1e40af; }
+
+.toolbar-sep {
+  width: 1px;
+  height: 24px;
+  background: #475569;
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.toolbar-spacer { flex: 1; }
+
+.zoom-indicator {
+  font-size: 11px;
+  color: #94a3b8;
+  min-width: 36px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* ── Editor body ─────────────────────────────────────────── */
+#editor-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Layers panel ────────────────────────────────────────── */
+#layers-panel {
+  width: 240px;
+  flex-shrink: 0;
+  background: #fff;
+  border-right: 1px solid #e2e8f0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Canvas area (workspace) ─────────────────────────────── */
+#canvas-area {
+  flex: 1;
+  overflow: auto;
+  /* Workspace background — must contrast clearly with the white artboard. */
+  background: #c8c8c8;
+  background-image:
+    linear-gradient(45deg, #b8b8b8 25%, transparent 25%),
+    linear-gradient(-45deg, #b8b8b8 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #b8b8b8 75%),
+    linear-gradient(-45deg, transparent 75%, #b8b8b8 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/*
+ * #canvas-wrap is the shadow container for the artboard.
+ *
+ * CRITICAL sizing rules:
+ *  - flex-shrink: 0  → flex layout must NOT compress it
+ *  - align-self: center → overrides any inherited stretch
+ *  - width / height are NOT set here (Fabric sets them via JS inline style)
+ *  - max-width: none  → prevents any framework max-width from capping it
+ */
+#canvas-wrap {
+  display:     block;
+  position:    relative; /* required for guide-overlay absolute positioning */
+  flex-shrink: 0;
+  align-self:  center;   /* never stretch in cross-axis */
+  line-height: 0;         /* prevent inline ghost space below canvas */
+  max-width:   none;
+  max-height:  none;
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,.12),
+    0 8px 32px rgba(0,0,0,.28);
+  border-radius: 2px;
+}
+
+/*
+ * Fabric.js injects a stylesheet rule like:
+ *   .canvas-container canvas { position: absolute; width: 100%; height: 100%; }
+ * This means the canvas SIZE = 100% of .canvas-container.
+ * We must guarantee .canvas-container is exactly artboardPx × artboardPx.
+ *
+ * ZoomManager also forces these via style.setProperty('width', …, 'important'),
+ * but the CSS below provides the non-JS safety net.
+ *
+ * Do NOT set explicit width/height here — that's done entirely by JS.
+ * Only prevent external rules from overriding the JS-set inline styles.
+ */
+#canvas-wrap .canvas-container,
+#canvas-wrap canvas {
+  max-width:  none !important;
+  max-height: none !important;
+  flex-shrink: 0;
+}
+
+#zoom-controls {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* ── Properties panel ────────────────────────────────────── */
+#props-panel {
+  width: 280px;
+  flex-shrink: 0;
+  background: #fff;
+  border-left: 1px solid #e2e8f0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Shared panel styles ─────────────────────────────────── */
+.panel-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #64748b;
+}
+
+.panel-empty {
+  padding: 20px 14px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.panel-section {
+  padding: 10px 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.panel-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #94a3b8;
+  margin-bottom: 8px;
+  margin-top: 0;
+}
+
+.panel-obj-type {
+  font-size: 10px;
+  color: #94a3b8;
+  background: #f1f5f9;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* ── Prop grid ───────────────────────────────────────────── */
+.prop-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.prop-field label {
+  display: block;
+  font-size: 10px;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.prop-field input {
+  width: 100%;
+  padding: 4px 7px;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  font-size: 12px;
+  color: #1e293b;
+  background: #f8fafc;
+}
+
+.prop-field input:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+/* ── Generic panel inputs ────────────────────────────────── */
+#props-panel label,
+#layers-panel label {
+  display: block;
+  font-size: 12px;
+  color: #475569;
+  margin-top: 8px;
+  margin-bottom: 3px;
+}
+
+#props-panel input[type=text],
+#props-panel input[type=number],
+#props-panel select,
+#props-panel textarea {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #1e293b;
+  background: #f8fafc;
+  box-sizing: border-box;
+}
+
+#props-panel input[type=text]:focus,
+#props-panel input[type=number]:focus,
+#props-panel select:focus,
+#props-panel textarea:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+#props-panel textarea {
+  resize: vertical;
+  min-height: 48px;
+}
+
+#props-panel input[type=checkbox] {
+  width: auto;
+  margin: 0;
+}
+
+/* ── Color row ───────────────────────────────────────────── */
+.color-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.color-row input[type=color] {
+  width: 36px;
+  height: 30px;
+  border-radius: 5px;
+  cursor: pointer;
+  padding: 1px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  flex-shrink: 0;
+}
+
+/* ── Align row ───────────────────────────────────────────── */
+.align-row {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.align-btn {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  transition: background .1s;
+}
+
+.align-btn:hover { background: #e2e8f0; }
+
+.align-btn.active {
+  background: #6366f1;
+  color: #fff;
+  border-color: #6366f1;
+}
+
+/* ── Layers ──────────────────────────────────────────────── */
+.layer-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  border-bottom: 1px solid #f8fafc;
+  transition: background .1s;
+  border-left: 3px solid transparent;
+  user-select: none;
+}
+
+.layer-item:hover { background: #f8fafc; }
+
+.layer-item.active {
+  background: #eef2ff;
+  border-left: 3px solid #6366f1;
+}
+
+.layer-item.locked { opacity: .6; }
+
+.layer-item.hidden-layer { opacity: .4; }
+
+.layer-icon {
+  font-size: 14px;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.layer-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #1e293b;
+}
+
+.layer-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity .1s;
+}
+
+.layer-item:hover .layer-actions { opacity: 1; }
+
+.layer-action {
+  padding: 2px 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+  border-radius: 3px;
+  line-height: 1;
+}
+
+.layer-action:hover { background: #e2e8f0; }
+
+/* ── Layer drag handle ───────────────────────────────────── */
+.layer-drag-handle {
+  cursor: grab;
+  color: #cbd5e1;
+  font-size: 14px;
+  flex-shrink: 0;
+  line-height: 1;
+  padding: 0 2px;
+  transition: color .1s;
+}
+.layer-item:hover .layer-drag-handle { color: #94a3b8; }
+.layer-drag-handle:active { cursor: grabbing; }
+
+/* ── Layer role badge ────────────────────────────────────── */
+.layer-role-badge {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: .03em;
+  line-height: 1.6;
+}
+
+/* ── Drag-and-drop states ────────────────────────────────── */
+.layer-dragging {
+  opacity: 0.35;
+}
+
+.layer-item.drop-above {
+  border-top: 2px solid #6366f1;
+}
+
+.layer-item.drop-below {
+  border-bottom: 2px solid #6366f1;
+}
+
+/* ── Template switcher ───────────────────────────────────── */
+.tpl-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0;
+}
+
+.tpl-btn {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  cursor: pointer;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  white-space: nowrap;
+  transition: border-color .1s, color .1s, background .1s;
+}
+
+.tpl-btn:hover {
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+.tpl-btn.active {
+  background: #6366f1;
+  color: #fff;
+  border-color: #6366f1;
+}
+
+/* ── Status message ──────────────────────────────────────── */
+#status-msg {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 9999;
+  display: none;
+  pointer-events: none;
+}
+
+.status-ok  { background: #dcfce7; color: #15803d; }
+.status-err { background: #fee2e2; color: #dc2626; }
+.status-info { background: #dbeafe; color: #1d4ed8; }
+
+/* ── Guide overlay ───────────────────────────────────────── */
+.guide-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* ── Toolbar select (canvas preset) ─────────────────────── */
+.tb-select {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: #334155;
+  color: #e2e8f0;
+  flex-shrink: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  max-width: 160px;
+}
+
+.tb-select:focus { background: #475569; }
+
+/* ── Alignment buttons ───────────────────────────────────── */
+.tb-align {
+  font-size: 14px;
+  padding: 4px 7px;
+  line-height: 1;
+}
+
+/* ── Preview panel ───────────────────────────────────────── */
+.preview-panel { padding: 14px; }
+
+.preview-panel h3 {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #94a3b8;
+  margin-bottom: 8px;
+  margin-top: 0;
+}
+
+.preview-img-wrap {
+  /* Enforce 1:1 container so a missing/loading image doesn't collapse it. */
+  aspect-ratio: 1 / 1;
+  background: #f1f5f9;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.preview-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;    /* never stretch; always square crop */
+  display: block;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.1);
+}

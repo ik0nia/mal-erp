@@ -1,0 +1,411 @@
+<section id="t09-resources-achizitii">
+
+<h2>T09 — Resurse Filament: Achiziții, Social Media &amp; Grafică</h2>
+
+<p>Acest capitol documentează resursele Filament din grupurile <strong>Achiziții</strong>, <strong>Social Media</strong> și <strong>Grafică</strong> ale panelului App. Toate resursele folosesc trait-urile <code>ChecksRolePermissions</code> și <code>HasDynamicNavSort</code>.</p>
+
+<hr>
+
+<h3 id="purchase-request-resource">1. PurchaseRequestResource — Necesare (PNR)</h3>
+
+<table>
+  <tr><th>Atribut</th><th>Valoare</th></tr>
+  <tr><td>Model</td><td><code>App\Models\PurchaseRequest</code></td></tr>
+  <tr><td>Grup navigare</td><td>Achiziții</td></tr>
+  <tr><td>Label</td><td>Necesare / Necesar</td></tr>
+  <tr><td>Iconă</td><td><code>heroicon-o-clipboard-document-list</code></td></tr>
+  <tr><td>Sort navigare</td><td>1</td></tr>
+  <tr><td>Badge navigare</td><td>Numărul de necesare cu status <code>submitted</code> (culoare <em>warning</em>)</td></tr>
+</table>
+
+<h4>1.1 Formular (Create / Edit)</h4>
+
+<h5>Secțiunea "Informații necesar"</h5>
+<table>
+  <tr><th>Câmp</th><th>Tip</th><th>Validare / Comportament</th></tr>
+  <tr><td><code>number</code></td><td>TextInput</td><td>Disabled — generat automat (format PNR-Ymd-XXXX)</td></tr>
+  <tr><td><code>status</code></td><td>Select</td><td>Disabled, default <code>draft</code></td></tr>
+  <tr><td><code>location_id</code></td><td>Select</td><td>Required, searchable. Super-admin vede toate locațiile; restul văd doar locațiile operaționale proprii. Default: <code>user->location_id</code></td></tr>
+  <tr><td><code>notes</code></td><td>Textarea</td><td>Opțional, 2 rânduri, <code>columnSpanFull</code></td></tr>
+</table>
+
+<h5>Secțiunea "Produse solicitate"</h5>
+<p>Folosește componenta custom <code>PurchaseItemsTable</code> (câmp <code>items</code>) care gestionează lista de produse solicitate ca tabel interactiv client-side, cu câmpurile:</p>
+<ul>
+  <li><code>woo_product_id</code> — produs WooCommerce (căutare)</li>
+  <li><code>quantity</code> — cantitate (min 0.001)</li>
+  <li><code>needed_by</code> — dată necesitate</li>
+  <li><code>is_urgent</code> — boolean</li>
+  <li><code>is_reserved</code> — boolean</li>
+  <li><code>customer_id</code> — client rezervare</li>
+  <tr><td><code>offer_id</code> — ofertă asociată</td></tr>
+  <li><code>notes</code> — notițe per produs</li>
+</ul>
+
+<p><strong>La salvare (<code>afterCreate</code> / <code>afterSave</code>):</strong></p>
+<ul>
+  <li><strong>Create</strong>: se creează înregistrări <code>PurchaseRequestItem</code> pentru fiecare produs din <code>purchaseItems</code>. <code>user_id</code> și <code>location_id</code> sunt injectate automat în <code>mutateFormDataBeforeCreate</code>.</li>
+  <li><strong>Edit</strong>: itemele existente cu status <code>pending</code> se actualizează; cele comandate/anulate nu se modifică; itemele noi se adaugă; itemele eliminate (doar cu status <code>pending</code>) se șterg. La final se apelează <code>recalculateStatus()</code>.</li>
+</ul>
+
+<h4>1.2 Tabel listă</h4>
+
+<table>
+  <tr><th>Coloană</th><th>Tip</th><th>Detalii</th></tr>
+  <tr><td>Număr</td><td>TextColumn</td><td>Searchable, sortable</td></tr>
+  <tr><td>Locație</td><td>TextColumn (<code>location.name</code>)</td><td>Sortable</td></tr>
+  <tr><td>Consultant</td><td>TextColumn (<code>user.name</code>)</td><td>Sortable</td></tr>
+  <tr><td>Status</td><td>TextColumn badge</td><td>Culori din <code>PurchaseRequest::statusColors()</code></td></tr>
+  <tr><td>Produse</td><td>TextColumn count</td><td>Numără relația <code>items</code></td></tr>
+  <tr><td>Urgent</td><td>IconColumn boolean</td><td>Roșu dacă are cel puțin un item cu <code>is_urgent = true</code></td></tr>
+  <tr><td>Data</td><td>TextColumn date</td><td>Format d.m.Y, sortable, default sort desc</td></tr>
+</table>
+
+<h4>1.3 Filtre</h4>
+
+<table>
+  <tr><th>Filtru</th><th>Tip</th><th>Detalii</th></tr>
+  <tr><td>Status</td><td>SelectFilter</td><td>Opțiuni din <code>PurchaseRequest::statusOptions()</code></td></tr>
+  <tr><td>Urgent</td><td>TernaryFilter</td><td>Filtrează după existența itemelor cu <code>is_urgent = true</code></td></tr>
+</table>
+
+<h4>1.4 Acțiuni tabel</h4>
+
+<table>
+  <tr><th>Acțiune</th><th>Condiție vizibilitate</th><th>Comportament</th></tr>
+  <tr><td>View</td><td>Întotdeauna</td><td>Deschide pagina ViewPurchaseRequest</td></tr>
+  <tr><td>Edit</td><td><code>canEdit($record)</code></td><td>Editare doar pe status <code>draft</code>, de către autor / admin / super_admin</td></tr>
+  <tr><td>Delete</td><td><code>canDelete($record)</code></td><td>Ștergere permisă doar pe <code>draft</code> / <code>cancelled</code>; cere confirmare</td></tr>
+  <tr><td><strong>Trimite</strong></td><td>Status = <code>draft</code></td><td>Schimbă status → <code>submitted</code>; notifică buyer-ii responsabili pentru furnizorii din necesar (fallback: toți managerii de achiziții)</td></tr>
+</table>
+
+<h4>1.5 Infolist (View)</h4>
+
+<ul>
+  <li><strong>Secțiunea "Informații necesar"</strong>: număr, status badge, locație, creat de, dată, observații.</li>
+  <li><strong>Secțiunea "Comunicare furnizori"</strong> (collapsed): afișează ultimele 8 emailuri (INBOX + Sent) de la furnizorii implicați în necesar, via blade <code>purchase-request-emails</code>. Emailurile sunt preluate în <code>ViewPurchaseRequest::getSupplierEmails()</code>.</li>
+  <li><strong>Secțiunea "Produse solicitate"</strong>: RepeatableEntry cu câmpurile: produs, furnizor, cantitate cerută, cantitate comandată (badge cu progres), dată necesitate, urgent, rezervat, client, ofertă (link), status item, PO asociat (link), notițe, și acțiunea inline <strong>"Anulează item"</strong> (disponibilă doar dacă item-ul e <code>pending</code> — apelează <code>recalculateStatus()</code>).</li>
+</ul>
+
+<h4>1.6 Control acces</h4>
+
+<table>
+  <tr><th>Operație</th><th>Condiție</th></tr>
+  <tr><td>Create</td><td>Orice utilizator autentificat</td></tr>
+  <tr><td>Edit</td><td>Status <code>draft</code> + autor sau admin/super_admin</td></tr>
+  <tr><td>Delete</td><td>Status <code>draft</code>/<code>cancelled</code> + autor sau admin/super_admin</td></tr>
+  <tr><td>Vizibilitate listă</td><td>Consultanții de vânzări văd doar propriile necesare (<code>user_id = auth()->id()</code>)</td></tr>
+</table>
+
+<h4>1.7 Acțiuni header (View)</h4>
+
+<table>
+  <tr><th>Acțiune</th><th>Condiție</th><th>Efect</th></tr>
+  <tr><td>Edit</td><td><code>canEdit()</code></td><td>Redirecționează la EditPurchaseRequest</td></tr>
+  <tr><td>Trimite spre buyer</td><td>Status = <code>draft</code></td><td>→ <code>submitted</code></td></tr>
+  <tr><td>Anulează</td><td>Status <code>draft</code>/<code>submitted</code> + <code>canEdit()</code></td><td>→ <code>cancelled</code></td></tr>
+  <tr><td>Delete</td><td><code>canDelete()</code></td><td>Ștergere cu confirmare</td></tr>
+</table>
+
+<hr>
+
+<h3 id="purchase-order-resource">2. PurchaseOrderResource — Comenzi furnizori (PO)</h3>
+
+<table>
+  <tr><th>Atribut</th><th>Valoare</th></tr>
+  <tr><td>Model</td><td><code>App\Models\PurchaseOrder</code></td></tr>
+  <tr><td>Grup navigare</td><td>Achiziții</td></tr>
+  <tr><td>Label</td><td>Comenzi furnizori / Comandă furnizor</td></tr>
+  <tr><td>Iconă</td><td><code>heroicon-o-shopping-bag</code></td></tr>
+  <tr><td>Sort navigare</td><td>4</td></tr>
+</table>
+
+<h4>2.1 Formular (Create / Edit)</h4>
+
+<h5>Secțiunea "Informații comandă"</h5>
+<table>
+  <tr><th>Câmp</th><th>Tip</th><th>Validare / Comportament</th></tr>
+  <tr><td><code>number</code></td><td>TextInput</td><td>Disabled — generat automat (format PO-Ymd-XXXX, sequence MAX+1)</td></tr>
+  <tr><td><code>supplier_id</code></td><td>Select</td><td>Required, searchable, live, filtrat pe furnizori activi. Disabled pe edit (furnizorul nu poate fi schimbat)</td></tr>
+  <tr><td><code>status</code></td><td>Select</td><td>Disabled, default <code>draft</code></td></tr>
+  <tr><td><code>notes_internal</code></td><td>Textarea</td><td>Opțional, 2 rânduri, columnSpanFull</td></tr>
+  <tr><td><code>notes_supplier</code></td><td>Textarea</td><td>Opțional, 2 rânduri, columnSpanFull</td></tr>
+</table>
+
+<h5>Secțiunea "Produse comandate" — TableRepeater</h5>
+<table>
+  <tr><th>Câmp</th><th>Tip</th><th>Detalii</th></tr>
+  <tr><td>Thumbnail</td><td>Placeholder</td><td>Imagine 32×32px preluată din <code>WooProduct::main_image_url</code> (cache static per request)</td></tr>
+  <tr><td><code>woo_product_id</code></td><td>Select searchable</td><td>Filtrează produsele după furnizorul selectat. La selectare: auto-fill <code>supplier_sku</code>, <code>unit_price</code> (din <code>ProductSupplier</code>), <code>product_name</code>, <code>sku</code></td></tr>
+  <tr><td><code>product_name</code></td><td>TextInput</td><td>Required — auto-completat sau introdus manual</td></tr>
+  <tr><td><code>sku</code></td><td>TextInput</td><td>SKU intern, nullable</td></tr>
+  <tr><td><code>supplier_sku</code></td><td>TextInput</td><td>SKU furnizor, nullable, auto-completat</td></tr>
+  <tr><td><code>quantity</code></td><td>TextInput numeric</td><td>Required, min 0.001, default 1. Live on blur → recalculează <code>line_total_preview</code></td></tr>
+  <tr><td><code>unit_price</code></td><td>TextInput numeric</td><td>Min 0, nullable, suffix RON. Live on blur → recalculează <code>line_total_preview</code></td></tr>
+  <tr><td>Total linie</td><td>Placeholder</td><td>Calculat live: <code>quantity × unit_price</code></td></tr>
+  <tr><td>Surse</td><td>Placeholder</td><td>Afișează sursele din <code>sources_json</code>: cantitate × număr necesar, badge URG, tooltip cu consultant/locație/dată necesitate</td></tr>
+  <tr><td><code>notes</code></td><td>TextInput</td><td>Notițe per linie, nullable</td></tr>
+  <tr><td><code>sources_json</code></td><td>Hidden</td><td>JSON cu sursele (necesarele) din care provine cantitatea</td></tr>
+</table>
+
+<p>Sub tabel: <strong>Total comandă</strong> (Placeholder) — sumă live a tuturor liniilor.</p>
+
+<h4>2.2 Pre-populare din BuyerDashboard (logică specială)</h4>
+
+<p>Când <code>CreatePurchaseOrder</code> primește query param <code>?supplier_id=X</code> (link din <code>BuyerDashboardPage</code> sau <code>UnassignedItemsPage</code>), metoda <code>fillForm()</code> apelează <code>buildItemsForSupplier($supplierId)</code> care:</p>
+<ol>
+  <li>Preia toate <code>PurchaseRequestItem</code> cu <code>supplier_id = X</code>, status <code>pending</code>, din necesare cu status <code>submitted</code> sau <code>partially_ordered</code>, unde <code>quantity &gt; ordered_quantity</code>.</li>
+  <li>Sortează: urgent întâi, apoi după <code>needed_by</code> crescător (FIFO).</li>
+  <li>Grupează pe produs (<code>woo_product_id</code> sau <code>product_name</code>).</li>
+  <li>Calculează cantitatea totală rămasă (= <code>quantity - ordered_quantity</code> sumată pe grup).</li>
+  <li>Auto-completează <code>supplier_sku</code> și <code>unit_price</code> din <code>ProductSupplier</code>.</li>
+  <li>Construiește <code>sources_json</code> cu metadatele fiecărei surse (consultant, locație, dată, client, etc.).</li>
+</ol>
+
+<h4>2.3 Alocare FIFO după creare (<code>afterCreate</code>)</h4>
+
+<p>Executat în <code>DB::transaction()</code> cu <code>lockForUpdate()</code> (previne race condition la creare simultană):</p>
+<ol>
+  <li>Pentru fiecare <code>PurchaseOrderItem</code> cu <code>sources_json</code> nevid, sortează sursele FIFO (urgent first → <code>needed_by</code> asc).</li>
+  <li>Iterează sursele și alocă din cantitatea disponibilă a PO (<code>remaining</code>): <code>canAllocate = min(remaining, sourceQty, availableInItem)</code>.</li>
+  <li>Incrementează <code>ordered_quantity</code> pe <code>PurchaseRequestItem</code>.</li>
+  <li>Dacă item-ul de necesar este complet acoperit (<code>isFullyOrdered()</code>) → status <code>ordered</code> + setează <code>purchase_order_item_id</code>.</li>
+  <li>Dacă parțial → rămâne <code>pending</code> cu referința la PO setată.</li>
+  <li>Salvează <code>allocated_qty</code> per sursă în <code>sources_json</code>.</li>
+  <li>La final: <code>recalculateStatus()</code> pe toate necesarele afectate.</li>
+</ol>
+
+<h4>2.4 Tabel listă</h4>
+
+<table>
+  <tr><th>Coloană</th><th>Tip</th><th>Detalii</th></tr>
+  <tr><td>Număr PO</td><td>TextColumn</td><td>Searchable, sortable</td></tr>
+  <tr><td>Furnizor</td><td>TextColumn (<code>supplier.name</code>)</td><td>Searchable, sortable</td></tr>
+  <tr><td>Status</td><td>TextColumn badge</td><td>Culori din <code>PurchaseOrder::statusColors()</code></td></tr>
+  <tr><td>Valoare</td><td>TextColumn</td><td>Format nr. RON, sortable</td></tr>
+  <tr><td>Resp. achiziții</td><td>TextColumn (<code>buyer.name</code>)</td><td>Sortable</td></tr>
+  <tr><td>Trimis la</td><td>TextColumn date</td><td>Format d.m.Y, placeholder —</td></tr>
+  <tr><td>Recepție</td><td>TextColumn badge</td><td>Afișat doar pentru status <code>sent</code>/<code>received</code>: "Așteptare" / "Completă" (success) / "Parțială ⚠" (warning)</td></tr>
+  <tr><td>Data</td><td>TextColumn dateTime</td><td>Format d.m.Y H:i, sortable, default sort desc</td></tr>
+</table>
+
+<h4>2.5 Filtre</h4>
+
+<table>
+  <tr><th>Filtru</th><th>Tip</th><th>Detalii</th></tr>
+  <tr><td>Status</td><td>SelectFilter</td><td>Opțiuni din <code>PurchaseOrder::statusOptions()</code></td></tr>
+  <tr><td>Furnizor</td><td>SelectFilter</td><td>Lista furnizorilor, searchable</td></tr>
+  <tr><td>Recepție parțială</td><td>TernaryFilter</td><td>Filtrează PO-urile cu status <code>received</code> care au lipsuri (<code>received_quantity &lt; quantity</code>)</td></tr>
+</table>
+
+<h4>2.6 Acțiuni tabel</h4>
+
+<table>
+  <tr><th>Acțiune</th><th>Condiție</th><th>Comportament</th></tr>
+  <tr><td>View</td><td>Întotdeauna</td><td>Deschide ViewPurchaseOrder</td></tr>
+  <tr><td>Edit</td><td>Status = <code>draft</code></td><td>Editare formular</td></tr>
+  <tr><td>Delete</td><td><code>canDelete()</code></td><td>Permis pe <code>draft</code>/<code>cancelled</code>/<code>rejected</code> — cere confirmare</td></tr>
+</table>
+
+<h4>2.7 Acțiuni header (View)</h4>
+
+<table>
+  <tr><th>Acțiune</th><th>Status vizibil</th><th>Comportament</th></tr>
+  <tr><td>Edit</td><td><code>draft</code></td><td>Redirecționează la EditPurchaseOrder</td></tr>
+  <tr><td><strong>Plasează comanda</strong></td><td><code>draft</code>, <code>approved</code></td><td>Verifică <code>needsApproval()</code>: dacă da → <code>pending_approval</code> + notifică manageri/directori; dacă nu → <code>approved</code> automat cu <code>approved_at</code>/<code>approved_by</code></td></tr>
+  <tr><td><strong>Aprobă</strong></td><td><code>pending_approval</code></td><td>Vizibil doar dacă <code>canApprove()</code> (manager/director/super_admin). Setează <code>approved</code> + timestamps</td></tr>
+  <tr><td><strong>Respinge</strong></td><td><code>pending_approval</code></td><td>Vizibil dacă <code>canApprove()</code>. Formular cu câmp <code>rejection_reason</code> (required). Reverte itemele din necesare la <code>pending</code>. Notifică buyer-ul</td></tr>
+  <tr><td><strong>Trimite email furnizor</strong></td><td><code>approved</code>, <code>sent</code>, <code>received</code></td><td>Modal cu câmpuri: <code>to_email</code> (pre-completat din furnizor), <code>subject</code>, <code>body</code> (pre-generat cu lista produselor și totalul). La trimitere: dacă status era <code>approved</code> → tranziție automată la <code>sent</code> + <code>markRequestItemsAsOrdered()</code></td></tr>
+  <tr><td><strong>Marchează trimis</strong></td><td><code>approved</code></td><td>Alternativă fără email (telefon/fax). → <code>sent</code> + <code>markRequestItemsAsOrdered()</code></td></tr>
+  <tr><td><strong>Recepție marfă</strong></td><td><code>sent</code></td><td>Modal cu câmpuri numerice per linie (default = cantitate comandată, min 0). Salvează <code>received_quantity</code>. Lipsurile revin în coada de cumpărare (<code>revertShortfallToRequestItems</code> — inversare FIFO). Notifică consultanții cu lipsuri</td></tr>
+  <tr><td><strong>Descarcă PDF</strong></td><td>Întotdeauna</td><td>Generează PDF via <code>barryvdh/laravel-dompdf</code> (template <code>pdf/purchase-order</code>), descărcare directă</td></tr>
+  <tr><td><strong>Anulează</strong></td><td>Orice, excl. <code>sent</code>/<code>received</code>/<code>cancelled</code></td><td>Reverte toate itemele din necesare la <code>pending</code> (<code>revertRequestItemsToPending</code> — scade <code>allocated_qty</code> din <code>ordered_quantity</code>) + <code>recalculateStatus()</code></td></tr>
+</table>
+
+<h4>2.8 Infolist (View)</h4>
+
+<ul>
+  <li><strong>Secțiunea "Informații comandă"</strong>: număr PO, furnizor, status badge, responsabil achiziții, valoare totală, monedă, notițe interne, notițe furnizor, aprobat la/de, motiv respingere, trimis la, recepționat la/de, observații recepție.</li>
+  <li><strong>Secțiunea "Comunicare furnizor"</strong> (collapsed): emailuri ±30/+60 zile de la furnizorul PO-ului, via blade <code>purchase-order-emails</code>.</li>
+  <li><strong>Secțiunea "Produse comandate"</strong>: RepeatableEntry cu produs, SKU intern, SKU furnizor, cantitate comandată, cantitate recepționată (badge: verde dacă completă, portocaliu dacă parțială cu format "rec / cmd ⚠"), preț unitar (4 zecimale RON), total linie, notițe.</li>
+</ul>
+
+<h4>2.9 Logica markRequestItemsAsOrdered</h4>
+
+<p>Apelată când PO trece la status <code>sent</code>. Parcurge toate <code>PurchaseOrderItem</code>-urile, extrage toți <code>request_item_id</code> cu <code>allocated_qty &gt; 0</code> din <code>sources_json</code> (fallback pe FK primar). Marchează ca <code>ordered</code> doar itemele de necesar care sunt complet acoperite (<code>isFullyOrdered()</code>). Apelează <code>recalculateStatus()</code> pe necesarele afectate.</p>
+
+<h4>2.10 Logica revertShortfallToRequestItems (recepție cu lipsuri)</h4>
+
+<p>La recepție parțială: pentru fiecare linie cu lipsuri, parcurge <code>sources_json</code> în ordine <strong>inversă FIFO</strong> (ultimii alocați — primii returnați). Scade din <code>ordered_quantity</code> al itemului de necesar și resetează statusul la <code>pending</code>. Dacă <code>ordered_quantity</code> ajunge la 0 → șterge și referința la PO.</p>
+
+<h4>2.11 Control acces</h4>
+
+<table>
+  <tr><th>Operație</th><th>Roluri permise</th></tr>
+  <tr><td>Create</td><td>super_admin, admin, manager_achizitii, manager</td></tr>
+  <tr><td>Delete</td><td>super_admin, admin, manager_achizitii, manager (doar pe draft/cancelled/rejected)</td></tr>
+  <tr><td>Approve/Reject</td><td>super_admin, manager, director_financiar, director_vanzari</td></tr>
+</table>
+
+<hr>
+
+<h3 id="social-post-resource">3. SocialPostResource — Postări Social Media</h3>
+
+<table>
+  <tr><th>Atribut</th><th>Valoare</th></tr>
+  <tr><td>Model</td><td><code>App\Models\SocialPost</code></td></tr>
+  <tr><td>Grup navigare</td><td>Social Media</td></tr>
+  <tr><td>Label</td><td>Postări / Postare</td></tr>
+  <tr><td>Iconă</td><td><code>heroicon-o-share</code></td></tr>
+  <tr><td>Sort navigare</td><td>1</td></tr>
+</table>
+
+<h4>3.1 Formular (Create)</h4>
+
+<table>
+  <tr><th>Câmp</th><th>Tip</th><th>Validare / Comportament</th></tr>
+  <tr><td><code>social_account_id</code></td><td>Select (relationship)</td><td>Required. Default: primul cont activ</td></tr>
+  <tr><td><code>brief_type</code></td><td>Select</td><td>Required, live. Opțiuni: <code>product</code>, <code>brand</code>, <code>promo</code>. Default: <code>product</code></td></tr>
+  <tr><td><code>woo_product_id</code></td><td>Select searchable</td><td>Opțional. Vizibil doar când <code>brief_type = product</code>. Max 500 produse cu <code>woo_id</code></td></tr>
+  <tr><td><code>brand_id</code></td><td>Select (relationship)</td><td>Opțional, searchable, preload. Vizibil doar când <code>brief_type = brand</code></td></tr>
+  <tr><td><code>template</code></td><td>Select</td><td>Opțional. Lista template-urilor grafice active (slug → nume). Dacă lipsește, se alege automat după tipul postării</td></tr>
+  <tr><td><code>brief_direction</code></td><td>Textarea</td><td>Required, 4 rânduri — direcția editorială / brief-ul AI</td></tr>
+</table>
+
+<h4>3.2 Tabel listă</h4>
+
+<table>
+  <tr><th>Coloană</th><th>Tip</th><th>Detalii</th></tr>
+  <tr><td>Imagine</td><td>ImageColumn</td><td>60×60px, disk public, rounded</td></tr>
+  <tr><td>Tip</td><td>TextColumn badge</td><td>product → info, brand → success, promo → warning</td></tr>
+  <tr><td>Brief</td><td>TextColumn</td><td>Limitat la 60 caractere, tooltip cu textul complet</td></tr>
+  <tr><td>Status</td><td>TextColumn badge</td><td>Culori din <code>SocialPost::statusColors()</code></td></tr>
+  <tr><td>Programată</td><td>TextColumn dateTime</td><td>d.m.Y H:i, sortable</td></tr>
+  <tr><td>Publicată</td><td>TextColumn dateTime</td><td>d.m.Y H:i, sortable</td></tr>
+  <tr><td>Creat</td><td>TextColumn dateTime</td><td>Ascuns implicit (toggleable)</td></tr>
+</table>
+
+<h4>3.3 Filtre</h4>
+
+<table>
+  <tr><th>Filtru</th><th>Tip</th></tr>
+  <tr><td>Status</td><td>SelectFilter (<code>SocialPost::statusOptions()</code>)</td></tr>
+  <tr><td>Tip</td><td>SelectFilter (<code>SocialPost::typeOptions()</code>)</td></tr>
+</table>
+
+<h4>3.4 Acțiuni tabel</h4>
+<p>Doar <strong>View</strong>. Nu există bulk actions.</p>
+
+<h4>3.5 Infolist (View)</h4>
+
+<ul>
+  <li><strong>"Preview postare"</strong> (2 coloane): imagine generată (400px înălțime) + status badge, tip, template grafic (cu logică auto-selecție afișată), cont, produs, brand, programată, publicată, link postare.</li>
+  <li><strong>"Conținut generat"</strong>: caption HTML (nl2br).</li>
+  <li><strong>"Texte grafică"</strong> (collapsed): <code>graphic_label</code>, <code>graphic_title</code>, <code>graphic_subtitle</code>.</li>
+  <li><strong>"Brief"</strong> (collapsed): direcție, prompt imagine (Gemini).</li>
+  <li><strong>"Eroare"</strong>: vizibilă doar dacă <code>error_message</code> e completat (roșu).</li>
+</ul>
+
+<h4>3.6 Pagini</h4>
+<p>Index, Create, View (nu există Edit — postările nu se editează manual după generare).</p>
+
+<hr>
+
+<h3 id="graphic-template-resource">4. GraphicTemplateResource — Template-uri grafice</h3>
+
+<table>
+  <tr><th>Atribut</th><th>Valoare</th></tr>
+  <tr><td>Model</td><td><code>App\Models\GraphicTemplate</code></td></tr>
+  <tr><td>Grup navigare</td><td>Social Media</td></tr>
+  <tr><td>Label</td><td>Template-uri grafice / Template grafic</td></tr>
+  <tr><td>Iconă</td><td><code>heroicon-o-photo</code></td></tr>
+  <tr><td>Sort navigare</td><td>10</td></tr>
+</table>
+
+<h4>4.1 Formular (Create / Edit)</h4>
+
+<h5>Secțiunea "Informații generale"</h5>
+<table>
+  <tr><th>Câmp</th><th>Tip</th><th>Validare</th></tr>
+  <tr><td><code>name</code></td><td>TextInput</td><td>Required, maxLength 255</td></tr>
+  <tr><td><code>slug</code></td><td>TextInput</td><td>Required, maxLength 255, unique (cu ignoreRecord)</td></tr>
+  <tr><td><code>layout</code></td><td>Select</td><td>Required. Opțiuni: <code>product</code> (imagine produs dreapta) / <code>brand</code> (logo brand mare dreapta). Default: <code>product</code></td></tr>
+  <tr><td><code>is_active</code></td><td>Toggle</td><td>Default true, columnSpanFull</td></tr>
+</table>
+
+<h5>Secțiunea "Culori &amp; Identitate"</h5>
+<table>
+  <tr><th>Câmp</th><th>Tip</th><th>Detalii</th></tr>
+  <tr><td><code>config.primary_color</code></td><td>ColorPicker</td><td>Required, default <code>#a52a3f</code> (roșu Malinco)</td></tr>
+</table>
+
+<h5>Secțiunea "Bara de jos"</h5>
+<table>
+  <tr><th>Câmp</th><th>Tip</th><th>Detalii</th></tr>
+  <tr><td><code>config.bottom_text</code></td><td>TextInput</td><td>maxLength 120 — text principal bara (uppercase automat)</td></tr>
+  <tr><td><code>config.bottom_subtext</code></td><td>TextInput</td><td>maxLength 200 — adresă / contact</td></tr>
+  <tr><td><code>config.show_truck</code></td><td>Toggle</td><td>Afișează iconița camion, default true</td></tr>
+  <tr><td><code>config.show_rainbow_bar</code></td><td>Toggle</td><td>Afișează bara curcubeu jos, default true</td></tr>
+</table>
+
+<h5>Secțiunea "Buton CTA"</h5>
+<table>
+  <tr><th>Câmp</th><th>Tip</th><th>Detalii</th></tr>
+  <tr><td><code>config.cta_text</code></td><td>TextInput</td><td>maxLength 60, default <code>malinco.ro →</code></td></tr>
+</table>
+
+<h5>Secțiunea "Proporții &amp; Fonturi" (collapsed)</h5>
+<p>Valorile sunt proporții relative față de lățimea imaginii (1080px = 1.0).</p>
+<table>
+  <tr><th>Câmp</th><th>Tip</th><th>Min / Max / Default</th></tr>
+  <tr><td><code>config.logo_scale</code></td><td>TextInput numeric</td><td>0.15 – 0.60 / 0.36 (36% lățime)</td></tr>
+  <tr><td><code>config.title_size_pct</code></td><td>TextInput numeric</td><td>0.04 – 0.12 / 0.075 (≈81px)</td></tr>
+  <tr><td><code>config.subtitle_size_pct</code></td><td>TextInput numeric</td><td>0.015 – 0.06 / 0.029 (≈31px)</td></tr>
+</table>
+
+<h4>4.2 Tabel listă</h4>
+
+<table>
+  <tr><th>Coloană</th><th>Tip</th><th>Detalii</th></tr>
+  <tr><td>Nume</td><td>TextColumn</td><td>Searchable</td></tr>
+  <tr><td>Slug</td><td>TextColumn badge gray</td><td>Identificatorul unic</td></tr>
+  <tr><td>Layout</td><td>TextColumn badge</td><td>brand → warning, product → info</td></tr>
+  <tr><td>Preview</td><td>ImageColumn</td><td>80×80px, disk public, square</td></tr>
+  <tr><td>Activ</td><td>IconColumn boolean</td><td></td></tr>
+  <tr><td>Actualizat</td><td>TextColumn since</td><td>Ex: "acum 2 ore"</td></tr>
+</table>
+
+<h4>4.3 Acțiuni tabel</h4>
+
+<table>
+  <tr><th>Acțiune</th><th>Detalii</th></tr>
+  <tr><td><strong>Editor vizual</strong></td><td>Deschide în tab nou editorul Fabric.js (<code>route('template-editor.show', $record)</code>)</td></tr>
+  <tr><td>Setări (Edit)</td><td>Editare formular configurație</td></tr>
+  <tr><td>Delete</td><td>Ștergere cu confirmare implicită</td></tr>
+</table>
+
+<h4>4.4 Pagini</h4>
+<p>Index, Create, Edit. Nu există pagină View dedicată — configurația se editează direct.</p>
+
+<hr>
+
+<h3 id="achizitii-flow-summary">5. Rezumat flux Achiziții</h3>
+
+<pre>
+Consultant → Creează PurchaseRequest (draft)
+           → Trimite (submitted) → notificare buyers
+Buyer      → Creează PurchaseOrder (?supplier_id=X din Dashboard)
+             ↑ pre-populate FIFO din necesare pending
+           → Plasează comanda
+             ↑ dacă depășește plafon/max-qty → pending_approval
+             ↑ altfel → approved automat
+Manager    → Aprobă / Respinge
+             ↑ Respingere → revertRequestItemsToPending, notifică buyer
+Buyer      → Trimite email furnizor / Marchează trimis
+             ↑ → sent + markRequestItemsAsOrdered()
+Buyer      → Recepție marfă (cu cantități per linie)
+             ↑ lipsuri → revertShortfallToRequestItems (inv. FIFO)
+             ↑ → received + notifică consultanții cu lipsuri
+</pre>
+
+</section>

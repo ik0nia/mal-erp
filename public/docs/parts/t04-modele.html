@@ -1,0 +1,799 @@
+<h2>Modele Eloquent — ERP Malinco</h2>
+
+<!-- ═══════════════════════════════════════════════════ WooProduct ═══ -->
+<h3>Model: WooProduct</h3>
+<p><strong>Tabelă:</strong> woo_products</p>
+
+<h4>Relații:</h4>
+<ul>
+  <li><code>connection()</code> — belongsTo(IntegrationConnection) — conexiunea WooCommerce/WinMentor din care provine produsul</li>
+  <li><code>attributes()</code> — hasMany(WooProductAttribute) — atributele produsului (ordonate după position)</li>
+  <li><code>categories()</code> — belongsToMany(WooCategory) prin pivot woo_product_category — categoriile WooCommerce</li>
+  <li><code>stocks()</code> — hasMany(ProductStock) — stocuri per locație/depozit</li>
+  <li><code>priceLogs()</code> — hasMany(ProductPriceLog) — istoricul modificărilor de preț</li>
+  <li><code>dailyStockMetrics()</code> — hasMany(DailyStockMetric, FK: sku) — metrici zilnice stoc pentru grafice</li>
+  <li><code>latestDailyStockMetric()</code> — hasOne(DailyStockMetric) ofMany(max day) — cel mai recent metric zilnic</li>
+  <li><code>suppliers()</code> — belongsToMany(Supplier) prin pivot product_suppliers using ProductSupplier — furnizori cu prețuri și condiții</li>
+  <li><code>offerItems()</code> — hasMany(OfferItem) — rânduri de oferte care referențiază acest produs</li>
+</ul>
+
+<h4>Câmpuri fillable:</h4>
+<p>connection_id, woo_id, type, status, sku, name, winmentor_name, slug, short_description, description, regular_price, sale_price, price, stock_status, manage_stock, woo_parent_id, main_image_url, data (JSON), source, is_placeholder, unit, brand, weight, dim_length, dim_width, dim_height, erp_notes, product_type, procurement_type, on_demand_label, is_discontinued, discontinued_reason</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>connection_id, woo_id, woo_parent_id — integer</li>
+  <li>manage_stock, is_placeholder, is_discontinued — boolean</li>
+  <li>data — array (JSON WooCommerce raw)</li>
+</ul>
+
+<h4>Constante/Stări:</h4>
+<ul>
+  <li><code>SOURCE_WOOCOMMERCE</code> / <code>SOURCE_WINMENTOR_CSV</code> — sursa de import</li>
+  <li><code>TYPE_SHOP</code> / <code>TYPE_PRODUCTION</code> / <code>TYPE_PALLET_FEE</code> — tipul produsului</li>
+  <li><code>PROCUREMENT_STOCK</code> / <code>PROCUREMENT_ON_DEMAND</code> — tipul de aprovizionare (stoc vs. la comandă)</li>
+</ul>
+
+<h4>Metode business importante:</h4>
+<ul>
+  <li><code>productTypeOptions()</code> — returnează array label-uri pentru tipul produsului</li>
+  <li><code>productTypeBadgeColor(string $type)</code> — returnează culoarea badge Filament în funcție de tip</li>
+  <li><code>getDecodedNameAttribute()</code> — accessor: decodează entitățile HTML din nume (ex: &amp;amp; → &amp;)</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════ Supplier ═══ -->
+<h3>Model: Supplier</h3>
+<p><strong>Tabelă:</strong> suppliers</p>
+
+<h4>Relații:</h4>
+<ul>
+  <li><code>buyer()</code> — belongsTo(User, buyer_id) — achizitorul responsabil pentru acest furnizor</li>
+  <li><code>purchaseOrders()</code> — hasMany(PurchaseOrder) — comenzile de achiziție emise către furnizor</li>
+  <li><code>emails()</code> — hasMany(EmailMessage) orderByDesc(sent_at) — emailurile asociate furnizorului</li>
+  <li><code>priceQuotes()</code> — hasMany(SupplierPriceQuote) orderByDesc(quoted_at) — cotații de preț extrase din emailuri</li>
+  <li><code>contacts()</code> — hasMany(SupplierContact) — contactele furnizorului (sortate: primar primul)</li>
+  <li><code>brands()</code> — belongsToMany(Brand) — brandurile distribuite de furnizor</li>
+  <li><code>products()</code> — belongsToMany(WooProduct) prin pivot product_suppliers using ProductSupplier — produsele furnizate</li>
+</ul>
+
+<h4>Câmpuri fillable:</h4>
+<p>name, website_url, contact_person, email, phone, address, vat_number, reg_number, bank_account, bank_name, notes, conditions (JSON), is_active, buyer_id, po_approval_threshold</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>conditions — array (JSON: condiții comerciale structurate)</li>
+  <li>is_active — boolean</li>
+  <li>buyer_id — integer</li>
+  <li>po_approval_threshold — decimal:2 (valoarea în RON peste care PO necesită aprobare)</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════ SupplierContact ═══ -->
+<h3>Model: SupplierContact</h3>
+<p><strong>Tabelă:</strong> supplier_contacts</p>
+
+<h4>Relații:</h4>
+<ul>
+  <li><code>supplier()</code> — belongsTo(Supplier) — furnizorul la care aparține contactul</li>
+  <li><code>emails()</code> — hasMany(EmailMessage) orderByDesc(sent_at) — emailurile primite de la/asociate acestui contact</li>
+</ul>
+
+<h4>Câmpuri fillable:</h4>
+<p>supplier_id, name, role, department, email, phone, notes, is_primary, source, first_seen_at, last_seen_at, email_count</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>is_primary — boolean</li>
+  <li>first_seen_at, last_seen_at — datetime</li>
+  <li>email_count — integer</li>
+</ul>
+
+<h4>Constante/Stări:</h4>
+<p>Câmpul <code>source</code> poate fi: <em>manual</em>, <em>email_discovery</em>, <em>domain_match</em> (contact descoperit automat de AI).</p>
+
+<h4>Metode business importante:</h4>
+<ul>
+  <li><code>recalculateStats()</code> — recalculează email_count, first_seen_at, last_seen_at din emailurile din DB, pentru statistici de activitate</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════ ProductSupplier ═══ -->
+<h3>Model: ProductSupplier</h3>
+<p><strong>Tabelă:</strong> product_suppliers (pivot extins, extends Pivot)</p>
+
+<h4>Relații:</h4>
+<ul>
+  <li><code>product()</code> — belongsTo(WooProduct, woo_product_id)</li>
+  <li><code>supplier()</code> — belongsTo(Supplier)</li>
+</ul>
+
+<h4>Câmpuri fillable:</h4>
+<p>woo_product_id, supplier_id, supplier_sku, purchase_price, currency, lead_days, min_order_qty, po_max_qty, is_preferred, notes</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>purchase_price — decimal:4</li>
+  <li>min_order_qty, po_max_qty — decimal:3</li>
+  <li>lead_days — integer</li>
+  <li>is_preferred — boolean (furnizorul preferat pentru acest produs)</li>
+</ul>
+
+<p><em>Note:</em> <code>po_max_qty</code> — cantitatea maximă pe PO fără aprobare; <code>$incrementing = true</code> (are cheie primară auto-increment proprie).</p>
+
+<!-- ═══════════════════════════════════════════════════ PurchaseRequest ═══ -->
+<h3>Model: PurchaseRequest</h3>
+<p><strong>Tabelă:</strong> purchase_requests</p>
+<p><strong>Traits:</strong> HasLocationScope, HasStatusEnum</p>
+
+<h4>Relații:</h4>
+<ul>
+  <li><code>user()</code> — belongsTo(User) — utilizatorul care a creat necesarul</li>
+  <li><code>location()</code> — belongsTo(Location) — locația pentru care s-a întocmit necesarul</li>
+  <li><code>items()</code> — hasMany(PurchaseRequestItem) — liniile necesarului</li>
+  <li><code>wooOrder()</code> — belongsTo(WooOrder) — comanda WooCommerce sursă (dacă source_type = woo_order)</li>
+</ul>
+
+<h4>Câmpuri fillable:</h4>
+<p>number, user_id, location_id, status, notes, woo_order_id, source_type</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>user_id, location_id — integer</li>
+</ul>
+
+<h4>Constante/Stări:</h4>
+<ul>
+  <li>Status: <code>STATUS_DRAFT</code> → <code>STATUS_SUBMITTED</code> → <code>STATUS_PARTIALLY_ORDERED</code> / <code>STATUS_FULLY_ORDERED</code> / <code>STATUS_CANCELLED</code></li>
+  <li>Sursă: <code>SOURCE_MANUAL</code> / <code>SOURCE_WOO_ORDER</code></li>
+</ul>
+
+<h4>Metode business importante:</h4>
+<ul>
+  <li><code>getOrCreateDraft(User $user)</code> — firstOrCreate: obține sau creează unicul draft activ al unui utilizator</li>
+  <li><code>createFromWooOrder(WooOrder $order)</code> — creează automat un PNR submitted din produsele on_demand dintr-o comandă WooCommerce; idempotent</li>
+  <li><code>recalculateStatus()</code> — recalculează statusul cererii în funcție de starea liniilor (ordered_quantity vs quantity): FULLY_ORDERED / PARTIALLY_ORDERED / SUBMITTED / CANCELLED</li>
+  <li><code>generateNumber()</code> — (privat) generează număr de serie PNR-XXXX pe baza seriei din AppSetting</li>
+  <li><code>statusLabels()</code> / <code>statusColorMap()</code> — mapări statice pentru UI Filament</li>
+</ul>
+
+<h4>Hooks booted:</h4>
+<p><code>creating</code>: auto-generare număr, setare status draft, auto-completare user_id și location_id din sesiunea curentă.</p>
+
+<!-- ═══════════════════════════════════════════════════ PurchaseRequestItem ═══ -->
+<h3>Model: PurchaseRequestItem</h3>
+<p><strong>Tabelă:</strong> purchase_request_items</p>
+
+<h4>Relații:</h4>
+<ul>
+  <li><code>purchaseRequest()</code> — belongsTo(PurchaseRequest)</li>
+  <li><code>product()</code> — belongsTo(WooProduct, woo_product_id)</li>
+  <li><code>supplier()</code> — belongsTo(Supplier) — furnizorul propus pentru acest rând</li>
+  <li><code>customer()</code> — belongsTo(Customer) — clientul pentru care se face rezervarea (opțional)</li>
+  <li><code>offer()</code> — belongsTo(Offer) — oferta sursă (opțional)</li>
+  <li><code>purchaseOrderItem()</code> — belongsTo(PurchaseOrderItem) — linia de PO care acoperă această cerere (nullOnDelete)</li>
+</ul>
+
+<h4>Câmpuri fillable:</h4>
+<p>purchase_request_id, woo_product_id, supplier_id, product_name, sku, quantity, needed_by, is_urgent, is_reserved, customer_id, offer_id, client_reference, notes, status, purchase_order_item_id, ordered_quantity</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>quantity, ordered_quantity — decimal:3</li>
+  <li>needed_by — date</li>
+  <li>is_urgent, is_reserved — boolean</li>
+</ul>
+
+<h4>Constante/Stări:</h4>
+<ul>
+  <li><code>STATUS_PENDING</code> / <code>STATUS_ORDERED</code> / <code>STATUS_CANCELLED</code></li>
+</ul>
+
+<h4>Metode business importante:</h4>
+<ul>
+  <li><code>getRemainingQuantityAttribute()</code> — accessor: cantitatea rămasă necomandată (quantity - ordered_quantity)</li>
+  <li><code>isFullyOrdered()</code> — true dacă ordered_quantity >= quantity</li>
+</ul>
+
+<h4>Hooks booted:</h4>
+<p><code>saving</code>: auto-completare product_name și sku din WooProduct; auto-fill supplier_id cu furnizorul preferat dacă nu e setat.</p>
+
+<!-- ═══════════════════════════════════════════════════ PurchaseOrder ═══ -->
+<h3>Model: PurchaseOrder</h3>
+<p><strong>Tabelă:</strong> purchase_orders</p>
+<p><strong>Traits:</strong> HasStatusEnum</p>
+
+<h4>Relații:</h4>
+<ul>
+  <li><code>supplier()</code> — belongsTo(Supplier)</li>
+  <li><code>buyer()</code> — belongsTo(User, buyer_id) — achizitorul care a creat PO-ul</li>
+  <li><code>approvedBy()</code> — belongsTo(User, approved_by)</li>
+  <li><code>rejectedBy()</code> — belongsTo(User, rejected_by)</li>
+  <li><code>receivedBy()</code> — belongsTo(User, received_by)</li>
+  <li><code>items()</code> — hasMany(PurchaseOrderItem) — liniile comenzii de achiziție</li>
+</ul>
+
+<h4>Câmpuri fillable:</h4>
+<p>number, supplier_id, buyer_id, status, total_value, currency, notes_internal, notes_supplier, approved_by, approved_at, rejected_by, rejected_at, rejection_reason, sent_at, received_at, received_by, received_notes</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>total_value — decimal:2</li>
+  <li>approved_at, rejected_at, sent_at, received_at — datetime</li>
+  <li>approved_by, rejected_by, received_by — integer</li>
+</ul>
+
+<h4>Constante/Stări:</h4>
+<ul>
+  <li><code>STATUS_DRAFT</code> → <code>STATUS_PENDING_APPROVAL</code> → <code>STATUS_APPROVED</code> / <code>STATUS_REJECTED</code> → <code>STATUS_SENT</code> → <code>STATUS_RECEIVED</code> / <code>STATUS_CANCELLED</code></li>
+</ul>
+
+<h4>Metode business importante:</h4>
+<ul>
+  <li><code>recalculateTotals()</code> — recalculează total_value ca sumă a line_total din items (saveQuietly)</li>
+  <li><code>needsApproval()</code> — verifică dacă PO necesită aprobare: (1) total depășește po_approval_threshold al furnizorului SAU (2) oricare item depășește po_max_qty din ProductSupplier; evită N+1 prin preîncărcarea ProductSupplier în batch</li>
+  <li><code>generateNumber()</code> — (privat) generează număr PO-Ymd-XXXX bazat pe MAX sequence a zilei curente</li>
+  <li><code>statusLabels()</code> / <code>statusColorMap()</code> — mapări statice pentru UI Filament</li>
+</ul>
+
+<h4>Hooks booted:</h4>
+<p><code>creating</code>: auto-generare număr, status implicit draft, monedă implicită RON, auto-completare buyer_id din sesiunea curentă.</p>
+
+<!-- ═══════════════════════════════════════════════════ PurchaseOrderItem ═══ -->
+<h3>Model: PurchaseOrderItem</h3>
+<p><strong>Tabelă:</strong> purchase_order_items</p>
+
+<h4>Relații:</h4>
+<ul>
+  <li><code>purchaseOrder()</code> — belongsTo(PurchaseOrder)</li>
+  <li><code>product()</code> — belongsTo(WooProduct, woo_product_id)</li>
+  <li><code>purchaseRequestItem()</code> — belongsTo(PurchaseRequestItem) — legătura cu necesarul sursă</li>
+</ul>
+
+<h4>Câmpuri fillable:</h4>
+<p>purchase_order_id, woo_product_id, product_name, sku, supplier_sku, quantity, unit_price, line_total, notes, purchase_request_item_id, sources_json (JSON), received_quantity</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>quantity, received_quantity — decimal:3</li>
+  <li>unit_price, line_total — decimal:4</li>
+</ul>
+
+<h4>Metode business importante / Hooks booted:</h4>
+<ul>
+  <li><code>saving</code>: recalculează automat line_total = quantity × unit_price</li>
+  <li><code>saved</code> / <code>deleted</code>: declanșează purchaseOrder→recalculateTotals() pentru a menține totalul PO sincronizat</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════ EmailMessage ═══ -->
+<h3>Model: EmailMessage</h3>
+<p><strong>Tabelă:</strong> email_messages</p>
+
+<h4>Relații:</h4>
+<ul>
+  <li><code>supplier()</code> — belongsTo(Supplier) — furnizorul asociat (auto-detectat prin domeniu email)</li>
+  <li><code>supplierContact()</code> — belongsTo(SupplierContact) — contactul specific din care a venit emailul</li>
+  <li><code>purchaseOrder()</code> — belongsTo(PurchaseOrder) — PO asociat manual (comunicare furnizor)</li>
+</ul>
+
+<h4>Câmpuri fillable:</h4>
+<p>imap_uid, imap_folder, from_email, from_name, subject, body_html, body_text, to_recipients (JSON), cc_recipients (JSON), attachments (JSON), sent_at, is_read, is_flagged, supplier_id, purchase_order_id, agent_processed_at, agent_actions (JSON), internal_notes</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>sent_at, agent_processed_at — datetime</li>
+  <li>is_read, is_flagged — boolean</li>
+  <li>to_recipients, cc_recipients, attachments, agent_actions — array</li>
+</ul>
+
+<h4>Metode business importante:</h4>
+<ul>
+  <li><code>getFromLabelAttribute()</code> — accessor: "Nume &lt;email&gt;" sau doar email</li>
+  <li><code>hasAttachments()</code> — true dacă există atașamente</li>
+  <li><code>getBodyDisplayAttribute()</code> — accessor: returnează HTML-ul emailului pentru afișare în UI (extrage body, sanitizează XSS)</li>
+  <li><code>sanitizeEmailHtml(string $html)</code> — static: elimină script/iframe/event handlers/javascript: din HTML, prevenind XSS</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════ ChatLog ═══ -->
+<h3>Model: ChatLog</h3>
+<p><strong>Tabelă:</strong> chat_logs</p>
+
+<h4>Relații:</h4>
+<p>Nicio relație Eloquent definită (model standalone pentru logging).</p>
+
+<h4>Câmpuri fillable:</h4>
+<p>session_id, ip_address, role (user/assistant), content, has_products, input_tokens, output_tokens, page_url, page_title</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>has_products — boolean</li>
+</ul>
+
+<h4>Metode business importante:</h4>
+<ul>
+  <li><code>log(sessionId, role, content, ip, hasProducts, inputTokens, outputTokens, pageUrl, pageTitle)</code> — static: creează un rând de log; captează excepții silențios (nu blochează chatul)</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════ ChatContact ═══ -->
+<h3>Model: ChatContact</h3>
+<p><strong>Tabelă:</strong> chat_contacts</p>
+
+<h4>Relații:</h4>
+<ul>
+  <li><code>contactedByUser()</code> — belongsTo(User, contacted_by) — utilizatorul ERP care a marcat contactul ca preluat</li>
+</ul>
+
+<h4>Câmpuri fillable:</h4>
+<p>session_id, email, phone, wants_specialist, contacted_at, contacted_by</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>wants_specialist — boolean</li>
+  <li>contacted_at — datetime</li>
+</ul>
+
+<h4>Metode business importante:</h4>
+<ul>
+  <li><code>isContacted()</code> — true dacă contacted_at nu e null</li>
+  <li><code>collect(sessionId, email, phone, wantsSpecialist)</code> — static: upsert contact per sesiune; păstrează valorile existente dacă parametrul nou e null; silențios la excepții</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════ SocialPost ═══ -->
+<h3>Model: SocialPost</h3>
+<p><strong>Tabelă:</strong> social_posts</p>
+<p><strong>Traits:</strong> HasStatusEnum</p>
+
+<h4>Relații:</h4>
+<ul>
+  <li><code>account()</code> — belongsTo(SocialAccount, social_account_id) — contul de social media pe care se publică</li>
+  <li><code>product()</code> — belongsTo(WooProduct, woo_product_id) — produsul promovat (opțional)</li>
+  <li><code>brand()</code> — belongsTo(Brand, brand_id) — brandul promovat (opțional)</li>
+  <li><code>creator()</code> — belongsTo(User, created_by) — utilizatorul care a creat postarea</li>
+</ul>
+
+<h4>Câmpuri fillable:</h4>
+<p>social_account_id, woo_product_id, brand_id, created_by, status, brief_type, brief_direction, caption, hashtags, image_path, template, image_prompt, platform_post_id, platform_url, scheduled_at, published_at, error_message, graphic_title, graphic_subtitle, graphic_label</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>scheduled_at, published_at — datetime</li>
+</ul>
+
+<h4>Constante/Stări:</h4>
+<ul>
+  <li>Status: <code>STATUS_DRAFT</code> → <code>STATUS_GENERATING</code> → <code>STATUS_READY</code> → <code>STATUS_SCHEDULED</code> → <code>STATUS_PUBLISHING</code> → <code>STATUS_PUBLISHED</code> / <code>STATUS_FAILED</code></li>
+  <li>Tip conținut: <code>TYPE_PRODUCT</code> / <code>TYPE_BRAND</code> / <code>TYPE_PROMO</code> / <code>TYPE_GENERAL</code></li>
+</ul>
+
+<h4>Metode business importante:</h4>
+<ul>
+  <li><code>isEditable()</code> — true dacă statusul permite editare (draft, ready, failed)</li>
+  <li><code>getImageUrl()</code> — returnează URL public al imaginii din storage</li>
+  <li><code>getFullCaption()</code> — returnează caption + hashtags combinate cu separator dublu newline</li>
+  <li><code>statusLabels()</code> / <code>statusColorMap()</code> / <code>typeOptions()</code> — mapări statice pentru UI</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════ SocialAccount ═══ -->
+<h3>Model: SocialAccount</h3>
+<p><strong>Tabelă:</strong> social_accounts</p>
+
+<h4>Relații:</h4>
+<ul>
+  <li><code>posts()</code> — hasMany(SocialPost) — postările create pentru acest cont</li>
+  <li><code>fetchedPosts()</code> — hasMany(SocialFetchedPost) — postările importate de pe platformă pentru analiză stil</li>
+  <li><code>styleProfiles()</code> — hasMany(SocialStyleProfile) — profilurile de stil generate de AI</li>
+</ul>
+
+<h4>Câmpuri fillable:</h4>
+<p>name, platform, account_id, access_token (criptat), token_expires_at, is_active, style_analyzed_at</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>token_expires_at, style_analyzed_at — datetime</li>
+  <li>is_active — boolean</li>
+</ul>
+
+<h4>Constante/Stări:</h4>
+<ul>
+  <li><code>PLATFORM_FACEBOOK</code> / <code>PLATFORM_INSTAGRAM</code></li>
+</ul>
+
+<h4>Metode business importante:</h4>
+<ul>
+  <li><code>activeStyleProfile()</code> — returnează cel mai recent profil de stil activ (non-Eloquent, returnează obiect direct)</li>
+  <li><code>getAccessToken()</code> — decriptează și returnează token-ul de acces</li>
+  <li><code>setAccessToken(string $token)</code> — criptează și salvează token-ul</li>
+  <li><code>isTokenExpired()</code> — verifică dacă token-ul a expirat</li>
+  <li><code>isTokenExpiringSoon()</code> — true dacă token-ul expiră în mai puțin de 7 zile</li>
+  <li><code>getPlatformLabel()</code> — returnează eticheta "Facebook" / "Instagram" etc.</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════ GraphicTemplate ═══ -->
+<h3>Model: GraphicTemplate</h3>
+<p><strong>Tabelă:</strong> graphic_templates</p>
+
+<h4>Relații:</h4>
+<p>Nicio relație Eloquent definită (template-urile sunt referite prin câmpul <code>template</code> din SocialPost).</p>
+
+<h4>Câmpuri fillable:</h4>
+<p>name, slug, layout, config (JSON), preview_image, is_active</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>config — array (configurația Fabric.js a template-ului)</li>
+  <li>is_active — boolean</li>
+</ul>
+
+<h4>Metode business importante:</h4>
+<ul>
+  <li><code>default()</code> — static: returnează template-ul cu slug 'malinco-default' sau primul activ găsit</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════ User ═══ -->
+<h3>Model: User</h3>
+<p><strong>Tabelă:</strong> users</p>
+<p><strong>Implementează:</strong> FilamentUser (Filament v3 auth)</p>
+
+<h4>Relații:</h4>
+<ul>
+  <li><code>location()</code> — belongsTo(Location) — locația/magazinul la care este arondat</li>
+  <li><code>offers()</code> — hasMany(Offer) — ofertele create de utilizator</li>
+  <li><code>samedayAwbs()</code> — hasMany(SamedayAwb) — AWB-urile create de utilizator</li>
+  <li><code>managedSuppliers()</code> — hasMany(Supplier, buyer_id) — furnizorii gestionați ca achizitor</li>
+  <li><code>purchaseRequests()</code> — hasMany(PurchaseRequest) — necesarele create de utilizator</li>
+</ul>
+
+<h4>Câmpuri fillable:</h4>
+<p>name, email, password, role, location_id, is_admin, is_super_admin</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>email_verified_at — datetime</li>
+  <li>password — hashed</li>
+  <li>location_id — integer</li>
+  <li>is_admin, is_super_admin — boolean</li>
+</ul>
+
+<h4>Constante/Stări (roluri):</h4>
+<ul>
+  <li><code>ROLE_MANAGER</code>, <code>ROLE_DIRECTOR_FINANCIAR</code>, <code>ROLE_SUPORT_FINANCIAR</code></li>
+  <li><code>ROLE_DIRECTOR_ECONOMIC</code>, <code>ROLE_DIRECTOR_VANZARI</code></li>
+  <li><code>ROLE_MANAGER_ACHIZITII</code> — rol achizitor (buyer)</li>
+  <li><code>ROLE_CONSULTANT_VANZARI</code></li>
+</ul>
+
+<h4>Metode business importante:</h4>
+<ul>
+  <li><code>isBuyer()</code> — true dacă role = manager_achizitii</li>
+  <li><code>isSuperAdmin()</code> / <code>isAdmin()</code> / <code>isOperational()</code> — verificări nivel acces</li>
+  <li><code>operationalLocationIds()</code> — returnează array de ID-uri locații accesibile (magazin + depozitele lui)</li>
+  <li><code>canAccessPanel(Panel)</code> — implementare FilamentUser: admin → doar panel 'admin'; toți → panel 'app'</li>
+  <li><code>roleOptions()</code> — static: array label-uri roluri pentru UI</li>
+</ul>
+
+<h4>Hooks booted:</h4>
+<p><code>saving</code>: dacă is_super_admin → forțează is_admin = true; dacă location este depozit (TYPE_WAREHOUSE) → redirectează la store_id-ul părintelui.</p>
+
+<!-- ═══════════════════════════════════════════════════ AppSetting ═══ -->
+<h3>Model: AppSetting</h3>
+<p><strong>Tabelă:</strong> app_settings</p>
+<p><em>Cheie primară:</em> <code>key</code> (string, non-incrementing) — model tip key-value store.</p>
+
+<h4>Relații:</h4>
+<p>Nicio relație Eloquent.</p>
+
+<h4>Câmpuri fillable:</h4>
+<p>key, value</p>
+
+<h4>Constante (chei importante):</h4>
+<ul>
+  <li>UI: <code>KEY_LOGO_PATH</code>, <code>KEY_BRAND_NAME</code></li>
+  <li>Numerotare: <code>KEY_PNR_SERIES</code>, <code>KEY_PNR_START_NUMBER</code>, <code>KEY_OFFER_SERIES</code>, <code>KEY_OFFER_START_NUMBER</code></li>
+  <li>IMAP: <code>KEY_IMAP_HOST</code>, <code>KEY_IMAP_PORT</code>, <code>KEY_IMAP_ENCRYPTION</code>, <code>KEY_IMAP_USERNAME</code>, <code>KEY_IMAP_PASSWORD</code> (criptat)</li>
+  <li>AI: <code>KEY_ANTHROPIC_API_KEY</code> (criptat, fallback pe ENV)</li>
+  <li>Chat: <code>KEY_CHAT_PRIMARY_COLOR</code>, <code>KEY_CHAT_BOT_NAME</code>, <code>KEY_CHAT_SUBTITLE</code>, <code>KEY_CHAT_WELCOME_MSG</code>, <code>KEY_CHAT_ENABLED</code>, <code>KEY_CHAT_MAX_COST_PER_SESSION</code></li>
+  <li>Telegram: <code>KEY_TELEGRAM_BOT_TOKEN</code> (criptat), <code>KEY_TELEGRAM_CHAT_ID</code></li>
+  <li>Plugin WP: <code>KEY_WOO_PLUGIN_API_KEY</code> (criptat)</li>
+  <li>Social Media: <code>KEY_GEMINI_API_KEY</code> (criptat), <code>KEY_META_APP_ID</code>, <code>KEY_META_APP_SECRET</code> (criptat)</li>
+  <li><code>NAV_GROUPS</code> / <code>NAV_ITEMS</code> — constante array pentru configurarea sortării navigației în panelul App</li>
+</ul>
+
+<h4>Metode business importante:</h4>
+<ul>
+  <li><code>get(string $key, ?string $default)</code> — static: citire cu cache 5 min (fallback direct DB dacă cache-ul nu e disponibil)</li>
+  <li><code>set(string $key, ?string $value)</code> — static: updateOrCreate + invalidare cache</li>
+  <li><code>getEncrypted(string $key)</code> — static: citire + decriptare; fallback pe variabila de mediu ENV dacă lipsește din DB</li>
+  <li><code>setEncrypted(string $key, ?string $value)</code> — static: criptare + salvare</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════ RolePermission ═══ -->
+<h3>Model: RolePermission</h3>
+<p><strong>Tabelă:</strong> role_permissions</p>
+
+<h4>Relații:</h4>
+<p>Nicio relație Eloquent (model standalone pentru ACL).</p>
+
+<h4>Câmpuri fillable:</h4>
+<p>role, resource (clasa completă a resursei Filament), can_access, can_create, can_edit, can_delete, can_view</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>can_access, can_create, can_edit, can_delete, can_view — boolean</li>
+</ul>
+
+<h4>Metode business importante:</h4>
+<ul>
+  <li><code>forRole(string $role)</code> — static: returnează toate permisiunile pentru un rol, indexate după resource; cache 5 min</li>
+  <li><code>check(string $resource, string $permission)</code> — static: verifică permisiunea utilizatorului curent; super_admin și admin au acces la tot; default-deny dacă nu există regulă</li>
+  <li><code>clearCache(string $role)</code> — static: invalidează cache-ul permisiunilor pentru un rol</li>
+  <li><code>cacheKey(string $role)</code> — static: generează cheia de cache</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════ Brand ═══ -->
+<h3>Model: Brand</h3>
+<p><strong>Tabelă:</strong> brands</p>
+
+<h4>Relații:</h4>
+<ul>
+  <li><code>suppliers()</code> — belongsToMany(Supplier) — furnizorii care distribuie acest brand</li>
+</ul>
+
+<h4>Câmpuri fillable:</h4>
+<p>name, slug, logo_url, website_url, description, is_active</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>is_active — boolean</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════ Offer ═══ -->
+<h3>Model: Offer</h3>
+<p><strong>Tabelă:</strong> offers</p>
+<p><strong>Traits:</strong> HasLocationScope, HasStatusEnum</p>
+
+<h4>Relații:</h4>
+<ul>
+  <li><code>location()</code> — belongsTo(Location)</li>
+  <li><code>user()</code> — belongsTo(User) — consultantul care a creat oferta</li>
+  <li><code>items()</code> — hasMany(OfferItem) orderBy(position) — liniile ofertei</li>
+</ul>
+
+<h4>Câmpuri fillable:</h4>
+<p>location_id, user_id, number, status, client_name, client_company, client_email, client_phone, notes, currency, subtotal, discount_total, total, valid_until, sent_at, accepted_at</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>subtotal, discount_total, total — decimal:4</li>
+  <li>valid_until — date</li>
+  <li>sent_at, accepted_at — datetime</li>
+</ul>
+
+<h4>Constante/Stări:</h4>
+<ul>
+  <li><code>STATUS_DRAFT</code> → <code>STATUS_SENT</code> → <code>STATUS_ACCEPTED</code> / <code>STATUS_REJECTED</code> / <code>STATUS_EXPIRED</code></li>
+</ul>
+
+<h4>Metode business importante:</h4>
+<ul>
+  <li><code>recalculateTotals()</code> — recalculează subtotal, discount_total, total din items (saveQuietly)</li>
+  <li><code>generateNumber()</code> — (privat) generează număr OFF-XXXX din serie AppSetting</li>
+</ul>
+
+<h4>Hooks booted:</h4>
+<p><code>creating</code>: auto-generare număr, status draft, monedă RON, auto-completare user_id.<br>
+<code>saving</code>: auto-setare sent_at la tranziția în STATUS_SENT; accepted_at la STATUS_ACCEPTED.</p>
+
+<!-- ═══════════════════════════════════════════════════ OfferItem ═══ -->
+<h3>Model: OfferItem</h3>
+<p><strong>Tabelă:</strong> offer_items</p>
+
+<h4>Relații:</h4>
+<ul>
+  <li><code>offer()</code> — belongsTo(Offer)</li>
+  <li><code>product()</code> — belongsTo(WooProduct, woo_product_id)</li>
+</ul>
+
+<h4>Câmpuri fillable:</h4>
+<p>offer_id, woo_product_id, position, product_name, sku, quantity, unit_price, discount_percent, line_subtotal, line_total</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>quantity — decimal:3</li>
+  <li>unit_price, line_subtotal, line_total — decimal:4</li>
+  <li>discount_percent — decimal:2</li>
+</ul>
+
+<h4>Metode business importante / Hooks booted:</h4>
+<ul>
+  <li><code>saving</code>: recalculează line_subtotal = qty × price și line_total cu reducere aplicată; auto-completare product_name și sku</li>
+  <li><code>saved</code> / <code>deleted</code>: declanșează offer→recalculateTotals()</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════ WooOrder ═══ -->
+<h3>Model: WooOrder</h3>
+<p><strong>Tabelă:</strong> woo_orders</p>
+<p><strong>Traits:</strong> HasLocationScope</p>
+
+<h4>Relații:</h4>
+<ul>
+  <li><code>connection()</code> — belongsTo(IntegrationConnection) — conexiunea WooCommerce sursă</li>
+  <li><code>location()</code> — belongsTo(Location)</li>
+  <li><code>items()</code> — hasMany(WooOrderItem, order_id) — liniile comenzii</li>
+  <li><code>samedayAwbs()</code> — hasMany(SamedayAwb, woo_order_id) — AWB-urile generate pentru această comandă</li>
+</ul>
+
+<h4>Câmpuri fillable:</h4>
+<p>connection_id, location_id, woo_id, number, status, currency, customer_note, billing (JSON), shipping (JSON), payment_method, payment_method_title, subtotal, shipping_total, discount_total, fee_total, tax_total, total, date_paid, date_completed, order_date, data (JSON)</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>billing, shipping, data — array</li>
+  <li>subtotal, shipping_total, discount_total, fee_total, tax_total, total — decimal:2</li>
+  <li>date_paid, date_completed, order_date — datetime</li>
+</ul>
+
+<h4>Constante/Stări:</h4>
+<ul>
+  <li><code>STATUS_LABELS</code>: pending, processing, on-hold, completed, cancelled, refunded, failed</li>
+  <li><code>STATUS_COLORS</code>: mapare status → culoare Filament badge</li>
+</ul>
+
+<h4>Metode business importante:</h4>
+<ul>
+  <li><code>getCustomerNameAttribute()</code> — accessor: "Prenume Nume" din billing JSON</li>
+  <li><code>getCustomerEmailAttribute()</code> — accessor: email din billing JSON</li>
+  <li><code>getCustomerPhoneAttribute()</code> — accessor: telefon din billing JSON</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════ WooOrderItem ═══ -->
+<h3>Model: WooOrderItem</h3>
+<p><strong>Tabelă:</strong> woo_order_items</p>
+
+<h4>Relații:</h4>
+<ul>
+  <li><code>order()</code> — belongsTo(WooOrder, order_id)</li>
+</ul>
+
+<h4>Câmpuri fillable:</h4>
+<p>order_id, woo_item_id, woo_product_id, name, sku, quantity, price, subtotal, total, tax, data (JSON)</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>quantity — integer</li>
+  <li>price — decimal:4</li>
+  <li>subtotal, total, tax — decimal:2</li>
+  <li>data — array</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════ SamedayAwb ═══ -->
+<h3>Model: SamedayAwb</h3>
+<p><strong>Tabelă:</strong> sameday_awbs</p>
+<p><strong>Traits:</strong> HasLocationScope</p>
+
+<h4>Relații:</h4>
+<ul>
+  <li><code>location()</code> — belongsTo(Location)</li>
+  <li><code>user()</code> — belongsTo(User) — utilizatorul care a generat AWB-ul</li>
+  <li><code>connection()</code> — belongsTo(IntegrationConnection, integration_connection_id) — conexiunea Sameday</li>
+  <li><code>wooOrder()</code> — belongsTo(WooOrder, woo_order_id) — comanda asociată</li>
+</ul>
+
+<h4>Câmpuri fillable:</h4>
+<p>location_id, user_id, integration_connection_id, woo_order_id, provider, status, awb_number, service_id, pickup_point_id, recipient_name, recipient_phone, recipient_email, recipient_county, recipient_city, recipient_address, recipient_postal_code, package_count, package_weight_kg, cod_amount, insured_value, shipping_cost, reference, observation, request_payload (JSON), response_payload (JSON), error_message</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>package_weight_kg — decimal:3</li>
+  <li>cod_amount, insured_value, shipping_cost — decimal:2</li>
+  <li>request_payload, response_payload — array</li>
+</ul>
+
+<h4>Constante/Stări:</h4>
+<ul>
+  <li><code>STATUS_CREATED</code> / <code>STATUS_CANCELLED</code> / <code>STATUS_FAILED</code></li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════ Customer ═══ -->
+<h3>Model: Customer</h3>
+<p><strong>Tabelă:</strong> customers</p>
+<p><strong>Traits:</strong> HasLocationScope</p>
+
+<h4>Relații:</h4>
+<ul>
+  <li><code>location()</code> — belongsTo(Location)</li>
+  <li><code>deliveryAddresses()</code> — hasMany(CustomerDeliveryAddress) orderBy(position) — adrese de livrare alternative</li>
+</ul>
+
+<h4>Câmpuri fillable:</h4>
+<p>location_id, type, name, representative_name, phone, email, cui, is_vat_payer, registration_number, address, city, county, postal_code, notes, is_active</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>is_vat_payer, is_active — boolean</li>
+</ul>
+
+<h4>Constante/Stări:</h4>
+<ul>
+  <li><code>TYPE_INDIVIDUAL</code> / <code>TYPE_COMPANY</code></li>
+</ul>
+
+<h4>Metode business importante:</h4>
+<ul>
+  <li><code>isCompany()</code> — true dacă type = company</li>
+  <li><code>typeOptions()</code> — static: opțiuni select pentru UI</li>
+</ul>
+
+<h4>Hooks booted:</h4>
+<p><code>saving</code>: normalizare tip, trim/lowercase email/telefon, normalizare CUI (via OpenApiCompanyLookupService); pentru persoane fizice: golește câmpurile specifice firmei (cui, is_vat_payer, registration_number, representative_name).</p>
+
+<!-- ═══════════════════════════════════════════════════ IntegrationConnection ═══ -->
+<h3>Model: IntegrationConnection</h3>
+<p><strong>Tabelă:</strong> integration_connections</p>
+
+<h4>Relații:</h4>
+<ul>
+  <li><code>location()</code> — belongsTo(Location)</li>
+  <li><code>syncRuns()</code> — hasMany(SyncRun, connection_id) — toate rulările de sincronizare</li>
+  <li><code>latestSyncRun()</code> — hasOne(SyncRun) latestOfMany(started_at) — ultima rulare</li>
+  <li><code>wooCategories()</code> — hasMany(WooCategory, connection_id)</li>
+  <li><code>wooProducts()</code> — hasMany(WooProduct, connection_id)</li>
+  <li><code>samedayAwbs()</code> — hasMany(SamedayAwb, integration_connection_id)</li>
+</ul>
+
+<h4>Câmpuri fillable:</h4>
+<p>location_id, provider, name, base_url, consumer_key (criptat), consumer_secret (criptat), verify_ssl, is_active, settings (JSON), webhook_secret (criptat)</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>consumer_key, consumer_secret, webhook_secret — encrypted (Laravel native encryption)</li>
+  <li>verify_ssl, is_active — boolean</li>
+  <li>settings — array</li>
+</ul>
+
+<h4>Constante/Stări:</h4>
+<ul>
+  <li><code>PROVIDER_WOOCOMMERCE</code> / <code>PROVIDER_WINMENTOR_CSV</code> / <code>PROVIDER_SAMEDAY</code></li>
+</ul>
+
+<h4>Metode business importante:</h4>
+<ul>
+  <li><code>isWooCommerce()</code> / <code>isWinmentorCsv()</code> / <code>isSameday()</code> — verificare tip provider</li>
+  <li><code>resolvePerPage(int $default)</code> — citește per_page din settings cu clamp [1, 100]</li>
+  <li><code>resolveTimeoutSeconds(int $default)</code> — citește timeout din settings cu minim 5s</li>
+  <li><code>csvUrl()</code> — URL-ul CSV pentru WinMentor</li>
+  <li><code>samedayUsername()</code> / <code>samedayPassword()</code> — credențiale Sameday (via consumer_key/secret)</li>
+  <li><code>samedayApiUrl()</code> — URL API Sameday (producție / demo în funcție de settings)</li>
+  <li><code>shouldPushPriceToSite()</code> — flag din settings: dacă prețul se sincronizează în WooCommerce</li>
+  <li><code>shouldAutoScheduleWinmentorImport()</code> — flag auto-sync WinMentor CSV</li>
+  <li><code>resolveWinmentorSyncIntervalMinutes()</code> — intervalul de sincronizare WinMentor (min 5 min)</li>
+  <li><code>webhookUrl()</code> — URL-ul webhook pentru notificări WooCommerce</li>
+  <li><code>generateWebhookSecret()</code> — static: generează un secret aleatoriu de 64 caractere hex</li>
+  <li><code>providerOptions()</code> — static: array label-uri pentru UI</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════ AiUsageLog ═══ -->
+<h3>Model: AiUsageLog</h3>
+<p><strong>Tabelă:</strong> ai_usage_logs</p>
+
+<h4>Relații:</h4>
+<p>Nicio relație Eloquent (model standalone pentru monitorizare costuri AI).</p>
+
+<h4>Câmpuri fillable:</h4>
+<p>source, model (claude-haiku-4-5, claude-sonnet-4-6, etc.), input_tokens, output_tokens, cost_usd, metadata (JSON)</p>
+
+<h4>Casts:</h4>
+<ul>
+  <li>input_tokens, output_tokens — integer</li>
+  <li>cost_usd — float</li>
+  <li>metadata — array</li>
+</ul>
+
+<h4>Constante:</h4>
+<ul>
+  <li><code>PRICES</code> — prețuri per milion tokens pentru fiecare model AI (USD): haiku-4-5 ($0.80/$4.00), sonnet-4-6 ($3.00/$15.00), opus-4-6 ($15.00/$75.00)</li>
+  <li><code>SOURCE_LABELS</code> — etichete prietenoase pentru sursele de utilizare AI: chatbot, email_ai, chat_summary, domain_match, bi_*, product_descriptions, product_titles, product_attributes, product_categories, product_images_eval, product_images_verify, product_dimensions, product_enrich_web, social_caption, social_style_analysis, social_image_gen, template_generation</li>
+</ul>
+
+<h4>Metode business importante:</h4>
+<ul>
+  <li><code>record(source, model, inputTokens, outputTokens, metadata)</code> — static: calculează costul din PRICES și creează înregistrarea; fallback la haiku dacă modelul e necunoscut</li>
+  <li><code>totalCostForPeriod(string $from, string $to)</code> — static: sumă cost_usd pentru un interval de timp</li>
+  <li><code>getSourceLabelAttribute()</code> — accessor: returnează eticheta prietenoasă din SOURCE_LABELS</li>
+</ul>

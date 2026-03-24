@@ -117,6 +117,16 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(Supplier::class, 'buyer_id');
     }
 
+    public function purchaseRequests(): HasMany
+    {
+        return $this->hasMany(PurchaseRequest::class);
+    }
+
+    public function isConsultantVanzari(): bool
+    {
+        return $this->role === self::ROLE_CONSULTANT_VANZARI;
+    }
+
     public function isBuyer(): bool
     {
         return $this->role === self::ROLE_MANAGER_ACHIZITII;

@@ -18,8 +18,8 @@ use App\Models\WooCategory;
 use App\Models\WooProduct;
 use Filament\Notifications\Notification;
 use Filament\Forms;
-use Filament\Forms\Form;
 use App\Models\Brand;
+use Filament\Schemas\Schema;
 use Filament\Infolists\Components\Actions;
 use Filament\Infolists\Components\Actions\Action as InfolistAction;
 use Filament\Infolists\Components\ImageEntry;
@@ -27,7 +27,6 @@ use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
-use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\ImageColumn;
@@ -48,11 +47,13 @@ class WooProductResource extends Resource
 
     protected static ?string $model = WooProduct::class;
 
+    protected static ?string $slug = 'produse';
+
     protected static ?string $recordTitleAttribute = 'name';
 
-    protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-shopping-bag';
 
-    protected static ?string $navigationGroup = 'Administrare magazin';
+    protected static string|\UnitEnum|null $navigationGroup = 'Administrare magazin';
 
     protected static ?string $navigationLabel = 'Produse';
 
@@ -81,7 +82,15 @@ class WooProductResource extends Resource
     {
         $user = static::currentUser();
 
-        return $user !== null && ($user->isSuperAdmin() || $user->role === \App\Models\User::ROLE_MANAGER);
+        if ($user === null) {
+            return false;
+        }
+
+        if ($user->role === \App\Models\User::ROLE_MANAGER) {
+            return true;
+        }
+
+        return \App\Models\RolePermission::check(static::permissionKey(), 'can_edit');
     }
 
     public static function canDelete(Model $record): bool
@@ -89,11 +98,12 @@ class WooProductResource extends Resource
         return false;
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Forms\Components\Section::make('Informații produs')
                 ->columns(2)
+                ->columnSpanFull()
                 ->schema([
                     Forms\Components\TextInput::make('name')
                         ->label('Denumire')
@@ -151,6 +161,7 @@ class WooProductResource extends Resource
                 ]),
 
             Forms\Components\Section::make('Categorii')
+                ->columnSpanFull()
                 ->schema([
                     Forms\Components\Select::make('categories')
                         ->label('Categorii')
@@ -163,6 +174,7 @@ class WooProductResource extends Resource
 
             Forms\Components\Section::make('Atribute tehnice')
                 ->description('Atribute vizibile pe fișa produsului în magazinul online.')
+                ->columnSpanFull()
                 ->schema([
                     Forms\Components\Repeater::make('attributesRelation')
                         ->label('')
@@ -186,6 +198,7 @@ class WooProductResource extends Resource
                 ]),
 
             Forms\Components\Section::make('Furnizori')
+                ->columnSpanFull()
                 ->schema([
                     Forms\Components\Repeater::make('suppliers_data')
                         ->label('')
@@ -204,9 +217,14 @@ class WooProductResource extends Resource
                                 ->label('SKU furnizor')
                                 ->maxLength(100),
                             Forms\Components\TextInput::make('purchase_price')
-                                ->label('Preț achiziție')
+                                ->label('Preț achiziție (fără TVA)')
                                 ->numeric()
                                 ->step(0.0001),
+                            Forms\Components\Placeholder::make('purchase_price_vat')
+                                ->label('Preț achiziție (cu TVA)')
+                                ->content(fn (Forms\Get $get): string => $get('purchase_price')
+                                    ? number_format((float) $get('purchase_price') * 1.21, 2, ',', '.') . ' RON'
+                                    : '—'),
                             Forms\Components\Select::make('currency')
                                 ->label('Monedă')
                                 ->options(['RON' => 'RON', 'EUR' => 'EUR', 'USD' => 'USD'])
@@ -233,12 +251,69 @@ class WooProductResource extends Resource
                                 ->columnSpanFull(),
                         ]),
                 ]),
+            Forms\Components\Section::make('Mod aprovizionare')
+                ->description('Controlează cum se aprovizionează produsul și dacă mai face parte din portofoliu.')
+                ->collapsible()
+                ->columnSpanFull()
+                ->schema([
+                    Forms\Components\Toggle::make('is_on_demand')
+                        ->label('La comandă (fără stoc fizic)')
+                        ->helperText('Backorders permise în WooCommerce, stoc 0, PNR auto-creat la comenzi.')
+                        ->default(false)
+                        ->reactive()
+                        ->afterStateHydrated(function (Forms\Components\Toggle $component, $record): void {
+                            if ($record) {
+                                $component->state($record->procurement_type === WooProduct::PROCUREMENT_ON_DEMAND);
+                            }
+                        }),
+                    Forms\Components\TextInput::make('on_demand_label')
+                        ->label('Mesaj disponibilitate (afișat pe site)')
+                        ->placeholder('ex: Disponibil în 3-5 zile lucrătoare')
+                        ->maxLength(100)
+                        ->visible(fn (Forms\Get $get): bool => (bool) $get('is_on_demand')),
+                    Forms\Components\Grid::make(2)->schema([
+                        Forms\Components\TextInput::make('min_stock_qty')
+                            ->label('Stoc minim (reorder point)')
+                            ->helperText('Când stocul scade sub această valoare, produsul apare în alertele de reaprovizionare.')
+                            ->numeric()->minValue(0)->nullable(),
+                        Forms\Components\TextInput::make('max_stock_qty')
+                            ->label('Stoc maxim (target)')
+                            ->helperText('Cât vrem să avem în stoc după aprovizionare. Dacă e gol, se calculează din velocitate × 14 zile.')
+                            ->numeric()->minValue(0)->nullable(),
+                    ]),
+                    Forms\Components\Toggle::make('is_discontinued')
+                        ->label('Fără reaprovizionare')
+                        ->helperText('Vindem stocul existent, dar nu mai achiziționăm. Exclus din sugestii de reaprovizionare.')
+                        ->reactive(),
+                    Forms\Components\Textarea::make('discontinued_reason')
+                        ->label('Motiv')
+                        ->placeholder('ex: Înlocuit de modelul X, furnizor oprit livrările...')
+                        ->rows(2)
+                        ->visible(fn (Forms\Get $get): bool => (bool) $get('is_discontinued')),
+                    Forms\Components\Select::make('substituted_by_id')
+                        ->label('Înlocuit de produsul')
+                        ->helperText('La achiziții viitoare se va comanda produsul selectat în loc de acesta.')
+                        ->relationship('substitutedBy', 'name')
+                        ->searchable()
+                        ->preload(false)
+                        ->getSearchResultsUsing(fn (string $search) => WooProduct::query()
+                            ->where(fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('sku', 'like', "%{$search}%"))
+                            ->limit(20)
+                            ->get()
+                            ->mapWithKeys(fn ($p) => [$p->id => "[{$p->sku}] {$p->name}"]))
+                        ->getOptionLabelUsing(fn ($value) => WooProduct::find($value)?->let(fn ($p) => "[{$p->sku}] {$p->name}"))
+                        ->placeholder('Niciun înlocuitor setat')
+                        ->native(false)
+                        ->nullable(),
+                ]),
         ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
+            ->paginationPageOptions([25, 50, 100, 250, 500])
+            ->defaultPaginationPageOption(50)
             ->columns([
                 ImageColumn::make('main_image_url')
                     ->label('Imagine')
@@ -266,8 +341,16 @@ class WooProductResource extends Resource
                 TextColumn::make('source')
                     ->label('Sursă')
                     ->badge()
-                    ->formatStateUsing(fn (WooProduct $record): string => $record->is_placeholder ? 'ERP (contabilitate)' : 'WooCommerce')
-                    ->color(fn (WooProduct $record): string => $record->is_placeholder ? 'warning' : 'success')
+                    ->formatStateUsing(fn (WooProduct $record): string => match ($record->source) {
+                        WooProduct::SOURCE_TOYA_API     => 'Feed furnizor Toya',
+                        WooProduct::SOURCE_WINMENTOR_CSV => 'ERP (contabilitate)',
+                        default                          => 'WooCommerce',
+                    })
+                    ->color(fn (WooProduct $record): string => match ($record->source) {
+                        WooProduct::SOURCE_TOYA_API     => 'info',
+                        WooProduct::SOURCE_WINMENTOR_CSV => 'warning',
+                        default                          => 'success',
+                    })
                     ->extraHeaderAttributes(['class' => 'hidden md:table-cell'])
                     ->extraAttributes(['class' => 'hidden md:table-cell'])
                     ->toggleable(),
@@ -275,12 +358,35 @@ class WooProductResource extends Resource
                     ->label('SKU')
                     ->placeholder('-')
                     ->toggleable(),
+                TextColumn::make('preferred_supplier')
+                    ->label('Furnizor')
+                    ->getStateUsing(fn (WooProduct $record): ?string =>
+                        $record->suppliers->firstWhere('pivot.is_preferred', true)?->name
+                        ?? $record->suppliers->first()?->name
+                    )
+                    ->placeholder('-')
+                    ->badge()
+                    ->color('gray')
+                    ->toggleable(),
                 TextColumn::make('price')
                     ->label('Preț')
                     ->placeholder('-'),
                 TextColumn::make('stock_status')
                     ->label('Stoc')
                     ->badge(),
+                TextColumn::make('procurement_type')
+                    ->label('Aprovizionare')
+                    ->badge()
+                    ->color(fn (string $state): string => $state === 'on_demand' ? 'warning' : 'gray')
+                    ->formatStateUsing(fn (string $state): string => $state === 'on_demand' ? 'La comandă' : 'Stoc')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\IconColumn::make('is_discontinued')
+                    ->label('Fără reaprov.')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-archive-box-x-mark')
+                    ->trueColor('danger')
+                    ->falseIcon('')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('categories_list')
                     ->label('Categorii')
                     ->state(fn (WooProduct $record): string => $record->categories->pluck('name')->implode(', '))
@@ -308,8 +414,9 @@ class WooProductResource extends Resource
                 Tables\Filters\SelectFilter::make('source')
                     ->label('Sursă')
                     ->options([
-                        WooProduct::SOURCE_WOOCOMMERCE => 'WooCommerce',
-                        WooProduct::SOURCE_WINMENTOR_CSV => 'ERP (contabilitate)',
+                        WooProduct::SOURCE_WOOCOMMERCE    => 'WooCommerce',
+                        WooProduct::SOURCE_WINMENTOR_CSV  => 'ERP (contabilitate)',
+                        WooProduct::SOURCE_TOYA_API       => 'Feed furnizor Toya',
                     ]),
                 Tables\Filters\SelectFilter::make('stock_status')
                     ->label('Stoc')
@@ -318,6 +425,24 @@ class WooProductResource extends Resource
                         'outofstock' => 'Fără stoc',
                         'onbackorder' => 'Precomandă',
                     ]),
+                Tables\Filters\TernaryFilter::make('is_discontinued')
+                    ->label('Reaprovizionare')
+                    ->placeholder('Toate')
+                    ->trueLabel('Fără reaprovizionare')
+                    ->falseLabel('Cu reaprovizionare')
+                    ->queries(
+                        true:  fn (Builder $query) => $query->where('is_discontinued', true),
+                        false: fn (Builder $query) => $query->where('is_discontinued', false),
+                    ),
+                Tables\Filters\TernaryFilter::make('procurement_type_filter')
+                    ->label('La comandă')
+                    ->placeholder('Toate')
+                    ->trueLabel('Doar la comandă')
+                    ->falseLabel('Fără "la comandă"')
+                    ->queries(
+                        true:  fn (Builder $query) => $query->where('procurement_type', 'on_demand'),
+                        false: fn (Builder $query) => $query->where('procurement_type', 'stock'),
+                    ),
                 Tables\Filters\TernaryFilter::make('web_enriched')
                     ->label('Îmbogățit web')
                     ->placeholder('Toate')
@@ -370,6 +495,7 @@ class WooProductResource extends Resource
                         });
                     }),
             ], layout: FiltersLayout::AboveContent)
+            ->deferFilters(false)
             ->filtersFormColumns(['default' => 2, 'sm' => 3, 'lg' => 5])
             ->persistFiltersInSession()
             ->recordUrl(fn (WooProduct $record): string => static::getUrl('view', ['record' => $record]))
@@ -377,11 +503,14 @@ class WooProductResource extends Resource
             ->searchDebounce('800ms')
             ->defaultSort('name')
             ->actionsPosition(\Filament\Tables\Enums\ActionsPosition::BeforeColumns)
-            ->actions([
+            ->recordActions([
                 Tables\Actions\Action::make('add_to_necesar')
-                    ->label('+ Necesar')
+                    ->label('Necesar')
                     ->icon('heroicon-o-shopping-cart')
+                    ->button()
+                    ->size(\Filament\Support\Enums\ActionSize::Medium)
                     ->color('warning')
+                    ->extraAttributes(['style' => 'background-color:#f97316;color:white;border-color:#ea6c00;font-weight:600;'])
                     ->modalHeading(fn (WooProduct $record) => 'Adaugă la necesar: '.($record->decoded_name ?? $record->name))
                     ->modalSubmitActionLabel('Adaugă')
                     ->form(static::necesarModalForm())
@@ -432,7 +561,7 @@ class WooProductResource extends Resource
         $query = parent::getEloquentQuery()->with([
             'connection.location',
             'categories',
-            'suppliers.contacts',
+            'suppliers',
         ]);
 
         $user = static::currentUser();
@@ -445,11 +574,14 @@ class WooProductResource extends Resource
             return $query;
         }
 
-        return $query->whereHas('connection', function (Builder $connectionQuery) use ($user): void {
-            $connectionQuery->where(function (Builder $inner) use ($user): void {
-                $inner->whereIn('location_id', $user->operationalLocationIds())
-                    ->orWhereNull('location_id');
-            });
+        return $query->where(function (Builder $outer) use ($user): void {
+            $outer->whereNull('connection_id')
+                ->orWhereHas('connection', function (Builder $connectionQuery) use ($user): void {
+                    $connectionQuery->where(function (Builder $inner) use ($user): void {
+                        $inner->whereIn('location_id', $user->operationalLocationIds())
+                            ->orWhereNull('location_id');
+                    });
+                });
         });
     }
 
@@ -482,9 +614,9 @@ class WooProductResource extends Resource
         });
     }
 
-    public static function infolist(Infolist $infolist): Infolist
+    public static function infolist(Schema $schema): Schema
     {
-        return $infolist
+        return $schema
             ->schema([
                 // ── Primul card: poza mare + info compactă ──────────────────
                 Section::make()
@@ -495,8 +627,7 @@ class WooProductResource extends Resource
                             ->columnSpanFull(),
                     ]),
 
-                // ── Acțiuni (edit, reverificare, stoc, contact) ─────────────
-                // ── Acțiuni utilitare (edit, contact) ──────────────────────
+                // ── Acțiuni utilitare stânga (edit, contact) ────────────────
                 Actions::make([
                     InfolistAction::make('edit')
                         ->label('Editează')
@@ -518,6 +649,47 @@ class WooProductResource extends Resource
                         ->modalContent(fn (WooProduct $record): HtmlString => static::renderSupplierContactModal($record))
                         ->modalSubmitAction(false)
                         ->modalCancelAction(fn (\Filament\Actions\StaticAction $action) => $action->label('Închide')),
+
+                    InfolistAction::make('toggle_site_status')
+                        ->label(fn (WooProduct $record): string => $record->status === 'publish' ? 'Trece în draft' : 'Publică pe site')
+                        ->icon(fn (WooProduct $record): string => $record->status === 'publish' ? 'heroicon-o-eye-slash' : 'heroicon-o-eye')
+                        ->color(fn (WooProduct $record): string => $record->status === 'publish' ? 'gray' : 'success')
+                        ->size(\Filament\Support\Enums\ActionSize::Small)
+                        ->visible(function (WooProduct $record): bool {
+                            if ($record->is_placeholder || ! $record->woo_id || ! $record->connection_id) {
+                                return false;
+                            }
+                            $user = auth()->user();
+                            return $user instanceof User && ($user->isAdmin() || $user->role === User::ROLE_MANAGER);
+                        })
+                        ->requiresConfirmation()
+                        ->modalHeading(fn (WooProduct $record): string => $record->status === 'publish'
+                            ? 'Treci produsul în draft?'
+                            : 'Publică produsul pe site?')
+                        ->modalDescription(fn (WooProduct $record): string => $record->status === 'publish'
+                            ? 'Produsul va dispărea de pe site imediat.'
+                            : 'Produsul va deveni vizibil pe site imediat.')
+                        ->modalSubmitActionLabel(fn (WooProduct $record): string => $record->status === 'publish' ? 'Da, trece în draft' : 'Da, publică')
+                        ->action(function (WooProduct $record): void {
+                            $newStatus = $record->status === 'publish' ? 'draft' : 'publish';
+                            try {
+                                $client = new \App\Services\WooCommerce\WooClient($record->connection);
+                                $result = $client->updateProductStatus((int) $record->woo_id, $newStatus);
+                            } catch (\Throwable $e) {
+                                Notification::make()->danger()->title('Eroare WooCommerce')->body($e->getMessage())->send();
+                                return;
+                            }
+                            $confirmedStatus = $result['status'] ?? null;
+                            if ($confirmedStatus !== $newStatus) {
+                                Notification::make()->warning()->title('WooCommerce nu a confirmat schimbarea')
+                                    ->body('Status returnat: ' . ($confirmedStatus ?? 'necunoscut'))->send();
+                                return;
+                            }
+                            $record->update(['status' => $newStatus]);
+                            Notification::make()->success()
+                                ->title($newStatus === 'publish' ? 'Produs publicat pe site' : 'Produs trecut în draft')
+                                ->send();
+                        }),
                 ]),
 
                 // ── Acțiuni principale (Reverificare + Asociează furnizor) ───
@@ -639,7 +811,119 @@ class WooProductResource extends Resource
                                 ->body('Produsul a fost asociat furnizorului „' . $supplier->name . '".')
                                 ->send();
                         }),
-                ])->extraAttributes(['class' => 'erp-main-actions']),
+
+                    InfolistAction::make('toggle_no_reorder')
+                        ->label(fn (WooProduct $record): string => $record->is_discontinued
+                            ? 'Reactivează reaprovizionarea'
+                            : 'Fără reaprovizionare')
+                        ->icon(fn (WooProduct $record): string => $record->is_discontinued
+                            ? 'heroicon-o-arrow-uturn-left'
+                            : 'heroicon-o-archive-box-x-mark')
+                        ->color(fn (WooProduct $record): string => $record->is_discontinued ? 'success' : 'danger')
+                        ->size(\Filament\Support\Enums\ActionSize::Small)
+                        ->visible(function (): bool {
+                            $user = auth()->user();
+                            return $user instanceof User && (
+                                $user->isAdmin() ||
+                                in_array($user->role, [User::ROLE_MANAGER, User::ROLE_DIRECTOR_VANZARI], true)
+                            );
+                        })
+                        ->requiresConfirmation()
+                        ->modalHeading(fn (WooProduct $record): string => $record->is_discontinued
+                            ? 'Reactivezi reaprovizionarea?'
+                            : 'Marchezi ca "Fără reaprovizionare"?')
+                        ->modalDescription(fn (WooProduct $record): string => $record->is_discontinued
+                            ? 'Produsul va apărea din nou în sugestiile de reaprovizionare.'
+                            : 'Produsul va fi exclus din Necesar Marfă. Stocul existent se vinde în continuare.')
+                        ->form(fn (WooProduct $record): array => $record->is_discontinued ? [] : [
+                            \Filament\Forms\Components\Textarea::make('discontinued_reason')
+                                ->label('Motiv (opțional)')
+                                ->placeholder('ex: Înlocuit de modelul X, furnizor oprit livrările...')
+                                ->rows(2),
+                        ])
+                        ->action(function (WooProduct $record, array $data): void {
+                            $markingDiscontinued = ! $record->is_discontinued;
+
+                            $record->update([
+                                'is_discontinued'     => $markingDiscontinued,
+                                'discontinued_reason' => $markingDiscontinued ? ($data['discontinued_reason'] ?? null) : null,
+                            ]);
+
+                            // Sincronizăm backorders în WooCommerce
+                            if ($record->woo_id && $record->connection) {
+                                try {
+                                    $client = new \App\Services\WooCommerce\WooClient($record->connection);
+                                    // Discontinued → backorders dezactivate; reactivat → backorders permise (notify)
+                                    $client->updateProduct((int) $record->woo_id, [
+                                        'backorders' => $markingDiscontinued ? 'no' : 'notify',
+                                    ]);
+                                } catch (\Throwable) {
+                                    // Sync WooCommerce eșuat — nu blocăm operația locală
+                                }
+                            }
+
+                            Notification::make()
+                                ->success()
+                                ->title($markingDiscontinued
+                                    ? 'Marcat ca fără reaprovizionare (backorders dezactivate)'
+                                    : 'Reaprovizionare reactivată (backorders permise)')
+                                ->send();
+                        }),
+
+                    InfolistAction::make('toggle_on_demand')
+                        ->label(fn (WooProduct $record): string => $record->procurement_type === WooProduct::PROCUREMENT_ON_DEMAND
+                            ? 'Scoate din "La comandă"'
+                            : 'Marchează "La comandă"')
+                        ->icon(fn (WooProduct $record): string => $record->procurement_type === WooProduct::PROCUREMENT_ON_DEMAND
+                            ? 'heroicon-o-archive-box-arrow-down'
+                            : 'heroicon-o-clock')
+                        ->color(fn (WooProduct $record): string => $record->procurement_type === WooProduct::PROCUREMENT_ON_DEMAND
+                            ? 'gray'
+                            : 'warning')
+                        ->size(\Filament\Support\Enums\ActionSize::Small)
+                        ->visible(function (): bool {
+                            $user = auth()->user();
+                            return $user instanceof User && (
+                                $user->isAdmin() ||
+                                in_array($user->role, [User::ROLE_MANAGER, User::ROLE_DIRECTOR_VANZARI], true)
+                            );
+                        })
+                        ->requiresConfirmation()
+                        ->modalHeading(fn (WooProduct $record): string => $record->procurement_type === WooProduct::PROCUREMENT_ON_DEMAND
+                            ? 'Scoți din modul "La comandă"?'
+                            : 'Marchezi ca "La comandă"?')
+                        ->modalDescription(fn (WooProduct $record): string => $record->procurement_type === WooProduct::PROCUREMENT_ON_DEMAND
+                            ? 'Revine la comportament normal (stoc fizic). WooCommerce: backorders dezactivate.'
+                            : 'Stocul din WooCommerce va fi setat la 0, backorders activate. PNR auto-creat la comenzi.')
+                        ->form(fn (WooProduct $record): array => $record->procurement_type !== WooProduct::PROCUREMENT_ON_DEMAND ? [
+                            \Filament\Forms\Components\TextInput::make('on_demand_label')
+                                ->label('Mesaj disponibilitate pe site (opțional)')
+                                ->placeholder('ex: Disponibil în 3-5 zile lucrătoare')
+                                ->maxLength(100),
+                        ] : [])
+                        ->action(function (WooProduct $record, array $data): void {
+                            $isOnDemand = $record->procurement_type === WooProduct::PROCUREMENT_ON_DEMAND;
+                            $newType    = $isOnDemand ? WooProduct::PROCUREMENT_STOCK : WooProduct::PROCUREMENT_ON_DEMAND;
+                            $record->update([
+                                'procurement_type' => $newType,
+                                'on_demand_label'  => $isOnDemand ? null : ($data['on_demand_label'] ?? null),
+                            ]);
+                            if ($record->woo_id) {
+                                try {
+                                    $client = new \App\Services\WooCommerce\WooClient($record->connection);
+                                    $client->updateProduct($record->woo_id, $isOnDemand
+                                        ? ['backorders' => 'no']
+                                        : ['manage_stock' => true, 'stock_quantity' => 0, 'backorders' => 'yes']
+                                    );
+                                } catch (\Throwable) {}
+                            }
+                            Notification::make()
+                                ->success()
+                                ->title($isOnDemand ? 'Produs revenit la stoc normal' : 'Produs marcat ca "La comandă"')
+                                ->send();
+                        }),
+                ])->extraAttributes(['class' => 'erp-main-actions'])
+                  ->alignment(\Filament\Support\Enums\Alignment::Right),
 
                 // ── Denumire WinMentor ───────────────────────────────────────
                 Section::make('Denumire WinMentor')
@@ -719,12 +1003,42 @@ class WooProductResource extends Resource
     {
         $imageUrl   = filled($record->main_image_url) ? e($record->main_image_url) : 'https://placehold.co/320x320?text=No+Image';
         $name       = e($record->decoded_name);
+
+        // Buton Resync WooCommerce (icon-only, logo Woo)
+        $canResync = false;
+        if ($record->woo_id && $record->connection_id) {
+            $authUser = auth()->user();
+            if ($authUser instanceof User) {
+                $canResync = $authUser->isAdmin() || in_array($authUser->role, [
+                    User::ROLE_MANAGER,
+                    User::ROLE_DIRECTOR_VANZARI,
+                ], true);
+            }
+        }
+        $resyncBtn = $canResync
+            ? '<button x-on:click="$wire.mountAction(\'resync_from_woo\')" type="button" title="Resync WooCommerce"'
+              . ' style="display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;'
+              . 'background:#7F54B3;border:none;cursor:pointer;border-radius:7px;padding:5px 7px;'
+              . 'opacity:0.8;transition:opacity .15s;" '
+              . 'x-on:mouseenter="$el.style.opacity=\'1\'" x-on:mouseleave="$el.style.opacity=\'0.8\'">'
+              . '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;">'
+              . '<path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>'
+              . '</svg></button>'
+            : '';
         $sku        = e($record->sku ?? '-');
         $price      = $record->price ? number_format((float) $record->price, 2, ',', '.') . ' lei' : '-';
         $regPrice   = $record->regular_price ? number_format((float) $record->regular_price, 2, ',', '.') . ' lei' : null;
         $salePrice  = $record->sale_price ? number_format((float) $record->sale_price, 2, ',', '.') . ' lei' : null;
-        $source     = $record->is_placeholder ? 'ERP (contabilitate)' : 'WooCommerce';
-        $sourceClr  = $record->is_placeholder ? '#d97706' : '#16a34a';
+        $source    = match ($record->source) {
+            WooProduct::SOURCE_TOYA_API      => 'Feed produse Toya',
+            WooProduct::SOURCE_WINMENTOR_CSV => 'ERP (contabilitate)',
+            default                          => $record->is_placeholder ? 'ERP (contabilitate)' : 'WooCommerce',
+        };
+        $sourceClr = match ($record->source) {
+            WooProduct::SOURCE_TOYA_API      => '#2563eb',
+            WooProduct::SOURCE_WINMENTOR_CSV => '#d97706',
+            default                          => $record->is_placeholder ? '#d97706' : '#16a34a',
+        };
         $stock      = $record->stock_status ?? '-';
         $stockClr   = $stock === 'instock' ? '#16a34a' : '#dc2626';
         $stockLbl   = match ($stock) { 'instock' => 'În stoc', 'outofstock' => 'Fără stoc', 'onbackorder' => 'Precomandă', default => $stock };
@@ -780,13 +1094,13 @@ class WooProductResource extends Resource
         $addToNecesarBtn = '<button'
             . ' x-on:click="$wire.mountAction(\'add_to_necesar\')"'
             . ' type="button"'
-            . ' style="margin-top:10px;background:#dc2626;color:#fff;border:none;cursor:pointer;'
-            . 'border-radius:8px;padding:11px 18px;font-size:0.97rem;font-weight:700;'
-            . 'display:flex;align-items:center;gap:9px;width:100%;justify-content:center;">'
-            . '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:20px;height:20px;flex-shrink:0;">'
+            . ' title="Adaugă la necesar"'
+            . ' style="margin-top:10px;background:#f97316;color:#fff;border:none;cursor:pointer;'
+            . 'border-radius:8px;padding:11px 18px;'
+            . 'display:flex;align-items:center;justify-content:center;width:100%;">'
+            . '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:22px;height:22px;">'
             . '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />'
             . '</svg>'
-            . 'Adaugă la necesar'
             . '</button>';
 
         // Descriere scurtă
@@ -809,12 +1123,26 @@ class WooProductResource extends Resource
             . '}'
             . '</style>';
 
+        // Bulina status listare site
+        $isListed  = ! $record->is_placeholder && $record->status === 'publish';
+        $dotColor  = $isListed ? '#16a34a' : '#dc2626';
+        $dotTitle  = $isListed ? 'Listat pe site' : 'Nelistat pe site';
+        $dotHtml   = '<span title="' . $dotTitle . '" style="'
+            . 'position:absolute;top:10px;left:10px;'
+            . 'width:24px;height:24px;border-radius:50%;'
+            . 'background:' . $dotColor . ';'
+            . 'border:3px solid #fff;'
+            . 'box-shadow:0 2px 6px rgba(0,0,0,0.35);'
+            . 'flex-shrink:0;'
+            . '"></span>';
+
         $html = $style . '<div style="display:flex;flex-wrap:wrap;gap:24px;align-items:start;width:100%;">'
 
             // Poza produs — responsivă
-            . '<div style="flex:0 0 auto;width:min(340px,100%);">'
+            . '<div style="flex:0 0 auto;width:min(340px,100%);position:relative;">'
             . '<img src="' . $imageUrl . '" alt="' . $name . '" '
             . 'style="width:100%;aspect-ratio:1/1;object-fit:contain;border-radius:12px;border:1px solid #e5e7eb;background:#fafafa;" />'
+            . $dotHtml
             . '</div>'
 
             // Coloana dreapta: brand + nume + preț + tags + grid + descriere
@@ -825,7 +1153,10 @@ class WooProductResource extends Resource
 
             // Denumire produs + preț pe același rând
             . '<div class="ph-name-price-row">'
+            . '<div style="display:flex;align-items:flex-start;gap:8px;min-width:0;">'
             . '<div class="ph-name">' . $name . '</div>'
+            . $resyncBtn
+            . '</div>'
             . $priceBlockHtml
             . '</div>'
 
@@ -899,10 +1230,6 @@ class WooProductResource extends Resource
     {
         $rows = '';
         foreach ($record->suppliers as $supplier) {
-            $logoHtml = filled($supplier->logo_url)
-                ? '<img src="' . e($supplier->logo_url) . '" alt="' . e($supplier->name) . '" style="height:40px;max-width:140px;object-fit:contain;margin-bottom:8px;" />'
-                : '';
-
             $field = fn (string $icon, string $label, ?string $val): string => filled($val)
                 ? '<div style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-bottom:1px solid #f3f4f6;">'
                   . '<span style="color:#6b7280;font-size:0.85rem;min-width:130px;">' . $label . '</span>'
@@ -910,9 +1237,13 @@ class WooProductResource extends Resource
                   . '</div>'
                 : '';
 
-            $skuVal   = $supplier->pivot->supplier_sku ?? null;
-            $priceVal = $supplier->pivot->purchase_price
-                ? number_format((float) $supplier->pivot->purchase_price, 2, ',', '.') . ' ' . ($supplier->pivot->currency ?? 'RON')
+            $skuVal        = $supplier->pivot->supplier_sku ?? null;
+            $currency      = $supplier->pivot->currency ?? 'RON';
+            $priceNet      = $supplier->pivot->purchase_price
+                ? number_format((float) $supplier->pivot->purchase_price, 2, ',', '.') . ' ' . $currency
+                : null;
+            $priceVat      = $supplier->pivot->purchase_price
+                ? number_format((float) $supplier->pivot->purchase_price * 1.21, 2, ',', '.') . ' RON'
                 : null;
 
             // Persoane de contact
@@ -933,13 +1264,13 @@ class WooProductResource extends Resource
             }
 
             $rows .= '<div style="margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #e5e7eb;">'
-                . $logoHtml
                 . '<div style="font-size:1rem;font-weight:700;color:#111827;margin-bottom:8px;">' . e($supplier->name) . '</div>'
                 . $field('phone', 'Telefon general', $supplier->phone)
                 . $field('envelope', 'Email general', $supplier->email)
                 . $field('globe', 'Website', $supplier->website_url)
                 . $field('tag', 'SKU furnizor', $skuVal)
-                . $field('currency', 'Preț achiziție', $priceVal)
+                . $field('currency', 'Preț achiziție (fără TVA)', $priceNet)
+                . $field('currency', 'Preț achiziție (cu TVA)', $priceVat)
                 . $field('document', 'CUI', $supplier->vat_number)
                 . $field('note', 'Notițe', $supplier->notes)
                 . ($contactsHtml ? '<div style="margin-top:10px;font-size:0.78rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Persoane de contact</div>' . $contactsHtml : '')

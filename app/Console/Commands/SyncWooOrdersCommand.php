@@ -3,9 +3,11 @@
 namespace App\Console\Commands;
 
 use App\Models\IntegrationConnection;
+use App\Models\WooOrder;
 use App\Services\WooCommerce\WooClient;
 use App\Services\WooCommerce\WooOrderSyncService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class SyncWooOrdersCommand extends Command
@@ -50,6 +52,8 @@ class SyncWooOrdersCommand extends Command
             $params['status'] = $status;
         }
 
+        $localCount = WooOrder::where('connection_id', $connection->id)->count();
+
         for ($page = 1; $page <= $pages; $page++) {
             try {
                 $orders = $client->getOrders($page, 100, $params);
@@ -59,7 +63,22 @@ class SyncWooOrdersCommand extends Command
             }
 
             if (empty($orders)) {
+                // SAFEGUARD: Dacă prima pagină returnează 0 comenzi dar avem local mai mult de 10,
+                // WooCommerce poate fi down sau răspunsul e incomplet — nu continuăm.
+                if ($page === 1 && $localCount > 10 && $status === '') {
+                    $message = "WooOrderSyncService: safeguard activat — WooCommerce a returnat 0 comenzi (pagina 1) dar avem {$localCount} local. Sync oprit.";
+                    $this->warn("  {$message}");
+                    Log::warning($message, ['connection_id' => $connection->id]);
+                }
                 break;
+            }
+
+            // SAFEGUARD: Dacă totalul returnat pe prima pagină e cu >50% mai mic decât localCount, alertăm.
+            if ($page === 1 && $localCount > 0 && count($orders) < $localCount * 0.5 && $status === '') {
+                $message = "WooOrderSyncService: discrepanță mare — remote prima pagină: " . count($orders) . ", local total: {$localCount}. Verifică sincronizarea.";
+                $this->warn("  {$message}");
+                Log::warning($message, ['connection_id' => $connection->id]);
+                // Nu blocăm — discrepanța e normală când localCount include mai multe pagini
             }
 
             foreach ($orders as $raw) {

@@ -8,7 +8,6 @@ use App\Filament\App\Concerns\EnforcesLocationScope;
 use App\Filament\App\Resources\WooProductResource;
 use App\Models\DailyStockMetric;
 use App\Models\Supplier;
-use App\Models\User;
 use Filament\Pages\Page;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
@@ -22,24 +21,25 @@ class StockMovementsReport extends Page implements HasTable
     use HasDynamicNavSort, InteractsWithTable;
     use EnforcesLocationScope;
 
-    public static function canAccess(): bool
+    public static function shouldRegisterNavigation(): bool
     {
-        $user = static::currentUser();
-
-        return $user !== null && (
-            $user->isSuperAdmin() || $user->role === User::ROLE_MANAGER
-        );
+        return \App\Models\RolePermission::check(static::class, 'can_access');
     }
 
-    protected static ?string $navigationIcon = 'heroicon-o-arrow-trending-up';
+    public static function canAccess(): bool
+    {
+        return \App\Models\RolePermission::check(static::class, 'can_access');
+    }
 
-    protected static ?string $navigationGroup = 'Rapoarte';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-arrow-trending-up';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Rapoarte';
 
     protected static ?string $navigationLabel = 'Mișcări stocuri';
 
     protected static ?int $navigationSort = 10;
 
-    protected static string $view = 'filament.app.pages.stock-movements-report';
+    protected string $view = 'filament.app.pages.stock-movements-report';
 
     public int $days = 7;
 
@@ -81,7 +81,7 @@ class StockMovementsReport extends Page implements HasTable
         $this->computeCategoryStats();
     }
 
-    public function getTableRecordKey(Model $record): string
+    public function getTableRecordKey(\Illuminate\Database\Eloquent\Model|array $record): string
     {
         return (string) $record->woo_product_id;
     }

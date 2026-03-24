@@ -1,0 +1,594 @@
+<section id="m06-oferte">
+
+  <h2>Modulul Oferte</h2>
+
+  <p>
+    Modulul Oferte permite echipei de vânzări să creeze, gestioneze și transmită oferte comerciale
+    către clienți, direct din ERP. Fiecare ofertă este un document structurat care conține datele
+    clientului, lista de produse cu prețuri și discounturi, totaluri calculate automat și o dată
+    de valabilitate. Odată finalizată, oferta poate fi tipărită sau transmisă clientului, iar
+    statusul ei evoluează pe parcursul procesului de vânzare — de la ciornă până la acceptare
+    sau respingere.
+  </p>
+
+  <p>
+    Ofertele sunt izolate per locație (magazin/depozit). Fiecare utilizator vede doar ofertele
+    locației sale, iar super-adminii au acces la toate locațiile. Numerotarea ofertelor este
+    automată, bazată pe seria configurată în setările aplicației (implicit <code>OFF-0001</code>,
+    <code>OFF-0002</code> etc.).
+  </p>
+
+  <hr>
+
+  <h3>1. Lista oferte</h3>
+
+  <p>
+    Accesați modulul din meniul lateral al panoului App. Lista afișează toate ofertele locației
+    active, ordonate implicit după data ultimei actualizări.
+  </p>
+
+  <h4>Coloanele din tabel</h4>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Coloană</th>
+        <th>Descriere</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Număr</strong></td>
+        <td>Numărul unic al ofertei, generat automat (ex: <code>OFF-0042</code>). Câmpul este căutabil.</td>
+      </tr>
+      <tr>
+        <td><strong>Client</strong></td>
+        <td>Numele persoanei de contact de pe ofertă. Câmpul este căutabil și sortabil.</td>
+      </tr>
+      <tr>
+        <td><strong>Magazin</strong></td>
+        <td>Locația din care a fost creată oferta. Coloana poate fi ascunsă (toggleable).</td>
+      </tr>
+      <tr>
+        <td><strong>Status</strong></td>
+        <td>
+          Starea curentă a ofertei, afișată ca badge colorat. Culorile sunt: gri (Draft),
+          albastru (Trimisă), verde (Acceptată), roșu (Respinsă), portocaliu (Expirată).
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Total</strong></td>
+        <td>Valoarea totală a ofertei după discounturi, în moneda ofertei.</td>
+      </tr>
+      <tr>
+        <td><strong>Valabilă până la</strong></td>
+        <td>Data limită de valabilitate, format <code>zz.ll.aaaa</code>.</td>
+      </tr>
+      <tr>
+        <td><strong>Actualizat</strong></td>
+        <td>Data și ora ultimei modificări a înregistrării.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>Filtre disponibile</h4>
+  <ul>
+    <li><strong>Status</strong> — filtrează ofertele după stare (Draft, Trimisă, Acceptată, Respinsă, Expirată).</li>
+    <li><strong>Magazin</strong> — disponibil super-adminilor pentru a filtra ofertele per locație.</li>
+  </ul>
+
+  <h4>Acțiuni rapide din tabel</h4>
+  <ul>
+    <li><strong>Preview</strong> — deschide pagina de vizualizare a ofertei într-un tab nou.</li>
+    <li><strong>Print</strong> — deschide direct dialogul de imprimare al browserului cu oferta formatată.</li>
+    <li><strong>Edit</strong> — deschide formularul de editare.</li>
+  </ul>
+
+  <p>
+    De asemenea, sunt disponibile acțiuni bulk: selectați mai multe oferte cu bifa din stânga
+    și folosiți butonul de acțiuni grupate pentru ștergere în bloc.
+  </p>
+
+  <hr>
+
+  <h3>2. Crearea unei oferte noi</h3>
+
+  <p>
+    Apăsați butonul <strong>Ofertă nouă</strong> din colțul dreapta-sus al listei. Formularul
+    este împărțit în două secțiuni principale: <em>Detalii ofertă</em> și <em>Produse ofertă</em>.
+  </p>
+
+  <h4>Secțiunea „Detalii ofertă"</h4>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Câmp</th>
+        <th>Detalii</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Număr ofertă</strong></td>
+        <td>
+          Câmp dezactivat, completat automat la salvare. Seria și numărul de start se
+          configurează din <em>Setări aplicație</em>.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Status</strong></td>
+        <td>Selectat din listă. La creare, valoarea implicită este <em>Draft</em>.</td>
+      </tr>
+      <tr>
+        <td><strong>Valabilă până la</strong></td>
+        <td>
+          Seletor de dată. Valoarea implicită este <strong>data curentă + 14 zile</strong>.
+          Poate fi modificată manual.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Magazin</strong></td>
+        <td>
+          Locația asociată ofertei. Se completează automat cu magazinul utilizatorului curent.
+          Doar super-adminii pot schimba locația.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>Selectarea clientului</h4>
+
+  <p>
+    Câmpul <strong>Caută client existent</strong> permite căutarea rapidă în baza de clienți
+    după nume, telefon sau adresă de email. Rezultatele includ numele firmei (dacă există),
+    numele reprezentantului și numărul de telefon. La selectarea unui client, câmpurile
+    <em>Nume client</em>, <em>Companie</em>, <em>Email</em> și <em>Telefon</em> se completează
+    automat.
+  </p>
+
+  <p>
+    Dacă clientul nu există în baza de date, apăsați butonul <strong>Client nou</strong>
+    (iconița cu siluetă + plus, afișată în dreapta câmpului de căutare). Se deschide un
+    modal cu formularul complet de creare client, care include:
+  </p>
+  <ul>
+    <li>Tip client: <em>Persoană fizică</em> sau <em>Persoană juridică</em>.</li>
+    <li>Nume, reprezentant (pentru firme), telefon, email.</li>
+    <li>
+      CUI — pentru persoane juridice, cu buton de lookup automat prin API-ul ANAF/OpenAPI:
+      introduceți CUI-ul și apăsați butonul de interogare pentru a prelua automat denumirea
+      firmei, adresa, numărul de înregistrare la Registrul Comerțului și statutul de plătitor TVA.
+    </li>
+    <li>Adresă, localitate, județ, cod poștal.</li>
+    <li>Note interne.</li>
+  </ul>
+  <p>
+    După salvare, clientul nou creat este selectat automat în formularul ofertei.
+  </p>
+
+  <h4>Câmpurile de contact ale clientului pe ofertă</h4>
+  <p>
+    Câmpurile <strong>Nume client</strong>, <strong>Companie</strong>, <strong>Email</strong>
+    și <strong>Telefon</strong> se stochează direct pe ofertă (nu prin FK la client). Aceasta
+    înseamnă că datele de pe ofertă rămân nemodificate chiar dacă ulterior editați fișa
+    clientului din baza de date.
+  </p>
+
+  <h4>Moneda ofertei</h4>
+  <p>
+    Câmpul <strong>Monedă</strong> este un selector cu opțiunile disponibile. Valoarea implicită
+    este <code>RON</code>. Toate valorile (preț unitar, subtotal, total) sunt afișate în moneda
+    selectată. Moneda poate fi schimbată înainte de adăugarea produselor.
+  </p>
+
+  <h4>Observații</h4>
+  <p>
+    Câmpul <strong>Observații</strong> (textarea) permite adăugarea de note suplimentare care
+    vor apărea la finalul documentului tipărit, în secțiunea „Observatii".
+  </p>
+
+  <hr>
+
+  <h3>3. Adăugarea produselor în ofertă</h3>
+
+  <p>
+    Secțiunea <strong>Produse ofertă</strong> conține un tabel editabil cu toate liniile ofertei.
+    Fiecare linie reprezintă un produs sau un articol ofertuat.
+  </p>
+
+  <h4>Structura unei linii de produs</h4>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Coloană</th>
+        <th>Descriere</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Produs</strong></td>
+        <td>
+          Selector cu căutare live în catalogul de produse WooCommerce. Rezultatele afișează
+          numele produsului, SKU-ul și prețul curent. La selectare, câmpul <em>Preț unitar</em>
+          se completează automat cu prețul de listă al produsului. Numele și SKU-ul produsului
+          sunt copiate pe linie și rămân independente față de catalog (modificările ulterioare
+          ale produsului nu afectează oferta salvată).
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Cantitate</strong></td>
+        <td>
+          Valoare numerică pozitivă cu până la 3 zecimale. Câmpul acceptă și cantități
+          fracționare (ex: 0.5, 2.750).
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Preț unitar</strong></td>
+        <td>
+          Prețul per unitate de măsură. Se completează automat din catalog, dar poate fi
+          modificat manual. Acceptă până la 4 zecimale.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Discount %</strong></td>
+        <td>
+          Procentul de reducere aplicat liniei (0–100). Valoarea implicită este 0. La modificare,
+          totalul liniei se recalculează instantaneu sub câmp (afișaj live).
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Total linie</strong></td>
+        <td>
+          Calculat automat: <code>cantitate × preț unitar × (1 - discount% / 100)</code>.
+          Afișat ca informație în dreapta rândului. La salvare, valoarea este persistată în
+          câmpurile <code>line_subtotal</code> (fără discount) și <code>line_total</code>
+          (cu discount aplicat).
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>Adăugarea și ștergerea liniilor</h4>
+  <p>
+    Apăsați butonul <strong>Adaugă produs</strong> din partea de jos a tabelului pentru a
+    insera o linie nouă. Puteți naviga între câmpuri cu tasta <kbd>Tab</kbd>; la apăsarea
+    <kbd>Tab</kbd> din câmpul Discount% al ultimului rând, se adaugă automat un rând nou și
+    focusul se mută pe câmpul Produs al noii linii, pentru introducere rapidă fără mouse.
+    Pentru ștergerea unei linii, folosiți butonul cu iconița coș de gunoi din dreapta rândului.
+  </p>
+
+  <h4>Totalurile ofertei</h4>
+  <p>
+    În timp real, sub tabelul de produse sunt afișate trei valori calculate:
+  </p>
+  <ul>
+    <li><strong>Subtotal</strong> — suma tuturor valorilor fără discount (<code>cantitate × preț unitar</code>).</li>
+    <li><strong>Discount total</strong> — suma reducerilor aplicate pe toate liniile.</li>
+    <li><strong>Total</strong> — valoarea finală de plată după discounturi.</li>
+  </ul>
+  <p>
+    Aceste valori sunt recalculate automat de server la fiecare salvare și sunt stocate în
+    câmpurile <code>subtotal</code>, <code>discount_total</code> și <code>total</code> ale
+    ofertei.
+  </p>
+
+  <hr>
+
+  <h3>4. Stările unei oferte</h3>
+
+  <p>
+    O ofertă parcurge un ciclu de viață cu cinci stări posibile. Tranziția între stări se face
+    manual, prin modificarea câmpului <strong>Status</strong> din formularul de editare.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Stare</th>
+        <th>Culoare badge</th>
+        <th>Semnificație</th>
+        <th>Comportament automat</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Draft</strong></td>
+        <td>Gri</td>
+        <td>Ofertă în lucru, nefinalizată. Starea inițială la creare.</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><strong>Trimisă</strong></td>
+        <td>Albastru</td>
+        <td>Oferta a fost transmisă clientului (email, tipărire, alt canal).</td>
+        <td>
+          La prima trecere în starea <em>Trimisă</em>, câmpul <code>sent_at</code> este
+          completat automat cu data și ora curentă.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Acceptată</strong></td>
+        <td>Verde</td>
+        <td>Clientul a acceptat oferta.</td>
+        <td>
+          La prima trecere în starea <em>Acceptată</em>, câmpul <code>accepted_at</code>
+          este completat automat cu data și ora curentă.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Respinsă</strong></td>
+        <td>Roșu</td>
+        <td>Clientul a refuzat oferta sau negocierea nu a dus la un acord.</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><strong>Expirată</strong></td>
+        <td>Portocaliu</td>
+        <td>
+          Data de valabilitate a trecut fără un răspuns din partea clientului. Această stare
+          se setează manual sau poate fi gestionată printr-un proces automat.
+        </td>
+        <td>—</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    <strong>Notă:</strong> Sistemul nu blochează tranzițiile între stări — puteți muta o
+    ofertă din orice stare în oricare alta. Responsabilitatea reflectării corecte a realității
+    revine utilizatorului.
+  </p>
+
+  <hr>
+
+  <h3>5. Vizualizarea unei oferte</h3>
+
+  <p>
+    Apăsând pe numărul unei oferte din tabel sau pe butonul <strong>Preview</strong> se deschide
+    pagina de vizualizare (<em>View Offer</em>). Aceasta prezintă oferta în format structurat, cu
+    secțiunile:
+  </p>
+  <ul>
+    <li><strong>Detalii ofertă</strong> — număr, status, valabilitate, date client, magazin, operator, observații.</li>
+    <li>
+      <strong>Produse ofertă</strong> — tabel cu toate liniile: imaginea produsului (miniatură),
+      denumire, cantitate, preț unitar, discount%, total linie.
+    </li>
+    <li><strong>Totaluri</strong> — subtotal, discount total, total final.</li>
+  </ul>
+  <p>
+    Din pagina de vizualizare sunt disponibile butoanele <strong>Print ofertă</strong> și
+    <strong>Edit</strong> în header.
+  </p>
+
+  <hr>
+
+  <h3>6. Tipărirea și exportul ofertei</h3>
+
+  <p>
+    Modulul Oferte include un layout special optimizat pentru tipar, accesibil prin butonul
+    <strong>Print ofertă</strong> (iconița imprimantă) din pagina de vizualizare sau direct
+    din lista de oferte.
+  </p>
+
+  <h4>Pagina de print</h4>
+  <p>
+    Pagina de print redă oferta ca document comercial de tip <em>OFERTA COMERCIALA</em>, cu:
+  </p>
+  <ul>
+    <li>
+      <strong>Header</strong>: numărul ofertei, data creării, data limită de valabilitate
+      (stânga) și datele companiei vânzătoare — denumire, adresă, CUI, statut TVA, nr. Reg.
+      Com., telefon, bancă și cont IBAN (dreapta), preluate automat din configurația locației.
+    </li>
+    <li><strong>Secțiunea Client</strong>: nume, companie, email, telefon.</li>
+    <li>
+      <strong>Tabelul de produse</strong>: coloane Nr., Produs (cu miniatură imagine dacă
+      există), Cantitate, Preț unitar, Disc. %, Total linie.
+    </li>
+    <li><strong>Totaluri</strong>: subtotal, discount total, total.</li>
+    <li><strong>Observații</strong> (dacă sunt completate).</li>
+    <li>
+      <strong>Zonă semnături</strong>: două câmpuri de semnătură — <em>Reprezentant vânzări</em>
+      (cu numele operatorului) și <em>Client</em>.
+    </li>
+  </ul>
+
+  <h4>Cum se tipărește</h4>
+  <ol>
+    <li>
+      Din lista de oferte, apăsați butonul <strong>Print</strong> de pe rândul dorit — se
+      deschide un tab nou și dialogul de imprimare al browserului pornește automat.
+    </li>
+    <li>
+      Alternativ, din pagina de vizualizare a ofertei, apăsați <strong>Print ofertă</strong>
+      în header — același comportament.
+    </li>
+    <li>
+      Din pagina de print în sine, butonul verde <strong>Print</strong> declanșează manual
+      dialogul de imprimare, iar butonul <strong>Preview</strong> deschide vizualizarea
+      structurată.
+    </li>
+  </ol>
+
+  <h4>Format și optimizare tipar</h4>
+  <p>
+    La imprimare, bara de butoane și elementele de navigare ale panoului sunt ascunse automat
+    prin CSS media print. Documentul se redă pe format <strong>A4</strong> cu margini de 10mm.
+    Imaginile produselor sunt incluse ca miniaturi inline. Nu există un export PDF dedicat în
+    browser — folosiți opțiunea <em>Salvare ca PDF</em> din dialogul de imprimare al sistemului
+    de operare pentru a obține un fișier PDF.
+  </p>
+
+  <hr>
+
+  <h3>7. Gestionarea bazei de clienți</h3>
+
+  <p>
+    Clienții sunt gestionați din modulul dedicat <strong>Clienți</strong>, accesibil din
+    meniul lateral. Baza de clienți este separată per locație, respectând același principiu
+    de izolare ca și ofertele.
+  </p>
+
+  <h4>Tipuri de clienți</h4>
+  <ul>
+    <li>
+      <strong>Persoană fizică</strong> — câmpurile specifice persoanelor juridice (CUI,
+      nr. Reg. Com., plătitor TVA, reprezentant) nu sunt disponibile și sunt șterse automat
+      la salvare dacă tipul este individual.
+    </li>
+    <li>
+      <strong>Persoană juridică</strong> — câmpuri suplimentare: denumire firmă, reprezentant
+      (persoana de contact), CUI, număr Registrul Comerțului, statut plătitor TVA.
+    </li>
+  </ul>
+
+  <h4>Câmpuri fișă client</h4>
+  <table>
+    <thead>
+      <tr>
+        <th>Câmp</th>
+        <th>Observații</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Tip</td>
+        <td>Persoană fizică / Persoană juridică.</td>
+      </tr>
+      <tr>
+        <td>Nume</td>
+        <td>
+          Numele firmei (pentru PJ) sau numele persoanei (pentru PF). Câmpul este trimmed
+          automat la salvare.
+        </td>
+      </tr>
+      <tr>
+        <td>Reprezentant</td>
+        <td>Disponibil doar pentru persoane juridice. Persoana de contact din firmă.</td>
+      </tr>
+      <tr>
+        <td>Telefon, Email</td>
+        <td>Emailul este normalizat automat la litere mici.</td>
+      </tr>
+      <tr>
+        <td>CUI</td>
+        <td>
+          Codul unic de identificare fiscală. Normalizat automat (prefix RO eliminat,
+          spații eliminate). Completabil prin interogare automată a bazei de date ANAF.
+        </td>
+      </tr>
+      <tr>
+        <td>Nr. Reg. Com.</td>
+        <td>Numărul de înregistrare la Registrul Comerțului (ex: J40/1234/2020).</td>
+      </tr>
+      <tr>
+        <td>Plătitor TVA</td>
+        <td>Toggle da/nu. Disponibil doar pentru persoane juridice.</td>
+      </tr>
+      <tr>
+        <td>Adresă, Localitate, Județ, Cod poștal</td>
+        <td>Adresa sediului/domiciliului.</td>
+      </tr>
+      <tr>
+        <td>Note</td>
+        <td>Observații interne despre client.</td>
+      </tr>
+      <tr>
+        <td>Activ</td>
+        <td>Toggle care permite dezactivarea clienților fără ștergere.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>Adrese de livrare</h4>
+  <p>
+    Fiecare client poate avea una sau mai multe <strong>adrese de livrare</strong>, gestionate
+    ca sub-înregistrări în fișa clientului. Fiecare adresă de livrare are:
+  </p>
+  <ul>
+    <li><strong>Etichetă</strong> — denumire scurtă pentru identificare rapidă (ex: „Depozit central", „Sediu sucursală").</li>
+    <li><strong>Persoană de contact</strong> și <strong>telefon de contact</strong> la adresa respectivă.</li>
+    <li><strong>Adresă, localitate, județ, cod poștal</strong>.</li>
+    <li><strong>Activ/Inactiv</strong> — pentru dezactivarea adreselor care nu mai sunt folosite.</li>
+    <li><strong>Poziție</strong> — ordinea de afișare în listă.</li>
+  </ul>
+  <p>
+    Adresele de livrare sunt utilizate la crearea comenzilor și AWB-urilor Sameday.
+  </p>
+
+  <h4>Lookup automat date firmă (ANAF)</h4>
+  <p>
+    În formularul de creare/editare client de tip Persoană juridică, după introducerea CUI-ului
+    apăsați butonul de interogare (iconița lupă sau săgeată) de lângă câmpul CUI. Sistemul
+    interoghează automat <strong>API-ul public OpenAPI/ANAF</strong> și completează:
+    denumirea firmei, adresa, numărul de înregistrare la Registrul Comerțului și statusul
+    de plătitor TVA. Verificați datele preluate și completați manual eventualele câmpuri lipsă.
+  </p>
+
+  <hr>
+
+  <h3>8. Conversia unei oferte în comandă</h3>
+
+  <p>
+    În versiunea curentă a ERP-ului, conversia directă a unei oferte acceptate în comandă
+    WooCommerce nu este automatizată ca un buton one-click. Fluxul recomandat după acceptarea
+    ofertei este:
+  </p>
+
+  <ol>
+    <li>
+      Setați statusul ofertei pe <strong>Acceptată</strong> — aceasta marchează automat
+      câmpul <code>accepted_at</code> cu data și ora curentă și asigură trasabilitatea
+      procesului de vânzare.
+    </li>
+    <li>
+      Folosiți datele din ofertă (client, produse, cantități, prețuri) pentru a crea manual
+      comanda în modulul de comenzi sau direct în WooCommerce, după procesul standard al
+      companiei.
+    </li>
+    <li>
+      Dacă este necesar un document de referință, tipăriți oferta acceptată ca dovadă a
+      acordului comercial.
+    </li>
+  </ol>
+
+  <p>
+    Oferta rămâne în sistem pe termen nelimitat și poate fi consultată oricând din lista de
+    oferte cu filtrul Status = Acceptată. Aceasta servește drept arhivă a înțelegerilor
+    comerciale cu clienții.
+  </p>
+
+  <h4>Bune practici recomandate</h4>
+  <ul>
+    <li>
+      <strong>Actualizați promptitudinea statusului</strong> — o ofertă în starea Draft sau
+      Trimisă de mult timp fără actualizare poate indica o oportunitate pierdută sau un
+      follow-up necesar.
+    </li>
+    <li>
+      <strong>Folosiți câmpul Valabilă până la</strong> — valabilitatea implicită de 14 zile
+      poate fi ajustată per ofertă. Când data expiră, setați manual statusul pe Expirată
+      pentru a menține rapoartele curate.
+    </li>
+    <li>
+      <strong>Completați Observațiile</strong> — notele interne și condițiile speciale
+      (transport inclus, termen de plată, condiții de livrare) introduse în câmpul Observații
+      vor apărea tipărit pe document și vor fi vizibile clientului.
+    </li>
+    <li>
+      <strong>Verificați datele firmei din locație</strong> — toate câmpurile companiei
+      vânzătoare (CUI, bancă, cont IBAN, telefon) sunt preluate din configurația locației.
+      Asigurați-vă că acestea sunt completate corect în Setări pentru a apărea corect pe
+      documentele tipărite.
+    </li>
+    <li>
+      <strong>Clienți noi — creați fișa înainte</strong> — deși puteți crea un client direct
+      din formularul ofertei, pentru clienți recurenți este mai eficient să aveți fișa creată
+      în avans cu toate datele (inclusiv adrese de livrare) pentru a le regăsi rapid la
+      completarea ofertelor viitoare.
+    </li>
+  </ul>
+
+</section>

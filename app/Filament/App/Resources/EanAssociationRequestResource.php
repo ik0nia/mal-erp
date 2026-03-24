@@ -19,8 +19,8 @@ class EanAssociationRequestResource extends Resource
     use ChecksRolePermissions, HasDynamicNavSort;
     protected static ?string $model = EanAssociationRequest::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-qr-code';
-    protected static ?string $navigationGroup = 'Administrare magazin';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-qr-code';
+    protected static string|\UnitEnum|null $navigationGroup = 'Administrare magazin';
     protected static ?string $navigationLabel = 'Cereri asociere EAN';
     protected static ?string $modelLabel = 'Cerere asociere EAN';
     protected static ?string $pluralModelLabel = 'Cereri asociere EAN';
@@ -78,7 +78,8 @@ class EanAssociationRequestResource extends Resource
                         'rejected' => 'Respins',
                     ]),
             ])
-            ->actions([
+            ->deferFilters(false)
+            ->recordActions([
                 Tables\Actions\Action::make('approve')
                     ->label('Aprobă')
                     ->icon('heroicon-o-check-circle')

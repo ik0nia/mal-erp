@@ -77,22 +77,20 @@
 
       {{-- Tab pills --}}
       <div class="flex items-center gap-2">
-        @foreach([
-          'fast' => ['label' => 'Rapid mișcătoare', 'icon' => '↑', 'active' => 'bg-blue-600 text-white', 'inactive' => 'border border-blue-200 text-blue-600 dark:border-blue-800 dark:text-blue-400 bg-white dark:bg-gray-900'],
-          'slow' => ['label' => 'Fără mișcare ≥30 zile', 'icon' => '↓', 'active' => 'bg-gray-600 text-white', 'inactive' => 'border border-gray-200 text-gray-600 dark:border-gray-700 dark:text-gray-400 bg-white dark:bg-gray-900'],
-        ] as $vTab => $cfg)
-          <button
-            wire:click="setVelocityTab('{{ $vTab }}')"
-            @class([
-              'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition focus:outline-none',
-              $cfg['active']   => $this->velocityTab === $vTab,
-              $cfg['inactive'] => $this->velocityTab !== $vTab,
-            ])
-          >
-            <span>{{ $cfg['icon'] }}</span>
-            {{ $cfg['label'] }}
-          </button>
-        @endforeach
+        <button
+          wire:click="setVelocityTab('fast')"
+          class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition focus:outline-none"
+          style="{{ $this->velocityTab === 'fast' ? 'background:#2563eb;color:#fff;' : 'border:1px solid #d1d5db;color:#6b7280;background:#fff;' }}"
+        >
+          <span>↑</span> Rapid mișcătoare
+        </button>
+        <button
+          wire:click="setVelocityTab('slow')"
+          class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition focus:outline-none"
+          style="{{ $this->velocityTab === 'slow' ? 'background:#4b5563;color:#fff;' : 'border:1px solid #d1d5db;color:#6b7280;background:#fff;' }}"
+        >
+          <span>↓</span> Fără mișcare ≥30 zile
+        </button>
       </div>
     </div>
 
@@ -199,26 +197,30 @@
 
       {{-- Tab pills --}}
       <div class="flex items-center gap-2">
-        @foreach([
-          'P0' => ['label' => 'Critice (P0)',             'count' => $this->countP0, 'active' => 'bg-red-600 text-white',    'inactive' => 'border border-red-200 text-red-600 dark:border-red-800 dark:text-red-400'],
-          'P1' => ['label' => 'Moderate (P1)',            'count' => $this->countP1, 'active' => 'bg-orange-500 text-white', 'inactive' => 'border border-orange-200 text-orange-600 dark:border-orange-800 dark:text-orange-400'],
-          'P2' => ['label' => 'Capital Blocat (P2)',      'count' => $this->countP2, 'active' => 'bg-yellow-500 text-white', 'inactive' => 'border border-yellow-200 text-yellow-700 dark:border-yellow-800 dark:text-yellow-400'],
-        ] as $level => $cfg)
-          <button
-            wire:click="setTab('{{ $level }}')"
-            @class([
-              'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition focus:outline-none',
-              $cfg['active']   => $this->tab === $level,
-              $cfg['inactive'] => $this->tab !== $level,
-              'bg-white dark:bg-gray-900' => $this->tab !== $level,
-            ])
-          >
-            {{ $cfg['label'] }}
-            <span class="rounded-full {{ $this->tab === $level ? 'bg-white/30' : 'bg-gray-100 dark:bg-white/10' }} px-1.5 py-0.5 text-xs font-bold">
-              {{ $cfg['count'] }}
-            </span>
-          </button>
-        @endforeach
+        <button
+          wire:click="setTab('P0')"
+          class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition focus:outline-none"
+          style="{{ $this->tab === 'P0' ? 'background:#dc2626;color:#fff;' : 'border:1px solid #d1d5db;color:#6b7280;background:#fff;' }}"
+        >
+          Critice (P0)
+          <span class="rounded-full px-1.5 py-0.5 text-xs font-bold" style="{{ $this->tab === 'P0' ? 'background:rgba(255,255,255,0.3);' : 'background:#f3f4f6;' }}">{{ $this->countP0 }}</span>
+        </button>
+        <button
+          wire:click="setTab('P1')"
+          class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition focus:outline-none"
+          style="{{ $this->tab === 'P1' ? 'background:#f97316;color:#fff;' : 'border:1px solid #d1d5db;color:#6b7280;background:#fff;' }}"
+        >
+          Moderate (P1)
+          <span class="rounded-full px-1.5 py-0.5 text-xs font-bold" style="{{ $this->tab === 'P1' ? 'background:rgba(255,255,255,0.3);' : 'background:#f3f4f6;' }}">{{ $this->countP1 }}</span>
+        </button>
+        <button
+          wire:click="setTab('P2')"
+          class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition focus:outline-none"
+          style="{{ $this->tab === 'P2' ? 'background:#eab308;color:#fff;' : 'border:1px solid #d1d5db;color:#6b7280;background:#fff;' }}"
+        >
+          Capital Blocat (P2)
+          <span class="rounded-full px-1.5 py-0.5 text-xs font-bold" style="{{ $this->tab === 'P2' ? 'background:rgba(255,255,255,0.3);' : 'background:#f3f4f6;' }}">{{ $this->countP2 }}</span>
+        </button>
       </div>
 
     </div>

@@ -239,7 +239,7 @@
             <div style="display:flex;align-items:center;gap:1rem;">
                 <div style="font-size:0.78rem;color:#9ca3af;">{{ $web['enriched'] }} / {{ $web['total'] }} produse cu EAN internațional ({{ $web['pct'] }}%)</div>
                 @if($web['enriched'] > 0)
-                <a href="{{ route('filament.app.resources.woo-products.index', ['tableFilters' => ['web_enriched' => ['value' => '1']]]) }}"
+                <a href="{{ \App\Filament\App\Resources\WooProductResource::getUrl('index', ['tableFilters' => ['web_enriched' => ['value' => '1']]]) }}"
                    style="font-size:0.75rem;color:#ea580c;text-decoration:none;font-weight:600;white-space:nowrap;">
                     Vezi toate →
                 </a>
@@ -257,7 +257,7 @@
         <div style="font-size:0.72rem;font-weight:600;color:#9ca3af;margin-bottom:0.5rem;text-transform:uppercase;">Ultimele îmbogățite</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0.6rem;">
             @foreach($recentWeb as $r)
-            <a href="{{ route('filament.app.resources.woo-products.edit', $r->id) }}" style="text-decoration:none;display:block;">
+            <a href="{{ \App\Filament\App\Resources\WooProductResource::getUrl('edit', ['record' => $r->id]) }}" style="text-decoration:none;display:block;">
             <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:0.5rem;padding:0.6rem 0.75rem;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor='#ea580c'" onmouseout="this.style.borderColor='#fed7aa'">
                 <div style="font-size:0.78rem;font-weight:600;color:#9a3412;margin-bottom:0.2rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ $r->name }}">
                     {{ $r->name }}

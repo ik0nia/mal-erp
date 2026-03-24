@@ -9,11 +9,11 @@ use Livewire\Attributes\On;
 
 class SupplierMovementChartWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Top furnizori — mișcări stoc';
+    protected ?string $heading = 'Top furnizori — mișcări stoc';
 
-    protected static ?string $maxHeight = '300px';
+    protected ?string $maxHeight = '300px';
 
-    protected static ?string $pollingInterval = null;
+    protected ?string $pollingInterval = null;
 
     public int $days = 7;
 

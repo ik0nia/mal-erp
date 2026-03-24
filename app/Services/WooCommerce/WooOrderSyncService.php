@@ -2,8 +2,10 @@
 
 namespace App\Services\WooCommerce;
 
+use App\Models\PurchaseRequest;
 use App\Models\WooOrder;
 use App\Models\WooOrderItem;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class WooOrderSyncService
@@ -57,6 +59,15 @@ class WooOrderSyncService
 
         $this->syncItems($order, $raw['line_items'] ?? []);
 
+        // Auto-creare PNR pentru produse "la comandă" dacă e comandă nouă (pending/processing)
+        if ($order->wasRecentlyCreated && in_array($order->status, ['pending', 'processing', 'on-hold'])) {
+            try {
+                PurchaseRequest::createFromWooOrder($order);
+            } catch (Throwable) {
+                // Nu blocăm sync-ul dacă crearea PNR eșuează
+            }
+        }
+
         return $order;
     }
 
@@ -65,6 +76,16 @@ class WooOrderSyncService
      */
     public function syncItems(WooOrder $order, array $lineItems): void
     {
+        $existingCount = $order->items()->count();
+
+        // SAFEGUARD: Nu șterge itemele dacă WooCommerce a returnat o listă goală
+        // dar comanda are deja iteme salvate local — semn că datele sunt incomplete.
+        if (count($lineItems) === 0 && $existingCount > 0) {
+            Log::warning('WooOrderSyncService: safeguard activat — line_items gol pentru comanda #' . $order->woo_id . ' care are ' . $existingCount . ' iteme locale. Ștergere anulată.');
+
+            return;
+        }
+
         $order->items()->delete();
 
         foreach ($lineItems as $item) {

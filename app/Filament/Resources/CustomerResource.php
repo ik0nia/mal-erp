@@ -8,7 +8,7 @@ use App\Models\Location;
 use App\Models\User;
 use App\Services\CompanyData\OpenApiCompanyLookupService;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Notifications\Notification;
@@ -23,9 +23,9 @@ class CustomerResource extends Resource
 {
     protected static ?string $model = Customer::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-user-group';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
 
-    protected static ?string $navigationGroup = 'Vânzări';
+    protected static string|\UnitEnum|null $navigationGroup = 'Vânzări';
 
     protected static ?string $navigationLabel = 'Clienți';
 
@@ -67,9 +67,9 @@ class CustomerResource extends Resource
         return static::currentUser()?->isAdmin() ?? false;
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\Section::make('Detalii client')
                     ->columns(3)
@@ -317,8 +317,9 @@ class CustomerResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Activ'),
             ])
+            ->deferFilters(false)
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('location'))
-            ->actions([
+            ->recordActions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])

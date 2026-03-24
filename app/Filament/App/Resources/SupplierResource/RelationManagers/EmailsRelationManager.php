@@ -129,6 +129,7 @@ class EmailsRelationManager extends RelationManager
                         'INBOX.Sent' => 'Trimise',
                     ]),
             ])
+            ->deferFilters(false)
             ->recordUrl(null)
             ->recordAction(null)
             ->paginated([15, 30, 50])

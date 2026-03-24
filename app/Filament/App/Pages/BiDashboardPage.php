@@ -11,11 +11,11 @@ class BiDashboardPage extends Page
 {
     use HasDynamicNavSort;
 
-    protected static string $view = 'filament.app.pages.bi-dashboard';
+    protected string $view = 'filament.app.pages.bi-dashboard';
 
     protected static ?string $navigationLabel = 'Dashboard BI';
-    protected static ?string $navigationGroup = 'Rapoarte';
-    protected static ?string $navigationIcon  = 'heroicon-o-chart-bar-square';
+    protected static string|\UnitEnum|null $navigationGroup = 'Rapoarte';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-chart-bar-square';
     protected static ?int    $navigationSort  = 89;
     protected static ?string $title           = 'Dashboard BI';
 
@@ -47,9 +47,14 @@ class BiDashboardPage extends Page
 
     // ─────────────────────────────────────────────────────────────────────────
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return \App\Models\RolePermission::check(static::class, 'can_access');
+    }
+
     public static function canAccess(): bool
     {
-        return auth()->user()?->isSuperAdmin() ?? false;
+        return \App\Models\RolePermission::check(static::class, 'can_access');
     }
 
     public function mount(): void
@@ -172,11 +177,16 @@ class BiDashboardPage extends Page
             return;
         }
 
-        $this->alertRows = DB::table('bi_inventory_alert_candidates_daily')
-            ->where('day', $this->alertDay)
-            ->where('risk_level', $this->tab)
-            ->orderByRaw('COALESCE(days_left_estimate, 9999) ASC, stock_value DESC')
+        $this->alertRows = DB::table('bi_inventory_alert_candidates_daily as a')
+            ->leftJoin('woo_products as p', 'p.sku', '=', 'a.reference_product_id')
+            ->where('a.day', $this->alertDay)
+            ->where('a.risk_level', $this->tab)
+            ->where(fn ($q) => $q->whereNull('p.product_type')->orWhere('p.product_type', '!=', 'production'))
+            ->where(fn ($q) => $q->whereNull('p.is_discontinued')->orWhere('p.is_discontinued', false))
+            ->where(fn ($q) => $q->whereNull('p.procurement_type')->orWhere('p.procurement_type', '!=', 'on_demand'))
+            ->orderByRaw('COALESCE(a.days_left_estimate, 9999) ASC, a.stock_value DESC')
             ->limit(200)
+            ->select('a.*')
             ->get()
             ->map(fn ($r) => [
                 'sku'              => $r->reference_product_id,

@@ -1,0 +1,750 @@
+<section id="m11-setari">
+  <h1>Modul 11 — Setări și Administrare</h1>
+
+  <p>
+    Secțiunea de setări și administrare centralizează toate configurările tehnice și operaționale
+    ale platformei ERP Malinco. Accesul la aceste pagini este rezervat utilizatorilor cu rol
+    <strong>super_admin</strong> sau <strong>admin</strong>. Modificările produc efect imediat,
+    fără a fi necesară repornirea aplicației.
+  </p>
+
+  <!-- ====================================================================== -->
+  <h2 id="m11-1">1. Pagina Setări Aplicație</h2>
+
+  <p>
+    Pagina <em>Setări aplicație</em> se găsește în meniul lateral al panoului App, identificată
+    prin iconița roată dințată (<code>cog-6-tooth</code>). Este organizată în patru secțiuni
+    distincte: <strong>Branding</strong>, <strong>Email inbox (IMAP)</strong>,
+    <strong>WooCommerce Plugin Bridge</strong> și <strong>Inteligență Artificială (Claude)</strong>.
+  </p>
+
+  <p>
+    Toate câmpurile de tip parolă sau cheie API sunt stocate <strong>criptat</strong> în baza de
+    date (prin mecanismul Laravel <code>encrypt()</code>). Din acest motiv, la deschiderea paginii
+    câmpurile de parolă apar goale — sistemul nu reîncarcă valorile sensibile în formular. Pentru
+    a modifica o parolă sau cheie, introduceți noua valoare; dacă lăsați câmpul gol, valoarea
+    existentă se păstrează nemodificată.
+  </p>
+
+  <h3>1.1 Secțiunea Branding</h3>
+  <table>
+    <thead>
+      <tr><th>Câmp</th><th>Descriere</th><th>Observații</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Nume aplicație</strong></td>
+        <td>Textul afișat în bara de navigare și în titlul paginilor ERP.</td>
+        <td>Valoare implicită: <em>Malinco ERP</em>. Maxim 100 caractere.</td>
+      </tr>
+      <tr>
+        <td><strong>Logo</strong></td>
+        <td>Imaginea afișată în header-ul panoului de administrare.</td>
+        <td>
+          Format recomandat: PNG cu fundal transparent, înălțime minimă 200px.
+          Dimensiunea maximă acceptată este 2 MB. Fișierul se salvează în directorul
+          <code>storage/app/public/brand/</code>.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ====================================================================== -->
+  <h2 id="m11-2">2. Configurarea IMAP — Email Inbox</h2>
+
+  <p>
+    Modulul de inteligență email necesită o conexiune IMAP pentru a citi mesajele din căsuța poștală
+    a companiei. Conexiunea este <strong>exclusiv read-only</strong>: sistemul nu trimite, nu șterge
+    și nu mută niciun email. Inbox-ul din Outlook sau webmail rămâne complet neafectat.
+  </p>
+
+  <p>
+    Emailurile sunt preluate automat la fiecare 5 minute printr-un job programat
+    (<code>FetchEmailsJob</code>). Sistemul folosește comanda IMAP <code>SINCE &lt;data&gt;</code>
+    pentru a prelua doar mesajele noi, evitând descărcarea repetată a întregului inbox.
+  </p>
+
+  <h3>Câmpuri de configurare IMAP</h3>
+  <table>
+    <thead>
+      <tr><th>Câmp</th><th>Descriere</th><th>Valoare tipică</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Server IMAP</strong></td>
+        <td>Hostname-ul serverului de mail al companiei.</td>
+        <td><code>mail.malinco.ro</code></td>
+      </tr>
+      <tr>
+        <td><strong>Port</strong></td>
+        <td>Portul TCP pentru conexiunea IMAP.</td>
+        <td><code>993</code> (SSL standard)</td>
+      </tr>
+      <tr>
+        <td><strong>Criptare</strong></td>
+        <td>
+          Protocolul de securitate al conexiunii. Opțiuni disponibile:
+          <ul>
+            <li><strong>SSL</strong> — portul 993, criptare imediată (recomandat)</li>
+            <li><strong>TLS</strong> — portul 143, criptare prin negociere</li>
+            <li><strong>STARTTLS</strong> — upgrade la TLS pe conexiune necriptată</li>
+            <li><strong>Fără criptare</strong> — numai pentru testare în rețea internă</li>
+          </ul>
+        </td>
+        <td>SSL</td>
+      </tr>
+      <tr>
+        <td><strong>Adresă email</strong></td>
+        <td>Contul de email folosit pentru autentificare IMAP și ca identitate de monitorizat.</td>
+        <td><code>office@malinco.ro</code></td>
+      </tr>
+      <tr>
+        <td><strong>Parolă</strong></td>
+        <td>
+          Parola contului de email. Stocată criptat în baza de date.
+          Lăsați câmpul gol dacă nu doriți să schimbați parola existentă.
+        </td>
+        <td>— (confidențial)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    După salvarea configurației IMAP, puteți testa conexiunea executând comanda:
+  </p>
+  <pre><code>php artisan email:import-history --folder=INBOX --limit=10</code></pre>
+
+  <!-- ====================================================================== -->
+  <h2 id="m11-3">3. Configurarea API Anthropic (Claude AI)</h2>
+
+  <p>
+    Platforma ERP integrează modelele de limbaj Claude de la Anthropic pentru mai multe funcționalități
+    automate: procesarea emailurilor de la furnizori, chatbot-ul de pe site, rezumatele conversațiilor,
+    analiza BI, îmbogățirea produselor și generarea de conținut pentru Social Media.
+  </p>
+
+  <h3>Obținerea cheii API</h3>
+  <ol>
+    <li>Accesați <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></li>
+    <li>Autentificați-vă cu contul organizației</li>
+    <li>Navigați la <em>API Keys</em> și creați o cheie nouă</li>
+    <li>Copiați cheia (format: <code>sk-ant-api03-...</code>) — aceasta nu mai poate fi vizualizată ulterior</li>
+  </ol>
+
+  <h3>Configurare în ERP</h3>
+  <p>
+    Introduceți cheia în câmpul <strong>Anthropic API Key</strong> din secțiunea
+    <em>Inteligență Artificială (Claude)</em> și salvați. Cheia este stocată criptat.
+    Dacă nu introduceți nicio valoare, sistemul folosește automat variabila de mediu
+    <code>ANTHROPIC_API_KEY</code> din fișierul <code>.env</code> (fallback).
+  </p>
+
+  <h3>Modele utilizate și costuri estimative</h3>
+  <table>
+    <thead>
+      <tr><th>Model</th><th>Preț input (per M tokens)</th><th>Preț output (per M tokens)</th><th>Utilizare principală</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>claude-haiku-4-5</td>
+        <td>$0.80</td>
+        <td>$4.00</td>
+        <td>Chatbot site, procesare emailuri, rezumate chat</td>
+      </tr>
+      <tr>
+        <td>claude-sonnet-4-6</td>
+        <td>$3.00</td>
+        <td>$15.00</td>
+        <td>Analiză BI, rapoarte complexe</td>
+      </tr>
+      <tr>
+        <td>claude-opus-4-6</td>
+        <td>$15.00</td>
+        <td>$75.00</td>
+        <td>Sarcini analitice de înaltă complexitate</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ====================================================================== -->
+  <h2 id="m11-4">4. Configurarea Integrărilor WooCommerce</h2>
+
+  <p>
+    Integrările cu platforme externe se gestionează din panoul Admin, secțiunea
+    <em>Integration Connections</em>. Fiecare integrare este asociată unei locații (depozit/magazin)
+    și poate fi de unul din trei tipuri: <strong>WooCommerce</strong>, <strong>WinMentor CSV</strong>
+    sau <strong>Sameday Courier</strong>.
+  </p>
+
+  <h3>4.1 Câmpuri comune tuturor integrărilor</h3>
+  <table>
+    <thead>
+      <tr><th>Câmp</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Locație</strong></td>
+        <td>Depozitul sau magazinul căruia îi aparține această integrare.</td>
+      </tr>
+      <tr>
+        <td><strong>Tip (Provider)</strong></td>
+        <td>WooCommerce, WinMentor CSV sau Sameday Courier.</td>
+      </tr>
+      <tr>
+        <td><strong>Nume</strong></td>
+        <td>Etichetă descriptivă pentru identificarea rapidă a conexiunii.</td>
+      </tr>
+      <tr>
+        <td><strong>Activ</strong></td>
+        <td>Activează sau dezactivează sincronizarea automată pentru această conexiune.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>4.2 Integrare WooCommerce</h3>
+  <p>
+    Conexiunea WooCommerce necesită credențiale REST API generate din panoul WordPress
+    (<em>WooCommerce → Settings → Advanced → REST API</em>).
+  </p>
+  <table>
+    <thead>
+      <tr><th>Câmp</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>URL de bază</strong></td>
+        <td>Adresa site-ului WooCommerce, ex: <code>https://malinco.ro</code>. Slash-ul final este eliminat automat.</td>
+      </tr>
+      <tr>
+        <td><strong>Consumer Key</strong></td>
+        <td>Cheia publică REST API WooCommerce (format <code>ck_...</code>). Stocată criptat.</td>
+      </tr>
+      <tr>
+        <td><strong>Consumer Secret</strong></td>
+        <td>Cheia secretă REST API WooCommerce (format <code>cs_...</code>). Stocată criptat.</td>
+      </tr>
+      <tr>
+        <td><strong>Verificare SSL</strong></td>
+        <td>Activați în producție. Dezactivați doar pentru testare locală cu certificate self-signed.</td>
+      </tr>
+      <tr>
+        <td><strong>Webhook Secret</strong></td>
+        <td>
+          Cheia secretă pentru validarea webhook-urilor primite de la WooCommerce.
+          Se generează automat la crearea conexiunii. URL-ul webhook este
+          <code>https://erp.malinco.ro/webhooks/woo/{id_conexiune}</code>.
+          Stocată criptat.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>4.3 Integrare WinMentor CSV</h3>
+  <p>
+    Importul din WinMentor se realizează prin fișiere CSV exportate periodic.
+    Câmpurile <em>Consumer Key</em> și <em>Consumer Secret</em> nu sunt utilizate pentru
+    această integrare — doar URL-ul fișierului CSV este necesar, configurat în câmpul
+    <em>settings → csv_url</em>.
+  </p>
+  <p>
+    Opțiuni suplimentare în setările JSON ale conexiunii:
+  </p>
+  <ul>
+    <li><code>auto_sync_enabled</code>: activează importul automat periodic (boolean)</li>
+    <li><code>sync_interval_minutes</code>: intervalul de sincronizare, minim 5 minute (integer)</li>
+  </ul>
+
+  <h3>4.4 Integrare Sameday Courier</h3>
+  <p>
+    Conexiunea Sameday folosește câmpurile <em>Consumer Key</em> drept <em>username</em> și
+    <em>Consumer Secret</em> drept <em>parolă</em> pentru API-ul Sameday.
+    URL-ul de bază poate fi lăsat gol (sistemul folosește automat <code>https://api.sameday.ro</code>
+    pentru producție sau <code>https://sameday-api.demo.zitec.com</code> pentru mediul demo,
+    configurat prin <code>settings → environment</code>).
+  </p>
+
+  <!-- ====================================================================== -->
+  <h2 id="m11-5">5. Setarea Cheii API pentru Plugin-ul WordPress</h2>
+
+  <p>
+    Plugin-ul <strong>malinco-erp-bridge</strong> instalat pe site-ul WordPress comunică cu ERP-ul
+    printr-un API REST securizat. Autentificarea se face prin header-ul HTTP
+    <code>X-ERP-Api-Key</code>, iar cheia trebuie să fie identică în ambele sisteme.
+  </p>
+
+  <h3>Pași de configurare</h3>
+  <ol>
+    <li>
+      <strong>În ERP</strong>: introduceți cheia secretă în câmpul <em>API Key plugin</em>
+      din secțiunea <em>WooCommerce Plugin Bridge</em> a paginii Setări aplicație și salvați.
+      Cheia este stocată criptat în tabela <code>app_settings</code> sub cheia
+      <code>woo_plugin_api_key</code>.
+    </li>
+    <li>
+      <strong>Pe WordPress</strong>: accesați <em>WP Admin → Settings → ERP Bridge</em>
+      și introduceți exact aceeași cheie în câmpul corespunzător.
+    </li>
+  </ol>
+
+  <p>
+    Cheia poate fi orice șir alfanumeric aleatoriu. Recomandăm generarea unui șir de minimum
+    32 caractere aleatorii. Dacă cele două chei nu coincid, toate apelurile API vor eșua cu
+    eroare de autentificare.
+  </p>
+
+  <p>
+    După configurare, verificați conexiunea cu comanda:
+  </p>
+  <pre><code>php artisan woo:deploy-plugin --check</code></pre>
+  <p>
+    Rezultatul afișat va confirma versiunea plugin-ului activ și URL-ul site-ului.
+  </p>
+
+  <!-- ====================================================================== -->
+  <h2 id="m11-6">6. Gestionarea Permisiunilor pe Roluri</h2>
+
+  <p>
+    Sistemul de control al accesului folosește un model de permisiuni bazat pe roluri
+    (<em>Role-Based Access Control</em>). Permisiunile sunt stocate în tabela
+    <code>role_permissions</code> și sunt incluse în cache cu un TTL de 5 minute pentru
+    performanță optimă.
+  </p>
+
+  <h3>6.1 Structura permisiunilor</h3>
+  <p>
+    Fiecare înregistrare de permisiune definește ce poate face un rol asupra unui anumit
+    <em>resource</em> (resursă Filament sau pagină). Câmpurile disponibile sunt:
+  </p>
+  <table>
+    <thead>
+      <tr><th>Câmp</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>role</strong></td>
+        <td>Rolul utilizatorului căruia i se aplică regula (ex: <code>buyer</code>, <code>sales</code>, <code>manager</code>).</td>
+      </tr>
+      <tr>
+        <td><strong>resource</strong></td>
+        <td>Clasa PHP completă a resursei Filament sau identificatorul paginii (ex: <code>App\Filament\App\Resources\PurchaseOrderResource</code>).</td>
+      </tr>
+      <tr>
+        <td><strong>can_access</strong></td>
+        <td>Poate accesa (vedea în meniu) resursa respectivă.</td>
+      </tr>
+      <tr>
+        <td><strong>can_create</strong></td>
+        <td>Poate crea înregistrări noi în acea resursă.</td>
+      </tr>
+      <tr>
+        <td><strong>can_edit</strong></td>
+        <td>Poate edita înregistrările existente.</td>
+      </tr>
+      <tr>
+        <td><strong>can_delete</strong></td>
+        <td>Poate șterge înregistrările.</td>
+      </tr>
+      <tr>
+        <td><strong>can_view</strong></td>
+        <td>Poate deschide pagina de detaliu (View) a unei înregistrări.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>6.2 Ierarhia rolurilor</h3>
+  <p>
+    Sistemul aplică o politică <strong>default-deny</strong>: dacă nu există nicio regulă definită
+    explicit pentru un rol și o resursă, accesul este <em>refuzat automat</em>.
+    Excepțiile sunt:
+  </p>
+  <ul>
+    <li>
+      <strong>super_admin</strong> — acces complet la toate resursele și paginile, fără a fi
+      necesare reguli explicite. Poate configura setările aplicației, gestionează permisiunile
+      altor roluri și are acces la logurile de utilizare AI.
+    </li>
+    <li>
+      <strong>admin</strong> — acces complet la toate resursele, similar cu super_admin,
+      cu excepția setărilor de sistem de nivel înalt.
+    </li>
+    <li>
+      <strong>Alte roluri</strong> (buyer, sales, manager etc.) — accesul este determinat
+      exclusiv de regulile definite în tabela <code>role_permissions</code>.
+    </li>
+  </ul>
+
+  <h3>6.3 Modificarea permisiunilor</h3>
+  <p>
+    Permisiunile se gestionează direct din panoul Admin al aplicației sau prin intervenție
+    directă în baza de date (pentru configurări inițiale). La salvarea unei permisiuni,
+    cache-ul rolului respectiv este invalidat automat, astfel că modificările devin
+    active imediat pentru noile sesiuni.
+  </p>
+
+  <h3>6.4 Ordinea navigației</h3>
+  <p>
+    Pe lângă permisiuni, <strong>super_admin</strong> poate configura ordinea grupurilor
+    și elementelor din meniul lateral. Aceste setări sunt stocate tot în <code>app_settings</code>,
+    sub chei de forma <code>nav_group_sort_*</code> și <code>nav_item_sort_*</code>.
+    Grupurile configurabile sunt:
+  </p>
+  <ul>
+    <li>Administrare magazin (sort implicit: 1)</li>
+    <li>Achiziții (sort implicit: 2)</li>
+    <li>Vânzări (sort implicit: 3)</li>
+    <li>Comenzi (sort implicit: 4)</li>
+    <li>Livrare (sort implicit: 5)</li>
+    <li>Rapoarte (sort implicit: 6)</li>
+    <li>Produse (sort implicit: 7)</li>
+    <li>Comunicare (sort implicit: 8)</li>
+    <li>Social Media (sort implicit: 9)</li>
+  </ul>
+
+  <!-- ====================================================================== -->
+  <h2 id="m11-7">7. Log Utilizare AI — Monitorizare Costuri</h2>
+
+  <p>
+    Pagina <em>Consum API Claude</em> (grupul <em>Sistem</em> din panoul Admin) oferă
+    vizibilitate completă asupra apelurilor API către Anthropic și costurile asociate.
+    Aceasta este utilă pentru a identifica sursele de consum ridicat și pentru a estima
+    bugetele lunare de utilizare AI.
+  </p>
+
+  <h3>7.1 Statistici afișate</h3>
+  <table>
+    <thead>
+      <tr><th>Indicator</th><th>Descriere</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Cost total</strong></td>
+        <td>Suma costurilor în USD pentru toate apelurile din perioada selectată.</td>
+      </tr>
+      <tr>
+        <td><strong>Total tokeni input</strong></td>
+        <td>Numărul de tokeni trimiși către model (prompturi, context, date).</td>
+      </tr>
+      <tr>
+        <td><strong>Total tokeni output</strong></td>
+        <td>Numărul de tokeni generați de model (răspunsuri, analize).</td>
+      </tr>
+      <tr>
+        <td><strong>Număr apeluri</strong></td>
+        <td>Câte apeluri API au fost efectuate în perioada selectată.</td>
+      </tr>
+      <tr>
+        <td><strong>Cost mediu pe zi</strong></td>
+        <td>Media zilnică a costurilor, calculată automat în funcție de perioada aleasă.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>7.2 Filtrare pe perioade</h3>
+  <p>
+    Sunt disponibile filtrele: <em>Azi</em>, <em>Ieri</em>, <em>Ultimele 7 zile</em>,
+    <em>Ultimele 14 zile</em> și <em>Ultimele 30 zile</em>.
+  </p>
+
+  <h3>7.3 Defalcare pe surse</h3>
+  <p>
+    Consumul este defalcat pe fiecare sursă de utilizare, oferind transparență deplină.
+    Sursele monitorizate includ:
+  </p>
+  <ul>
+    <li><strong>Chatbot site</strong> — răspunsuri generate pentru vizitatorii site-ului</li>
+    <li><strong>Email AI</strong> — procesarea automată a emailurilor de la furnizori</li>
+    <li><strong>Rezumat chat</strong> — generarea rezumatelor conversațiilor din chat</li>
+    <li><strong>Domain matching furnizori</strong> — asocierea automată a domeniilor email cu furnizorii</li>
+    <li><strong>BI — Rapoarte</strong> (zilnic, săptămânal, lunar, trimestrial, semestrial, anual)</li>
+    <li><strong>Enrichment produse</strong> — descrieri, titluri, atribute, categorii, imagini, dimensiuni, web scraping</li>
+    <li><strong>Social Media</strong> — generare caption-uri, analiză stil, generare imagini, template-uri grafice</li>
+  </ul>
+
+  <h3>7.4 Evoluție pe zile</h3>
+  <p>
+    A doua tabelă din pagină afișează consumul agregat pe fiecare zi din perioada selectată
+    (cost, tokeni, număr apeluri), permițând identificarea zilelor cu activitate neobișnuit
+    de ridicată.
+  </p>
+
+  <h3>7.5 Log detaliat</h3>
+  <p>
+    Ultimele 200 de înregistrări din perioada selectată sunt afișate în ordine
+    cronologică inversă, cu detalii despre sursă, model utilizat, număr de tokeni
+    și costul individual al fiecărui apel.
+  </p>
+
+  <p>
+    Costurile sunt calculate automat de sistem pe baza prețurilor publice Anthropic:
+    tokenii de intrare și ieșire se contorizează separat, iar costul fiecărui apel se
+    calculează cu formula:
+    <code>cost = (input_tokens / 1.000.000 × preț_input) + (output_tokens / 1.000.000 × preț_output)</code>.
+  </p>
+
+  <!-- ====================================================================== -->
+  <h2 id="m11-8">8. Branduri — Gestionarea Listei de Branduri</h2>
+
+  <p>
+    Modulul <em>Branduri</em> se găsește în grupul <strong>Achiziții</strong> din meniul lateral
+    (sort implicit: 5) și permite gestionarea catalogului de mărci comercializate de companie.
+    Brandurile sunt utilizate în modulul de achiziții pentru a asocia furnizorii cu mărcile
+    pe care le distribuie.
+  </p>
+
+  <h3>8.1 Câmpurile unui brand</h3>
+  <table>
+    <thead>
+      <tr><th>Câmp</th><th>Descriere</th><th>Observații</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Nume brand</strong></td>
+        <td>Denumirea comercială a brandului (ex: Samsung, Bosch, Philips).</td>
+        <td>Obligatoriu. Maxim 255 caractere.</td>
+      </tr>
+      <tr>
+        <td><strong>Slug</strong></td>
+        <td>
+          Identificatorul URL-friendly al brandului, generat automat din nume
+          (ex: <code>samsung</code>, <code>bosch</code>).
+        </td>
+        <td>Obligatoriu. Trebuie să fie unic în sistem. Generat automat la completarea numelui.</td>
+      </tr>
+      <tr>
+        <td><strong>Website</strong></td>
+        <td>Adresa site-ului oficial al brandului.</td>
+        <td>Opțional. Trebuie să fie URL valid.</td>
+      </tr>
+      <tr>
+        <td><strong>URL / cale logo</strong></td>
+        <td>
+          Adresa imaginii logo-ului brandului. Poate fi URL complet
+          (<code>https://...</code>) sau cale relativă față de directorul public
+          (<code>brand-logos/samsung.png</code>).
+        </td>
+        <td>Opțional. Maxim 500 caractere.</td>
+      </tr>
+      <tr>
+        <td><strong>Descriere scurtă</strong></td>
+        <td>Text liber de prezentare a brandului, vizibil intern în ERP.</td>
+        <td>Opțional.</td>
+      </tr>
+      <tr>
+        <td><strong>Activ</strong></td>
+        <td>
+          Marchează brandul ca activ sau inactiv. Brandurile inactive pot fi
+          filtrate în liste și rapoarte.
+        </td>
+        <td>Implicit: activ (true).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>8.2 Asocierea furnizorilor</h3>
+  <p>
+    Fiecare brand poate fi asociat cu unul sau mai mulți furnizori care distribuie produsele
+    acelui brand. Asocierea se face printr-o relație many-to-many. Din lista de branduri
+    se pot vedea direct furnizorii asociați fiecărui brand (maxim 3 afișați, restul indicat
+    prin număr).
+  </p>
+
+  <h3>8.3 Operațiuni disponibile</h3>
+  <ul>
+    <li><strong>Creare</strong>: butonul <em>Adaugă brand</em> din colțul dreapta-sus al listei.</li>
+    <li><strong>Editare</strong>: click pe iconița de editare din coloana de acțiuni.</li>
+    <li><strong>Ștergere în masă</strong>: selectați mai multe branduri din listă și folosiți acțiunea <em>Delete selected</em>.</li>
+    <li><strong>Filtrare după status</strong>: filtrul <em>Activ</em> permite afișarea doar a brandurilor active, inactive sau ambele.</li>
+    <li><strong>Sortare implicită</strong>: alfabetic după numele brandului.</li>
+  </ul>
+
+  <!-- ====================================================================== -->
+  <h2 id="m11-9">9. Plugin WordPress — malinco-erp-bridge</h2>
+
+  <h3>9.1 Ce face plugin-ul</h3>
+  <p>
+    Plugin-ul <strong>malinco-erp-bridge</strong> (versiunea curentă: 2.1.0) extinde WordPress-ul
+    cu un API REST privat care permite comunicarea bidirecțională între ERP și site-ul
+    WooCommerce. Plugin-ul acționează ca un pod (<em>bridge</em>) prin care ERP-ul poate
+    citi și scrie date direct în WordPress fără a folosi API-ul standard WooCommerce REST
+    pentru operațiunile pe meta-date.
+  </p>
+
+  <p>
+    Funcționalitățile principale ale plugin-ului includ:
+  </p>
+  <ul>
+    <li>
+      <strong>Sincronizare meta-date produse</strong>: ERP-ul poate scrie meta-date personalizate
+      pe produsele WooCommerce (furnizor, SKU furnizor, stoc WinMentor, prețuri, disponibilitate).
+    </li>
+    <li>
+      <strong>Sincronizare în bulk</strong>: endpoint-ul <code>/product/bulk-meta</code> permite
+      actualizarea meta-datelor pentru sute de produse simultan, reducând numărul de apeluri API.
+    </li>
+    <li>
+      <strong>Logică de disponibilitate și preț</strong>: plugin-ul calculează automat starea de
+      disponibilitate a produselor pe baza stocului WinMentor, prețului furnizorului și timpilor
+      de livrare configurați per furnizor.
+    </li>
+    <li>
+      <strong>Golire cache</strong>: endpoint-ul <code>/cache/flush</code> invalidează cache-ul
+      WordPress după modificări majore de date.
+    </li>
+    <li>
+      <strong>Citire opțiuni WordPress</strong>: ERP-ul poate citi opțiuni din baza de date
+      WordPress prin endpoint-ul <code>/options/{cheie}</code>.
+    </li>
+    <li>
+      <strong>Auto-actualizare</strong>: plugin-ul se poate actualiza singur prin endpoint-ul
+      <code>/self-update</code>, fără intervenție manuală în panoul WordPress.
+    </li>
+  </ul>
+
+  <h3>9.2 Endpoint-uri REST disponibile</h3>
+  <p>
+    Toate endpoint-urile sunt disponibile la prefixul <code>/wp-json/malinco-erp/v1/</code>
+    și necesită autentificare prin header-ul <code>X-ERP-Api-Key</code>.
+  </p>
+  <table>
+    <thead>
+      <tr><th>Metodă</th><th>Endpoint</th><th>Funcție</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>GET</td>
+        <td><code>/version</code></td>
+        <td>Verifică că plugin-ul răspunde și returnează versiunea și URL-ul site-ului.</td>
+      </tr>
+      <tr>
+        <td>GET</td>
+        <td><code>/product/meta</code></td>
+        <td>Citește meta-datele unui produs specificat prin SKU sau ID WooCommerce.</td>
+      </tr>
+      <tr>
+        <td>POST</td>
+        <td><code>/product/meta</code></td>
+        <td>Actualizează meta-datele unui singur produs.</td>
+      </tr>
+      <tr>
+        <td>POST</td>
+        <td><code>/product/bulk-meta</code></td>
+        <td>Actualizează meta-datele pentru mai multe produse simultan.</td>
+      </tr>
+      <tr>
+        <td>POST</td>
+        <td><code>/product/recalculate</code></td>
+        <td>Declanșează recalcularea disponibilității și prețului pentru produse specificate.</td>
+      </tr>
+      <tr>
+        <td>POST</td>
+        <td><code>/cache/flush</code></td>
+        <td>Golește cache-urile WordPress (object cache, transients).</td>
+      </tr>
+      <tr>
+        <td>GET</td>
+        <td><code>/options/{cheie}</code></td>
+        <td>Citește o opțiune din baza de date WordPress.</td>
+      </tr>
+      <tr>
+        <td>POST</td>
+        <td><code>/self-update</code></td>
+        <td>Primește un fișier ZIP și actualizează plugin-ul la noua versiune.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>9.3 Instalarea inițială</h3>
+  <ol>
+    <li>
+      Descărcați fișierul <code>malinco-erp-bridge.zip</code> din directorul
+      <code>public/</code> al ERP-ului sau construiți-l cu comanda:
+      <pre><code>php artisan woo:deploy-plugin --build-only</code></pre>
+    </li>
+    <li>
+      În panoul WordPress, accesați <em>Plugins → Add New → Upload Plugin</em>,
+      selectați ZIP-ul și instalați.
+    </li>
+    <li>
+      Activați plugin-ul.
+    </li>
+    <li>
+      Accesați <em>Settings → ERP Bridge</em> și introduceți cheia API (aceeași
+      configurată în ERP la pasul descris în secțiunea 5).
+    </li>
+  </ol>
+
+  <h3>9.4 Actualizarea plugin-ului</h3>
+  <p>
+    Actualizările pot fi aplicate automat prin comanda de deploy din ERP, fără a accesa
+    panoul WordPress:
+  </p>
+  <pre><code>php artisan woo:deploy-plugin</code></pre>
+  <p>
+    Comanda construiește un ZIP cu ultima versiune a fișierelor din directorul
+    <code>wordpress-plugin/malinco-erp-bridge/</code>, îl trimite prin endpoint-ul
+    <code>/self-update</code> și verifică versiunea activă după instalare.
+  </p>
+
+  <p>Opțiuni disponibile pentru comanda de deploy:</p>
+  <table>
+    <thead>
+      <tr><th>Opțiune</th><th>Efect</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>--check</code></td>
+        <td>Verifică versiunea curentă a plugin-ului activ pe WordPress, fără a face nicio modificare.</td>
+      </tr>
+      <tr>
+        <td><code>--build-only</code></td>
+        <td>Construiește fișierul ZIP local (în <code>storage/app/</code>) fără a-l trimite pe WordPress. Util pentru inspecție manuală sau instalare prin interfața WordPress.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>9.5 Meta-datele sincronizate</h3>
+  <p>
+    Principalele meta-date gestionate de plugin pe produsele WooCommerce:
+  </p>
+  <ul>
+    <li><code>_wm_stock</code> — stocul curent din WinMentor (număr întreg)</li>
+    <li><code>_wm_price</code> — prețul curent din WinMentor (număr zecimal)</li>
+    <li><code>_supplier_price</code> — prețul din feed-ul furnizorului</li>
+    <li><code>_furnizor_nume</code> — numele furnizorului principal al produsului</li>
+    <li><code>_furnizor_sku</code> — codul SKU al produsului în catalogul furnizorului</li>
+    <li><code>_ever_in_stock</code> — dacă produsul a fost vreodată în stoc (0 sau 1)</li>
+    <li><code>_pricing_source</code> — sursa activă a prețului (<code>winmentor</code> sau <code>supplier</code>)</li>
+    <li><code>_stock_label</code> — eticheta de disponibilitate afișată pe site</li>
+    <li><code>_availability_state</code> — starea internă de disponibilitate (pentru debugging)</li>
+    <li><code>_lead_time_override_days</code> și <code>_lead_time_override_text</code> — timp de livrare personalizat per produs</li>
+  </ul>
+
+  <h3>9.6 Sincronizarea meta furnizor → WooCommerce</h3>
+  <p>
+    La salvarea unui produs din interfața ERP (pagina de editare produs), dacă produsul
+    are un ID WooCommerce asociat, se declanșează automat job-ul
+    <code>SyncProductSupplierMetaJob</code>. Acesta scrie meta-datele
+    <code>_furnizor_nume</code> și <code>_furnizor_sku</code> prin API-ul WooCommerce standard
+    (<code>WooClient::updateProduct()</code>). Pentru sincronizarea în masă a tuturor
+    produselor, folosiți comanda:
+  </p>
+  <pre><code>php artisan woo:sync-supplier-meta</code></pre>
+
+  <!-- ====================================================================== -->
+  <h2 id="m11-rezumat">Rezumat — Fluxul de configurare recomandat</h2>
+
+  <p>
+    La instalarea inițială a platformei ERP sau la configurarea unui mediu nou, ordinea
+    recomandată de configurare este:
+  </p>
+  <ol>
+    <li>Setați <strong>Branding</strong> (nume aplicație și logo).</li>
+    <li>Configurați <strong>IMAP</strong> pentru importul emailurilor istorice și sincronizarea continuă.</li>
+    <li>Introduceți <strong>cheia API Anthropic</strong> pentru a activa procesarea AI a emailurilor și celelalte funcționalități inteligente.</li>
+    <li>Creați <strong>integrările WooCommerce</strong> și WinMentor CSV în panoul Admin.</li>
+    <li>Instalați și configurați <strong>plugin-ul WordPress</strong> cu cheia API corespunzătoare.</li>
+    <li>Definiți <strong>permisiunile pe roluri</strong> pentru fiecare tip de utilizator din organizație.</li>
+    <li>Monitorizați periodic <strong>consumul API Claude</strong> pentru optimizarea costurilor.</li>
+  </ol>
+
+</section>

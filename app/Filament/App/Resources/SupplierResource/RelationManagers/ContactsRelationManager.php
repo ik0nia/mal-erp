@@ -3,7 +3,7 @@
 namespace App\Filament\App\Resources\SupplierResource\RelationManagers;
 
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -15,9 +15,9 @@ class ContactsRelationManager extends RelationManager
     protected static ?string $modelLabel  = 'persoană de contact';
     protected static ?string $pluralModelLabel = 'persoane de contact';
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Forms\Components\TextInput::make('name')
                 ->label('Nume')
                 ->required()
@@ -25,9 +25,24 @@ class ContactsRelationManager extends RelationManager
                 ->columnSpanFull(),
 
             Forms\Components\TextInput::make('role')
-                ->label('Rol / Funcție')
-                ->placeholder('ex: Agent comercial, Contabilitate, Logistică')
+                ->label('Funcție / Titlu')
+                ->placeholder('ex: Director, Agent comercial')
                 ->maxLength(255),
+
+            Forms\Components\Select::make('department')
+                ->label('Departament')
+                ->options([
+                    'comercial'       => 'Comercial',
+                    'comenzi'         => 'Comenzi',
+                    'director'        => 'Director',
+                    'contabilitate'   => 'Contabilitate / Financiar',
+                    'logistica'       => 'Logistică',
+                    'tehnic'          => 'Tehnic / Service',
+                    'marketing'       => 'Marketing',
+                    'altul'           => 'Altul',
+                ])
+                ->native(false)
+                ->nullable(),
 
             Forms\Components\Toggle::make('is_primary')
                 ->label('Contact principal')
@@ -59,6 +74,28 @@ class ContactsRelationManager extends RelationManager
                     ->weight('bold')
                     ->description(fn ($record) => $record->role)
                     ->searchable(),
+
+                Tables\Columns\BadgeColumn::make('department')
+                    ->label('Departament')
+                    ->colors([
+                        'primary' => 'comercial',
+                        'success' => 'comenzi',
+                        'danger'  => 'director',
+                        'warning' => 'contabilitate',
+                        'gray'    => fn ($state) => in_array($state, ['logistica', 'tehnic', 'marketing', 'altul']),
+                    ])
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'comercial'     => 'Comercial',
+                        'comenzi'       => 'Comenzi',
+                        'director'      => 'Director',
+                        'contabilitate' => 'Contabilitate',
+                        'logistica'     => 'Logistică',
+                        'tehnic'        => 'Tehnic',
+                        'marketing'     => 'Marketing',
+                        'altul'         => 'Altul',
+                        default         => '—',
+                    })
+                    ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('email')
                     ->label('Email')
@@ -112,7 +149,7 @@ class ContactsRelationManager extends RelationManager
                     ->label('Adaugă contact')
                     ->mutateFormDataUsing(fn (array $data) => array_merge($data, ['source' => 'manual'])),
             ])
-            ->actions([
+            ->recordActions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ]);

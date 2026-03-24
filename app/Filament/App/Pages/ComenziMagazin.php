@@ -10,9 +10,9 @@ class ComenziMagazin extends Page
 {
     use HasDynamicNavSort;
 
-    protected static ?string $navigationIcon = 'heroicon-o-building-storefront';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-building-storefront';
 
-    protected static ?string $navigationGroup = 'Comenzi';
+    protected static string|\UnitEnum|null $navigationGroup = 'Comenzi';
 
     protected static ?string $navigationLabel = 'Comenzi Magazin';
 
@@ -20,7 +20,12 @@ class ComenziMagazin extends Page
 
     protected static ?int $navigationSort = 20;
 
-    protected static string $view = 'filament.app.pages.comenzi-magazin';
+    protected string $view = 'filament.app.pages.comenzi-magazin';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return \App\Models\RolePermission::check(static::class, 'can_access');
+    }
 
     public static function canAccess(): bool
     {

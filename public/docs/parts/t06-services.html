@@ -1,0 +1,877 @@
+<!-- T06 — Servicii și Integrări Externe -->
+<h2 id="t06">T06 — Servicii și Integrări Externe</h2>
+<p>Toate serviciile se află în <code>app/Services/</code>. Fiecare clasă are o singură responsabilitate și nu cunoaște alte servicii (cu excepția <code>ChatService</code> care orchestrează mai multe modele).</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h3>Serviciu: ClaudeAiClient</h3>
+<p><strong>Fișier:</strong> <code>app/Services/Ai/ClaudeAiClient.php</code></p>
+<p><strong>Scop:</strong> Client centralizat pentru Anthropic API. Oferă apeluri simple (text completion) și acces la clientul brut pentru tool-use/streaming. Calculează automat costul USD pe baza token-ilor consumați.</p>
+
+<h4>Dependențe constructor:</h4>
+<ul>
+  <li><code>?string $apiKey</code> — opțional; dacă lipsește, se citește din <code>AppSetting::KEY_ANTHROPIC_API_KEY</code> (criptat în DB), cu fallback pe <code>env('ANTHROPIC_API_KEY')</code>.</li>
+</ul>
+
+<h4>Metode publice:</h4>
+<table>
+  <tr><th>Metodă</th><th>Parametri</th><th>Return</th><th>Descriere</th></tr>
+  <tr>
+    <td><code>rawClient()</code></td>
+    <td>—</td>
+    <td><code>AnthropicClient</code></td>
+    <td>Returnează instanța SDK Anthropic brută. Folosit pentru tool-use, streaming sau parametri avansați.</td>
+  </tr>
+  <tr>
+    <td><code>complete()</code></td>
+    <td><code>string $prompt</code>, <code>?string $system</code>, <code>string $model</code>, <code>int $maxTokens</code></td>
+    <td><code>array{content, tokens, cost_usd}</code></td>
+    <td>Trimite un mesaj simplu și returnează răspunsul complet cu numărul de tokeni și costul calculat în USD.</td>
+  </tr>
+  <tr>
+    <td><code>calculateCost()</code> <em>(static)</em></td>
+    <td><code>string $model</code>, <code>int $inputTokens</code>, <code>int $outputTokens</code></td>
+    <td><code>float</code></td>
+    <td>Calculează costul USD pe baza tabelului de prețuri intern. Prețuri: Sonnet 4.6 — $3/$15 per M tokeni; Haiku — $0.80/$4.00 per M tokeni.</td>
+  </tr>
+  <tr>
+    <td><code>pricing()</code> <em>(static)</em></td>
+    <td><code>string $model</code></td>
+    <td><code>array{input: float, output: float}</code></td>
+    <td>Returnează tabelul de prețuri (USD per milion tokeni) pentru modelul dat.</td>
+  </tr>
+  <tr>
+    <td><code>modelSonnet()</code> <em>(static)</em></td>
+    <td>—</td>
+    <td><code>string</code></td>
+    <td>Returnează ID-ul modelului Sonnet din config (default: <code>claude-sonnet-4-6</code>).</td>
+  </tr>
+  <tr>
+    <td><code>modelHaiku()</code> <em>(static)</em></td>
+    <td>—</td>
+    <td><code>string</code></td>
+    <td>Returnează ID-ul modelului Haiku din config (default: <code>claude-haiku-4-5-20251001</code>).</td>
+  </tr>
+</table>
+
+<h4>Integrare externă:</h4>
+<p><strong>API URL:</strong> <code>https://api.anthropic.com/v1/messages</code> (via SDK PHP <code>anthropic-sdk-php</code>)<br>
+<strong>Autentificare:</strong> Header <code>x-api-key</code> — cheie stocată criptat în <code>AppSetting::KEY_ANTHROPIC_API_KEY</code><br>
+<strong>Modele disponibile:</strong> <code>claude-sonnet-4-6</code> (calitate înaltă), <code>claude-haiku-4-5-20251001</code> (rapid/ieftin)<br>
+<strong>Rate limits:</strong> Nu sunt implementate explicit — gestionare prin retry manual în serviciile consumatoare.<br>
+<strong>Constante fallback:</strong> <code>MODEL_SONNET = 'claude-sonnet-4-6'</code>, <code>MODEL_HAIKU = 'claude-haiku-4-5-20251001'</code></p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h3>Serviciu: WooClient</h3>
+<p><strong>Fișier:</strong> <code>app/Services/WooCommerce/WooClient.php</code></p>
+<p><strong>Scop:</strong> Client HTTP pentru WooCommerce REST API v3. Gestionează toate operațiunile cu produse, comenzi și categorii. Include retry automat pentru erori tranzitorii (timeout cURL / HTTP 503).</p>
+
+<h4>Dependențe constructor:</h4>
+<ul>
+  <li><code>IntegrationConnection $connection</code> — conține <code>base_url</code>, <code>consumer_key</code>, <code>consumer_secret</code>, <code>verify_ssl</code>, timeout.</li>
+</ul>
+
+<h4>Metode publice:</h4>
+<table>
+  <tr><th>Metodă</th><th>Parametri</th><th>Return</th><th>Descriere</th></tr>
+  <tr>
+    <td><code>getCategories()</code></td>
+    <td><code>int $page</code>, <code>int $perPage=100</code></td>
+    <td><code>array[]</code></td>
+    <td>Fetch paginate categorii WooCommerce, ordonate după ID crescător.</td>
+  </tr>
+  <tr>
+    <td><code>getCategory()</code></td>
+    <td><code>int $id</code></td>
+    <td><code>array</code></td>
+    <td>Fetch o singură categorie după ID.</td>
+  </tr>
+  <tr>
+    <td><code>getProducts()</code></td>
+    <td><code>int $page</code>, <code>int $perPage=100</code></td>
+    <td><code>array[]</code></td>
+    <td>Fetch paginate produse WooCommerce (toate statusurile implicite).</td>
+  </tr>
+  <tr>
+    <td><code>getProductStatuses()</code></td>
+    <td><code>int $page</code>, <code>int $perPage=100</code></td>
+    <td><code>array{id,status}[]</code></td>
+    <td>Fetch lightweight (doar <code>id</code> + <code>status</code>) pentru toate produsele — folosit la sync status-uri.</td>
+  </tr>
+  <tr>
+    <td><code>getProduct()</code></td>
+    <td><code>int $id</code></td>
+    <td><code>array</code></td>
+    <td>Fetch un singur produs după WooCommerce ID.</td>
+  </tr>
+  <tr>
+    <td><code>testConnection()</code></td>
+    <td>—</td>
+    <td><code>bool</code></td>
+    <td>Verifică conectivitatea. Încearcă <code>/system_status</code>, cu fallback pe <code>/products?per_page=1</code>.</td>
+  </tr>
+  <tr>
+    <td><code>updateProductPrice()</code></td>
+    <td><code>int $productId</code>, <code>string $regularPrice</code></td>
+    <td><code>array</code></td>
+    <td>Actualizează <code>regular_price</code> al unui produs. Folosește retry.</td>
+  </tr>
+  <tr>
+    <td><code>updateProductPricesBatch()</code></td>
+    <td><code>array $updates</code> — <code>[{id, regular_price}]</code></td>
+    <td><code>array</code></td>
+    <td>Actualizare en-gros prețuri via <code>/products/batch</code> (endpoint WooCommerce batch).</td>
+  </tr>
+  <tr>
+    <td><code>sideloadProductImage()</code></td>
+    <td><code>int $wooProductId</code>, <code>string $imageUrl</code></td>
+    <td><code>string</code></td>
+    <td>Trimite un URL de imagine; WooCommerce îl descarcă și îl stochează intern. Returnează noul URL media.</td>
+  </tr>
+  <tr>
+    <td><code>createProductsBatch()</code></td>
+    <td><code>array $products</code></td>
+    <td><code>array{created, errors}</code></td>
+    <td>Creare produse în bulk. Separă produsele create cu succes de cele cu erori.</td>
+  </tr>
+  <tr>
+    <td><code>getOrders()</code></td>
+    <td><code>int $page</code>, <code>int $perPage=100</code>, <code>array $params=[]</code></td>
+    <td><code>array[]</code></td>
+    <td>Fetch paginate comenzi, ordonate descrescător după dată. Acceptă parametri suplimentari de filtrare.</td>
+  </tr>
+  <tr>
+    <td><code>getOrder()</code></td>
+    <td><code>int $orderId</code></td>
+    <td><code>array</code></td>
+    <td>Fetch o singură comandă după WooCommerce ID.</td>
+  </tr>
+  <tr>
+    <td><code>updateProduct()</code></td>
+    <td><code>int $productId</code>, <code>array $fields</code></td>
+    <td><code>array</code></td>
+    <td>Actualizare generică câmpuri arbitrare pe un produs (inclusiv <code>meta_data</code>).</td>
+  </tr>
+  <tr>
+    <td><code>updateProductStatus()</code></td>
+    <td><code>int $productId</code>, <code>string $status</code></td>
+    <td><code>array</code></td>
+    <td>Schimbă statusul unui produs (<code>publish</code>, <code>draft</code>, etc.).</td>
+  </tr>
+  <tr>
+    <td><code>updateOrderStatus()</code></td>
+    <td><code>int $orderId</code>, <code>string $status</code></td>
+    <td><code>array</code></td>
+    <td>Actualizează statusul unei comenzi WooCommerce.</td>
+  </tr>
+  <tr>
+    <td><code>addOrderNote()</code></td>
+    <td><code>int $orderId</code>, <code>string $note</code>, <code>bool $customerNote=false</code></td>
+    <td><code>array</code></td>
+    <td>Adaugă o notă la o comandă. Dacă <code>$customerNote=true</code>, nota e vizibilă și clientului.</td>
+  </tr>
+  <tr>
+    <td><code>updateOrderMeta()</code></td>
+    <td><code>int $orderId</code>, <code>string $key</code>, <code>string $value</code></td>
+    <td><code>array</code></td>
+    <td>Setează o singură cheie de meta-date pe o comandă.</td>
+  </tr>
+</table>
+
+<h4>Retry logic:</h4>
+<p>Metoda privată <code>retryRequest(callable $fn, int $tries=3)</code> reîncearcă automat la <strong>cURL error 28</strong> (timeout) și <strong>HTTP 503</strong>. Între încercări: <code>usleep(500_000 × attempt)</code> (0.5s, 1s). Orice altă excepție se reraise imediat.</p>
+
+<h4>Integrare externă:</h4>
+<p><strong>API URL:</strong> <code>{base_url}/wp-json/wc/v3/</code><br>
+<strong>Autentificare:</strong> HTTP Basic Auth cu <code>consumer_key</code> / <code>consumer_secret</code> (OAuth WooCommerce)<br>
+<strong>SSL:</strong> verificare configurabilă per conexiune (<code>verify_ssl</code>)<br>
+<strong>Timeout:</strong> configurat per <code>IntegrationConnection::resolveTimeoutSeconds()</code></p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h3>Serviciu: WooOrderSyncService</h3>
+<p><strong>Fișier:</strong> <code>app/Services/WooCommerce/WooOrderSyncService.php</code></p>
+<p><strong>Scop:</strong> Normalizează și persistă comenzile WooCommerce (raw API) în tabelele locale <code>woo_orders</code> și <code>woo_order_items</code>. La comenzile noi cu produse „la comandă", creează automat o cerere de necesare (<code>PurchaseRequest</code>).</p>
+
+<h4>Dependențe constructor:</h4>
+<p>Fără dependențe — construibil direct cu <code>new WooOrderSyncService()</code>.</p>
+
+<h4>Metode publice:</h4>
+<table>
+  <tr><th>Metodă</th><th>Parametri</th><th>Return</th><th>Descriere</th></tr>
+  <tr>
+    <td><code>upsertOrder()</code></td>
+    <td><code>int $connectionId</code>, <code>?int $locationId</code>, <code>array $raw</code></td>
+    <td><code>?WooOrder</code></td>
+    <td>
+      Creează sau actualizează o comandă și itemele sale. Algoritm:
+      <ol>
+        <li>Normalizează câmpurile financiare (subtotal calculat din <code>line_items</code> dacă lipsește).</li>
+        <li><code>updateOrCreate</code> pe cheia <code>(connection_id, woo_id)</code>.</li>
+        <li>Apelează <code>syncItems()</code> pentru itemele de linie.</li>
+        <li>Dacă comanda e nouă și statusul e <code>pending/processing/on-hold</code>, încearcă <code>PurchaseRequest::createFromWooOrder()</code> (silențios la eroare).</li>
+      </ol>
+    </td>
+  </tr>
+  <tr>
+    <td><code>syncItems()</code></td>
+    <td><code>WooOrder $order</code>, <code>array $lineItems</code></td>
+    <td><code>void</code></td>
+    <td>Șterge și recreează itemele comenzii. <strong>Safeguard:</strong> dacă WooCommerce returnează 0 iteme dar comanda are deja iteme în DB, ștergerea este anulată (log warning).</td>
+  </tr>
+  <tr>
+    <td><code>parseDate()</code></td>
+    <td><code>mixed $value</code></td>
+    <td><code>?string</code></td>
+    <td>Parsează un string dată în format <code>Y-m-d H:i:s</code> via Carbon. Returnează <code>null</code> la eroare sau valoare goală.</td>
+  </tr>
+</table>
+
+<h4>Integrare externă:</h4>
+<p>Nu face apeluri HTTP direct — primește datele brute de la <code>WooClient</code> prin <code>SyncWooOrdersCommand</code>.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h3>Serviciu: WooPluginClient</h3>
+<p><strong>Fișier:</strong> <code>app/Services/WooCommerce/WooPluginClient.php</code></p>
+<p><strong>Scop:</strong> Client HTTP pentru plugin-ul WordPress „malinco-erp-bridge". Apelează endpoint-uri custom sub <code>/wp-json/malinco-erp/v1/</code> pentru sincronizarea meta-datelor produselor, recalculare disponibilitate/preț și self-update plugin.</p>
+
+<h4>Dependențe constructor:</h4>
+<p>Fără parametri. Citește automat:</p>
+<ul>
+  <li><code>IntegrationConnection</code> — <code>base_url</code> al conexiunii WooCommerce active</li>
+  <li><code>AppSetting::KEY_WOO_PLUGIN_API_KEY</code> — cheia API criptată în DB</li>
+</ul>
+
+<h4>Metode publice:</h4>
+<table>
+  <tr><th>Metodă</th><th>Parametri</th><th>Return</th><th>Descriere</th></tr>
+  <tr>
+    <td><code>getVersion()</code></td>
+    <td>—</td>
+    <td><code>?array{version,status}</code></td>
+    <td>Verifică disponibilitatea plugin-ului și returnează versiunea curentă. Returnează <code>null</code> dacă plugin-ul nu răspunde.</td>
+  </tr>
+  <tr>
+    <td><code>updateProductMeta()</code></td>
+    <td><code>int $wooId</code>, <code>string $sku</code>, <code>array $meta</code></td>
+    <td><code>bool</code></td>
+    <td>Actualizează meta-datele unui produs WooCommerce (ex: <code>_furnizor_nume</code>, <code>_furnizor_sku</code>). Identificarea produsului: prioritate <code>woo_id</code>, fallback <code>sku</code>.</td>
+  </tr>
+  <tr>
+    <td><code>bulkUpdateProductMeta()</code></td>
+    <td><code>array $items</code> — <code>[{woo_id, sku, meta}]</code></td>
+    <td><code>array{updated,failed,errors}</code></td>
+    <td>Actualizare en-gros meta-date pentru multiple produse într-un singur request HTTP.</td>
+  </tr>
+  <tr>
+    <td><code>recalculateProducts()</code></td>
+    <td><code>int[] $productIds</code></td>
+    <td><code>bool</code></td>
+    <td>Declanșează recalcularea disponibilității și prețului pentru produsele date (via plugin <code>malinco-availability-pricing</code>).</td>
+  </tr>
+  <tr>
+    <td><code>deployPlugin()</code></td>
+    <td><code>string $zipPath</code></td>
+    <td><code>bool</code></td>
+    <td>Trimite un ZIP cu noua versiune a plugin-ului și declanșează self-update pe WordPress. Timeout 60s (multipart upload).</td>
+  </tr>
+</table>
+
+<h4>Integrare externă:</h4>
+<p><strong>API URL:</strong> <code>{woocommerce_base_url}/wp-json/malinco-erp/v1/</code><br>
+<strong>Autentificare:</strong> Header <code>X-ERP-Api-Key</code> — cheie stocată criptat în <code>AppSetting::KEY_WOO_PLUGIN_API_KEY</code><br>
+<strong>Timeout:</strong> 15s implicit, 60s pentru deploy<br>
+<strong>Format:</strong> JSON (Accept/Content-Type: application/json)</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h3>Serviciu: ImapMailboxService</h3>
+<p><strong>Fișier:</strong> <code>app/Services/Email/ImapMailboxService.php</code></p>
+<p><strong>Scop:</strong> Serviciu IMAP pur — conectare, listare foldere, fetch și parsare emailuri. Nu persistă nimic în DB. Responsabilitatea se oprește la returnarea datelor brute structurate. Folosit de <code>FetchEmailsJob</code>.</p>
+
+<h4>Dependențe constructor:</h4>
+<ul>
+  <li><code>string $host</code>, <code>int $port</code>, <code>string $encryption</code>, <code>string $username</code>, <code>string $password</code>, <code>bool $validateCert=true</code></li>
+</ul>
+<p>Factory method <code>fromAppSettings()</code> construiește instanța din <code>AppSetting</code> (cheile <code>KEY_IMAP_*</code>). Returnează <code>null</code> dacă credențialele lipsesc.</p>
+
+<h4>Metode publice:</h4>
+<table>
+  <tr><th>Metodă</th><th>Parametri</th><th>Return</th><th>Descriere</th></tr>
+  <tr>
+    <td><code>connect()</code></td>
+    <td>—</td>
+    <td><code>static</code></td>
+    <td>Conectează la serverul IMAP via biblioteca <code>webklex/php-imap</code>. Returnează <code>$this</code> pentru method chaining.</td>
+  </tr>
+  <tr>
+    <td><code>disconnect()</code></td>
+    <td>—</td>
+    <td><code>void</code></td>
+    <td>Deconectează și eliberează resursele. Erorile la deconectare sunt ignorate silențios.</td>
+  </tr>
+  <tr>
+    <td><code>reconnect()</code></td>
+    <td>—</td>
+    <td><code>static</code></td>
+    <td>Deconectare + <code>gc_collect_cycles()</code> + reconectare. Util între foldere pentru a elibera starea IMAP internă.</td>
+  </tr>
+  <tr>
+    <td><code>getFolders()</code></td>
+    <td>—</td>
+    <td><code>string[]</code></td>
+    <td>Returnează path-urile folderelor disponibile, excluzând automat trash/spam/junk/drafts (case-insensitive pe suffix).</td>
+  </tr>
+  <tr>
+    <td><code>searchUidsSince()</code></td>
+    <td><code>string $folder</code>, <code>DateTimeInterface $since</code></td>
+    <td><code>string[]</code></td>
+    <td>Returnează UID-urile mesajelor din folder care au <code>SINCE</code> data dată. Folosește <code>IMAP::ST_UID</code> cu search direct pe conexiune (nu <code>->all()</code> care crăpă pe unele servere).</td>
+  </tr>
+  <tr>
+    <td><code>fetchMessage()</code></td>
+    <td><code>string $folder</code>, <code>string $uid</code></td>
+    <td><code>?array</code></td>
+    <td>Fetch și parsare un singur email după UID. Marchează mesajul ca <code>leaveUnread()</code>. Returnează <code>null</code> dacă UID-ul nu există.</td>
+  </tr>
+  <tr>
+    <td><code>fetchMessages()</code></td>
+    <td><code>string $folder</code>, <code>string[] $uids</code></td>
+    <td><code>array[]</code></td>
+    <td>Fetch mai multor UID-uri. UID-urile lipsă sunt omise silențios; erorile <code>Duplicate entry</code> sunt ignorate.</td>
+  </tr>
+  <tr>
+    <td><code>fetchSince()</code></td>
+    <td><code>string $folder</code>, <code>DateTimeInterface $since</code>, <code>string[] $existingUids=[]</code></td>
+    <td><code>array{uids, messages}</code></td>
+    <td>Combină <code>searchUidsSince()</code> + filtrare UID-uri deja în DB + <code>fetchMessages()</code>. API convenabil pentru <code>FetchEmailsJob</code>.</td>
+  </tr>
+  <tr>
+    <td><code>fromAppSettings()</code> <em>(static)</em></td>
+    <td>—</td>
+    <td><code>?static</code></td>
+    <td>Factory: construiește instanța din AppSetting. Returnează <code>null</code> dacă host/user/password lipsesc.</td>
+  </tr>
+</table>
+
+<h4>Structura mesajului parsat:</h4>
+<pre><code>{
+  uid, folder, from_email, from_name, subject,
+  body_html, body_text, sent_at,
+  to: [{email, name}],
+  cc: [{email, name}],
+  attachments: [{name, size, mime_type}]
+}</code></pre>
+
+<h4>Integrare externă:</h4>
+<p><strong>Protocol:</strong> IMAP via <code>webklex/php-imap</code><br>
+<strong>Credențiale:</strong> Stocate în <code>AppSetting</code> — <code>KEY_IMAP_HOST</code>, <code>KEY_IMAP_PORT</code> (default 993), <code>KEY_IMAP_ENCRYPTION</code> (default ssl), <code>KEY_IMAP_USERNAME</code>, <code>KEY_IMAP_PASSWORD</code> (criptat)<br>
+<strong>Foldere excluse automat:</strong> trash, spam, junk, drafts<br>
+<strong>Decodare subiecte:</strong> MIME encoded-word (<code>=?UTF-8?Q?...?=</code>) via <code>mb_decode_mimeheader()</code></p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h3>Serviciu: ChatService</h3>
+<p><strong>Fișier:</strong> <code>app/Services/ChatService.php</code></p>
+<p><strong>Scop:</strong> Chatbot AI pentru site-ul public malinco.ro. Gestionează sesiunile de conversație (cache Redis/file), apelează Claude cu Tool Use în loop și returnează răspunsul text + carduri produs pentru widget.</p>
+
+<h4>Dependențe constructor:</h4>
+<p>Fără parametri. Citește <code>AppSetting::KEY_ANTHROPIC_API_KEY</code> la inițializare.</p>
+
+<h4>Configurare (config/app.php — secțiunea <code>malinco</code>):</h4>
+<ul>
+  <li><code>chat.max_history</code> — numărul maxim de mesaje salvate în cache per sesiune (default 20)</li>
+  <li><code>chat.session_ttl</code> — TTL cache sesiune în secunde (default 900 = 15 min)</li>
+  <li><code>cache.chat_prefix</code> — prefix cache istoric: <code>chat:</code></li>
+  <li><code>cache.chat_state</code> — prefix cache stare conversație: <code>chat_state:</code></li>
+</ul>
+
+<h4>Metode publice:</h4>
+<table>
+  <tr><th>Metodă</th><th>Parametri</th><th>Return</th><th>Descriere</th></tr>
+  <tr>
+    <td><code>chat()</code></td>
+    <td><code>string $sessionId</code>, <code>string $userMessage</code>, <code>?array $pageContext</code>, <code>?array $pageHistory</code></td>
+    <td><code>array{reply, products, input_tokens, output_tokens, show_contact_form, contact_form_message}</code></td>
+    <td>
+      Entry point principal. Algoritm:
+      <ol>
+        <li>Verifică limita cost per sesiune.</li>
+        <li>Mesaje triviale (mulțumesc, etc.) — răspuns instant fără apel AI.</li>
+        <li>Apelează <code>callClaude()</code> cu istoricul și contextul paginii.</li>
+        <li>Salvează istoricul și costul; logează în <code>AiUsageLog</code>.</li>
+      </ol>
+    </td>
+  </tr>
+</table>
+
+<h4>Tools disponibile (Tool Use Claude):</h4>
+<table>
+  <tr><th>Tool</th><th>Input</th><th>Descriere</th></tr>
+  <tr>
+    <td><code>searchProducts</code></td>
+    <td><code>query, category?, brand?</code></td>
+    <td>Caută produse publicate în catalog WooCommerce (fulltext + LIKE). Populează <code>$foundProducts</code> pentru widget. Returnează max 5 produse cu <code>id, name, price, image_url, url, stock_available, unit</code>.</td>
+  </tr>
+  <tr>
+    <td><code>getAvailableBrands</code></td>
+    <td><code>query, category?</code></td>
+    <td>Returnează brandurile disponibile pentru un tip de produs, cu numărul de produse per brand.</td>
+  </tr>
+  <tr>
+    <td><code>checkQuantityAvailability</code></td>
+    <td><code>product_query, quantity</code></td>
+    <td>Verifică disponibilitatea unui produs pentru o cantitate dată. Nu returnează stoc exact — răspuns calitativ (disponibil/insuficient).</td>
+  </tr>
+  <tr>
+    <td><code>getOrderStatus</code></td>
+    <td><code>email, order_number?</code></td>
+    <td>Caută comenzi WooCommerce după email client (și opțional număr comandă). Returnează status, total și data comenzii.</td>
+  </tr>
+  <tr>
+    <td><code>getCompanyInfo</code></td>
+    <td><code>topic</code></td>
+    <td>Returnează informații despre companie: program, adresă, contact, transport, plată — citite din <code>AppSetting</code>.</td>
+  </tr>
+  <tr>
+    <td><code>collectContactInfo</code></td>
+    <td><code>email?, phone?, wants_specialist</code></td>
+    <td>Salvează datele de contact în <code>ChatContact</code> și trimite notificare Telegram via <code>SendTelegramLeadJob</code>.</td>
+  </tr>
+  <tr>
+    <td><code>showContactForm</code></td>
+    <td><code>message</code></td>
+    <td>Semnalizează widget-ului să afișeze formularul de contact. Executat o singură dată per sesiune.</td>
+  </tr>
+</table>
+
+<h4>Limite și protecții:</h4>
+<ul>
+  <li>Max <strong>5 iterații</strong> tool-use per request (<code>MAX_TOOL_ITERATIONS</code>)</li>
+  <li>Max <strong>6 mesaje</strong> trimise la Claude din istoric (<code>MAX_CONTEXT_MESSAGES</code>)</li>
+  <li>Limită cost per sesiune (configurabilă)</li>
+  <li>Mesaje triviale detectate fără apel AI</li>
+  <li><code>showContactForm</code> dezactivat după prima apariție în starea conversației</li>
+</ul>
+
+<h4>Integrare externă:</h4>
+<p><strong>API URL:</strong> <code>https://api.anthropic.com/v1/messages</code><br>
+<strong>Model:</strong> <code>claude-haiku-4-5-20251001</code> (rapid și ieftin pentru chat)<br>
+<strong>Timeout:</strong> 30s per apel HTTP<br>
+<strong>Max tokens per răspuns:</strong> 768</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h3>Serviciu: TelegramService</h3>
+<p><strong>Fișier:</strong> <code>app/Services/TelegramService.php</code></p>
+<p><strong>Scop:</strong> Trimitere notificări Telegram pentru lead-uri noi din chat widget și alte alerte interne.</p>
+
+<h4>Dependențe constructor:</h4>
+<p>Fără parametri. Citește <code>AppSetting::KEY_TELEGRAM_BOT_TOKEN</code> (criptat) și <code>AppSetting::KEY_TELEGRAM_CHAT_ID</code>.</p>
+
+<h4>Metode publice:</h4>
+<table>
+  <tr><th>Metodă</th><th>Parametri</th><th>Return</th><th>Descriere</th></tr>
+  <tr>
+    <td><code>isConfigured()</code></td>
+    <td>—</td>
+    <td><code>bool</code></td>
+    <td>Verifică dacă token-ul și chat_id sunt configurate.</td>
+  </tr>
+  <tr>
+    <td><code>send()</code></td>
+    <td><code>string $message</code></td>
+    <td><code>bool</code></td>
+    <td>Trimite un mesaj text cu suport HTML basic (<code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>, <code>&lt;code&gt;</code>, <code>&lt;a&gt;</code>). Timeout 8s. Returnează <code>false</code> la eroare.</td>
+  </tr>
+  <tr>
+    <td><code>sendLeadNotification()</code></td>
+    <td><code>?string $email</code>, <code>?string $phone</code>, <code>bool $wantsSpecialist</code>, <code>?string $interestedIn</code>, <code>?string $summary</code>, <code>string $sessionId</code></td>
+    <td><code>bool</code></td>
+    <td>Formatează și trimite notificarea de lead nou cu link direct în ERP.</td>
+  </tr>
+</table>
+
+<h4>Integrare externă:</h4>
+<p><strong>API URL:</strong> <code>https://api.telegram.org/bot{TOKEN}/sendMessage</code><br>
+<strong>Autentificare:</strong> Token bot în URL (stocat criptat în AppSetting)<br>
+<strong>Parse mode:</strong> HTML<br>
+<strong>Timeout:</strong> 8 secunde</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h3>Serviciu: MetaGraphClient</h3>
+<p><strong>Fișier:</strong> <code>app/Services/SocialMedia/MetaGraphClient.php</code></p>
+<p><strong>Scop:</strong> Client pentru Facebook/Instagram Graph API. Fetch postări istorice (pentru analiza stilului), publicare postări noi cu sau fără imagine, și interogare informații pagină.</p>
+
+<h4>Dependențe constructor:</h4>
+<ul>
+  <li><code>string $accessToken</code> — token de acces pagină Facebook</li>
+  <li><code>string $apiVersion='v21.0'</code> — versiunea Graph API</li>
+</ul>
+
+<h4>Metode publice:</h4>
+<table>
+  <tr><th>Metodă</th><th>Parametri</th><th>Return</th><th>Descriere</th></tr>
+  <tr>
+    <td><code>fetchPagePosts()</code></td>
+    <td><code>string $pageId</code>, <code>int $maxPosts=200</code></td>
+    <td><code>array[]</code></td>
+    <td>Fetch postările paginii Facebook cu paginare cursor (<code>paging.next</code>). Câmpuri: <code>id, message, created_time, full_picture, attachments</code>. Maximum <code>$maxPosts</code> postări.</td>
+  </tr>
+  <tr>
+    <td><code>publishPost()</code></td>
+    <td><code>string $pageId</code>, <code>string $message</code>, <code>?string $imageUrl</code></td>
+    <td><code>array</code></td>
+    <td>Publică pe Facebook. Cu imagine: POST la <code>/{pageId}/photos</code> (WooCommerce descarcă URL-ul). Fără imagine: POST la <code>/{pageId}/feed</code>. Aruncă <code>RuntimeException</code> la eroare API.</td>
+  </tr>
+  <tr>
+    <td><code>getPageInfo()</code></td>
+    <td><code>string $pageId</code></td>
+    <td><code>array{id,name,fan_count,link}</code></td>
+    <td>Returnează informații despre pagină: ID, nume, număr fani, link.</td>
+  </tr>
+</table>
+
+<h4>Integrare externă:</h4>
+<p><strong>API URL:</strong> <code>https://graph.facebook.com/v21.0/</code><br>
+<strong>Autentificare:</strong> Parametru <code>access_token</code> în query string/body (Page Access Token)<br>
+<strong>Timeout:</strong> 30s (fetch postări), 15s (info pagină)<br>
+<strong>Rate limits:</strong> Nu sunt gestionate explicit — limitate de Facebook la ~200 calls/oră per token</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h3>Serviciu: GeminiImageService</h3>
+<p><strong>Fișier:</strong> <code>app/Services/SocialMedia/GeminiImageService.php</code></p>
+<p><strong>Scop:</strong> Generare imagini AI via Google Gemini (Vertex AI). Folosește image-to-image: preia o imagine de referință de pe pagina Facebook și generează o imagine nouă în același stil vizual.</p>
+
+<h4>Dependențe constructor:</h4>
+<p>Fără parametri. Citește JSON-ul contului de serviciu Google de la calea configurată în <code>AppSetting::get('google_service_account_path')</code> (default: <code>/var/www/scripts/cegim/service_account.json</code>).</p>
+
+<h4>Metode publice:</h4>
+<table>
+  <tr><th>Metodă</th><th>Parametri</th><th>Return</th><th>Descriere</th></tr>
+  <tr>
+    <td><code>generateRaw()</code></td>
+    <td><code>string $prompt</code>, <code>int $accountId=1</code></td>
+    <td><code>string</code> (date binare)</td>
+    <td>Generează imaginea și returnează datele binare brute. Metoda recomandată — salvarea este delegată la <code>SocialImageComposer</code>.</td>
+  </tr>
+  <tr>
+    <td><code>generateAndSave()</code> <em>(deprecated)</em></td>
+    <td><code>string $prompt</code>, <code>string $postId</code>, <code>int $accountId=1</code>, <code>?string $brandLogoUrl</code></td>
+    <td><code>string</code> (filename relativ)</td>
+    <td>Generează, salvează la 1080×1350 și opțional suprapune logo brand. Deprecat — folosiți <code>generateRaw()</code>.</td>
+  </tr>
+</table>
+
+<h4>Algoritm generare:</h4>
+<ol>
+  <li>Obține un Bearer token JWT pentru Vertex AI (semnare RSA256 cu cheia privată din service account).</li>
+  <li>Caută o imagine de referință: întâi în <code>storage/public/social/style-references/</code> (locale, stabile), fallback pe postările fetchate din Facebook CDN.</li>
+  <li>Trimite request multimodal la Gemini: imagine referință + prompt text în modul image-to-image.</li>
+  <li>Extrage datele binare din <code>candidates[0].content.parts[].inlineData.data</code> (base64 decode).</li>
+</ol>
+
+<h4>Integrare externă:</h4>
+<p><strong>API URL:</strong> <code>https://aiplatform.googleapis.com/v1/projects/{project_id}/locations/global/publishers/google/models/gemini-3.1-flash-image-preview:generateContent</code><br>
+<strong>Autentificare:</strong> Bearer token JWT (OAuth2 service account — scope <code>cloud-platform</code>)<br>
+<strong>Timeout:</strong> 300s (generarea imaginii poate dura)<br>
+<strong>Token OAuth:</strong> <code>https://oauth2.googleapis.com/token</code> cu grant type <code>urn:ietf:params:oauth:grant-type:jwt-bearer</code></p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h3>Serviciu: NodeImageRenderer</h3>
+<p><strong>Fișier:</strong> <code>app/Services/SocialMedia/NodeImageRenderer.php</code></p>
+<p><strong>Scop:</strong> Randare imagini grafice 1080×1080 pentru social media prin apelarea unui proces Node.js extern (<code>node-renderer/render.js</code>). Suportă suprapunere produs, logo brand, titlu, subtitlu și configurații de template.</p>
+
+<h4>Dependențe constructor:</h4>
+<p>Fără parametri. Paths hardcodate:</p>
+<ul>
+  <li><code>node-renderer/render.js</code> — scriptul Node.js de randare</li>
+  <li><code>storage/public/malinco-logo.png</code> — logo Malinco inclus în toate imaginile</li>
+</ul>
+
+<h4>Metode publice:</h4>
+<table>
+  <tr><th>Metodă</th><th>Parametri</th><th>Return</th><th>Descriere</th></tr>
+  <tr>
+    <td><code>render()</code></td>
+    <td><code>string $postId</code>, <code>?string $productImageUrl</code>, <code>?string $brandLogoPath</code>, <code>?string $title</code>, <code>?string $subtitle</code>, <code>array $extraElements</code>, <code>?string $label</code>, <code>array $templateConfig</code></td>
+    <td><code>?string</code></td>
+    <td>
+      Construiește un config JSON și îl pasează ca argument la <code>node render.js '{...}'</code>. Salvează output-ul în <code>storage/public/social/{postId}_{random}.jpg</code>. Returnează filename relativ sau <code>null</code> la eșec. Timeout 30s.
+      <br><br>
+      Config trimis la Node: <code>output, width=1080, height=1080, malinco_logo, product_image?, brand_logo?, title?, subtitle?, elements?, label?</code> + override-uri din <code>templateConfig</code> (output/width/height/logo nu sunt suprascrise).
+    </td>
+  </tr>
+  <tr>
+    <td><code>isAvailable()</code></td>
+    <td>—</td>
+    <td><code>bool</code></td>
+    <td>Verifică dacă scriptul Node și logo-ul Malinco există pe disk.</td>
+  </tr>
+</table>
+
+<h4>Integrare externă:</h4>
+<p><strong>Proces:</strong> <code>node node-renderer/render.js '{"output":...}'</code> via <code>Symfony\Component\Process\Process</code><br>
+<strong>Timeout:</strong> 30 secunde<br>
+<strong>Output:</strong> JPEG 1080×1080 salvat în <code>storage/public/social/</code><br>
+<strong>Permisiuni:</strong> Directorul <code>social/</code> trebuie să fie <code>0775</code> (www-data poate scrie)</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h3>Serviciu: SocialCaptionService</h3>
+<p><strong>Fișier:</strong> <code>app/Services/SocialMedia/SocialCaptionService.php</code></p>
+<p><strong>Scop:</strong> Generare text (caption Facebook + prompt imagine Gemini + texte grafică) pentru postări social media via Claude Sonnet. Respectă un template de structură fix pentru brand-ul Malinco.</p>
+
+<h4>Dependențe constructor:</h4>
+<p>Fără parametri. Citește <code>AppSetting::KEY_ANTHROPIC_API_KEY</code> la apel.</p>
+
+<h4>Metode publice:</h4>
+<table>
+  <tr><th>Metodă</th><th>Parametri</th><th>Return</th><th>Descriere</th></tr>
+  <tr>
+    <td><code>generate()</code></td>
+    <td><code>SocialPost $post</code>, <code>?SocialStyleProfile $styleProfile</code></td>
+    <td><code>array{caption, hashtags, image_prompt, graphic_title, graphic_subtitle}</code></td>
+    <td>Generează complet: caption Facebook (structură obligatorie cu hook, avantaje, CTA, footer adresă), prompt imagine pentru Gemini, titlu și subtitlu grafică. Model: <strong>Sonnet</strong>. Max 1024 tokeni. Aruncă <code>RuntimeException</code> la răspuns JSON invalid.</td>
+  </tr>
+  <tr>
+    <td><code>generateGraphicTextsOnly()</code></td>
+    <td><code>SocialPost $post</code></td>
+    <td><code>array{graphic_title, graphic_subtitle}</code></td>
+    <td>Apel mic (max 150 tokeni) pentru generare exclusiv a textelor graficii. Model: <strong>Haiku</strong>. Reguli: graphic_title max 4 cuvinte MAJUSCULE, graphic_subtitle 40-55 caractere.</td>
+  </tr>
+</table>
+
+<h4>Structura obligatorie caption (prompt hardcodat):</h4>
+<ul>
+  <li>Hook cu emoji + titlu</li>
+  <li>Fraza introductivă</li>
+  <li>3 avantaje cu ✔️ sau 👉</li>
+  <li>Call-to-action</li>
+  <li>Footer fix: adresă Sântandrei nr. 311, www.malinco.ro, office@malinco.ro, 0359 444 999</li>
+  <li>Zero hashtag-uri</li>
+</ul>
+
+<h4>Integrare externă:</h4>
+<p><strong>API URL:</strong> <code>https://api.anthropic.com/v1/messages</code><br>
+<strong>Modele:</strong> Sonnet (<code>generate()</code>), Haiku (<code>generateGraphicTextsOnly()</code>)<br>
+<strong>Timeout:</strong> 45s (generate), 20s (graphic only)<br>
+<strong>Log usage:</strong> <code>AiUsageLog::record('social_caption', ...)</code></p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h3>Serviciu: SocialImageComposer</h3>
+<p><strong>Fișier:</strong> <code>app/Services/SocialMedia/SocialImageComposer.php</code></p>
+<p><strong>Scop:</strong> Compozitie imagini 1080×1350 (4:5 portrait) pentru social media folosind extensia PHP GD. Aplică template-ul vizual Malinco: fundal alb, produs centrat, bandă diagonală burgundy, logo Malinco dreapta-sus, logo brand partener dreapta-jos.</p>
+
+<h4>Dependențe constructor:</h4>
+<p>Fără parametri. Citește <code>storage/public/malinco-logo.png</code>.</p>
+
+<h4>Metode publice:</h4>
+<table>
+  <tr><th>Metodă</th><th>Parametri</th><th>Return</th><th>Descriere</th></tr>
+  <tr>
+    <td><code>composeFromProductUrl()</code></td>
+    <td><code>string $imageUrl</code>, <code>string $postId</code>, <code>?string $brandLogoPath</code></td>
+    <td><code>?string</code></td>
+    <td>Descarcă imaginea produsului din URL, aplică template-ul complet Malinco și salvează JPEG 92%. Returnează filename relativ sau <code>null</code> la eșec.</td>
+  </tr>
+  <tr>
+    <td><code>composeFromBinary()</code></td>
+    <td><code>string $binaryData</code>, <code>string $postId</code>, <code>?string $brandLogoPath</code></td>
+    <td><code>string</code></td>
+    <td>Procesează datele binare Gemini: crop centrat la 4:5, logo Malinco, opțional logo brand. Fără template complet (background/diagonal) — imaginea Gemini are deja stilul propriu.</td>
+  </tr>
+</table>
+
+<h4>Template vizual Malinco:</h4>
+<ul>
+  <li><strong>Dimensiuni:</strong> 1080×1350 px</li>
+  <li><strong>Fundal:</strong> alb (#FFFFFF)</li>
+  <li><strong>Produs:</strong> centrat, max 72% din înălțime, padding 60px lateral / 80px sus</li>
+  <li><strong>Accent diagonal:</strong> triunghi burgundy (#AB2223) colț stânga-jos (0,H) → (0,H-280) → (400,H) + bandă secundară mai deschisă (#C43738)</li>
+  <li><strong>Logo Malinco:</strong> 240px lățime, colț dreapta-sus, padding 30px, fundal alb semi-transparent</li>
+  <li><strong>Logo brand:</strong> max 200px, colț dreapta-jos, 80px deasupra marginii, fundal alb semi-transparent</li>
+</ul>
+
+<h4>Integrare externă:</h4>
+<p>Fără apeluri API externe. Descarcă imaginea produsului via <code>Http::get()</code> dacă e furnizat un URL. Folosește exclusiv PHP GD.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h3>Serviciu: StyleAnalysisService</h3>
+<p><strong>Fișier:</strong> <code>app/Services/SocialMedia/StyleAnalysisService.php</code></p>
+<p><strong>Scop:</strong> Analizează postările istorice de pe o pagină Facebook (text + imagini reale) și generează un profil de stil (<code>SocialStyleProfile</code>) via Claude Vision. Profilul este folosit ulterior de <code>SocialCaptionService</code> pentru a menține consistența tonului.</p>
+
+<h4>Dependențe constructor:</h4>
+<p>Fără parametri. Citește <code>AppSetting::KEY_ANTHROPIC_API_KEY</code> la apel.</p>
+
+<h4>Metode publice:</h4>
+<table>
+  <tr><th>Metodă</th><th>Parametri</th><th>Return</th><th>Descriere</th></tr>
+  <tr>
+    <td><code>analyzeAndSave()</code></td>
+    <td><code>SocialAccount $account</code>, <code>array $posts</code></td>
+    <td><code>SocialStyleProfile</code></td>
+    <td>
+      Algoritm:
+      <ol>
+        <li>Selectează max 50 postări cu text.</li>
+        <li>Descarcă max 10 imagini ca base64 pentru Claude Vision.</li>
+        <li>Trimite request multimodal Claude Sonnet (text + imagini reale).</li>
+        <li>Parsează răspunsul JSON: <code>tone, vocabulary, hashtag_patterns, caption_structure, visual_style</code>.</li>
+        <li>Dezactivează profilul anterior activ și salvează noul profil.</li>
+      </ol>
+    </td>
+  </tr>
+</table>
+
+<h4>Câmpuri profil stil:</h4>
+<ul>
+  <li><strong>tone</strong> — descriere ton: formal/informal, entuziast/neutru, tip limbaj</li>
+  <li><strong>vocabulary</strong> — cuvinte recurente, lungime text, emoji-uri</li>
+  <li><strong>hashtag_patterns</strong> — tipuri hashtag-uri, număr mediu</li>
+  <li><strong>caption_structure</strong> — structura postărilor: hook, CTA, contact</li>
+  <li><strong>visual_style</strong> — descriere detaliată stil vizual real (folosit ca prompt pentru Gemini)</li>
+</ul>
+
+<h4>Integrare externă:</h4>
+<p><strong>API URL:</strong> <code>https://api.anthropic.com/v1/messages</code><br>
+<strong>Model:</strong> Claude Sonnet (cu Vision pentru imagini)<br>
+<strong>Timeout:</strong> 120s (analiza imaginilor poate dura)<br>
+<strong>Max tokens:</strong> 4096<br>
+<strong>Log usage:</strong> <code>AiUsageLog::record('social_style_analysis', ...)</code></p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h3>Serviciu: TemplateGeneratorService</h3>
+<p><strong>Fișier:</strong> <code>app/Services/SocialMedia/TemplateGeneratorService.php</code></p>
+<p><strong>Scop:</strong> Pipeline în 4 pași pentru generarea automată de <code>GraphicTemplate</code>-uri din imagini de referință. Claude analizează structura vizuală, backend-ul aplică rețete de layout pre-proiectate, apoi rafinare stil și normalizare layout.</p>
+
+<h4>Dependențe constructor:</h4>
+<p>Fără parametri. Citește <code>AppSetting::KEY_ANTHROPIC_API_KEY</code> la apel.</p>
+
+<h4>Pipeline (4 pași):</h4>
+<ol>
+  <li><strong>STEP A — Analiză Claude Vision:</strong> Detectează familia de compoziție, măsoară zonele reale (procente din canvas), detectează elemente decorative (diagonale, panouri colorate), extrage culori brand și semnale de stil vizual.</li>
+  <li><strong>STEP B — Rețete de layout:</strong> Fiecare familie de compoziție are o rețetă pre-proiectată cu coordonate sigure. Elementele opționale sunt incluse doar dacă Claude le-a detectat.</li>
+  <li><strong>STEP C — Rafinare stil:</strong> Ajustează proporțiile elementelor pe baza semnalelor de stil (mărimea logo, dominanța produsului, prominența footer-ului, scala titlului).</li>
+  <li><strong>STEP D — Normalizare layout:</strong> Constrângeri hard: footer ancorat jos, margini sigure, prevenire suprapuneri. Elementele decorative sunt excluse din constrângeri.</li>
+</ol>
+
+<h4>Familii de compoziție (RECIPES):</h4>
+<ul>
+  <li><code>product_right_text_left</code> — produs dreapta, text+logo stânga</li>
+  <li><code>product_left_text_right</code> — produs stânga, text+logo dreapta</li>
+  <li><code>centered_product</code> — produs centrat, titlu deasupra</li>
+  <li><code>partner_campaign</code> — dual brand (Malinco + partener), produs jos</li>
+  <li><code>text_announcement</code> — fără produs, text dominant</li>
+  <li><code>promo_badge</code> — produs cu badge promoțional proeminent</li>
+</ul>
+
+<h4>Metode publice:</h4>
+<table>
+  <tr><th>Metodă</th><th>Parametri</th><th>Return</th><th>Descriere</th></tr>
+  <tr>
+    <td><code>analyzeAndGenerate()</code></td>
+    <td><code>string[] $imagePaths</code> — căi relative în disk public</td>
+    <td><code>GraphicTemplate[]</code></td>
+    <td>Entry point principal. Acceptă max 8 imagini. Trimite imaginile (base64) + promptul structural la Claude Sonnet, parsează răspunsul JSON, aplică pipeline-ul complet (Steps B-D) și persistă template-urile generate în DB.</td>
+  </tr>
+</table>
+
+<h4>Profile de stil default (Malinco baseline):</h4>
+<ul>
+  <li><code>title_size: large</code>, <code>title_weight: extrabold</code> (Montserrat 800+)</li>
+  <li><code>logo_size: medium</code>, <code>product_dominance: high</code></li>
+  <li><code>footer_prominence: strong</code>, <code>spacing_feel: balanced</code>, <code>accent_style: moderate</code></li>
+</ul>
+
+<h4>Integrare externă:</h4>
+<p><strong>API URL:</strong> <code>https://api.anthropic.com/v1/messages</code><br>
+<strong>Model:</strong> Claude Sonnet (cu Vision)<br>
+<strong>Timeout:</strong> 120s<br>
+<strong>Max tokens:</strong> 4096<br>
+<strong>Max imagini per apel:</strong> 8<br>
+<strong>Log usage:</strong> <code>AiUsageLog::record('template_generation', ...)</code></p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2>Rezumat integrări externe</h2>
+<table>
+  <tr><th>Serviciu</th><th>API extern</th><th>Autentificare</th><th>Model/Endpoint cheie</th></tr>
+  <tr>
+    <td>ClaudeAiClient</td>
+    <td>Anthropic API</td>
+    <td>Header <code>x-api-key</code></td>
+    <td>Sonnet 4.6 / Haiku 4.5 — <code>/v1/messages</code></td>
+  </tr>
+  <tr>
+    <td>ChatService</td>
+    <td>Anthropic API</td>
+    <td>Header <code>x-api-key</code></td>
+    <td>Haiku 4.5 cu Tool Use — <code>/v1/messages</code></td>
+  </tr>
+  <tr>
+    <td>SocialCaptionService</td>
+    <td>Anthropic API</td>
+    <td>Header <code>x-api-key</code></td>
+    <td>Sonnet/Haiku — <code>/v1/messages</code></td>
+  </tr>
+  <tr>
+    <td>StyleAnalysisService</td>
+    <td>Anthropic API (Vision)</td>
+    <td>Header <code>x-api-key</code></td>
+    <td>Sonnet cu imagini base64</td>
+  </tr>
+  <tr>
+    <td>TemplateGeneratorService</td>
+    <td>Anthropic API (Vision)</td>
+    <td>Header <code>x-api-key</code></td>
+    <td>Sonnet cu imagini base64</td>
+  </tr>
+  <tr>
+    <td>GeminiImageService</td>
+    <td>Google Vertex AI</td>
+    <td>JWT Bearer (service account RSA256)</td>
+    <td>gemini-3.1-flash-image-preview</td>
+  </tr>
+  <tr>
+    <td>MetaGraphClient</td>
+    <td>Facebook Graph API v21.0</td>
+    <td>Page Access Token în query/body</td>
+    <td><code>/{pageId}/posts</code>, <code>/photos</code>, <code>/feed</code></td>
+  </tr>
+  <tr>
+    <td>WooClient</td>
+    <td>WooCommerce REST API v3</td>
+    <td>HTTP Basic Auth (consumer key/secret)</td>
+    <td><code>/wp-json/wc/v3/</code></td>
+  </tr>
+  <tr>
+    <td>WooPluginClient</td>
+    <td>Plugin malinco-erp-bridge</td>
+    <td>Header <code>X-ERP-Api-Key</code></td>
+    <td><code>/wp-json/malinco-erp/v1/</code></td>
+  </tr>
+  <tr>
+    <td>ImapMailboxService</td>
+    <td>IMAP server</td>
+    <td>Username + password (SSL/TLS)</td>
+    <td>webklex/php-imap, port 993</td>
+  </tr>
+  <tr>
+    <td>TelegramService</td>
+    <td>Telegram Bot API</td>
+    <td>Token bot în URL</td>
+    <td><code>/bot{TOKEN}/sendMessage</code></td>
+  </tr>
+  <tr>
+    <td>NodeImageRenderer</td>
+    <td>Proces local Node.js</td>
+    <td>—</td>
+    <td><code>node node-renderer/render.js '{config}'</code></td>
+  </tr>
+  <tr>
+    <td>SocialImageComposer</td>
+    <td>— (PHP GD local)</td>
+    <td>—</td>
+    <td>Compozitie imagini fără API extern</td>
+  </tr>
+  <tr>
+    <td>WooOrderSyncService</td>
+    <td>— (persistare locală)</td>
+    <td>—</td>
+    <td>Normalizare date din WooClient</td>
+  </tr>
+</table>

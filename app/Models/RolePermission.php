@@ -78,11 +78,11 @@ class RolePermission extends Model
 
         $permissions = static::forRole($role);
 
-        // Dacă nu există o regulă explicit definită → acces permis implicit
+        // Dacă nu există o regulă explicit definită → acces refuzat implicit (default-deny)
         if (! isset($permissions[$resource])) {
-            return true;
+            return false;
         }
 
-        return (bool) ($permissions[$resource][$permission] ?? true);
+        return (bool) ($permissions[$resource][$permission] ?? false);
     }
 }

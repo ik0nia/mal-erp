@@ -1,0 +1,415 @@
+<h2 id="db-core">Schema baze de date — Tabele Core</h2>
+<p>Documentație tehnică generată automat din migrațiile Laravel. Data: 2026-03-15.</p>
+
+<!-- ============================================================ -->
+<h3>Tabela: <code>users</code></h3>
+<table>
+  <tr><th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+  <tr><td>id</td><td>bigint unsigned AUTO_INCREMENT</td><td>NU</td><td>—</td><td>Cheie primară</td></tr>
+  <tr><td>name</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Numele complet al utilizatorului</td></tr>
+  <tr><td>email</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Adresa de email (UNIQUE)</td></tr>
+  <tr><td>email_verified_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data verificării emailului</td></tr>
+  <tr><td>password</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Parolă hashed (bcrypt)</td></tr>
+  <tr><td>remember_token</td><td>varchar(100)</td><td>DA</td><td>NULL</td><td>Token sesiune „ține-mă minte"</td></tr>
+  <tr><td>role</td><td>varchar(255)</td><td>NU</td><td>'operator'</td><td>Rol utilizator: operator, manager, buyer, consultant etc.</td></tr>
+  <tr><td>location_id</td><td>bigint unsigned</td><td>DA</td><td>NULL</td><td>FK → locations.id (nullOnDelete); locația asignată</td></tr>
+  <tr><td>is_admin</td><td>tinyint(1)</td><td>NU</td><td>0</td><td>Flag admin — acces la panoul Admin Filament</td></tr>
+  <tr><td>is_super_admin</td><td>tinyint(1)</td><td>NU</td><td>0</td><td>Flag super-admin — acces complet, inclusiv pagini restricționate</td></tr>
+  <tr><td>created_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data creării</td></tr>
+  <tr><td>updated_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data ultimei modificări</td></tr>
+</table>
+<p><strong>Indecși:</strong> UNIQUE(email), INDEX(role), INDEX(location_id), INDEX(is_admin), INDEX(is_super_admin)</p>
+<p><strong>FK:</strong> location_id → locations.id (SET NULL ON DELETE)</p>
+
+<!-- ============================================================ -->
+<h3>Tabela: <code>locations</code></h3>
+<table>
+  <tr><th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+  <tr><td>id</td><td>bigint unsigned AUTO_INCREMENT</td><td>NU</td><td>—</td><td>Cheie primară</td></tr>
+  <tr><td>name</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Denumirea locației / depozitului</td></tr>
+  <tr><td>type</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Tipul locației: warehouse, store, office etc.</td></tr>
+  <tr><td>store_id</td><td>bigint unsigned</td><td>DA</td><td>NULL</td><td>FK self-referențial → locations.id; magazinul-mamă</td></tr>
+  <tr><td>address</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Adresa fizică</td></tr>
+  <tr><td>city</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Orașul</td></tr>
+  <tr><td>county</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Județul</td></tr>
+  <tr><td>company_name</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Denumirea firmei</td></tr>
+  <tr><td>company_vat_number</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>CUI/CIF firmă</td></tr>
+  <tr><td>company_is_vat_payer</td><td>tinyint(1)</td><td>DA</td><td>NULL</td><td>Firmă plătitoare TVA</td></tr>
+  <tr><td>company_registration_number</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Nr. Registrul Comerțului</td></tr>
+  <tr><td>company_postal_code</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Cod poștal firmă</td></tr>
+  <tr><td>company_phone</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Telefon firmă</td></tr>
+  <tr><td>company_bank</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Banca firmei</td></tr>
+  <tr><td>company_bank_account</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>IBAN cont bancar</td></tr>
+  <tr><td>is_active</td><td>tinyint(1)</td><td>NU</td><td>1</td><td>Locație activă</td></tr>
+  <tr><td>created_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data creării</td></tr>
+  <tr><td>updated_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data ultimei modificări</td></tr>
+</table>
+<p><strong>Indecși:</strong> INDEX(type), INDEX(is_active)</p>
+<p><strong>FK:</strong> store_id → locations.id (SET NULL ON DELETE)</p>
+
+<!-- ============================================================ -->
+<h3>Tabela: <code>woo_products</code></h3>
+<table>
+  <tr><th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+  <tr><td>id</td><td>bigint unsigned AUTO_INCREMENT</td><td>NU</td><td>—</td><td>Cheie primară ERP</td></tr>
+  <tr><td>connection_id</td><td>bigint unsigned</td><td>NU</td><td>—</td><td>FK → integration_connections.id (CASCADE DELETE)</td></tr>
+  <tr><td>woo_id</td><td>bigint unsigned</td><td>NU</td><td>—</td><td>ID produs în WooCommerce</td></tr>
+  <tr><td>type</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Tipul WooCommerce: simple, variable, variation etc.</td></tr>
+  <tr><td>status</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Status WooCommerce: publish, draft, private etc.</td></tr>
+  <tr><td>sku</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Codul SKU al produsului</td></tr>
+  <tr><td>name</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Denumirea produsului</td></tr>
+  <tr><td>winmentor_name</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Denumirea din WinMentor (ERP contabil); poate diferi de name</td></tr>
+  <tr><td>slug</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Slug URL produs</td></tr>
+  <tr><td>short_description</td><td>longtext</td><td>DA</td><td>NULL</td><td>Descriere scurtă HTML</td></tr>
+  <tr><td>description</td><td>longtext</td><td>DA</td><td>NULL</td><td>Descriere completă HTML</td></tr>
+  <tr><td>regular_price</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Prețul de listă (string WooCommerce)</td></tr>
+  <tr><td>sale_price</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Prețul promoțional</td></tr>
+  <tr><td>price</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Prețul activ (cel afișat pe site)</td></tr>
+  <tr><td>stock_status</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Status stoc WooCommerce: instock, outofstock, onbackorder</td></tr>
+  <tr><td>manage_stock</td><td>tinyint(1)</td><td>DA</td><td>NULL</td><td>Dacă WooCommerce gestionează stocul numeric</td></tr>
+  <tr><td>unit</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Unitate de măsură: buc, kg, l etc.</td></tr>
+  <tr><td>brand</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Marca produsului (text liber; extras din atributele WooCommerce)</td></tr>
+  <tr><td>weight</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Greutate produs (kg, string WooCommerce)</td></tr>
+  <tr><td>dim_length</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Lungime ambalaj</td></tr>
+  <tr><td>dim_width</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Lățime ambalaj</td></tr>
+  <tr><td>dim_height</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Înălțime ambalaj</td></tr>
+  <tr><td>erp_notes</td><td>text</td><td>DA</td><td>NULL</td><td>Note interne ERP</td></tr>
+  <tr><td>product_type</td><td>enum('shop','production','pallet_fee')</td><td>NU</td><td>'shop'</td><td>Clasificare ERP: shop=comercializare, production=materie primă, pallet_fee=garanție palet</td></tr>
+  <tr><td>procurement_type</td><td>enum('stock','on_demand')</td><td>NU</td><td>'stock'</td><td>Mod aprovizionare: stock=stoc fizic, on_demand=la comandă</td></tr>
+  <tr><td>on_demand_label</td><td>varchar(100)</td><td>DA</td><td>NULL</td><td>Mesaj custom afișat pe site pt. produse la comandă</td></tr>
+  <tr><td>is_discontinued</td><td>tinyint(1)</td><td>NU</td><td>0</td><td>Produs discontinuat</td></tr>
+  <tr><td>discontinued_reason</td><td>text</td><td>DA</td><td>NULL</td><td>Motivul discontinuării</td></tr>
+  <tr><td>woo_parent_id</td><td>bigint unsigned</td><td>DA</td><td>NULL</td><td>woo_id al produsului-părinte (pentru variații)</td></tr>
+  <tr><td>main_image_url</td><td>text</td><td>DA</td><td>NULL</td><td>URL imagine principală</td></tr>
+  <tr><td>source</td><td>varchar(255)</td><td>NU</td><td>'woocommerce'</td><td>Sursa înregistrării: woocommerce sau placeholder (ERP-only)</td></tr>
+  <tr><td>is_placeholder</td><td>tinyint(1)</td><td>NU</td><td>0</td><td>Produs creat manual în ERP, fără echivalent WooCommerce</td></tr>
+  <tr><td>data</td><td>json</td><td>NU</td><td>—</td><td>Payload JSON complet primit de la WooCommerce API</td></tr>
+  <tr><td>created_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data creării</td></tr>
+  <tr><td>updated_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data ultimei modificări</td></tr>
+</table>
+<p><strong>Indecși:</strong>
+  UNIQUE(connection_id, woo_id),
+  INDEX(connection_id, sku),
+  INDEX(connection_id, name),
+  INDEX(connection_id, slug),
+  INDEX(connection_id, source),
+  INDEX(connection_id, is_placeholder),
+  INDEX(procurement_type),
+  INDEX(is_discontinued),
+  FULLTEXT(name, winmentor_name, sku) — <code>woo_products_fulltext_search</code>
+</p>
+<p><strong>FK:</strong> connection_id → integration_connections.id (CASCADE DELETE)</p>
+
+<!-- ============================================================ -->
+<h3>Tabela: <code>woo_product_category</code></h3>
+<p>Tabelă pivot many-to-many între produse și categorii WooCommerce.</p>
+<table>
+  <tr><th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+  <tr><td>woo_product_id</td><td>bigint unsigned</td><td>NU</td><td>—</td><td>FK → woo_products.id (CASCADE DELETE); parte din PK compus</td></tr>
+  <tr><td>woo_category_id</td><td>bigint unsigned</td><td>NU</td><td>—</td><td>FK → woo_categories.id (CASCADE DELETE); parte din PK compus</td></tr>
+</table>
+<p><strong>Indecși:</strong> PRIMARY KEY(woo_product_id, woo_category_id)</p>
+<p><strong>FK:</strong> woo_product_id → woo_products.id (CASCADE DELETE); woo_category_id → woo_categories.id (CASCADE DELETE)</p>
+
+<!-- ============================================================ -->
+<h3>Tabela: <code>woo_categories</code></h3>
+<table>
+  <tr><th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+  <tr><td>id</td><td>bigint unsigned AUTO_INCREMENT</td><td>NU</td><td>—</td><td>Cheie primară ERP</td></tr>
+  <tr><td>connection_id</td><td>bigint unsigned</td><td>NU</td><td>—</td><td>FK → integration_connections.id (CASCADE DELETE)</td></tr>
+  <tr><td>woo_id</td><td>bigint unsigned</td><td>NU</td><td>—</td><td>ID categorie în WooCommerce</td></tr>
+  <tr><td>name</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Denumirea categoriei</td></tr>
+  <tr><td>slug</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Slug URL categorie</td></tr>
+  <tr><td>description</td><td>longtext</td><td>DA</td><td>NULL</td><td>Descriere HTML</td></tr>
+  <tr><td>parent_woo_id</td><td>bigint unsigned</td><td>DA</td><td>NULL</td><td>woo_id al categoriei-părinte (raw, din WooCommerce)</td></tr>
+  <tr><td>parent_id</td><td>bigint unsigned</td><td>DA</td><td>NULL</td><td>FK → woo_categories.id (SET NULL ON DELETE); categorie-părinte rezolvată local</td></tr>
+  <tr><td>image_url</td><td>text</td><td>DA</td><td>NULL</td><td>URL imagine categorie</td></tr>
+  <tr><td>menu_order</td><td>int</td><td>DA</td><td>NULL</td><td>Ordine afișare în meniu WooCommerce</td></tr>
+  <tr><td>count</td><td>int</td><td>DA</td><td>NULL</td><td>Număr produse în categorie (cacheiat de WooCommerce)</td></tr>
+  <tr><td>data</td><td>json</td><td>NU</td><td>—</td><td>Payload JSON complet de la API WooCommerce</td></tr>
+  <tr><td>created_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data creării</td></tr>
+  <tr><td>updated_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data ultimei modificări</td></tr>
+</table>
+<p><strong>Indecși:</strong> UNIQUE(connection_id, woo_id), INDEX(connection_id, parent_woo_id), INDEX(connection_id, name)</p>
+<p><strong>FK:</strong> connection_id → integration_connections.id (CASCADE DELETE); parent_id → woo_categories.id (SET NULL ON DELETE)</p>
+
+<!-- ============================================================ -->
+<h3>Tabela: <code>woo_orders</code></h3>
+<table>
+  <tr><th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+  <tr><td>id</td><td>bigint unsigned AUTO_INCREMENT</td><td>NU</td><td>—</td><td>Cheie primară ERP</td></tr>
+  <tr><td>connection_id</td><td>bigint unsigned</td><td>NU</td><td>—</td><td>FK → integration_connections.id (CASCADE DELETE)</td></tr>
+  <tr><td>location_id</td><td>bigint unsigned</td><td>DA</td><td>NULL</td><td>FK → locations.id (SET NULL ON DELETE)</td></tr>
+  <tr><td>woo_id</td><td>bigint unsigned</td><td>NU</td><td>—</td><td>ID comandă în WooCommerce</td></tr>
+  <tr><td>number</td><td>varchar(255)</td><td>NU</td><td>''</td><td>Numărul comenzii afișat (ex: #1234)</td></tr>
+  <tr><td>status</td><td>varchar(255)</td><td>NU</td><td>'pending'</td><td>Status WooCommerce: pending, processing, completed, cancelled etc.</td></tr>
+  <tr><td>currency</td><td>varchar(255)</td><td>NU</td><td>'RON'</td><td>Moneda comenzii</td></tr>
+  <tr><td>customer_note</td><td>text</td><td>DA</td><td>NULL</td><td>Nota clientului la comandă</td></tr>
+  <tr><td>billing</td><td>json</td><td>DA</td><td>NULL</td><td>Adresa de facturare (JSON WooCommerce)</td></tr>
+  <tr><td>shipping</td><td>json</td><td>DA</td><td>NULL</td><td>Adresa de livrare (JSON WooCommerce)</td></tr>
+  <tr><td>payment_method</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Codul metodei de plată (ex: cod, bacs)</td></tr>
+  <tr><td>payment_method_title</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Denumirea afișată a metodei de plată</td></tr>
+  <tr><td>subtotal</td><td>decimal(12,2)</td><td>NU</td><td>0</td><td>Subtotal produse (fără livrare, taxe)</td></tr>
+  <tr><td>shipping_total</td><td>decimal(12,2)</td><td>NU</td><td>0</td><td>Cost livrare</td></tr>
+  <tr><td>discount_total</td><td>decimal(12,2)</td><td>NU</td><td>0</td><td>Total reduceri aplicate</td></tr>
+  <tr><td>fee_total</td><td>decimal(12,2)</td><td>NU</td><td>0</td><td>Total taxe suplimentare</td></tr>
+  <tr><td>tax_total</td><td>decimal(12,2)</td><td>NU</td><td>0</td><td>Total TVA</td></tr>
+  <tr><td>total</td><td>decimal(12,2)</td><td>NU</td><td>0</td><td>Valoarea totală a comenzii</td></tr>
+  <tr><td>date_paid</td><td>datetime</td><td>DA</td><td>NULL</td><td>Data plății</td></tr>
+  <tr><td>date_completed</td><td>datetime</td><td>DA</td><td>NULL</td><td>Data finalizării comenzii</td></tr>
+  <tr><td>order_date</td><td>datetime</td><td>NU</td><td>—</td><td>Data plasării comenzii</td></tr>
+  <tr><td>data</td><td>json</td><td>DA</td><td>NULL</td><td>Payload JSON complet de la WooCommerce API</td></tr>
+  <tr><td>created_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data creării locale</td></tr>
+  <tr><td>updated_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data ultimei modificări</td></tr>
+</table>
+<p><strong>Indecși:</strong> UNIQUE(connection_id, woo_id), INDEX(location_id, status), INDEX(connection_id, status)</p>
+<p><strong>FK:</strong> connection_id → integration_connections.id (CASCADE DELETE); location_id → locations.id (SET NULL ON DELETE)</p>
+
+<!-- ============================================================ -->
+<h3>Tabela: <code>woo_order_items</code></h3>
+<table>
+  <tr><th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+  <tr><td>id</td><td>bigint unsigned AUTO_INCREMENT</td><td>NU</td><td>—</td><td>Cheie primară</td></tr>
+  <tr><td>order_id</td><td>bigint unsigned</td><td>NU</td><td>—</td><td>FK → woo_orders.id (CASCADE DELETE)</td></tr>
+  <tr><td>woo_item_id</td><td>bigint unsigned</td><td>DA</td><td>NULL</td><td>ID linie-produs în WooCommerce</td></tr>
+  <tr><td>woo_product_id</td><td>bigint unsigned</td><td>DA</td><td>NULL</td><td>woo_id-ul produsului comandat (referință neconstrânsă)</td></tr>
+  <tr><td>name</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Denumirea produsului la momentul comenzii</td></tr>
+  <tr><td>sku</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>SKU produs la momentul comenzii</td></tr>
+  <tr><td>quantity</td><td>int unsigned</td><td>NU</td><td>1</td><td>Cantitate comandată</td></tr>
+  <tr><td>price</td><td>decimal(10,4)</td><td>NU</td><td>0</td><td>Prețul unitar</td></tr>
+  <tr><td>subtotal</td><td>decimal(12,2)</td><td>NU</td><td>0</td><td>Subtotal linie (fără TVA)</td></tr>
+  <tr><td>total</td><td>decimal(12,2)</td><td>NU</td><td>0</td><td>Total linie (cu reduceri aplicate)</td></tr>
+  <tr><td>tax</td><td>decimal(12,2)</td><td>NU</td><td>0</td><td>TVA linie</td></tr>
+  <tr><td>data</td><td>json</td><td>DA</td><td>NULL</td><td>Payload JSON linie din WooCommerce</td></tr>
+  <tr><td>created_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data creării</td></tr>
+  <tr><td>updated_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data ultimei modificări</td></tr>
+</table>
+<p><strong>Indecși:</strong> INDEX(order_id)</p>
+<p><strong>FK:</strong> order_id → woo_orders.id (CASCADE DELETE)</p>
+
+<!-- ============================================================ -->
+<h3>Tabela: <code>suppliers</code></h3>
+<table>
+  <tr><th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+  <tr><td>id</td><td>bigint unsigned AUTO_INCREMENT</td><td>NU</td><td>—</td><td>Cheie primară</td></tr>
+  <tr><td>name</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Denumirea furnizorului</td></tr>
+  <tr><td>logo_url</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>URL logo furnizor</td></tr>
+  <tr><td>website_url</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Site web furnizor</td></tr>
+  <tr><td>contact_person</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Persoana de contact principală (câmp legacy; vezi supplier_contacts)</td></tr>
+  <tr><td>email</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Email general furnizor</td></tr>
+  <tr><td>phone</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Telefon general furnizor</td></tr>
+  <tr><td>address</td><td>text</td><td>DA</td><td>NULL</td><td>Adresa furnizorului</td></tr>
+  <tr><td>vat_number</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>CUI/CIF furnizor</td></tr>
+  <tr><td>reg_number</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Nr. Registrul Comerțului furnizor</td></tr>
+  <tr><td>bank_account</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>IBAN cont bancar furnizor</td></tr>
+  <tr><td>bank_name</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Banca furnizorului</td></tr>
+  <tr><td>notes</td><td>text</td><td>DA</td><td>NULL</td><td>Note interne</td></tr>
+  <tr><td>conditions</td><td>json</td><td>DA</td><td>NULL</td><td>Condiții comerciale structurate (termene plată, discount-uri etc.)</td></tr>
+  <tr><td>is_active</td><td>tinyint(1)</td><td>NU</td><td>1</td><td>Furnizor activ</td></tr>
+  <tr><td>buyer_id</td><td>bigint unsigned</td><td>DA</td><td>NULL</td><td>FK → users.id; buyer responsabil de acest furnizor</td></tr>
+  <tr><td>po_approval_threshold</td><td>decimal(10,2)</td><td>DA</td><td>NULL</td><td>Prag valoric (RON) peste care PO necesită aprobare; NULL = fără prag</td></tr>
+  <tr><td>created_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data creării</td></tr>
+  <tr><td>updated_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data ultimei modificări</td></tr>
+</table>
+<p><strong>Indecși:</strong> —</p>
+<p><strong>FK:</strong> buyer_id → users.id (SET NULL ON DELETE)</p>
+
+<!-- ============================================================ -->
+<h3>Tabela: <code>supplier_contacts</code></h3>
+<table>
+  <tr><th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+  <tr><td>id</td><td>bigint unsigned AUTO_INCREMENT</td><td>NU</td><td>—</td><td>Cheie primară</td></tr>
+  <tr><td>supplier_id</td><td>bigint unsigned</td><td>NU</td><td>—</td><td>FK → suppliers.id (CASCADE DELETE)</td></tr>
+  <tr><td>name</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Numele contactului</td></tr>
+  <tr><td>role</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Funcția (ex: director vânzări, agent comercial)</td></tr>
+  <tr><td>department</td><td>varchar(50)</td><td>DA</td><td>NULL</td><td>Departamentul contactului (sales, logistics, finance etc.)</td></tr>
+  <tr><td>email</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Adresa de email</td></tr>
+  <tr><td>phone</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Telefon contact</td></tr>
+  <tr><td>notes</td><td>text</td><td>DA</td><td>NULL</td><td>Note interne</td></tr>
+  <tr><td>is_primary</td><td>tinyint(1)</td><td>NU</td><td>0</td><td>Contact principal al furnizorului</td></tr>
+  <tr><td>source</td><td>varchar(255)</td><td>NU</td><td>'manual'</td><td>Sursa contactului: manual (adăugat de utilizator) sau email_discovery / domain_match (auto)</td></tr>
+  <tr><td>first_seen_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Prima apariție în istoricul emailurilor</td></tr>
+  <tr><td>last_seen_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Ultima apariție în istoricul emailurilor</td></tr>
+  <tr><td>email_count</td><td>int unsigned</td><td>NU</td><td>0</td><td>Număr total emailuri asociate acestui contact</td></tr>
+  <tr><td>created_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data creării</td></tr>
+  <tr><td>updated_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data ultimei modificări</td></tr>
+</table>
+<p><strong>Indecși:</strong> —</p>
+<p><strong>FK:</strong> supplier_id → suppliers.id (CASCADE DELETE)</p>
+
+<!-- ============================================================ -->
+<h3>Tabela: <code>product_suppliers</code></h3>
+<p>Tabelă pivot cu informații comerciale pentru relația produs ↔ furnizor.</p>
+<table>
+  <tr><th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+  <tr><td>id</td><td>bigint unsigned AUTO_INCREMENT</td><td>NU</td><td>—</td><td>Cheie primară (nu composite, pentru a permite FK din alte tabele)</td></tr>
+  <tr><td>woo_product_id</td><td>bigint unsigned</td><td>NU</td><td>—</td><td>FK → woo_products.id (CASCADE DELETE)</td></tr>
+  <tr><td>supplier_id</td><td>bigint unsigned</td><td>NU</td><td>—</td><td>FK → suppliers.id (CASCADE DELETE)</td></tr>
+  <tr><td>supplier_sku</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Codul produsului în catalogul furnizorului</td></tr>
+  <tr><td>purchase_price</td><td>decimal(10,4)</td><td>DA</td><td>NULL</td><td>Prețul de achiziție negociat</td></tr>
+  <tr><td>currency</td><td>varchar(10)</td><td>NU</td><td>'RON'</td><td>Moneda prețului de achiziție</td></tr>
+  <tr><td>lead_days</td><td>smallint unsigned</td><td>DA</td><td>NULL</td><td>Zile de livrare de la furnizor</td></tr>
+  <tr><td>min_order_qty</td><td>decimal(10,3)</td><td>DA</td><td>NULL</td><td>Cantitate minimă de comandă</td></tr>
+  <tr><td>po_max_qty</td><td>decimal(10,3)</td><td>DA</td><td>NULL</td><td>Cantitate maximă per PO (depășirea declanșează aprobare)</td></tr>
+  <tr><td>is_preferred</td><td>tinyint(1)</td><td>NU</td><td>0</td><td>Furnizor preferat pentru acest produs</td></tr>
+  <tr><td>notes</td><td>text</td><td>DA</td><td>NULL</td><td>Note comerciale</td></tr>
+  <tr><td>created_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data creării</td></tr>
+  <tr><td>updated_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data ultimei modificări</td></tr>
+</table>
+<p><strong>Indecși:</strong> UNIQUE(woo_product_id, supplier_id), INDEX(supplier_id)</p>
+<p><strong>FK:</strong> woo_product_id → woo_products.id (CASCADE DELETE); supplier_id → suppliers.id (CASCADE DELETE)</p>
+
+<!-- ============================================================ -->
+<h3>Tabela: <code>brands</code></h3>
+<table>
+  <tr><th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+  <tr><td>id</td><td>bigint unsigned AUTO_INCREMENT</td><td>NU</td><td>—</td><td>Cheie primară</td></tr>
+  <tr><td>name</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Denumirea brandului</td></tr>
+  <tr><td>slug</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Identificator URL unic (UNIQUE)</td></tr>
+  <tr><td>logo_url</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>URL logo brand</td></tr>
+  <tr><td>website_url</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Site web brand</td></tr>
+  <tr><td>description</td><td>text</td><td>DA</td><td>NULL</td><td>Descriere brand</td></tr>
+  <tr><td>is_active</td><td>tinyint(1)</td><td>NU</td><td>1</td><td>Brand activ</td></tr>
+  <tr><td>created_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data creării</td></tr>
+  <tr><td>updated_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data ultimei modificări</td></tr>
+</table>
+<p><strong>Indecși:</strong> UNIQUE(slug)</p>
+<p><strong>FK:</strong> —</p>
+<p><em>Notă: Tabelă separată <code>brand_supplier</code> (pivot many-to-many) leagă brandurile de furnizori.</em></p>
+
+<!-- ============================================================ -->
+<h3>Tabela: <code>offers</code></h3>
+<table>
+  <tr><th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+  <tr><td>id</td><td>bigint unsigned AUTO_INCREMENT</td><td>NU</td><td>—</td><td>Cheie primară</td></tr>
+  <tr><td>location_id</td><td>bigint unsigned</td><td>NU</td><td>—</td><td>FK → locations.id (CASCADE DELETE); locația emitentă</td></tr>
+  <tr><td>user_id</td><td>bigint unsigned</td><td>NU</td><td>—</td><td>FK → users.id (CASCADE DELETE); agentul care a creat oferta</td></tr>
+  <tr><td>number</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Numărul ofertei (UNIQUE, ex: OFF-20260301-0001)</td></tr>
+  <tr><td>status</td><td>varchar(255)</td><td>NU</td><td>'draft'</td><td>Status: draft, sent, accepted, rejected, expired</td></tr>
+  <tr><td>client_name</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Numele clientului</td></tr>
+  <tr><td>client_company</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Firma clientului</td></tr>
+  <tr><td>client_email</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Email client</td></tr>
+  <tr><td>client_phone</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Telefon client</td></tr>
+  <tr><td>notes</td><td>text</td><td>DA</td><td>NULL</td><td>Note ofertă</td></tr>
+  <tr><td>currency</td><td>varchar(3)</td><td>NU</td><td>'RON'</td><td>Moneda ofertei</td></tr>
+  <tr><td>subtotal</td><td>decimal(15,4)</td><td>NU</td><td>0</td><td>Subtotal înainte de reducere</td></tr>
+  <tr><td>discount_total</td><td>decimal(15,4)</td><td>NU</td><td>0</td><td>Valoarea totală a reducerilor</td></tr>
+  <tr><td>total</td><td>decimal(15,4)</td><td>NU</td><td>0</td><td>Valoarea totală finală</td></tr>
+  <tr><td>valid_until</td><td>date</td><td>DA</td><td>NULL</td><td>Data expirării ofertei</td></tr>
+  <tr><td>sent_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data trimiterii ofertei</td></tr>
+  <tr><td>accepted_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data acceptării ofertei</td></tr>
+  <tr><td>created_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data creării</td></tr>
+  <tr><td>updated_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data ultimei modificări</td></tr>
+</table>
+<p><strong>Indecși:</strong> UNIQUE(number), INDEX(location_id, status), INDEX(user_id, status), INDEX(status, updated_at)</p>
+<p><strong>FK:</strong> location_id → locations.id (CASCADE DELETE); user_id → users.id (CASCADE DELETE)</p>
+
+<!-- ============================================================ -->
+<h3>Tabela: <code>offer_items</code></h3>
+<table>
+  <tr><th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+  <tr><td>id</td><td>bigint unsigned AUTO_INCREMENT</td><td>NU</td><td>—</td><td>Cheie primară</td></tr>
+  <tr><td>offer_id</td><td>bigint unsigned</td><td>NU</td><td>—</td><td>FK → offers.id (CASCADE DELETE)</td></tr>
+  <tr><td>woo_product_id</td><td>bigint unsigned</td><td>DA</td><td>NULL</td><td>FK → woo_products.id (SET NULL ON DELETE); produsul ERP asociat</td></tr>
+  <tr><td>position</td><td>int unsigned</td><td>NU</td><td>0</td><td>Ordinea liniei în ofertă</td></tr>
+  <tr><td>product_name</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Denumirea produsului (copiată la momentul ofertei)</td></tr>
+  <tr><td>sku</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>SKU produs la momentul ofertei</td></tr>
+  <tr><td>quantity</td><td>decimal(15,3)</td><td>NU</td><td>1</td><td>Cantitate ofertată</td></tr>
+  <tr><td>unit_price</td><td>decimal(15,4)</td><td>NU</td><td>0</td><td>Prețul unitar</td></tr>
+  <tr><td>discount_percent</td><td>decimal(5,2)</td><td>NU</td><td>0</td><td>Reducere procentuală per linie</td></tr>
+  <tr><td>line_subtotal</td><td>decimal(15,4)</td><td>NU</td><td>0</td><td>Subtotal linie (qty × unit_price)</td></tr>
+  <tr><td>line_total</td><td>decimal(15,4)</td><td>NU</td><td>0</td><td>Total linie după reducere</td></tr>
+  <tr><td>created_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data creării</td></tr>
+  <tr><td>updated_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data ultimei modificări</td></tr>
+</table>
+<p><strong>Indecși:</strong> INDEX(offer_id, position), INDEX(woo_product_id)</p>
+<p><strong>FK:</strong> offer_id → offers.id (CASCADE DELETE); woo_product_id → woo_products.id (SET NULL ON DELETE)</p>
+
+<!-- ============================================================ -->
+<h3>Tabela: <code>customers</code></h3>
+<table>
+  <tr><th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+  <tr><td>id</td><td>bigint unsigned AUTO_INCREMENT</td><td>NU</td><td>—</td><td>Cheie primară</td></tr>
+  <tr><td>location_id</td><td>bigint unsigned</td><td>NU</td><td>—</td><td>FK → locations.id (CASCADE DELETE)</td></tr>
+  <tr><td>type</td><td>varchar(32)</td><td>NU</td><td>'individual'</td><td>Tipul clientului: individual sau company</td></tr>
+  <tr><td>name</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Numele persoanei sau firmei</td></tr>
+  <tr><td>representative_name</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Reprezentantul legal (pentru firme)</td></tr>
+  <tr><td>phone</td><td>varchar(64)</td><td>DA</td><td>NULL</td><td>Telefon principal</td></tr>
+  <tr><td>email</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Email principal</td></tr>
+  <tr><td>cui</td><td>varchar(64)</td><td>DA</td><td>NULL</td><td>CUI/CIF (pentru persoane juridice)</td></tr>
+  <tr><td>is_vat_payer</td><td>tinyint(1)</td><td>DA</td><td>NULL</td><td>Plătitor TVA</td></tr>
+  <tr><td>registration_number</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Nr. Registrul Comerțului</td></tr>
+  <tr><td>address</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Adresa principală</td></tr>
+  <tr><td>city</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Orașul</td></tr>
+  <tr><td>county</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Județul</td></tr>
+  <tr><td>postal_code</td><td>varchar(32)</td><td>DA</td><td>NULL</td><td>Codul poștal</td></tr>
+  <tr><td>notes</td><td>text</td><td>DA</td><td>NULL</td><td>Note interne</td></tr>
+  <tr><td>is_active</td><td>tinyint(1)</td><td>NU</td><td>1</td><td>Client activ</td></tr>
+  <tr><td>created_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data creării</td></tr>
+  <tr><td>updated_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data ultimei modificări</td></tr>
+</table>
+<p><strong>Indecși:</strong> INDEX(location_id, type), INDEX(location_id, name), INDEX(cui), INDEX(is_active)</p>
+<p><strong>FK:</strong> location_id → locations.id (CASCADE DELETE)</p>
+
+<!-- ============================================================ -->
+<h3>Tabela: <code>customer_delivery_addresses</code></h3>
+<table>
+  <tr><th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+  <tr><td>id</td><td>bigint unsigned AUTO_INCREMENT</td><td>NU</td><td>—</td><td>Cheie primară</td></tr>
+  <tr><td>customer_id</td><td>bigint unsigned</td><td>NU</td><td>—</td><td>FK → customers.id (CASCADE DELETE)</td></tr>
+  <tr><td>label</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Eticheta adresei (ex: Sediu central, Depozit)</td></tr>
+  <tr><td>contact_name</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Numele persoanei de contact la această adresă</td></tr>
+  <tr><td>contact_phone</td><td>varchar(64)</td><td>DA</td><td>NULL</td><td>Telefonul persoanei de contact la această adresă</td></tr>
+  <tr><td>address</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Strada și numărul</td></tr>
+  <tr><td>city</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Orașul</td></tr>
+  <tr><td>county</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Județul</td></tr>
+  <tr><td>postal_code</td><td>varchar(32)</td><td>DA</td><td>NULL</td><td>Codul poștal</td></tr>
+  <tr><td>position</td><td>int unsigned</td><td>NU</td><td>0</td><td>Ordinea de afișare a adresei</td></tr>
+  <tr><td>is_active</td><td>tinyint(1)</td><td>NU</td><td>1</td><td>Adresă activă</td></tr>
+  <tr><td>created_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data creării</td></tr>
+  <tr><td>updated_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data ultimei modificări</td></tr>
+</table>
+<p><strong>Indecși:</strong> INDEX(customer_id, position), INDEX(customer_id, is_active)</p>
+<p><strong>FK:</strong> customer_id → customers.id (CASCADE DELETE)</p>
+
+<!-- ============================================================ -->
+<h3>Tabela: <code>sameday_awbs</code></h3>
+<table>
+  <tr><th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th></tr>
+  <tr><td>id</td><td>bigint unsigned AUTO_INCREMENT</td><td>NU</td><td>—</td><td>Cheie primară</td></tr>
+  <tr><td>location_id</td><td>bigint unsigned</td><td>NU</td><td>—</td><td>FK → locations.id (CASCADE DELETE); locația expeditoare</td></tr>
+  <tr><td>user_id</td><td>bigint unsigned</td><td>DA</td><td>NULL</td><td>FK → users.id (SET NULL ON DELETE); utilizatorul care a creat AWB-ul</td></tr>
+  <tr><td>integration_connection_id</td><td>bigint unsigned</td><td>DA</td><td>NULL</td><td>FK → integration_connections.id (SET NULL ON DELETE)</td></tr>
+  <tr><td>woo_order_id</td><td>bigint unsigned</td><td>DA</td><td>NULL</td><td>FK → woo_orders.id (SET NULL ON DELETE); comanda WooCommerce asociată</td></tr>
+  <tr><td>provider</td><td>varchar(255)</td><td>NU</td><td>'sameday'</td><td>Curier: sameday (extensibil)</td></tr>
+  <tr><td>status</td><td>varchar(255)</td><td>NU</td><td>'created'</td><td>Status AWB: created, printed, in_transit, delivered, returned, cancelled</td></tr>
+  <tr><td>awb_number</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Numărul AWB alocat de curier</td></tr>
+  <tr><td>service_id</td><td>bigint unsigned</td><td>DA</td><td>NULL</td><td>ID serviciu curier (ex: Standard, Express)</td></tr>
+  <tr><td>pickup_point_id</td><td>bigint unsigned</td><td>DA</td><td>NULL</td><td>ID punct de ridicare Sameday</td></tr>
+  <tr><td>recipient_name</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Numele destinatarului</td></tr>
+  <tr><td>recipient_phone</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Telefonul destinatarului</td></tr>
+  <tr><td>recipient_email</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Email destinatar</td></tr>
+  <tr><td>recipient_county</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Județul destinatarului</td></tr>
+  <tr><td>recipient_city</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Orașul destinatarului</td></tr>
+  <tr><td>recipient_address</td><td>varchar(255)</td><td>NU</td><td>—</td><td>Adresa destinatarului</td></tr>
+  <tr><td>recipient_postal_code</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Codul poștal destinatar</td></tr>
+  <tr><td>package_count</td><td>int unsigned</td><td>NU</td><td>1</td><td>Numărul de colete</td></tr>
+  <tr><td>package_weight_kg</td><td>decimal(8,3)</td><td>NU</td><td>—</td><td>Greutatea totală în kg</td></tr>
+  <tr><td>cod_amount</td><td>decimal(12,2)</td><td>DA</td><td>NULL</td><td>Suma ramburs (COD); NULL dacă nu este ramburs</td></tr>
+  <tr><td>insured_value</td><td>decimal(12,2)</td><td>DA</td><td>NULL</td><td>Valoarea asigurată a coletului</td></tr>
+  <tr><td>shipping_cost</td><td>decimal(12,2)</td><td>DA</td><td>NULL</td><td>Costul transportului (returnat de API)</td></tr>
+  <tr><td>reference</td><td>varchar(255)</td><td>DA</td><td>NULL</td><td>Referința internă (ex: nr. comandă)</td></tr>
+  <tr><td>observation</td><td>text</td><td>DA</td><td>NULL</td><td>Observații curier</td></tr>
+  <tr><td>request_payload</td><td>json</td><td>DA</td><td>NULL</td><td>Payload trimis la API Sameday</td></tr>
+  <tr><td>response_payload</td><td>json</td><td>DA</td><td>NULL</td><td>Răspunsul API Sameday</td></tr>
+  <tr><td>error_message</td><td>text</td><td>DA</td><td>NULL</td><td>Mesaj de eroare dacă crearea AWB a eșuat</td></tr>
+  <tr><td>created_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data creării</td></tr>
+  <tr><td>updated_at</td><td>timestamp</td><td>DA</td><td>NULL</td><td>Data ultimei modificări</td></tr>
+</table>
+<p><strong>Indecși:</strong> INDEX(location_id, status), INDEX(provider, awb_number), INDEX(woo_order_id)</p>
+<p><strong>FK:</strong>
+  location_id → locations.id (CASCADE DELETE);
+  user_id → users.id (SET NULL ON DELETE);
+  integration_connection_id → integration_connections.id (SET NULL ON DELETE);
+  woo_order_id → woo_orders.id (SET NULL ON DELETE)
+</p>

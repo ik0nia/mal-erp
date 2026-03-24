@@ -1,0 +1,627 @@
+<style>
+  .doc-section { margin-bottom: 3rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 2rem; }
+  .doc-section h3 { font-size: 1.4rem; font-weight: 700; color: #1e3a5f; margin-bottom: 0.4rem; }
+  .doc-section h4 { font-size: 1rem; font-weight: 600; color: #374151; margin-top: 1.2rem; margin-bottom: 0.4rem; }
+  .doc-section p { margin: 0.2rem 0 0.6rem; color: #374151; font-size: 0.9rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-bottom: 1rem; }
+  th { background: #f3f4f6; padding: 0.45rem 0.6rem; text-align: left; border: 1px solid #d1d5db; font-weight: 600; }
+  td { padding: 0.4rem 0.6rem; border: 1px solid #e5e7eb; vertical-align: top; }
+  tr:nth-child(even) td { background: #fafafa; }
+  .badge { display: inline-block; padding: 1px 7px; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; }
+  .badge-yes { background: #dcfce7; color: #166534; }
+  .badge-no  { background: #fee2e2; color: #991b1b; }
+  .badge-cond { background: #fef9c3; color: #854d0e; }
+  ul.plain { list-style: none; margin: 0; padding: 0; }
+  ul.plain li { padding: 1px 0; }
+</style>
+
+<h2 style="font-size:1.6rem;font-weight:800;color:#111827;margin-bottom:1.5rem;">Filament Resources — App Panel</h2>
+<p style="color:#6b7280;margin-bottom:2rem;">Documentatie completa a campurilor, validarilor, filtrelor si actiunilor disponibile in panoul App (<code>app/Filament/App/Resources/</code>).</p>
+
+<!-- =============================================================== -->
+<section id="t8-woo-product-resource" class="doc-section">
+<h3>WooProductResource</h3>
+<p><strong>Model:</strong> <code>WooProduct</code> | <strong>URL slug:</strong> <code>/produse</code> | <strong>Nav group:</strong> Administrare magazin | <strong>Nav sort:</strong> 20 | <strong>Icon:</strong> heroicon-o-shopping-bag</p>
+<p><strong>Traits:</strong> <code>EnforcesLocationScope</code>, <code>ChecksRolePermissions</code>, <code>HasDynamicNavSort</code></p>
+
+<h4>Permisiuni</h4>
+<table>
+  <tr><th>Operatie</th><th>Conditie</th></tr>
+  <tr><td>canViewAny</td><td>auth()-&gt;check()</td></tr>
+  <tr><td>canCreate</td><td><strong>false</strong> — creare dezactivata</td></tr>
+  <tr><td>canView</td><td>auth()-&gt;check()</td></tr>
+  <tr><td>canEdit</td><td>super_admin SAU role = manager</td></tr>
+  <tr><td>canDelete</td><td><strong>false</strong> — stergere dezactivata</td></tr>
+</table>
+
+<h4>Campuri formular (EditWooProduct)</h4>
+<table>
+  <tr><th>Camp</th><th>Tip Filament</th><th>Label</th><th>Required</th><th>Validari</th><th>Valori acceptate</th><th>Descriere</th></tr>
+  <tr><td>name</td><td>TextInput</td><td>Denumire</td><td><span class="badge badge-yes">DA</span></td><td>maxLength(255)</td><td>—</td><td>Denumirea produsului pe site; columnSpanFull</td></tr>
+  <tr><td>winmentor_name</td><td>TextInput (disabled)</td><td>Denumire WinMentor</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>—</td><td>Readonly, completat automat din import WinMentor; dehydrated(false)</td></tr>
+  <tr><td>brand</td><td>TextInput</td><td>Brand / Producator</td><td><span class="badge badge-no">NU</span></td><td>maxLength(255)</td><td>—</td><td>Text liber; daca exista Brand cu acelasi nume, logo-ul este afisat in view</td></tr>
+  <tr><td>unit</td><td>Select</td><td>Unitate de masura</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>buc, kg, g, m, m2, m3, l, ml, set, pac, role</td><td>UM afisata pe fisa produsului</td></tr>
+  <tr><td>weight</td><td>TextInput</td><td>Greutate (kg)</td><td><span class="badge badge-no">NU</span></td><td>maxLength(20)</td><td>—</td><td>Greutate in kilograme</td></tr>
+  <tr><td>dim_length</td><td>TextInput</td><td>Lungime (cm)</td><td><span class="badge badge-no">NU</span></td><td>maxLength(20)</td><td>—</td><td>Dimensiune lungime</td></tr>
+  <tr><td>dim_width</td><td>TextInput</td><td>Latime (cm)</td><td><span class="badge badge-no">NU</span></td><td>maxLength(20)</td><td>—</td><td>Dimensiune latime</td></tr>
+  <tr><td>dim_height</td><td>TextInput</td><td>Inaltime (cm)</td><td><span class="badge badge-no">NU</span></td><td>maxLength(20)</td><td>—</td><td>Dimensiune inaltime</td></tr>
+  <tr><td>product_type</td><td>Select</td><td>Tip produs (BI)</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>WooProduct::productTypeOptions() — shop, production, warranty_pallet etc.</td><td>Clasificare BI; production si warranty_pallet excluse din rapoarte</td></tr>
+  <tr><td>erp_notes</td><td>Textarea</td><td>Notite interne ERP</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>—</td><td>Note interne; contine tag [web-enriched] daca produsul a fost imbogatit</td></tr>
+  <tr><td>categories</td><td>Select (multiple)</td><td>Categorii</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>WooCategory (relatie many-to-many)</td><td>Categorii WooCommerce asociate produsului; searchable, preload</td></tr>
+  <tr><td>attributesRelation</td><td>Repeater (relatie)</td><td>Atribute tehnice</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>—</td><td>Reordonabile pe coloana position; addActionLabel "Adauga atribut"</td></tr>
+  <tr><td>attributesRelation -&gt; name</td><td>TextInput</td><td>Atribut</td><td><span class="badge badge-yes">DA</span></td><td>maxLength(100)</td><td>datalist cu atribute cunoscute din GenerateProductAttributesCommand</td><td>Numele atributului (ex: Material, Putere)</td></tr>
+  <tr><td>attributesRelation -&gt; value</td><td>TextInput</td><td>Valoare</td><td><span class="badge badge-yes">DA</span></td><td>maxLength(255)</td><td>—</td><td>Valoarea atributului (ex: Cupru, 4.5W)</td></tr>
+  <tr><td>suppliers_data</td><td>Repeater (JSON)</td><td>Furnizori</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>—</td><td>Lista furnizorilor asociati produsului cu detalii pivot; default([])</td></tr>
+  <tr><td>suppliers_data -&gt; supplier_id</td><td>Select</td><td>Furnizor</td><td><span class="badge badge-yes">DA</span></td><td>—</td><td>Furnizori activi (is_active=true)</td><td>Furnizorul asociat; searchable; columnSpanFull</td></tr>
+  <tr><td>suppliers_data -&gt; supplier_sku</td><td>TextInput</td><td>SKU furnizor</td><td><span class="badge badge-no">NU</span></td><td>maxLength(100)</td><td>—</td><td>Codul produsului in catalogul furnizorului</td></tr>
+  <tr><td>suppliers_data -&gt; purchase_price</td><td>TextInput</td><td>Pret achizitie</td><td><span class="badge badge-no">NU</span></td><td>numeric, step(0.0001)</td><td>—</td><td>Pretul de achizitie de la furnizor</td></tr>
+  <tr><td>suppliers_data -&gt; currency</td><td>Select</td><td>Moneda</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>RON, EUR, USD</td><td>Moneda pretului de achizitie; default RON</td></tr>
+  <tr><td>suppliers_data -&gt; lead_days</td><td>TextInput</td><td>Zile livrare</td><td><span class="badge badge-no">NU</span></td><td>numeric, minValue(0)</td><td>—</td><td>Numarul de zile pentru livrarea de la furnizor</td></tr>
+  <tr><td>suppliers_data -&gt; min_order_qty</td><td>TextInput</td><td>Cant. minima</td><td><span class="badge badge-no">NU</span></td><td>numeric, minValue(0)</td><td>—</td><td>Cantitatea minima de comanda</td></tr>
+  <tr><td>suppliers_data -&gt; po_max_qty</td><td>TextInput</td><td>Cant. max PO (fara aprobare)</td><td><span class="badge badge-no">NU</span></td><td>numeric, minValue(0)</td><td>—</td><td>Cantitatea maxima per PO fara aprobare; correlata cu Supplier::po_approval_threshold</td></tr>
+  <tr><td>suppliers_data -&gt; is_preferred</td><td>Toggle</td><td>Furnizor preferat</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>true/false</td><td>Marcheaza furnizorul preferat; afisat in coloana tabel</td></tr>
+  <tr><td>suppliers_data -&gt; notes</td><td>Textarea</td><td>Notite</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>—</td><td>Note specifice relatiei produs-furnizor</td></tr>
+  <tr><td>is_on_demand</td><td>Toggle</td><td>La comanda (fara stoc fizic)</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>true/false</td><td>Activare mod on-demand; afterStateHydrated din procurement_type</td></tr>
+  <tr><td>on_demand_label</td><td>TextInput</td><td>Mesaj disponibilitate</td><td><span class="badge badge-no">NU</span></td><td>maxLength(100)</td><td>—</td><td>Mesaj afisat pe site; vizibil doar daca is_on_demand=true</td></tr>
+  <tr><td>is_discontinued</td><td>Toggle</td><td>Fara reaprovizionare</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>true/false</td><td>Exclus din Necesar Marfa; nu se mai achizitioneaza</td></tr>
+  <tr><td>discontinued_reason</td><td>Textarea</td><td>Motiv</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>—</td><td>Vizibil doar daca is_discontinued=true</td></tr>
+</table>
+
+<h4>Coloane tabel (ListWooProducts)</h4>
+<table>
+  <tr><th>Camp</th><th>Tip coloana</th><th>Label</th><th>Sortabil</th><th>Cautabil</th><th>Toggleable</th><th>Note</th></tr>
+  <tr><td>main_image_url</td><td>ImageColumn</td><td>Imagine</td><td>—</td><td>—</td><td>—</td><td>56px square, placeholder placehold.co; ascuns pe mobile (hidden sm:table-cell)</td></tr>
+  <tr><td>name</td><td>TextColumn</td><td>Produs</td><td>DA</td><td>DA (custom fulltext)</td><td>—</td><td>Afiseaza decoded_name (entitati HTML decodate)</td></tr>
+  <tr><td>winmentor_name</td><td>TextColumn</td><td>Denumire WinMentor</td><td>—</td><td>DA</td><td>DA (ascuns implicit)</td><td>—</td></tr>
+  <tr><td>source</td><td>TextColumn badge</td><td>Sursa</td><td>—</td><td>—</td><td>DA</td><td>WooCommerce (verde) sau ERP/contabilitate (portocaliu); ascuns pe mobile</td></tr>
+  <tr><td>sku</td><td>TextColumn</td><td>SKU</td><td>—</td><td>—</td><td>DA</td><td>—</td></tr>
+  <tr><td>preferred_supplier</td><td>TextColumn badge (gri)</td><td>Furnizor</td><td>—</td><td>—</td><td>DA</td><td>Furnizorul marcat is_preferred sau primul furnizor</td></tr>
+  <tr><td>price</td><td>TextColumn</td><td>Pret</td><td>—</td><td>—</td><td>—</td><td>Pretul curent WooCommerce</td></tr>
+  <tr><td>stock_status</td><td>TextColumn badge</td><td>Stoc</td><td>—</td><td>—</td><td>—</td><td>instock/outofstock/onbackorder</td></tr>
+  <tr><td>procurement_type</td><td>TextColumn badge</td><td>Aprovizionare</td><td>—</td><td>—</td><td>DA (ascuns implicit)</td><td>on_demand = portocaliu "La comanda"; stock = gri</td></tr>
+  <tr><td>is_discontinued</td><td>IconColumn</td><td>Fara reaprov.</td><td>—</td><td>—</td><td>DA (ascuns implicit)</td><td>Icona rosie heroicon-o-archive-box-x-mark daca true; falseIcon gol</td></tr>
+  <tr><td>categories_list</td><td>TextColumn</td><td>Categorii</td><td>—</td><td>—</td><td>DA</td><td>Lista categoriilor; ascuns pe mobile/tablet (hidden lg:table-cell)</td></tr>
+  <tr><td>product_type</td><td>SelectColumn</td><td>Tip produs</td><td>—</td><td>—</td><td>DA</td><td>EditLive inline in tabel</td></tr>
+  <tr><td>updated_at</td><td>TextColumn</td><td>Actualizat</td><td>DA</td><td>—</td><td>—</td><td>Format d.m.Y H:i:s; ascuns pe mobile</td></tr>
+</table>
+
+<h4>Filtre (deasupra tabelului, layout AboveContent, 2/3/5 coloane responsive)</h4>
+<table>
+  <tr><th>Filtru</th><th>Tip</th><th>Optiuni</th></tr>
+  <tr><td>product_type</td><td>SelectFilter</td><td>WooProduct::productTypeOptions()</td></tr>
+  <tr><td>source</td><td>SelectFilter</td><td>woocommerce, winmentor_csv</td></tr>
+  <tr><td>stock_status</td><td>SelectFilter</td><td>instock, outofstock, onbackorder</td></tr>
+  <tr><td>is_discontinued</td><td>TernaryFilter</td><td>Toate / Fara reaprovizionare / Cu reaprovizionare</td></tr>
+  <tr><td>procurement_type_filter</td><td>TernaryFilter</td><td>Toate / Doar la comanda / Fara "la comanda"</td></tr>
+  <tr><td>web_enriched</td><td>TernaryFilter</td><td>Toate / Da (EAN lookup) / Nu — bazat pe erp_notes LIKE '%[web-enriched]%'</td></tr>
+  <tr><td>has_image</td><td>TernaryFilter</td><td>Toate / Cu imagine / Fara imagine</td></tr>
+  <tr><td>category_id</td><td>SelectFilter</td><td>WooCategory; filtrat per locatie utilizator; query pe relatia categories</td></tr>
+</table>
+<p>Filtrele sunt persistate in sesiune (persistFiltersInSession()); searchDebounce 800ms.</p>
+
+<h4>Actiuni row (ListWooProducts)</h4>
+<table>
+  <tr><th>Actiune</th><th>Label</th><th>Tip</th><th>Conditie vizibilitate</th><th>Comportament</th></tr>
+  <tr><td>add_to_necesar</td><td>Necesar</td><td>Action (buton portocaliu, icon-only)</td><td>Toti utilizatorii autentificati</td><td>Modal cu: cantitate (numeric, min 0.001, default 1, butoane +/-), toggle Urgent, camp Note. Adauga la PurchaseRequest draft al utilizatorului; daca produsul exista deja, cumuleaza cantitatea. Notificare succes cu link "Deschide cosul".</td></tr>
+</table>
+
+<h4>Actiuni infolist (ViewWooProduct)</h4>
+<table>
+  <tr><th>Actiune</th><th>Label</th><th>Conditie</th><th>Comportament</th></tr>
+  <tr><td>edit</td><td>Editeaza</td><td>canEdit(record) = super_admin sau manager</td><td>Redirect la EditWooProduct</td></tr>
+  <tr><td>contact_supplier</td><td>Contact furnizor</td><td>Produsul are furnizori asociati</td><td>Modal read-only cu date contact furnizori (telefon, email, website, SKU, pret achizitie, CUI, persoane de contact cu badge "Principal")</td></tr>
+  <tr><td>toggle_site_status</td><td>Trece in draft / Publica pe site</td><td>Produs cu woo_id si connection_id; rol admin sau manager</td><td>Confirmare; apeleaza WooClient::updateProductStatus(); verifica statusul confirmat in raspuns; actualizeaza local. Eroare daca WooCommerce nu confirma.</td></tr>
+  <tr><td>review_request</td><td>Reverificare</td><td>Toti utilizatorii autentificati</td><td>Modal cu: mesaj (Textarea, required, max 2000) si poza optionala (FileUpload, image, max 20MB, disk public). Creeaza ProductReviewRequest cu status pending.</td></tr>
+  <tr><td>associate_supplier</td><td>Asociaza furnizor</td><td>Produsul NU are furnizori asociati</td><td>Modal cu Select furnizor (searchable; cu optiune inline creare furnizor nou). Asociaza prin pivot si logheaza in ProductSupplierLog.</td></tr>
+  <tr><td>toggle_no_reorder</td><td>Fara reaprovizionare / Reactiveaza reaprovizionarea</td><td>Admin, manager, director_vanzari</td><td>Confirmare + camp motiv optional. Toggle is_discontinued pe produs.</td></tr>
+  <tr><td>toggle_on_demand</td><td>Marcheaza "La comanda" / Scoate din "La comanda"</td><td>Admin, manager, director_vanzari</td><td>Confirmare + mesaj disponibilitate optional. Schimba procurement_type; daca are woo_id apeleaza WooClient::updateProduct() pentru backorders on/off.</td></tr>
+  <tr><td>add_to_necesar (infolist)</td><td>Adauga la necesar</td><td>Toti autentificati</td><td>Buton portocaliu in product_header; identic cu actiunea row</td></tr>
+  <tr><td>resync_from_woo</td><td>(icon resync)</td><td>Admin/manager/director_vanzari; produs cu woo_id si connection_id</td><td>Buton inline HTML in header produs (violet, iconita WooCommerce); declanseaza mountAction('resync_from_woo')</td></tr>
+</table>
+
+<h4>Sectiuni infolist (ViewWooProduct)</h4>
+<table>
+  <tr><th>Sectiune</th><th>Continut</th><th>Conditie vizibilitate</th></tr>
+  <tr><td>product_header (ViewEntry)</td><td>Imagine mare, bulina status site, brand logo/badge, denumire + pret (regular/sale), SKU, sursa, stoc WooCommerce, stoc WinMentor (suma per locatie), barcode, buton "Adauga la necesar", descriere scurta</td><td>Intotdeauna</td></tr>
+  <tr><td>Denumire WinMentor</td><td>TextEntry winmentor_name</td><td>Ascuns daca winmentor_name este gol</td></tr>
+  <tr><td>Descriere</td><td>TextEntry description (HTML)</td><td>RolePermission::check('woo_product_section_descriere')</td></tr>
+  <tr><td>Atribute tehnice</td><td>Tabel HTML cu atributele produsului</td><td>RolePermission::check('woo_product_section_atribute_tehnice')</td></tr>
+  <tr><td>Istoric variatie stoc</td><td>Tabel 10 vizibile / 30 cu scroll din daily_stock_metrics</td><td>RolePermission::check('woo_product_section_istoric_stoc')</td></tr>
+  <tr><td>Rezumat variatii</td><td>2 carduri (cantitate + valoare) din daily_stock_metrics</td><td>RolePermission::check('woo_product_section_rezumat_variatii')</td></tr>
+  <tr><td>Payload brut (Woo)</td><td>JSON pretty-print al coloanei data; collapsible + collapsed implicit</td><td>RolePermission::check('woo_product_section_payload_brut')</td></tr>
+</table>
+
+<h4>Filtrare Eloquent</h4>
+<p>super_admin vede toate produsele; ceilalti vad doar produse din locatiile lor operationale (whereHas('connection', location_id IN ...)). Eager-loading: connection.location, categories, suppliers.contacts.</p>
+
+<h4>Cautare optimizata (applyOptimizedSearch)</h4>
+<p>Termeni separati prin spatiu; fiecare termen aplicat ca AND pe: woo_products.name, winmentor_name, sku, slug, categorii (whereHas). Evita injectii SQL prin escape % si _.</p>
+
+<h4>Pagini definite</h4>
+<ul class="plain">
+  <li>index → ListWooProducts (/produse)</li>
+  <li>view → ViewWooProduct (/produse/{record})</li>
+  <li>edit → EditWooProduct (/produse/{record}/edit)</li>
+</ul>
+</section>
+
+<!-- =============================================================== -->
+<section id="t8-supplier-resource" class="doc-section">
+<h3>SupplierResource</h3>
+<p><strong>Model:</strong> <code>Supplier</code> | <strong>URL:</strong> /suppliers | <strong>Nav group:</strong> Achizitii | <strong>Nav sort:</strong> 4 | <strong>Icon:</strong> heroicon-o-truck</p>
+<p><strong>Traits:</strong> <code>ChecksRolePermissions</code>, <code>HasDynamicNavSort</code></p>
+
+<h4>Permisiuni</h4>
+<table>
+  <tr><th>Operatie</th><th>Conditie</th></tr>
+  <tr><td>canViewAny</td><td>ChecksRolePermissions (implicit autentificat + permisiune rola)</td></tr>
+  <tr><td>canCreate</td><td>Implicit Filament — autentificat</td></tr>
+  <tr><td>canEdit</td><td>Implicit Filament — autentificat</td></tr>
+  <tr><td>canDelete</td><td>Furnizorul NU are produse asociate (<code>!$record-&gt;products()-&gt;exists()</code>)</td></tr>
+</table>
+
+<h4>Campuri formular — Sectiunea "Informatii generale"</h4>
+<table>
+  <tr><th>Camp</th><th>Tip</th><th>Label</th><th>Required</th><th>Validari</th><th>Note</th></tr>
+  <tr><td>name</td><td>TextInput</td><td>Nume furnizor</td><td><span class="badge badge-yes">DA</span></td><td>maxLength(255)</td><td>—</td></tr>
+  <tr><td>website_url</td><td>TextInput</td><td>Website</td><td><span class="badge badge-no">NU</span></td><td>url, maxLength(255)</td><td>—</td></tr>
+  <tr><td>address</td><td>Textarea</td><td>Adresa</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>—</td></tr>
+  <tr><td>is_active</td><td>Toggle</td><td>Activ</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>default true</td></tr>
+</table>
+
+<h4>Campuri formular — Sectiunea "Date fiscale si bancare"</h4>
+<table>
+  <tr><th>Camp</th><th>Tip</th><th>Label</th><th>Required</th><th>Validari</th></tr>
+  <tr><td>vat_number</td><td>TextInput</td><td>CUI / CIF</td><td><span class="badge badge-no">NU</span></td><td>maxLength(50)</td></tr>
+  <tr><td>reg_number</td><td>TextInput</td><td>Nr. Reg. Com.</td><td><span class="badge badge-no">NU</span></td><td>maxLength(50)</td></tr>
+  <tr><td>bank_account</td><td>TextInput</td><td>IBAN</td><td><span class="badge badge-no">NU</span></td><td>maxLength(50)</td></tr>
+  <tr><td>bank_name</td><td>TextInput</td><td>Banca</td><td><span class="badge badge-no">NU</span></td><td>maxLength(255)</td></tr>
+</table>
+
+<h4>Campuri formular — Sectiunea "Configurare achizitii"</h4>
+<table>
+  <tr><th>Camp</th><th>Tip</th><th>Label</th><th>Required</th><th>Validari</th><th>Note</th></tr>
+  <tr><td>buyer_id</td><td>Select</td><td>Responsabil achizitii (Buyer)</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>Utilizatori cu roluri buyer sau manager; nullable</td></tr>
+  <tr><td>po_approval_threshold</td><td>TextInput</td><td>Plafon maxim PO fara aprobare (RON)</td><td><span class="badge badge-no">NU</span></td><td>numeric</td><td>PO-urile cu total peste prag necesita aprobare manageriala</td></tr>
+  <tr><td>notes</td><td>Textarea</td><td>(fara label)</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>Notite interne despre furnizor</td></tr>
+</table>
+
+<h4>Campuri formular — Sectiunea "Conditii comerciale" (cu sub-sectiuni/tabs)</h4>
+<p>Toate campurile sunt stocate in coloana JSON <code>conditions</code>. Sectiunea este collapsible.</p>
+<table>
+  <tr><th>Path JSON</th><th>Tip</th><th>Label</th><th>Validari</th><th>Valori</th></tr>
+  <tr><td colspan="5" style="background:#f9fafb;font-weight:600;">— Tab Livrare —</td></tr>
+  <tr><td>conditions.delivery.lead_days_standard</td><td>TextInput</td><td>Lead time standard (zile)</td><td>numeric, minValue(0)</td><td>—</td></tr>
+  <tr><td>conditions.delivery.lead_days_urgent</td><td>TextInput</td><td>Lead time urgent (zile)</td><td>numeric, minValue(0)</td><td>—</td></tr>
+  <tr><td>conditions.delivery.order_cutoff_time</td><td>TextInput</td><td>Ora limita comanda</td><td>—</td><td>—</td></tr>
+  <tr><td>conditions.delivery.order_days</td><td>Select (multiple)</td><td>Zile preluare comenzi</td><td>—</td><td>mon, tue, wed, thu, fri, sat, sun</td></tr>
+  <tr><td>conditions.delivery.delivery_days</td><td>Select (multiple)</td><td>Zile livrare</td><td>—</td><td>mon, tue, wed, thu, fri, sat, sun</td></tr>
+  <tr><td>conditions.delivery.pickup_available</td><td>Toggle</td><td>Ridicare din depozit propriu</td><td>—</td><td>—</td></tr>
+  <tr><td>conditions.delivery.pickup_address</td><td>TextInput</td><td>Adresa depozit ridicare</td><td>—</td><td>—</td></tr>
+  <tr><td>conditions.delivery.note</td><td>Textarea</td><td>Note livrare</td><td>—</td><td>—</td></tr>
+  <tr><td colspan="5" style="background:#f9fafb;font-weight:600;">— Tab Comenzi —</td></tr>
+  <tr><td>conditions.ordering.order_methods</td><td>Select (multiple)</td><td>Metode de plasare comenzi</td><td>—</td><td>email, portal, phone, whatsapp, edi, in_person</td></tr>
+  <tr><td>conditions.ordering.preferred_method</td><td>Select</td><td>Metoda preferata</td><td>—</td><td>email, portal, phone, whatsapp, edi, in_person</td></tr>
+  <tr><td>conditions.ordering.portal_url</td><td>TextInput</td><td>URL portal comenzi</td><td>url</td><td>—</td></tr>
+  <tr><td>conditions.ordering.order_email</td><td>TextInput</td><td>Email comenzi</td><td>email</td><td>—</td></tr>
+  <tr><td>conditions.ordering.order_phone</td><td>TextInput</td><td>Telefon comenzi</td><td>—</td><td>—</td></tr>
+  <tr><td>conditions.ordering.order_whatsapp</td><td>TextInput</td><td>WhatsApp comenzi</td><td>—</td><td>—</td></tr>
+  <tr><td>conditions.ordering.portal_username</td><td>TextInput</td><td>User portal</td><td>—</td><td>—</td></tr>
+  <tr><td>conditions.ordering.min_order_value</td><td>TextInput</td><td>Valoare minima comanda (RON)</td><td>numeric, minValue(0)</td><td>—</td></tr>
+  <tr><td>conditions.ordering.min_order_qty_lines</td><td>TextInput</td><td>Nr. minim linii</td><td>numeric, minValue(0)</td><td>—</td></tr>
+  <tr><td>conditions.ordering.below_minimum_surcharge</td><td>TextInput</td><td>Suprataxa sub minim (RON)</td><td>numeric, minValue(0)</td><td>—</td></tr>
+  <tr><td>conditions.ordering.note</td><td>Textarea</td><td>Note comenzi</td><td>—</td><td>—</td></tr>
+  <tr><td colspan="5" style="background:#f9fafb;font-weight:600;">— Tab Transport —</td></tr>
+  <tr><td>conditions.transport.incoterm</td><td>Select</td><td>Incoterm</td><td>—</td><td>EXW, FCA, CPT, CIP, DAP, DPU, DDP, FOB, CFR, CIF</td></tr>
+  <tr><td>conditions.transport.transport_paid_by</td><td>Select</td><td>Transport platit de</td><td>—</td><td>supplier, buyer, split</td></tr>
+  <tr><td>conditions.transport.free_shipping_threshold</td><td>TextInput</td><td>Prag transport gratuit (RON)</td><td>numeric, minValue(0)</td><td>—</td></tr>
+  <tr><td>conditions.transport.shipping_cost_fixed</td><td>TextInput</td><td>Cost fix transport (RON)</td><td>numeric, minValue(0)</td><td>—</td></tr>
+  <tr><td>conditions.transport.carrier</td><td>TextInput</td><td>Curier / Transportator</td><td>—</td><td>—</td></tr>
+  <tr><td>conditions.transport.insurance_included</td><td>Toggle</td><td>Asigurare marfa inclusa</td><td>—</td><td>—</td></tr>
+  <tr><td>conditions.transport.note</td><td>Textarea</td><td>Note transport</td><td>—</td><td>—</td></tr>
+  <tr><td colspan="5" style="background:#f9fafb;font-weight:600;">— Tab Plata —</td></tr>
+  <tr><td>conditions.payment.payment_methods</td><td>Select (multiple)</td><td>Metode plata acceptate</td><td>—</td><td>bank_transfer, cash, card, check, bill_of_exchange, letter_of_credit, offset</td></tr>
+  <tr><td>conditions.payment.default_term</td><td>Select</td><td>Termen de plata</td><td>—</td><td>immediate, net_7, net_14, net_21, net_30, net_45, net_60, net_90, custom, advance_100</td></tr>
+  <tr><td>conditions.payment.net_days</td><td>TextInput</td><td>Zile termen custom</td><td>numeric, minValue(0)</td><td>—</td></tr>
+  <tr><td>conditions.payment.advance_percent</td><td>TextInput</td><td>Procent avans (%)</td><td>numeric, minValue(0), maxValue(100)</td><td>—</td></tr>
+  <tr><td>conditions.payment.currency</td><td>Select</td><td>Moneda facturare</td><td>—</td><td>RON, EUR, USD</td></tr>
+  <tr><td>conditions.payment.early_payment_discount</td><td>TextInput</td><td>Discount plata anticipata (%)</td><td>numeric, minValue(0), maxValue(100)</td><td>—</td></tr>
+  <tr><td>conditions.payment.early_payment_days</td><td>TextInput</td><td>Termen discount anticipat (zile)</td><td>numeric, minValue(0)</td><td>—</td></tr>
+  <tr><td>conditions.payment.late_penalty_percent</td><td>TextInput</td><td>Penalitate intarziere (%/zi)</td><td>numeric, minValue(0)</td><td>—</td></tr>
+  <tr><td>conditions.payment.fx_clause</td><td>Textarea</td><td>Clauza valutara</td><td>—</td><td>—</td></tr>
+  <tr><td>conditions.payment.note</td><td>Textarea</td><td>Note plata</td><td>—</td><td>—</td></tr>
+  <tr><td colspan="5" style="background:#f9fafb;font-weight:600;">— Tab Discounturi comerciale —</td></tr>
+  <tr><td>conditions.commercial.discount_percent</td><td>TextInput</td><td>Discount comercial general (%)</td><td>numeric, minValue(0), maxValue(100)</td><td>—</td></tr>
+  <tr><td>conditions.commercial.discount_type</td><td>Select</td><td>Aplicare discount</td><td>—</td><td>on_invoice, credit_note, prepaid_deduction</td></tr>
+  <tr><td>conditions.commercial.rebate_threshold_value</td><td>TextInput</td><td>Prag anual rabat (RON)</td><td>numeric, minValue(0)</td><td>—</td></tr>
+  <tr><td>conditions.commercial.rebate_percent</td><td>TextInput</td><td>% rabat la prag</td><td>numeric, minValue(0), maxValue(100)</td><td>—</td></tr>
+  <tr><td>conditions.commercial.quarterly_discount_percent</td><td>TextInput</td><td>Discount trimestrial (%)</td><td>numeric, minValue(0), maxValue(100)</td><td>—</td></tr>
+  <tr><td>conditions.commercial.promotional_discount</td><td>TextInput</td><td>Discount promotional (%)</td><td>numeric, minValue(0), maxValue(100)</td><td>—</td></tr>
+  <tr><td>conditions.commercial.promotional_until</td><td>DatePicker</td><td>Valabil pana la</td><td>—</td><td>—</td></tr>
+  <tr><td>conditions.commercial.volume_discounts (Repeater)</td><td>Repeater</td><td>Discounturi pe transe de volum</td><td>—</td><td>—</td></tr>
+  <tr><td>&nbsp;&nbsp;→ from_value</td><td>TextInput</td><td>De la valoare (RON)</td><td><span class="badge badge-yes">DA</span></td><td>numeric, minValue(0)</td></tr>
+  <tr><td>&nbsp;&nbsp;→ discount_percent</td><td>TextInput</td><td>Discount (%)</td><td><span class="badge badge-yes">DA</span></td><td>numeric, minValue(0), maxValue(100), suffix %</td></tr>
+  <tr><td>conditions.commercial.discount_note</td><td>Textarea</td><td>Note discount</td><td>—</td><td>—</td></tr>
+  <tr><td colspan="5" style="background:#f9fafb;font-weight:600;">— Tab Retururi si Garantie —</td></tr>
+  <tr><td>conditions.returns.return_allowed</td><td>Toggle</td><td>Retururi acceptate</td><td>—</td><td>—</td></tr>
+  <tr><td>conditions.returns.return_authorization_req</td><td>Toggle</td><td>Necesita autorizatie (RMA)</td><td>—</td><td>—</td></tr>
+  <tr><td>conditions.returns.return_window_days</td><td>TextInput</td><td>Fereastra retur (zile)</td><td>numeric, minValue(0)</td><td>—</td></tr>
+  <tr><td>conditions.returns.return_condition</td><td>Select</td><td>Conditie marfa returnata</td><td>—</td><td>original_packaging, undamaged, any</td></tr>
+  <tr><td>conditions.returns.return_restocking_fee</td><td>TextInput</td><td>Comision restocking (%)</td><td>numeric, minValue(0)</td><td>—</td></tr>
+  <tr><td>conditions.returns.return_email</td><td>TextInput</td><td>Email retururi</td><td>—</td><td>—</td></tr>
+  <tr><td>conditions.returns.return_note</td><td>Textarea</td><td>Procedura de retur</td><td>—</td><td>—</td></tr>
+  <tr><td>conditions.returns.warranty_months</td><td>TextInput</td><td>Garantie produse (luni)</td><td>numeric, minValue(0)</td><td>—</td></tr>
+  <tr><td>conditions.returns.warranty_type</td><td>Select</td><td>Tip garantie</td><td>—</td><td>manufacturer, supplier, distributor</td></tr>
+  <tr><td>conditions.returns.warranty_note</td><td>Textarea</td><td>Note garantie</td><td>—</td><td>—</td></tr>
+</table>
+
+<h4>Coloane tabel (ListSuppliers)</h4>
+<table>
+  <tr><th>Camp</th><th>Tip</th><th>Label</th><th>Sortabil</th><th>Cautabil</th><th>Toggleable</th></tr>
+  <tr><td>name</td><td>TextColumn</td><td>Furnizor</td><td>DA</td><td>DA</td><td>—</td></tr>
+  <tr><td>brands.logo_url</td><td>ImageColumn (stacked, limit 6)</td><td>Branduri</td><td>—</td><td>—</td><td>DA</td></tr>
+  <tr><td>contacts.name</td><td>TextColumn (limitList 1)</td><td>Contact principal</td><td>—</td><td>—</td><td>DA</td></tr>
+  <tr><td>contacts.phone</td><td>TextColumn (copyable, limitList 1)</td><td>Telefon</td><td>—</td><td>—</td><td>DA</td></tr>
+  <tr><td>vat_number</td><td>TextColumn</td><td>CUI</td><td>—</td><td>—</td><td>DA</td></tr>
+  <tr><td>buyer.name</td><td>TextColumn</td><td>Buyer</td><td>—</td><td>—</td><td>DA</td></tr>
+  <tr><td>is_active</td><td>IconColumn</td><td>Activ</td><td>—</td><td>—</td><td>—</td></tr>
+  <tr><td>products_count</td><td>TextColumn (counts)</td><td>Produse</td><td>DA</td><td>—</td><td>—</td></tr>
+  <tr><td>updated_at</td><td>TextColumn</td><td>Modificat</td><td>DA</td><td>—</td><td>DA</td></tr>
+</table>
+
+<h4>Filtre</h4>
+<table>
+  <tr><th>Filtru</th><th>Tip</th></tr>
+  <tr><td>is_active</td><td>TernaryFilter — Activ / Inactiv / Toate</td></tr>
+</table>
+
+<h4>Actiuni row</h4>
+<table>
+  <tr><th>Actiune</th><th>Label</th><th>Conditie</th><th>Comportament</th></tr>
+  <tr><td>ViewAction</td><td>Vizualizare</td><td>Toti</td><td>Redirect la ViewSupplier</td></tr>
+  <tr><td>EditAction</td><td>Editare</td><td>Toti</td><td>Redirect la EditSupplier</td></tr>
+  <tr><td>move_products</td><td>Muta produse</td><td>Furnizorul are produse asociate</td><td>Modal cu: Select furnizor destinatie (required), Radio mod (toate / selectare manuala), CheckboxList produse (vizibil daca mod=selected, required). Muta sau dezasociaza produse existente la destinatie in tranzactie DB.</td></tr>
+</table>
+
+<h4>Actiuni bulk</h4>
+<table>
+  <tr><th>Actiune</th><th>Conditie blocare</th></tr>
+  <tr><td>DeleteBulkAction</td><td>Blocata daca oricare furnizor selectat are produse asociate; afiseaza notificare danger cu lista numelor si anuleaza actiunea</td></tr>
+</table>
+
+<h4>Infolist (ViewSupplier)</h4>
+<p>Sectiuni: Informatii generale (name, is_active, website_url, buyer.name, address), Date fiscale (CUI, reg_number, IBAN, banca, po_approval_threshold), Notite, Conditii comerciale (5 sub-sectiuni livrare/comenzi/transport/plata/discounturi + retururi/garantie), Contacte (RepeatableEntry).</p>
+
+<h4>Relation Managers</h4>
+<ul class="plain">
+  <li><strong>ContactsRelationManager</strong> — CRUD contacte furnizor (name, role, phone, email, is_primary etc.)</li>
+  <li><strong>ProductsRelationManager</strong> — lista produselor asociate furnizorului (read-only sau editabile)</li>
+</ul>
+
+<h4>Pagini definite</h4>
+<ul class="plain">
+  <li>index → ListSuppliers</li>
+  <li>create → CreateSupplier</li>
+  <li>view → ViewSupplier</li>
+  <li>edit → EditSupplier</li>
+</ul>
+</section>
+
+<!-- =============================================================== -->
+<section id="t8-brand-resource" class="doc-section">
+<h3>BrandResource</h3>
+<p><strong>Model:</strong> <code>Brand</code> | <strong>URL:</strong> /brands | <strong>Nav group:</strong> Achizitii | <strong>Nav sort:</strong> 5 | <strong>Icon:</strong> heroicon-o-tag</p>
+<p><strong>Traits:</strong> <code>ChecksRolePermissions</code>, <code>HasDynamicNavSort</code></p>
+
+<h4>Campuri formular</h4>
+<table>
+  <tr><th>Camp</th><th>Tip</th><th>Label</th><th>Required</th><th>Validari</th><th>Note</th></tr>
+  <tr><td>name</td><td>TextInput</td><td>Nume brand</td><td><span class="badge badge-yes">DA</span></td><td>maxLength(255)</td><td>live(onBlur) → afterStateUpdated seteaza slug via Str::slug()</td></tr>
+  <tr><td>slug</td><td>TextInput</td><td>Slug</td><td><span class="badge badge-yes">DA</span></td><td>maxLength(255), unique(ignoreRecord)</td><td>Completat automat la modificarea numelui</td></tr>
+  <tr><td>website_url</td><td>TextInput</td><td>Website</td><td><span class="badge badge-no">NU</span></td><td>url, maxLength(255)</td><td>prefix "https://"; columnSpanFull</td></tr>
+  <tr><td>logo_url</td><td>TextInput</td><td>URL / cale logo</td><td><span class="badge badge-no">NU</span></td><td>maxLength(500)</td><td>URL complet sau cale relativa (brand-logos/nume.png); columnSpanFull</td></tr>
+  <tr><td>description</td><td>Textarea</td><td>Descriere scurta</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>rows(2); columnSpanFull</td></tr>
+  <tr><td>is_active</td><td>Toggle</td><td>Activ</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>default true; columnSpanFull</td></tr>
+  <tr><td>suppliers</td><td>Select (multiple)</td><td>Furnizori asociati</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>Relatie many-to-many cu Supplier; preload, searchable, optionsLimit 50</td></tr>
+</table>
+
+<h4>Coloane tabel</h4>
+<table>
+  <tr><th>Camp</th><th>Tip</th><th>Label</th><th>Sortabil</th><th>Cautabil</th><th>Toggleable</th></tr>
+  <tr><td>logo_url</td><td>ImageColumn (80x40, object-fit contain)</td><td>Logo</td><td>—</td><td>—</td><td>DA</td></tr>
+  <tr><td>name</td><td>TextColumn (bold)</td><td>Brand</td><td>DA</td><td>DA</td><td>—</td></tr>
+  <tr><td>suppliers.name</td><td>TextColumn (listWithLineBreaks, limitList 3)</td><td>Furnizori</td><td>—</td><td>—</td><td>—</td></tr>
+  <tr><td>website_url</td><td>TextColumn (URL, openUrlInNewTab)</td><td>Website</td><td>—</td><td>—</td><td>DA</td></tr>
+  <tr><td>is_active</td><td>IconColumn boolean</td><td>Activ</td><td>—</td><td>—</td><td>—</td></tr>
+  <tr><td>updated_at</td><td>TextColumn (d.m.Y)</td><td>Modificat</td><td>DA</td><td>—</td><td>DA</td></tr>
+</table>
+
+<h4>Filtre</h4>
+<table>
+  <tr><th>Filtru</th><th>Tip</th></tr>
+  <tr><td>is_active</td><td>TernaryFilter</td></tr>
+</table>
+
+<h4>Actiuni row</h4>
+<p>EditAction</p>
+
+<h4>Actiuni bulk</h4>
+<p>DeleteBulkAction</p>
+
+<h4>Sortare implicita</h4>
+<p>defaultSort('name')</p>
+
+<h4>Eager loading</h4>
+<p>with(['suppliers']) pe getEloquentQuery()</p>
+
+<h4>Pagini definite</h4>
+<ul class="plain">
+  <li>index → ListBrands</li>
+  <li>create → CreateBrand</li>
+  <li>edit → EditBrand</li>
+</ul>
+</section>
+
+<!-- =============================================================== -->
+<section id="t8-offer-resource" class="doc-section">
+<h3>OfferResource</h3>
+<p><strong>Model:</strong> <code>Offer</code> | <strong>URL:</strong> /offers | <strong>Nav group:</strong> Vanzari | <strong>Nav sort:</strong> 10 | <strong>Icon:</strong> heroicon-o-document-text</p>
+<p><strong>Traits:</strong> <code>EnforcesLocationScope</code>, <code>ChecksRolePermissions</code>, <code>HasDynamicNavSort</code></p>
+
+<h4>Permisiuni</h4>
+<table>
+  <tr><th>Operatie</th><th>Conditie</th></tr>
+  <tr><td>canViewAny</td><td>auth()-&gt;check()</td></tr>
+  <tr><td>canCreate</td><td>auth()-&gt;check()</td></tr>
+  <tr><td>canEdit</td><td>canAccessRecord (per locatie)</td></tr>
+  <tr><td>canDelete</td><td>canAccessRecord (per locatie)</td></tr>
+</table>
+
+<h4>Campuri formular — Sectiunea "Detalii oferta"</h4>
+<table>
+  <tr><th>Camp</th><th>Tip</th><th>Label</th><th>Required</th><th>Validari</th><th>Note</th></tr>
+  <tr><td>number</td><td>TextInput (disabled)</td><td>Numar oferta</td><td>—</td><td>—</td><td>Generat automat; dehydrated(false)</td></tr>
+  <tr><td>status</td><td>Select</td><td>Status</td><td><span class="badge badge-yes">DA</span></td><td>—</td><td>Offer::statusOptions(): draft, sent, accepted, rejected, expired; default draft</td></tr>
+  <tr><td>valid_until</td><td>DatePicker</td><td>Valabila pana la</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>default now()+14 zile</td></tr>
+  <tr><td>location_id</td><td>Select</td><td>Magazin</td><td><span class="badge badge-yes">DA</span></td><td>—</td><td>Location::TYPE_STORE + is_active; disabled pentru non-superadmin; default locatia curenta; live</td></tr>
+  <tr><td>user_id</td><td>Hidden</td><td>—</td><td>—</td><td>—</td><td>auth()-&gt;id()</td></tr>
+  <tr><td>_customer_lookup</td><td>Select (searchable, virtual)</td><td>Cauta client existent</td><td>—</td><td>—</td><td>dehydrated(false); cautare dupa nume/telefon/email; afterStateUpdated → precompletare campuri client; cu optiune inline creare client nou (form complet)</td></tr>
+  <tr><td>client_name</td><td>TextInput</td><td>Nume client</td><td><span class="badge badge-yes">DA</span></td><td>maxLength(255)</td><td>columnSpan(2)</td></tr>
+  <tr><td>client_company</td><td>TextInput</td><td>Companie</td><td><span class="badge badge-no">NU</span></td><td>maxLength(255)</td><td>—</td></tr>
+  <tr><td>client_email</td><td>TextInput</td><td>Email</td><td><span class="badge badge-no">NU</span></td><td>email, maxLength(255)</td><td>—</td></tr>
+  <tr><td>client_phone</td><td>TextInput</td><td>Telefon</td><td><span class="badge badge-no">NU</span></td><td>maxLength(50)</td><td>—</td></tr>
+  <tr><td>notes</td><td>Textarea</td><td>Observatii</td><td><span class="badge badge-no">NU</span></td><td>—</td><td>rows(3); columnSpanFull</td></tr>
+</table>
+
+<h4>Campuri formular — Sectiunea "Produse oferta" (awcodes/TableRepeater)</h4>
+<p>Layout tabel; minItems(1); ordonare pe coloana <code>position</code>; live; stackAt MaxWidth::Large; Tab pe ultimul camp → adaugare rand nou automat.</p>
+<table>
+  <tr><th>Camp</th><th>Tip</th><th>Label</th><th>Required</th><th>Validari</th><th>Note</th></tr>
+  <tr><td>thumbnail</td><td>Placeholder</td><td>Imagine</td><td>—</td><td>—</td><td>Imagine produs 64px calculata din woo_product_id curent</td></tr>
+  <tr><td>woo_product_id</td><td>Select (searchable, live)</td><td>Produs</td><td><span class="badge badge-yes">DA</span></td><td>—</td><td>afterStateUpdated → seteaza product_name, sku, unit_price din pretul WooCommerce; columnSpan(5)</td></tr>
+  <tr><td>quantity</td><td>TextInput</td><td>Cantitate</td><td><span class="badge badge-yes">DA</span></td><td>numeric, minValue(0.001), step(0.001)</td><td>default 1; inputMode decimal; live; text-right</td></tr>
+  <tr><td>unit_price</td><td>TextInput</td><td>Pret unitar</td><td><span class="badge badge-yes">DA</span></td><td>numeric, minValue(0), step(0.0001)</td><td>prefix RON; live; text-right; precompletat din pretul WooCommerce</td></tr>
+  <tr><td>discount_percent</td><td>TextInput</td><td>Discount %</td><td><span class="badge badge-no">NU</span></td><td>numeric, minValue(0), maxValue(100), step(0.01)</td><td>suffix %; live; text-right; Tab pe ultimul camp din ultimul rand → adauga rand nou</td></tr>
+  <tr><td>line_total_preview</td><td>Placeholder</td><td>Total linie</td><td>—</td><td>—</td><td>Calculat live: qty * price * (1 - discount/100)</td></tr>
+  <tr><td>sku</td><td>Hidden</td><td>—</td><td>—</td><td>—</td><td>Stocat din produs</td></tr>
+  <tr><td>product_name</td><td>Hidden</td><td>—</td><td>—</td><td>—</td><td>Stocat din produs (decoded HTML)</td></tr>
+  <tr><td>position</td><td>Hidden</td><td>—</td><td>—</td><td>—</td><td>Ordine linii</td></tr>
+</table>
+
+<h4>Sectiunea "Totaluri" (Placeholders live)</h4>
+<ul class="plain">
+  <li><strong>subtotal_live</strong> — suma (qty * unit_price) per linie</li>
+  <li><strong>discount_total_live</strong> — suma discount-urilor</li>
+  <li><strong>total_live</strong> — subtotal - discount total (bold)</li>
+</ul>
+
+<h4>Coloane tabel (ListOffers)</h4>
+<table>
+  <tr><th>Camp</th><th>Tip</th><th>Label</th><th>Sortabil</th><th>Cautabil</th></tr>
+  <tr><td>number</td><td>TextColumn</td><td>Numar</td><td>DA</td><td>DA</td></tr>
+  <tr><td>client_name</td><td>TextColumn (wrap)</td><td>Client</td><td>DA</td><td>DA</td></tr>
+  <tr><td>location.name</td><td>TextColumn</td><td>Magazin</td><td>DA</td><td>—</td></tr>
+  <tr><td>status</td><td>TextColumn badge</td><td>Status</td><td>—</td><td>—</td></tr>
+  <tr><td>total</td><td>TextColumn money(RON)</td><td>Total</td><td>DA</td><td>—</td></tr>
+  <tr><td>valid_until</td><td>TextColumn date(d.m.Y)</td><td>Valabila pana la</td><td>DA</td><td>—</td></tr>
+  <tr><td>updated_at</td><td>TextColumn dateTime</td><td>Actualizat</td><td>DA</td><td>—</td></tr>
+</table>
+
+<h4>Filtre</h4>
+<table>
+  <tr><th>Filtru</th><th>Tip</th><th>Optiuni</th></tr>
+  <tr><td>status</td><td>SelectFilter</td><td>Offer::statusOptions()</td></tr>
+  <tr><td>location_id</td><td>SelectFilter</td><td>Locatii tip store din locatiile accesibile utilizatorului</td></tr>
+</table>
+
+<h4>Actiuni row</h4>
+<table>
+  <tr><th>Actiune</th><th>Label</th><th>Comportament</th></tr>
+  <tr><td>preview</td><td>Preview</td><td>Deschide ViewOffer in tab nou</td></tr>
+  <tr><td>print</td><td>Print</td><td>Deschide pagina de print in tab nou (cu ?auto_print=1)</td></tr>
+  <tr><td>EditAction</td><td>Editare</td><td>Redirect la EditOffer</td></tr>
+</table>
+
+<h4>Actiuni bulk</h4>
+<p>DeleteBulkAction</p>
+
+<h4>Infolist (ViewOffer)</h4>
+<p>Sectiuni: Detalii oferta (number, status badge, valid_until, client_name, client_company, client_phone, client_email, location.name, user.name, notes), Produse oferta (RepeatableEntry cu imagine produs, product_name, quantity, unit_price, discount_percent, line_total), Totaluri (subtotal, discount_total, total bold).</p>
+
+<h4>Filtrare Eloquent</h4>
+<p>Per locatie (applyLocationFilter()); eager-loading: location, items.</p>
+
+<h4>Pagini definite</h4>
+<ul class="plain">
+  <li>index → ListOffers</li>
+  <li>create → CreateOffer</li>
+  <li>edit → EditOffer</li>
+  <li>view → ViewOffer</li>
+  <li>print → PrintOffer (pagina dedicata tiparire PDF)</li>
+</ul>
+</section>
+
+<!-- =============================================================== -->
+<section id="t8-woo-order-resource" class="doc-section">
+<h3>WooOrderResource</h3>
+<p><strong>Model:</strong> <code>WooOrder</code> | <strong>URL:</strong> /woo-orders | <strong>Nav group:</strong> Comenzi | <strong>Nav sort:</strong> 10 | <strong>Label:</strong> Comenzi Online | <strong>Icon:</strong> heroicon-o-shopping-cart</p>
+<p><strong>Traits:</strong> <code>EnforcesLocationScope</code>, <code>ChecksRolePermissions</code>, <code>HasDynamicNavSort</code></p>
+
+<h4>Permisiuni</h4>
+<table>
+  <tr><th>Operatie</th><th>Conditie</th></tr>
+  <tr><td>canViewAny</td><td>auth()-&gt;check()</td></tr>
+  <tr><td>canCreate</td><td><strong>false</strong> — dezactivat</td></tr>
+  <tr><td>canEdit</td><td><strong>false</strong> — dezactivat</td></tr>
+  <tr><td>canDelete</td><td><strong>false</strong> — dezactivat</td></tr>
+  <tr><td>canView</td><td>auth()-&gt;check()</td></tr>
+</table>
+<p>Comenzile sunt <strong>read-only</strong> in ERP — actualizate exclusiv via sync WooCommerce.</p>
+
+<h4>Campuri formular</h4>
+<p>Nu exista formular de editare (canEdit = false).</p>
+
+<h4>Coloane tabel (ListWooOrders)</h4>
+<table>
+  <tr><th>Camp</th><th>Tip</th><th>Label</th><th>Sortabil</th><th>Cautabil</th><th>Toggleable</th></tr>
+  <tr><td>number</td><td>TextColumn</td><td>Comanda</td><td>DA</td><td>DA</td><td>—</td></tr>
+  <tr><td>status</td><td>TextColumn badge</td><td>Status</td><td>—</td><td>—</td><td>—</td></tr>
+  <tr><td>customer_name</td><td>TextColumn</td><td>Client</td><td>—</td><td>DA (billing first + last name via JSON_EXTRACT)</td><td>—</td></tr>
+  <tr><td>customer_email</td><td>TextColumn</td><td>Email</td><td>—</td><td>DA (billing email via JSON_EXTRACT)</td><td>DA (ascuns implicit)</td></tr>
+  <tr><td>total</td><td>TextColumn</td><td>Total</td><td>DA</td><td>—</td><td>—</td></tr>
+  <tr><td>payment_method_title</td><td>TextColumn</td><td>Plata</td><td>—</td><td>—</td><td>—</td></tr>
+  <tr><td>order_date</td><td>TextColumn (d.m.Y H:i)</td><td>Data</td><td>DA</td><td>—</td><td>—</td></tr>
+</table>
+<p>Sortare implicita: order_date DESC.</p>
+
+<h4>Filtre</h4>
+<table>
+  <tr><th>Filtru</th><th>Tip</th><th>Optiuni</th></tr>
+  <tr><td>status</td><td>SelectFilter</td><td>WooOrder::STATUS_LABELS (pending, processing, on-hold, completed, cancelled, refunded, failed, checkout-draft)</td></tr>
+  <tr><td>order_date</td><td>Filter (2x DatePicker)</td><td>De la / Pana la — whereDate pe order_date</td></tr>
+</table>
+
+<h4>Actiuni row</h4>
+<p>ViewAction → ViewWooOrder</p>
+
+<h4>Actiuni bulk</h4>
+<table>
+  <tr><th>Actiune</th><th>Label</th><th>Comportament</th></tr>
+  <tr><td>resync_selected</td><td>Resync selectate</td><td>Confirmare; pentru fiecare comanda selectata apeleaza WooClient::getOrder() si actualizeaza status, total, data JSON; continua la urmatoarea daca una esueaza. Notificare succes la final.</td></tr>
+</table>
+
+<h4>Infolist (ViewWooOrder)</h4>
+<table>
+  <tr><th>Sectiune</th><th>Campuri infolist</th></tr>
+  <tr><td>Comanda (3 coloane)</td><td>number (#NR), status (badge colorat din WooOrder::STATUS_COLORS), order_date, payment_method_title, date_paid, customer_note</td></tr>
+  <tr><td>Client (2 coloane)</td><td>billing_info (adresa completa construita din JSON billing), shipping_info (idem din JSON shipping sau "La fel ca facturarea"), customer_phone, customer_email</td></tr>
+  <tr><td>Produse (RepeatableEntry, 6 coloane)</td><td>name, sku, quantity, erp_stock (stoc din ProductStock; badge verde daca qty &gt;= cantitate comandata, rosu altfel), price, total</td></tr>
+  <tr><td>Totale (3 coloane)</td><td>subtotal, shipping_total, discount_total, tax_total, total (bold, large)</td></tr>
+  <tr><td>AWB-uri Sameday (RepeatableEntry, 3 coloane)</td><td>awb_number (copyable), status (badge: created=success, cancelled=gray, failed=danger), created_at</td></tr>
+</table>
+
+<h4>Actiuni header (ViewWooOrder — definite in Pages/ViewWooOrder.php)</h4>
+<p>Includ: schimbare status comanda, adaugare nota interna, resync individual din WooCommerce, creare AWB Sameday.</p>
+
+<h4>Filtrare Eloquent</h4>
+<p>Per locatie (applyLocationFilter()); eager-loading: items.order, samedayAwbs, connection.</p>
+
+<h4>Pagini definite</h4>
+<ul class="plain">
+  <li>index → ListWooOrders</li>
+  <li>view → ViewWooOrder</li>
+</ul>
+</section>
+
+<!-- =============================================================== -->
+<section id="t8-customer-resource" class="doc-section">
+<h3>CustomerResource</h3>
+<p><strong>Model:</strong> <code>Customer</code> | <strong>URL:</strong> /customers | <strong>Nav group:</strong> Vanzari | <strong>Nav sort:</strong> 5 | <strong>Icon:</strong> heroicon-o-user-group</p>
+<p><strong>Traits:</strong> <code>EnforcesLocationScope</code>, <code>ChecksRolePermissions</code>, <code>HasDynamicNavSort</code></p>
+
+<h4>Permisiuni</h4>
+<table>
+  <tr><th>Operatie</th><th>Conditie</th></tr>
+  <tr><td>canViewAny</td><td>auth()-&gt;check()</td></tr>
+  <tr><td>canCreate</td><td>auth()-&gt;check()</td></tr>
+  <tr><td>canEdit</td><td>canAccessRecord (per locatie)</td></tr>
+  <tr><td>canDelete</td><td>canAccessRecord (per locatie)</td></tr>
+</table>
+
+<h4>Campuri formular — Sectiunea "Detalii client"</h4>
+<table>
+  <tr><th>Camp</th><th>Tip</th><th>Label</th><th>Required</th><th>Validari</th><th>Note</th></tr>
+  <tr><td>location_id</td><td>Hidden</td><td>—</td><td>—</td><td>—</td><td>Completat automat din locatia curenta a utilizatorului; dehydrated</td></tr>
+  <tr><td>type</td><td>Select</td><td>Tip client</td><td><span class="badge badge-yes">DA</span></td><td>—</td><td>Customer::typeOptions(): individual, company; default individual; live — reseteza campuri firma (cui, is_vat_payer, registration_number, representative_name) la schimbare pe individual</td></tr>
+  <tr><td>is_active</td><td>Toggle</td><td>Activ</td><td>—</td><td>—</td><td>Ascuns la operatia create; default true</td></tr>
+  <tr><td>cui</td><td>TextInput</td><td>CUI</td><td><span class="badge badge-cond">Conditionat</span></td><td>regex:/^[0-9]+$/, maxLength(64)</td><td>Vizibil si required doar pentru type=company; live(onBlur) → auto-completare date firma din OpenAPI (name, reg_number, postal_code, phone, address, city, county, is_vat_payer)</td></tr>
+  <tr><td>name</td><td>TextInput</td><td>Nume client</td><td><span class="badge badge-yes">DA</span></td><td>maxLength(255)</td><td>columnSpan(2)</td></tr>
+  <tr><td>representative_name</td><td>TextInput</td><td>Nume reprezentant</td><td><span class="badge badge-cond">Conditionat</span></td><td>maxLength(255)</td><td>Vizibil si required doar pentru type=company</td></tr>
+  <tr><td>phone</td><td>TextInput</td><td>Telefon</td><td><span class="badge badge-cond">Conditionat</span></td><td>tel, maxLength(64)</td><td>required pentru type=company</td></tr>
+  <tr><td>email</td><td>TextInput</td><td>Email</td><td><span class="badge badge-no">NU</span></td><td>email, maxLength(255)</td><td>—</td></tr>
+  <tr><td>is_vat_payer</td><td>Toggle</td><td>Platitor TVA</td><td>—</td><td>—</td><td>Vizibil doar pentru type=company; inline(false); auto-completat din OpenAPI</td></tr>
+  <tr><td>registration_number</td><td>TextInput</td><td>Nr. Reg. Com.</td><td><span class="badge badge-no">NU</span></td><td>maxLength(255)</td><td>Vizibil doar pentru type=company</td></tr>
+</table>
+
+<h4>Campuri formular — Sectiunea "Adresa implicita"</h4>
+<table>
+  <tr><th>Camp</th><th>Tip</th><th>Label</th><th>Required</th><th>Validari</th></tr>
+  <tr><td>address</td><td>TextInput</td><td>Adresa</td><td><span class="badge badge-yes">DA</span></td><td>maxLength(255), columnSpan(2)</td></tr>
+  <tr><td>postal_code</td><td>TextInput</td><td>Cod postal</td><td><span class="badge badge-no">NU</span></td><td>maxLength(32)</td></tr>
+  <tr><td>city</td><td>TextInput</td><td>Oras</td><td><span class="badge badge-no">NU</span></td><td>maxLength(255)</td></tr>
+  <tr><td>county</td><td>TextInput</td><td>Judet</td><td><span class="badge badge-no">NU</span></td><td>maxLength(255)</td></tr>
+  <tr><td>notes</td><td>Textarea</td><td>Observatii</td><td><span class="badge badge-no">NU</span></td><td>rows(3), columnSpanFull</td></tr>
+</table>
+
+<h4>Campuri formular — Sectiunea "Adrese de livrare alternative" (Repeater, relatie deliveryAddresses)</h4>
+<p>orderColumn('position'), reorderableWithButtons(), defaultItems(0), collapsed, itemLabel = eticheta sau adresa sau "Adresa noua".</p>
+<table>
+  <tr><th>Camp</th><th>Tip</th><th>Label</th><th>Required</th><th>Validari</th></tr>
+  <tr><td>label</td><td>TextInput</td><td>Eticheta</td><td><span class="badge badge-no">NU</span></td><td>maxLength(255)</td></tr>
+  <tr><td>is_active</td><td>Toggle</td><td>Activa</td><td>—</td><td>default true</td></tr>
+  <tr><td>contact_name</td><td>TextInput</td><td>Nume contact</td><td><span class="badge badge-no">NU</span></td><td>maxLength(255)</td></tr>
+  <tr><td>contact_phone</td><td>TextInput</td><td>Telefon contact</td><td><span class="badge badge-no">NU</span></td><td>tel, maxLength(64)</td></tr>
+  <tr><td>address</td><td>TextInput</td><td>Adresa</td><td><span class="badge badge-yes">DA</span></td><td>maxLength(255), columnSpanFull</td></tr>
+  <tr><td>city</td><td>TextInput</td><td>Oras</td><td><span class="badge badge-no">NU</span></td><td>maxLength(255)</td></tr>
+  <tr><td>county</td><td>TextInput</td><td>Judet</td><td><span class="badge badge-no">NU</span></td><td>maxLength(255)</td></tr>
+  <tr><td>postal_code</td><td>TextInput</td><td>Cod postal</td><td><span class="badge badge-no">NU</span></td><td>maxLength(32)</td></tr>
+</table>
+
+<h4>Functionalitate speciala: Auto-completare date firma (OpenAPI)</h4>
+<p>La iesirea din campul CUI (live onBlur), serviciul <code>OpenApiCompanyLookupService::lookupByCui()</code> este apelat automat. Campuri precompletate: name, registration_number, postal_code, phone, address, city, county, is_vat_payer. Afiseaza notificare success sau warning in caz de eroare API.</p>
+
+<h4>Coloane tabel (ListCustomers)</h4>
+<table>
+  <tr><th>Camp</th><th>Tip</th><th>Label</th><th>Sortabil</th><th>Cautabil</th><th>Toggleable</th></tr>
+  <tr><td>name</td><td>TextColumn</td><td>Client</td><td>DA</td><td>DA</td><td>—</td></tr>
+  <tr><td>type</td><td>TextColumn badge</td><td>Tip</td><td>DA</td><td>—</td><td>—</td></tr>
+  <tr><td>representative_name</td><td>TextColumn</td><td>Reprezentant</td><td>—</td><td>DA</td><td>DA (ascuns implicit)</td></tr>
+  <tr><td>phone</td><td>TextColumn</td><td>Telefon</td><td>—</td><td>DA</td><td>DA</td></tr>
+  <tr><td>cui</td><td>TextColumn</td><td>CUI</td><td>—</td><td>DA</td><td>DA</td></tr>
+  <tr><td>is_active</td><td>IconColumn boolean</td><td>Activ</td><td>DA</td><td>—</td><td>—</td></tr>
+  <tr><td>updated_at</td><td>TextColumn (d.m.Y H:i)</td><td>Actualizat</td><td>DA</td><td>—</td><td>—</td></tr>
+</table>
+
+<h4>Filtre</h4>
+<table>
+  <tr><th>Filtru</th><th>Tip</th><th>Optiuni</th></tr>
+  <tr><td>type</td><td>SelectFilter</td><td>Customer::typeOptions()</td></tr>
+  <tr><td>is_active</td><td>TernaryFilter</td><td>Activ / Inactiv / Toate</td></tr>
+</table>
+
+<h4>Actiuni row</h4>
+<p>EditAction, DeleteAction</p>
+
+<h4>Actiuni bulk</h4>
+<p>DeleteBulkAction</p>
+
+<h4>Filtrare Eloquent</h4>
+<p>Per locatie (applyLocationFilter()).</p>
+
+<h4>Pagini definite</h4>
+<ul class="plain">
+  <li>index → ListCustomers</li>
+  <li>create → CreateCustomer</li>
+  <li>edit → EditCustomer</li>
+</ul>
+</section>

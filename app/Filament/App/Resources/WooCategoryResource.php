@@ -24,9 +24,9 @@ class WooCategoryResource extends Resource
 
     protected static ?string $model = WooCategory::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-tag';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-tag';
 
-    protected static ?string $navigationGroup = 'Administrare magazin';
+    protected static string|\UnitEnum|null $navigationGroup = 'Administrare magazin';
 
     protected static ?string $navigationLabel = 'Categorii';
 

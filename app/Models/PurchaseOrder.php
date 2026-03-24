@@ -2,17 +2,20 @@
 
 namespace App\Models;
 
+use App\Enums\HasStatusEnum;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PurchaseOrder extends Model
 {
+    use HasStatusEnum;
     public const STATUS_DRAFT            = 'draft';
     public const STATUS_PENDING_APPROVAL = 'pending_approval';
     public const STATUS_APPROVED         = 'approved';
     public const STATUS_REJECTED         = 'rejected';
     public const STATUS_SENT             = 'sent';
+    public const STATUS_RECEIVED         = 'received';
     public const STATUS_CANCELLED        = 'cancelled';
 
     protected $fillable = [
@@ -30,6 +33,9 @@ class PurchaseOrder extends Model
         'rejected_at',
         'rejection_reason',
         'sent_at',
+        'received_at',
+        'received_by',
+        'received_notes',
     ];
 
     protected function casts(): array
@@ -43,6 +49,8 @@ class PurchaseOrder extends Model
             'rejected_by'  => 'integer',
             'rejected_at'  => 'datetime',
             'sent_at'      => 'datetime',
+            'received_at'  => 'datetime',
+            'received_by'  => 'integer',
         ];
     }
 
@@ -63,7 +71,7 @@ class PurchaseOrder extends Model
 
     }
 
-    public static function statusOptions(): array
+    public static function statusLabels(): array
     {
         return [
             self::STATUS_DRAFT            => 'Draft',
@@ -71,11 +79,12 @@ class PurchaseOrder extends Model
             self::STATUS_APPROVED         => 'Aprobat',
             self::STATUS_REJECTED         => 'Respins',
             self::STATUS_SENT             => 'Trimis',
+            self::STATUS_RECEIVED         => 'Recepționat',
             self::STATUS_CANCELLED        => 'Anulat',
         ];
     }
 
-    public static function statusColors(): array
+    public static function statusColorMap(): array
     {
         return [
             self::STATUS_DRAFT            => 'gray',
@@ -83,6 +92,7 @@ class PurchaseOrder extends Model
             self::STATUS_APPROVED         => 'success',
             self::STATUS_REJECTED         => 'danger',
             self::STATUS_SENT             => 'info',
+            self::STATUS_RECEIVED         => 'success',
             self::STATUS_CANCELLED        => 'gray',
         ];
     }
@@ -105,6 +115,11 @@ class PurchaseOrder extends Model
     public function rejectedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'rejected_by');
+    }
+
+    public function receivedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'received_by');
     }
 
     public function items(): HasMany
@@ -130,14 +145,25 @@ class PurchaseOrder extends Model
         }
 
         // Regula 2: oricare item depășește cantitatea maximă
+        // Preîncărcăm toate ProductSupplier-urile relevante într-un singur query (evităm N+1)
+        $productIds = $this->items->pluck('woo_product_id')->filter()->unique()->values();
+
+        if ($productIds->isEmpty()) {
+            return false;
+        }
+
+        $productSupplierMap = ProductSupplier::query()
+            ->where('supplier_id', $this->supplier_id)
+            ->whereIn('woo_product_id', $productIds)
+            ->get(['woo_product_id', 'po_max_qty'])
+            ->keyBy('woo_product_id');
+
         foreach ($this->items as $item) {
             if (! $item->woo_product_id) {
                 continue;
             }
 
-            $ps = ProductSupplier::where('woo_product_id', $item->woo_product_id)
-                ->where('supplier_id', $this->supplier_id)
-                ->first();
+            $ps = $productSupplierMap->get($item->woo_product_id);
 
             if ($ps && $ps->po_max_qty && (float) $item->quantity > (float) $ps->po_max_qty) {
                 return true;
@@ -149,10 +175,14 @@ class PurchaseOrder extends Model
 
     private static function generateNumber(): string
     {
-        do {
-            $number = 'PO-'.now()->format('Ymd').'-'.str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT);
-        } while (self::query()->where('number', $number)->exists());
+        $max = self::query()
+            ->where('number', 'like', 'PO-%')
+            ->get(['number'])
+            ->map(fn ($r): int => (int) ltrim(substr($r->number, 3), '0'))
+            ->max() ?? 0;
 
-        return $number;
+        $next = max($max + 1, 100000);
+
+        return 'PO-' . $next;
     }
 }

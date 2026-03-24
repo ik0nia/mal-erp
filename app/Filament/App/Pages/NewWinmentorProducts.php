@@ -18,11 +18,16 @@ class NewWinmentorProducts extends Page implements HasTable
 {
     use HasDynamicNavSort, InteractsWithTable;
 
-    protected static ?string $navigationIcon  = 'heroicon-o-sparkles';
-    protected static ?string $navigationGroup = 'Produse';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-sparkles';
+    protected static string|\UnitEnum|null $navigationGroup = 'Produse';
     protected static ?string $navigationLabel = 'Produse noi WinMentor';
     protected static ?int    $navigationSort  = 25;
-    protected static string  $view            = 'filament.app.pages.new-winmentor-products';
+    protected string  $view            = 'filament.app.pages.new-winmentor-products';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return \App\Models\RolePermission::check(static::class, 'can_access');
+    }
 
     public static function canAccess(): bool
     {
@@ -153,6 +158,7 @@ class NewWinmentorProducts extends Page implements HasTable
                         false: fn (Builder $q) => $q->whereDoesntHave('suppliers'),
                     ),
             ])
+            ->deferFilters(false)
             ->recordUrl(fn (WooProduct $record): string => \App\Filament\App\Resources\WooProductResource::getUrl('view', ['record' => $record]))
             ->defaultSort('created_at', 'desc')
             ->striped()

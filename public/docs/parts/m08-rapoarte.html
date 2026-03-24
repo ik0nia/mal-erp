@@ -1,0 +1,557 @@
+<section id="m08-rapoarte">
+
+  <h1>Modulul Rapoarte și Business Intelligence</h1>
+
+  <p>
+    ERP Malinco include un sistem complet de raportare și analiză Business Intelligence (BI), construit pe
+    date proprii sincronizate zilnic din WooCommerce, WinMentor și din activitatea magazinului online. Rapoartele
+    acoperă trei domenii principale: stocuri și prețuri, magazin online și discrepanțe de catalog. Analizele BI
+    mai avansate sunt generate automat de Claude (modelul Sonnet) și sunt accesibile doar utilizatorilor cu rol
+    <strong>super_admin</strong>, în timp ce rapoartele operaționale pot fi acordate prin sistemul de permisiuni.
+  </p>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <h2 id="m08-acces">1. Rapoartele disponibile și accesul</h2>
+
+  <p>
+    Toate rapoartele sunt grupate în meniul lateral sub grupul <strong>Rapoarte</strong> sau
+    <strong>Administrare magazin</strong>, în funcție de tipul lor. Tabelul de mai jos rezumă fiecare raport,
+    locația din meniu și cine îl poate accesa:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Raport</th>
+        <th>Grup meniu</th>
+        <th>Acces</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Dashboard BI</td>
+        <td>Rapoarte</td>
+        <td>Exclusiv <code>super_admin</code></td>
+      </tr>
+      <tr>
+        <td>Analiză BI (manuale + automate)</td>
+        <td>Rapoarte</td>
+        <td>Exclusiv <code>super_admin</code></td>
+      </tr>
+      <tr>
+        <td>Mișcări stocuri</td>
+        <td>Rapoarte</td>
+        <td><code>super_admin</code> și <code>manager</code></td>
+      </tr>
+      <tr>
+        <td>Raport Magazin Online</td>
+        <td>Rapoarte</td>
+        <td>Controlat prin <code>RolePermission</code> (poate_accesa)</td>
+      </tr>
+      <tr>
+        <td>Discrepanțe SKU</td>
+        <td>Administrare magazin</td>
+        <td>Controlat prin <code>RolePermission</code> (poate_accesa)</td>
+      </tr>
+      <tr>
+        <td>Necesar Marfă</td>
+        <td>Achiziții</td>
+        <td>Vezi secțiunea dedicată din modulul Achiziții</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    Permisiunile de tip <code>RolePermission</code> se configurează de către super_admin din pagina
+    <strong>Setări aplicație</strong>. Dacă un utilizator nu are permisiunea necesară și încearcă să acceseze
+    direct URL-ul unui raport, primește eroare 403.
+  </p>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <h2 id="m08-dashboard-bi">2. Dashboard BI — interpretarea metricelor și alertelor</h2>
+
+  <p>
+    Dashboard-ul BI (<strong>Rapoarte → Dashboard BI</strong>) este panoul central de monitorizare a sănătății
+    stocului. El se bazează exclusiv pe tabele BI pre-calculate zilnic (<code>bi_inventory_kpi_daily</code>,
+    <code>bi_inventory_alert_candidates_daily</code>, <code>bi_product_velocity_current</code>) și nu face
+    interogări directe pe produse în timp real.
+  </p>
+
+  <h3>2.1 KPI-uri de stoc</h3>
+  <p>
+    În partea superioară a dashboard-ului sunt afișate patru indicatori cheie calculați din ultima zi disponibilă
+    în baza de date BI:
+  </p>
+  <ul>
+    <li><strong>Valoarea totală a stocului</strong> (RON) — suma valorilor produselor în stoc la închiderea zilei
+        precedente, calculată ca <code>cantitate × preț de vânzare</code>.</li>
+    <li><strong>Variația față de ziua anterioară</strong> — diferența în RON și procentuală față de ziua
+        precedentă. Un delta pozitiv înseamnă că stocul a crescut în valoare (intrări > ieșiri sau modificări
+        de preț în creștere).</li>
+    <li><strong>Produse în stoc</strong> — numărul de SKU-uri cu cantitate disponibilă mai mare ca zero.</li>
+    <li><strong>Produse fără stoc</strong> — numărul de SKU-uri cu stoc epuizat. Aceasta este o metrică
+        <em>high confidence</em>: valoarea este certă indiferent de cât de recent este sistemul.</li>
+  </ul>
+
+  <h3>2.2 Sistemul de alerte P0 / P1 / P2</h3>
+  <p>
+    Alertele BI clasifică produsele în trei niveluri de risc, afișate pe tab-uri:
+  </p>
+  <dl>
+    <dt><strong>P0 — Critice</strong></dt>
+    <dd>
+      Produse care necesită atenție imediată. Un produs devine P0 dacă se află în cel puțin una din situațiile:
+      <ul>
+        <li><code>out_of_stock</code> — cantitatea disponibilă este zero;</li>
+        <li><code>critical_stock</code> — stocul estimat se va epuiza în maxim 7 zile (calculat pe baza
+            consumului mediu din ultimele 30 de zile);</li>
+        <li><code>price_spike</code> — prețul de vânzare a înregistrat o variație bruscă față de media
+            recentă, ceea ce poate indica o eroare de import sau o modificare reală semnificativă.</li>
+      </ul>
+      Coloana <em>Zile rămase</em> afișează estimarea de epuizare. Valoarea <code>∞</code> înseamnă că nu
+      există consum înregistrat în ultimele 30 de zile (deci nu se poate estima).
+    </dd>
+
+    <dt><strong>P1 — Moderate</strong></dt>
+    <dd>
+      Produse cu stoc estimat între 7 și 14 zile. Necesită planificarea reaprovizionării în săptămâna curentă
+      pentru a evita intrarea în P0.
+    </dd>
+
+    <dt><strong>P2 — Capital Blocat / Dead Stock</strong></dt>
+    <dd>
+      Produse fără nicio mișcare de stoc în ultimele 30 de zile și cu valoare imobilizată semnificativă
+      (pragul minim este 300 RON). Interpretarea corectă a P2 depinde de <em>maturitatea datelor</em>:
+      <ul>
+        <li>Dacă sistemul BI are mai puțin de 30 de zile de date istorice (status <strong>BOOTSTRAP</strong>),
+            P2 înseamnă doar "candidat potențial" — nu este confirmat dead stock.</li>
+        <li>Cu 30–90 de zile de date (status <strong>PARTIAL_HISTORY</strong>), clasificarea este
+            preliminară.</li>
+        <li>Cu peste 90 de zile de date (status <strong>MATURE</strong>), P2 reprezintă dead stock confirmat
+            și pot fi luate decizii de lichidare.</li>
+      </ul>
+    </dd>
+  </dl>
+
+  <h3>2.3 Velocity — produse rapide și lente</h3>
+  <p>
+    Secțiunea Velocity afișează două liste:
+  </p>
+  <ul>
+    <li><strong>Fast movers</strong> — top 50 produse ordonate descrescător după consumul mediu zilnic din
+        ultimele 30 de zile (<code>avg_out_qty_30d</code>). Sunt produsele cu rotație rapidă și risc sporit
+        de ruptură de stoc.</li>
+    <li><strong>Slow movers</strong> — produse care nu au avut nicio mișcare de ieșire în ultimele 30 sau
+        mai multe zile. Sunt afișate în ordinea descrescătoare a zilelor de inactivitate. Produsele fără nicio
+        mișcare de la import apar cu "niciodată".</li>
+  </ul>
+  <p>
+    Coloanele de velocity afișate în dashboard sunt: <code>avg_out_qty_7d</code> (medie zilnică ultimele 7
+    zile), <code>avg_out_qty_30d</code> (medie zilnică ultimele 30 zile), <code>avg_out_qty_90d</code> (medie
+    zilnică ultimele 90 zile), cantitatea totală ieșită în 30 și 90 de zile, și data ultimei mișcări.
+  </p>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <h2 id="m08-necesar-marfa">3. Raport Necesar Marfă</h2>
+
+  <p>
+    Raportul Necesar Marfă face parte din modulul <strong>Achiziții</strong> și este descris detaliat în secțiunea
+    dedicată acestui modul. Pe scurt, el centralizează produsele care au cereri de aprovizionare (Purchase
+    Requests) în stare <em>submitted</em> sau <em>partially_ordered</em>, grupate pe furnizori, și permite
+    crearea rapidă a comenzilor de achiziție. Accesul se face din meniul lateral
+    <strong>Achiziții → Necesar Marfă</strong>.
+  </p>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <h2 id="m08-discrepante-sku">4. Raport Discrepanțe SKU</h2>
+
+  <p>
+    Raportul Discrepanțe SKU (<strong>Administrare magazin → Discrepanțe SKU</strong>) identifică produsele
+    din catalog cu probleme de identificare sau de legătură între sistemele ERP și WooCommerce. El este
+    organizat pe trei tab-uri:
+  </p>
+
+  <h3>4.1 Produse Placeholder</h3>
+  <p>
+    Produsele marcate ca <code>is_placeholder = true</code> sunt articole create temporar în WooCommerce (de
+    obicei importate automat) care nu au fost validate și asociate cu un SKU real din WinMentor. Contorul
+    afișat în stat card include și sub-contorul de <em>placeholder-uri cu stoc pozitiv</em> — acestea sunt
+    mai urgente deoarece există cantitate în sistem dar produsul nu este corect identificat pe site.
+  </p>
+  <p>
+    <strong>Cum se rezolvă:</strong> Deschideți produsul din lista de placeholder-uri și asociați-l cu
+    SKU-ul corect din WinMentor. Dacă produsul nu există în WinMentor, poate fi creat manual sau eliminat
+    din catalog.
+  </p>
+
+  <h3>4.2 Produse fără SKU</h3>
+  <p>
+    Produse care nu sunt placeholder-uri dar au câmpul SKU gol sau null. Acestea sunt de obicei produse
+    create direct în WooCommerce fără a trece prin fluxul de import din WinMentor. Fără SKU, sistemul ERP
+    nu poate sincroniza stocul și prețul cu WinMentor.
+  </p>
+  <p>
+    <strong>Cum se rezolvă:</strong> Completați câmpul SKU cu codul din WinMentor. Sincronizarea stocului
+    va deveni activă la importul următor.
+  </p>
+
+  <h3>4.3 Produse pe site fără stoc WinMentor</h3>
+  <p>
+    Produse cu SKU valid dar fără nicio înregistrare în tabelul de stocuri (<code>product_stocks</code>).
+    Aceasta poate indica: (a) SKU-ul există în WooCommerce dar nu a fost niciodată importat din WinMentor;
+    (b) SKU-ul a fost redenumit în WinMentor și nu mai coincide; (c) produsul nu mai este activ în WinMentor.
+  </p>
+  <p>
+    <strong>Cum se rezolvă:</strong> Verificați că SKU-ul din ERP corespunde exact cu cel din WinMentor
+    (fără spații sau caractere suplimentare). Rulați o sincronizare manuală dacă este necesar.
+  </p>
+
+  <h3>4.4 Filtrare și navigare</h3>
+  <p>
+    Fiecare tab afișează un tabel paginat (25, 50 sau 100 înregistrări pe pagină) cu coloanele: SKU, Denumire,
+    Preț WinMentor, Stoc site (badge verde/roșu) și Sursa produsului (WooCommerce sau WinMentor CSV). Căutarea
+    funcționează după SKU și denumire. Faceți click pe un rând pentru a deschide direct produsul și a-l corecta.
+  </p>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <h2 id="m08-miscari-stoc">5. Raport Mișcări Stoc</h2>
+
+  <p>
+    Raportul Mișcări Stoc (<strong>Rapoarte → Mișcări stocuri</strong>) este disponibil pentru rolurile
+    <em>super_admin</em> și <em>manager</em>. Prezintă o vedere agregată a intrărilor și ieșirilor de stoc
+    pe baza datelor din tabelul <code>daily_stock_metrics</code>.
+  </p>
+
+  <h3>5.1 Filtre disponibile</h3>
+  <p>Raportul oferă trei axe de filtrare, aplicabile independent sau combinat:</p>
+  <ul>
+    <li><strong>Perioadă</strong> — butoane rapide pentru ultimele 7, 14, 30 sau 90 de zile. Implicit: 7 zile.</li>
+    <li><strong>Furnizor</strong> — filtrează tabelul și statisticile la produsele unui anumit furnizor activ.
+        Lista furnizorilor activi se populează automat.</li>
+    <li><strong>Categorie</strong> — filtrează la o categorie rădăcină WooCommerce. Sistemul rezolvă automat
+        ierarhia (subcategorii și sub-subcategorii sunt incluse).</li>
+  </ul>
+
+  <h3>5.2 Statistici globale (stat cards)</h3>
+  <p>
+    În partea superioară a raportului sunt afișate șase indicatori calculați pe intervalul selectat:
+  </p>
+  <ul>
+    <li><strong>Total intrări (buc)</strong> — suma variațiilor pozitive de stoc (aprovizionări).</li>
+    <li><strong>Total ieșiri (buc)</strong> — suma variațiilor negative de stoc (vânzări, transferuri).</li>
+    <li><strong>Valoare intrări (RON)</strong> — calculată ca <code>cantitate intrată × preț vânzare la
+        momentul intrării</code>.</li>
+    <li><strong>Valoare ieșiri (RON)</strong> — similar, pentru ieșiri.</li>
+    <li><strong>Produse cu mișcare</strong> — numărul de SKU-uri distincte care au avut cel puțin o variație
+        în interval.</li>
+    <li><strong>Produse cu modificare de preț</strong> — SKU-uri distincte la care prețul de vânzare a
+        diferit între prima și ultima zi a intervalului.</li>
+  </ul>
+
+  <h3>5.3 Statistici pe furnizori și categorii</h3>
+  <p>
+    Sub stat cards sunt afișate două tabele secundare:
+  </p>
+  <ul>
+    <li><strong>Top 10 furnizori după valoare mișcată</strong> — ordonați descrescător după valoarea totală
+        absolută a mișcărilor (intrări + ieșiri). Util pentru a identifica rapid furnizorii cu activitate
+        intensă.</li>
+    <li><strong>Categorii rădăcină cu mișcare</strong> — similar, per categorie de nivel superior.</li>
+  </ul>
+
+  <h3>5.4 Tabelul detaliat de produse</h3>
+  <p>
+    Lista principală afișează primele 100 de produse ordonate după volumul total de mișcare (intrări + ieșiri).
+    Coloanele disponibile:
+  </p>
+  <ul>
+    <li><strong>Produs / SKU</strong> — denumirea decodificată și codul produsului.</li>
+    <li><strong>Mișcare totală (buc)</strong> — suma absolută a intrărilor și ieșirilor.</li>
+    <li><strong>Variație netă (buc)</strong> — diferența netă (pozitivă = stoc crescut, negativă = stoc
+        scăzut). Afișat în verde sau roșu.</li>
+    <li><strong>Stoc curent (buc)</strong> — cantitatea la ultima zi din interval.</li>
+    <li><strong>Preț actual (RON)</strong> — prețul de vânzare la ultima zi.</li>
+    <li><strong>Delta preț (RON)</strong> — diferența de preț între prima și ultima zi a intervalului.
+        Verde = creștere, roșu = scădere.</li>
+  </ul>
+  <p>
+    Faceți click pe orice rând pentru a deschide fișa completă a produsului în
+    <strong>Produse → (produsul respectiv)</strong>.
+  </p>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <h2 id="m08-magazin-online">6. Raport Magazin Online</h2>
+
+  <p>
+    Raportul Magazin Online (<strong>Rapoarte → Raport Magazin Online</strong>) prezintă o analiză a comenzilor
+    WooCommerce sincronizate local. Accesul este configurat prin sistemul de permisiuni de rol.
+  </p>
+
+  <h3>6.1 Filtrarea perioadei</h3>
+  <p>
+    Raportul permite selectarea unui <strong>an</strong> din lista anilor cu date disponibile și,
+    opțional, a unei <strong>luni</strong> specifice din acel an. Implicit se afișează toate comenzile din
+    anul curent. Comenzile cu statusul <em>cancelled</em>, <em>refunded</em> și <em>failed</em> sunt excluse
+    din calculele de venituri, dar apar în breakdown-ul pe statusuri.
+  </p>
+
+  <h3>6.2 Indicatori principali (stat cards)</h3>
+  <ul>
+    <li><strong>Venit total (RON)</strong> — suma totală a comenzilor active din perioada selectată.</li>
+    <li><strong>Număr comenzi</strong> — numărul total de comenzi (exclusiv anulate, rambursate, eșuate).</li>
+    <li><strong>Valoare medie comandă (RON)</strong> — venitul total împărțit la numărul de comenzi.</li>
+    <li><strong>Comenzi finalizate</strong> — comenzile cu statusul <em>completed</em>.</li>
+    <li><strong>Comenzi în procesare</strong> — comenzile cu statusul <em>processing</em>.</li>
+  </ul>
+
+  <h3>6.3 Breakdown pe statusuri</h3>
+  <p>
+    Un tabel listează toate statusurile de comenzi (inclusiv anulate), cu numărul de comenzi și valoarea
+    totală per status. Această vedere permite identificarea rapidă a ratei de anulare — o problemă frecventă
+    la Malinco pentru produsele voluminoase comandate din afara județului Bihor, unde livrarea prin curier
+    standard nu este posibilă.
+  </p>
+
+  <h3>6.4 Vânzări pe categorii</h3>
+  <p>
+    Produsele din comenzi sunt grupate după categoria rădăcină (nivelul superior al ierarhiei de categorii
+    WooCommerce). Sunt afișate venitul total și numărul de comenzi distincte per categorie, ordonate
+    descrescător după venit. Această vedere răspunde la întrebarea: <em>ce categorii de produse generează
+    cel mai mult venit online?</em>
+  </p>
+
+  <h3>6.5 Top furnizori și branduri</h3>
+  <p>
+    Similar, raportul calculează top 10 furnizori după venitul generat prin vânzările online ale produselor
+    lor, și top 10 branduri (din câmpul <em>brand</em> al produselor). Ambele secțiuni includ venitul total
+    și numărul de comenzi distincte.
+  </p>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <h2 id="m08-analize-bi">7. Analize BI — generate automat și manual</h2>
+
+  <p>
+    Pagina <strong>Rapoarte → Analiză BI</strong> este accesibilă exclusiv <em>super_admin</em>-ilor și
+    centralizează toate rapoartele text generate de Claude pe baza datelor BI. Există două modalități de
+    generare: automată (prin scheduler) și manuală (prin butonul din interfață).
+  </p>
+
+  <h3>7.1 Generare automată — rapoarte periodice</h3>
+  <p>
+    Sistemul BI generează automat rapoarte la mai multe orizonturi de timp, toate rulate prin Laravel Scheduler:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Tip raport</th>
+        <th>Frecvență</th>
+        <th>Ora</th>
+        <th>Perioadă acoperită</th>
+        <th>Model AI</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Săptămânal</td>
+        <td>Duminică</td>
+        <td>05:00</td>
+        <td>Ultimele 7 zile (luni–sâmbătă)</td>
+        <td>Claude Sonnet</td>
+      </tr>
+      <tr>
+        <td>Lunar</td>
+        <td>1 ale lunii</td>
+        <td>11:00</td>
+        <td>Ultimele 30 de zile (grupat săptămânal)</td>
+        <td>Claude Sonnet</td>
+      </tr>
+      <tr>
+        <td>Trimestrial</td>
+        <td>1 ian / apr / iul / oct</td>
+        <td>06:00</td>
+        <td>Ultimele 90 de zile (grupat săptămânal)</td>
+        <td>Claude Sonnet</td>
+      </tr>
+      <tr>
+        <td>Semestrial</td>
+        <td>1 ian și 1 iul</td>
+        <td>08:00</td>
+        <td>Ultimele 180 de zile (grupat lunar)</td>
+        <td>Claude Sonnet</td>
+      </tr>
+      <tr>
+        <td>Anual</td>
+        <td>1 ianuarie</td>
+        <td>10:00</td>
+        <td>Ultimele 365 de zile (grupat lunar)</td>
+        <td>Claude Sonnet</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    Toate orele sunt în fusul orar <strong>Europe/Bucharest</strong>. Rapoartele rulează în background
+    (<code>runInBackground()</code>) și nu blochează alte procese. Un <em>watchdog</em>
+    (<code>bi:health-check</code>) rulează zilnic la 09:00 și repară automat eventualele goluri din datele
+    BI sursă — dacă <code>bi:compute-daily</code> nu a rulat corect noaptea trecută, watchdog-ul îl execută
+    acum și notifică adminii prin Filament.
+  </p>
+
+  <h3>7.2 Ce conțin rapoartele automate</h3>
+
+  <p><strong>Raportul săptămânal</strong> are accent operațional și acoperă 8 secțiuni obligatorii:</p>
+  <ol>
+    <li>Status maturitate date (BOOTSTRAP / PARTIAL_HISTORY / MATURE)</li>
+    <li>KPI Snapshot — valoare stoc start→end, produse in/out-of-stock</li>
+    <li>Riscuri imediate P0 — exclusiv stoc 0, detaliate pe reason_flags</li>
+    <li>Risc pe termen scurt P0 critical_stock + P1</li>
+    <li>Capital blocat P2 — top 15 produse după valoarea imobilizată</li>
+    <li>Velocity — fast movers și slow movers cu trend</li>
+    <li>Dinamica prețurilor — variații ≥3% start vs. end săptămână</li>
+    <li>Plan de acțiune prioritizat — maxim 7 acțiuni concrete</li>
+  </ol>
+
+  <p><strong>Raportul lunar</strong> are accent strategic și conține în plus:</p>
+  <ul>
+    <li>Card executiv cu indicatori cheie (total produse active, SKU fără consum 30 zile, valoare P2
+        totală și concentrare în top 10)</li>
+    <li>KPI grupat săptămânal pe întreg intervalul de 30 de zile</li>
+    <li>Evoluția alertelor P0/P1/P2 pe fiecare săptămână din lună</li>
+    <li>Context din rapoartele săptămânale din perioadă (Claude primește rezumatele anterioare ca
+        referință pentru a evita repetiția)</li>
+    <li>Modificări de prețuri cu variație ≥3%, comparând prețul de la începutul și sfârșitul lunii</li>
+    <li>Recomandări strategice pentru luna următoare, cu referință la date concrete</li>
+  </ul>
+
+  <p>
+    Rapoartele trimestriale, semestriale și anuale urmează aceeași logică, cu granularitate sporită
+    (date grupate lunar pentru perioadele mai lungi) și contextualizare pe rapoartele anterioare din
+    ierarhia de rapoarte.
+  </p>
+
+  <h3>7.3 Contextualizare ierarhică</h3>
+  <p>
+    Un element important al sistemului este că rapoartele de nivel superior primesc ca și context rapoartele
+    de nivel inferior din aceeași perioadă:
+  </p>
+  <ul>
+    <li>Raportul <strong>lunar</strong> include rezumatele rapoartelor <em>săptămânale</em> din lună
+        (maxim 2.000–3.000 caractere per raport).</li>
+    <li>Raportul <strong>trimestrial</strong> include rapoartele <em>lunare</em> din trimestru.</li>
+    <li>Raportul <strong>anual</strong> include rapoartele <em>trimestriale</em> și <em>semestriale</em>
+        din an.</li>
+  </ul>
+  <p>
+    Claude este instruit explicit să sintetizeze informațiile existente și să evidențieze <em>schimbările</em>
+    față de ce era deja cunoscut, nu să repete concluzii anterioare.
+  </p>
+
+  <h3>7.4 Conceptul de maturitate a datelor</h3>
+  <p>
+    Toate rapoartele BI automate includ obligatoriu o secțiune de <strong>status maturitate date</strong>,
+    care informează despre fiabilitatea indicatorilor:
+  </p>
+  <ul>
+    <li><strong>BOOTSTRAP</strong> (sub 30 de zile de date) — indicatorii bazați pe consum mediu pe 30 sau
+        90 de zile sunt diluați și au fiabilitate scăzută. Nu se recomandă decizii de lichidare stoc sau
+        comenzi pe baza acestor date.</li>
+    <li><strong>PARTIAL_HISTORY</strong> (30–90 de zile) — avg_30d este valid; avg_90d este parțial diluat.
+        Clasificarea P2 este preliminară.</li>
+    <li><strong>MATURE</strong> (peste 90 de zile) — toate metricele sunt valide. Dead stock P2 este
+        confirmat și deciziile de lichidare sunt aplicabile.</li>
+  </ul>
+
+  <h3>7.5 Generare manuală a analizelor BI</h3>
+  <p>
+    Pe lângă rapoartele automate, super_admin-ii pot genera oricând o analiză BI ad-hoc din pagina
+    <strong>Rapoarte → Analiză BI</strong>, folosind butonul <strong>"Generează analiză nouă"</strong>.
+  </p>
+  <p>Formularul de configurare permite alegerea:</p>
+  <ul>
+    <li><strong>Secțiuni de analizat</strong>:
+      <ul>
+        <li><em>Stocuri + Magazin online</em> — analiză completă (implicit);</li>
+        <li><em>Doar stocuri și prețuri</em> — fără date de comenzi;</li>
+        <li><em>Doar magazin online</em> — fără date de stoc.</li>
+      </ul>
+    </li>
+    <li><strong>Perioadă</strong>: ultimele 7, 30, 90 sau 365 de zile; o zi anume; sau un interval
+        personalizat cu date de start și de end.</li>
+  </ul>
+  <p>
+    După confirmare, analiza se trimite ca job în coadă (<code>GenerateBiAnalysisJob</code>). Pagina
+    se actualizează automat și afișează un indicator de progres cât timp analiza este în curs. La finalizare
+    apare o notificare de succes și raportul devine selectabil din lista din stânga. Dacă un job nu răspunde
+    în 15 minute, este marcat automat ca <em>failed</em> la vizitarea paginii.
+  </p>
+  <p>
+    Rapoartele generate manual au tipul <code>manual</code> în baza de date și sunt incluse ca referință
+    în rapoartele automatizate ale acelorași perioade.
+  </p>
+
+  <h3>7.6 Interfața paginii Analiză BI</h3>
+  <p>
+    Pagina <strong>Analiză BI</strong> are o structură în două coloane:
+  </p>
+  <ul>
+    <li><strong>Coloana stângă</strong> — lista tuturor analizelor finalizate sau eșuate, ordonate
+        descrescător după data generării. Faceți click pe orice analiză pentru a o selecta și afișa.</li>
+    <li><strong>Coloana dreaptă</strong> — conținutul analizei selectate, redat ca Markdown formatat HTML.
+        Lângă titlul fiecărei analize există și butonul de ștergere.</li>
+  </ul>
+  <p>
+    Analizele <em>failed</em> sunt afișate cu mesajul de eroare în loc de conținut, pentru diagnosticare.
+  </p>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <h2 id="m08-export">8. Exportul rapoartelor</h2>
+
+  <p>
+    La această dată, rapoartele din modulul BI nu au un buton de export direct în interfață. Datele pot fi
+    extrase prin metodele alternative descrise mai jos.
+  </p>
+
+  <h3>8.1 Copiere manuală a textului BI</h3>
+  <p>
+    Conținutul analizelor BI (generate de Claude) este text Markdown formatat. Poate fi copiat direct din
+    interfața paginii <strong>Analiză BI</strong> și lipit în orice editor (Word, Google Docs, email). Titlul
+    analizei și data sunt afișate în capul fiecărui raport.
+  </p>
+
+  <h3>8.2 Export PDF pentru Comenzi de Achiziție</h3>
+  <p>
+    Modulul Achiziții include export PDF funcțional pentru comenzile de aprovizionare (Purchase Orders),
+    accesibil din butonul <strong>"Descarcă PDF"</strong> din pagina de vizualizare a unei comenzi. Acesta
+    nu face parte din modulul de rapoarte BI, dar este cel mai frecvent export utilizat operațional.
+  </p>
+
+  <h3>8.3 Rulare rapoarte din linia de comandă</h3>
+  <p>
+    Super-adminii cu acces SSH pot genera rapoartele BI în orice moment, fără a aștepta schedule-ul:
+  </p>
+  <pre><code>php artisan bi:generate-weekly-report
+php artisan bi:generate-monthly-report
+php artisan bi:generate-period-report --type=quarterly
+php artisan bi:generate-period-report --type=semiannual
+php artisan bi:generate-period-report --type=annual</code></pre>
+  <p>
+    Toate comenzile acceptă opțiunile <code>--from=YYYY-MM-DD</code> și <code>--to=YYYY-MM-DD</code> pentru
+    a genera rapoarte pe intervale personalizate. Comenzile de tip <code>bi:generate-period-report</code>
+    acceptă în plus <code>--type=</code>.
+  </p>
+  <p>
+    De asemenea, watchdog-ul BI poate fi rulat manual pentru a verifica și repara datele lipsă:
+  </p>
+  <pre><code>php artisan bi:health-check --days=7</code></pre>
+
+  <h3>8.4 Costurile AI și logul de utilizare</h3>
+  <p>
+    Fiecare generare de analiză BI consumă tokeni Anthropic. Costurile sunt înregistrate automat în
+    tabelul <code>ai_usage_logs</code> cu tipul <code>bi_daily</code>, <code>bi_weekly</code> sau
+    <code>bi_monthly</code>. Super-adminii pot vizualiza consumul AI agregat din pagina
+    <strong>Setări → Utilizare AI</strong>. Costul estimat per raport este vizibil și în snapshot-ul
+    de metrici salvat pe fiecare analiză (<code>metrics_snapshot.cost_usd</code>).
+  </p>
+
+</section>

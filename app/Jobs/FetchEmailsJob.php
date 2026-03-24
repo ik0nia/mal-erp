@@ -99,7 +99,7 @@ class FetchEmailsJob implements ShouldQueue
             'host'          => $host,
             'port'          => $port,
             'encryption'    => $encryption,
-            'validate_cert' => false,
+            'validate_cert' => ! app()->isLocal(),
             'username'      => $username,
             'password'      => $password,
             'protocol'      => 'imap',
@@ -252,10 +252,10 @@ class FetchEmailsJob implements ShouldQueue
                     'supplier_contact_id' => $contactId,
                 ]);
 
-                // Dispatch AI pentru emailuri noi din INBOX/Sent cu furnizor cunoscut
-                if (in_array($folderPath, ['INBOX', 'INBOX.Sent']) && $supplierId) {
-                    ProcessEmailAIJob::dispatch($emailRecord->id)->delay(now()->addSeconds(15));
-                }
+                // Dispatch AI pentru emailuri noi din INBOX/Sent cu furnizor cunoscut — DEZACTIVAT temporar (consum API).
+                // if (in_array($folderPath, ['INBOX', 'INBOX.Sent']) && $supplierId) {
+                //     ProcessEmailAIJob::dispatch($emailRecord->id)->delay(now()->addSeconds(15));
+                // }
 
                 $saved++;
 
@@ -273,6 +273,14 @@ class FetchEmailsJob implements ShouldQueue
         }
 
         return $saved;
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        Log::error(class_basename(static::class) . ' failed', [
+            'exception' => $exception->getMessage(),
+            'trace'     => $exception->getTraceAsString(),
+        ]);
     }
 
     private function decodeMimeStr(string $str): string

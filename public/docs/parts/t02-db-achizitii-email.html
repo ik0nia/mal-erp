@@ -1,0 +1,708 @@
+<section id="t02-db-achizitii-email">
+
+<h2>T02 — Schema Baze de Date: Achiziții, Email, Chat, AI</h2>
+<p>Documentat la: 2026-03-15 | Migrații sursă: <code>database/migrations/</code> | Modele: <code>app/Models/</code></p>
+
+<nav class="toc-local">
+  <strong>Tabele documentate:</strong>
+  <a href="#tbl-purchase-requests">purchase_requests</a> &middot;
+  <a href="#tbl-purchase-request-items">purchase_request_items</a> &middot;
+  <a href="#tbl-purchase-orders">purchase_orders</a> &middot;
+  <a href="#tbl-purchase-order-items">purchase_order_items</a> &middot;
+  <a href="#tbl-email-messages">email_messages</a> &middot;
+  <a href="#tbl-email-entities">email_entities</a> &middot;
+  <a href="#tbl-supplier-price-quotes">supplier_price_quotes</a> &middot;
+  <a href="#tbl-chat-logs">chat_logs</a> &middot;
+  <a href="#tbl-chat-contacts">chat_contacts</a> &middot;
+  <a href="#tbl-ai-usage-logs">ai_usage_logs</a> &middot;
+  <a href="#tbl-app-settings">app_settings</a> &middot;
+  <a href="#tbl-role-permissions">role_permissions</a> &middot;
+  <a href="#tbl-integration-connections">integration_connections</a>
+</nav>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODUL ACHIZIȚII
+     ═══════════════════════════════════════════════════════════════ -->
+
+<h3 id="tbl-purchase-requests">1. purchase_requests</h3>
+<p><strong>Scop:</strong> Necesare de achiziție (PNR). Un utilizator dintr-o locație creează un necesar și îl trimite buyer-ilor pentru a fi acoperit prin comenzi de achiziție.</p>
+<p><strong>Model Eloquent:</strong> <code>App\Models\PurchaseRequest</code> | Trait-uri: <code>HasLocationScope</code>, <code>HasStatusEnum</code></p>
+
+<p><strong>Workflow status:</strong> <code>draft</code> → <code>submitted</code> → <code>partially_ordered</code> / <code>fully_ordered</code> / <code>cancelled</code></p>
+
+<table border="1" cellspacing="0" cellpadding="4">
+  <thead>
+    <tr>
+      <th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>id</strong></td><td>bigint unsigned</td><td>NO</td><td>AUTO_INCREMENT</td><td>Cheie primară</td></tr>
+    <tr><td><strong>number</strong></td><td>varchar(255)</td><td>NO</td><td>—</td><td>Număr unic generat: <code>&lt;SERIE&gt;-NNNN</code> (ex: PNR-0001). Serie configurabilă în AppSetting::KEY_PNR_SERIES</td></tr>
+    <tr><td><strong>user_id</strong></td><td>bigint unsigned</td><td>NO</td><td>—</td><td>FK → users.id. Utilizatorul care a creat necesarul</td></tr>
+    <tr><td><strong>location_id</strong></td><td>bigint unsigned</td><td>NO</td><td>—</td><td>FK → locations.id. Locația/depozitul solicitant</td></tr>
+    <tr><td><strong>status</strong></td><td>enum</td><td>NO</td><td>draft</td><td>Stare curentă. Valori: <code>draft</code>, <code>submitted</code>, <code>partially_ordered</code>, <code>fully_ordered</code>, <code>cancelled</code></td></tr>
+    <tr><td><strong>notes</strong></td><td>text</td><td>YES</td><td>NULL</td><td>Note interne libere</td></tr>
+    <tr><td><strong>woo_order_id</strong></td><td>bigint unsigned</td><td>YES</td><td>NULL</td><td>FK → woo_orders.id. Prezent când necesarul a fost generat automat dintr-o comandă WooCommerce cu produse on_demand</td></tr>
+    <tr><td><strong>source_type</strong></td><td>varchar(255)</td><td>YES</td><td>NULL</td><td>Sursa creării: <code>manual</code> (default) sau <code>woo_order</code></td></tr>
+    <tr><td><strong>created_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+    <tr><td><strong>updated_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Indecși &amp; FK:</strong></p>
+<ul>
+  <li><code>UNIQUE (number)</code></li>
+  <li><code>FK user_id → users(id)</code> — restricție standard</li>
+  <li><code>FK location_id → locations(id)</code> — restricție standard</li>
+  <li><code>FK woo_order_id → woo_orders(id)</code> — nullOnDelete</li>
+</ul>
+
+<p><strong>Relații Eloquent:</strong></p>
+<ul>
+  <li><code>user()</code> → BelongsTo User</li>
+  <li><code>location()</code> → BelongsTo Location</li>
+  <li><code>items()</code> → HasMany PurchaseRequestItem</li>
+  <li><code>wooOrder()</code> → BelongsTo WooOrder</li>
+</ul>
+
+<p><strong>Logică business:</strong></p>
+<ul>
+  <li><code>getOrCreateDraft(User)</code> — firstOrCreate draft per user (previne duplicate)</li>
+  <li><code>recalculateStatus()</code> — recalculează statusul pe baza itemelor: dacă toți ordered_qty &ge; qty → <em>fully_ordered</em>; dacă cel puțin unul > 0 → <em>partially_ordered</em>; altfel → <em>submitted</em>; dacă toți cancelați → <em>cancelled</em></li>
+  <li><code>createFromWooOrder(WooOrder)</code> — auto-generare necesare pentru produse on_demand (idempotent)</li>
+</ul>
+
+<hr>
+
+<h3 id="tbl-purchase-request-items">2. purchase_request_items</h3>
+<p><strong>Scop:</strong> Linii de produs dintr-un necesar de achiziție. Fiecare linie specifică produsul, cantitatea necesară și furnizorul preferat.</p>
+<p><strong>Model Eloquent:</strong> <code>App\Models\PurchaseRequestItem</code></p>
+
+<table border="1" cellspacing="0" cellpadding="4">
+  <thead>
+    <tr>
+      <th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>id</strong></td><td>bigint unsigned</td><td>NO</td><td>AUTO_INCREMENT</td><td>Cheie primară</td></tr>
+    <tr><td><strong>purchase_request_id</strong></td><td>bigint unsigned</td><td>NO</td><td>—</td><td>FK → purchase_requests.id (cascadeOnDelete)</td></tr>
+    <tr><td><strong>woo_product_id</strong></td><td>bigint unsigned</td><td>YES</td><td>NULL</td><td>FK → woo_products.id (nullOnDelete). Null pentru produse fără catalog</td></tr>
+    <tr><td><strong>supplier_id</strong></td><td>bigint unsigned</td><td>YES</td><td>NULL</td><td>FK → suppliers.id (nullOnDelete). Auto-completat din furnizorul preferat al produsului</td></tr>
+    <tr><td><strong>product_name</strong></td><td>varchar(255)</td><td>NO</td><td>—</td><td>Denumire produs (auto-completată din woo_products dacă woo_product_id e setat)</td></tr>
+    <tr><td><strong>sku</strong></td><td>varchar(255)</td><td>YES</td><td>NULL</td><td>Codul intern ERP (auto-completat din produs)</td></tr>
+    <tr><td><strong>quantity</strong></td><td>decimal(10,3)</td><td>NO</td><td>—</td><td>Cantitatea solicitată</td></tr>
+    <tr><td><strong>ordered_quantity</strong></td><td>decimal(10,3)</td><td>NO</td><td>0</td><td>Cantitate acoperită de comenzi de achiziție. Acumulat automat la creare PO item</td></tr>
+    <tr><td><strong>needed_by</strong></td><td>date</td><td>YES</td><td>NULL</td><td>Data limită necesitate</td></tr>
+    <tr><td><strong>is_urgent</strong></td><td>tinyint(1)</td><td>NO</td><td>0</td><td>Marcaj urgență</td></tr>
+    <tr><td><strong>is_reserved</strong></td><td>tinyint(1)</td><td>NO</td><td>0</td><td>Produs rezervat pentru un client</td></tr>
+    <tr><td><strong>customer_id</strong></td><td>bigint unsigned</td><td>YES</td><td>NULL</td><td>FK → customers.id (nullOnDelete). Clientul pentru care e rezervat</td></tr>
+    <tr><td><strong>offer_id</strong></td><td>bigint unsigned</td><td>YES</td><td>NULL</td><td>FK → offers.id (nullOnDelete). Oferta din care provine cererea</td></tr>
+    <tr><td><strong>client_reference</strong></td><td>varchar(255)</td><td>YES</td><td>NULL</td><td>Referință client (ex: număr comandă client)</td></tr>
+    <tr><td><strong>notes</strong></td><td>text</td><td>YES</td><td>NULL</td><td>Note interne</td></tr>
+    <tr><td><strong>status</strong></td><td>enum</td><td>NO</td><td>pending</td><td>Stare item: <code>pending</code>, <code>ordered</code>, <code>cancelled</code></td></tr>
+    <tr><td><strong>purchase_order_item_id</strong></td><td>bigint unsigned</td><td>YES</td><td>NULL</td><td>FK → purchase_order_items.id (nullOnDelete). Linkul direct la linia din PO care acoperă cererea</td></tr>
+    <tr><td><strong>created_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+    <tr><td><strong>updated_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Indecși &amp; FK:</strong></p>
+<ul>
+  <li><code>FK purchase_request_id → purchase_requests(id)</code> — cascadeOnDelete</li>
+  <li><code>FK woo_product_id → woo_products(id)</code> — nullOnDelete</li>
+  <li><code>FK supplier_id → suppliers(id)</code> — nullOnDelete</li>
+  <li><code>FK customer_id → customers(id)</code> — nullOnDelete</li>
+  <li><code>FK offer_id → offers(id)</code> — nullOnDelete</li>
+  <li><code>FK purchase_order_item_id → purchase_order_items(id)</code> — nullOnDelete</li>
+  <li><code>INDEX pri_supplier_status (supplier_id, status)</code> — pentru query-uri BuyerDashboard</li>
+  <li><code>INDEX pri_status_ordered (status, ordered_quantity)</code> — pentru filtrare rapidă iteme neacoperite</li>
+</ul>
+
+<p><strong>Relații Eloquent:</strong></p>
+<ul>
+  <li><code>purchaseRequest()</code> → BelongsTo PurchaseRequest</li>
+  <li><code>product()</code> → BelongsTo WooProduct (via woo_product_id)</li>
+  <li><code>supplier()</code> → BelongsTo Supplier</li>
+  <li><code>customer()</code> → BelongsTo Customer</li>
+  <li><code>offer()</code> → BelongsTo Offer</li>
+  <li><code>purchaseOrderItem()</code> → BelongsTo PurchaseOrderItem</li>
+</ul>
+
+<p><strong>Castări:</strong> <code>quantity</code>, <code>ordered_quantity</code> → <em>decimal:3</em>; <code>needed_by</code> → <em>date</em>; <code>is_urgent</code>, <code>is_reserved</code> → <em>boolean</em></p>
+
+<p><strong>Accesor:</strong> <code>remaining_quantity</code> = <code>quantity - ordered_quantity</code> (min 0)</p>
+
+<hr>
+
+<h3 id="tbl-purchase-orders">3. purchase_orders</h3>
+<p><strong>Scop:</strong> Comenzi de achiziție (PO) trimise furnizorilor. Include flux de aprobare, trimitere și recepție.</p>
+<p><strong>Model Eloquent:</strong> <code>App\Models\PurchaseOrder</code> | Trait: <code>HasStatusEnum</code></p>
+
+<p><strong>Workflow status:</strong> <code>draft</code> → <code>pending_approval</code> → <code>approved</code> / <code>rejected</code> → <code>sent</code> → <code>received</code> / <code>cancelled</code></p>
+
+<p><strong>Numerotare:</strong> Format <code>PO-YYYYMMDD-NNNN</code> (secvență MAX+1 per zi)</p>
+
+<table border="1" cellspacing="0" cellpadding="4">
+  <thead>
+    <tr>
+      <th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>id</strong></td><td>bigint unsigned</td><td>NO</td><td>AUTO_INCREMENT</td><td>Cheie primară</td></tr>
+    <tr><td><strong>number</strong></td><td>varchar(255)</td><td>NO</td><td>—</td><td>Număr unic PO (ex: PO-20260315-0001)</td></tr>
+    <tr><td><strong>supplier_id</strong></td><td>bigint unsigned</td><td>NO</td><td>—</td><td>FK → suppliers.id. Furnizorul destinatar</td></tr>
+    <tr><td><strong>buyer_id</strong></td><td>bigint unsigned</td><td>NO</td><td>—</td><td>FK → users.id. Buyer-ul responsabil de PO</td></tr>
+    <tr><td><strong>status</strong></td><td>enum</td><td>NO</td><td>draft</td><td>Stare: <code>draft</code>, <code>pending_approval</code>, <code>approved</code>, <code>rejected</code>, <code>sent</code>, <code>received</code>, <code>cancelled</code></td></tr>
+    <tr><td><strong>total_value</strong></td><td>decimal(12,2)</td><td>NO</td><td>0</td><td>Valoare totală PO. Recalculată automat din line_total-urile itemelor la orice saved/deleted</td></tr>
+    <tr><td><strong>currency</strong></td><td>char(3)</td><td>NO</td><td>RON</td><td>Moneda PO (ISO 4217)</td></tr>
+    <tr><td><strong>notes_internal</strong></td><td>text</td><td>YES</td><td>NULL</td><td>Note vizibile doar intern (nu pe PDF)</td></tr>
+    <tr><td><strong>notes_supplier</strong></td><td>text</td><td>YES</td><td>NULL</td><td>Note incluse pe documentul trimis furnizorului</td></tr>
+    <tr><td><strong>approved_by</strong></td><td>bigint unsigned</td><td>YES</td><td>NULL</td><td>FK → users.id. Userul care a aprobat PO-ul</td></tr>
+    <tr><td><strong>approved_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Data/ora aprobării</td></tr>
+    <tr><td><strong>rejected_by</strong></td><td>bigint unsigned</td><td>YES</td><td>NULL</td><td>FK → users.id. Userul care a respins PO-ul</td></tr>
+    <tr><td><strong>rejected_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Data/ora respingerii</td></tr>
+    <tr><td><strong>rejection_reason</strong></td><td>text</td><td>YES</td><td>NULL</td><td>Motivul respingerii (completat de manager)</td></tr>
+    <tr><td><strong>sent_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Data/ora trimiterii la furnizor</td></tr>
+    <tr><td><strong>received_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Data/ora recepției mărfii</td></tr>
+    <tr><td><strong>received_by</strong></td><td>bigint unsigned</td><td>YES</td><td>NULL</td><td>FK → users.id. Userul care a înregistrat recepția</td></tr>
+    <tr><td><strong>received_notes</strong></td><td>text</td><td>YES</td><td>NULL</td><td>Note recepție (ex: lipsuri, diferențe cantitative)</td></tr>
+    <tr><td><strong>created_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+    <tr><td><strong>updated_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Indecși &amp; FK:</strong></p>
+<ul>
+  <li><code>UNIQUE (number)</code></li>
+  <li><code>FK supplier_id → suppliers(id)</code></li>
+  <li><code>FK buyer_id → users(id)</code></li>
+  <li><code>FK approved_by → users(id)</code> — nullOnDelete</li>
+  <li><code>FK rejected_by → users(id)</code> — nullOnDelete</li>
+  <li><code>FK received_by → users(id)</code> — nullOnDelete</li>
+</ul>
+
+<p><strong>Relații Eloquent:</strong></p>
+<ul>
+  <li><code>supplier()</code> → BelongsTo Supplier</li>
+  <li><code>buyer()</code> → BelongsTo User (via buyer_id)</li>
+  <li><code>approvedBy()</code> → BelongsTo User (via approved_by)</li>
+  <li><code>rejectedBy()</code> → BelongsTo User (via rejected_by)</li>
+  <li><code>receivedBy()</code> → BelongsTo User (via received_by)</li>
+  <li><code>items()</code> → HasMany PurchaseOrderItem</li>
+</ul>
+
+<p><strong>Logică business:</strong></p>
+<ul>
+  <li><code>recalculateTotals()</code> — face SUM(line_total) pe items și salvează în total_value (silently)</li>
+  <li><code>needsApproval()</code> — returnează true dacă total_value &gt; supplier.po_approval_threshold SAU dacă vreun item depășește po_max_qty din ProductSupplier</li>
+</ul>
+
+<hr>
+
+<h3 id="tbl-purchase-order-items">4. purchase_order_items</h3>
+<p><strong>Scop:</strong> Linii de produs dintr-o comandă de achiziție. Leagă necesarele de achiziție cu comanda efectivă.</p>
+<p><strong>Model Eloquent:</strong> <code>App\Models\PurchaseOrderItem</code></p>
+
+<table border="1" cellspacing="0" cellpadding="4">
+  <thead>
+    <tr>
+      <th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>id</strong></td><td>bigint unsigned</td><td>NO</td><td>AUTO_INCREMENT</td><td>Cheie primară</td></tr>
+    <tr><td><strong>purchase_order_id</strong></td><td>bigint unsigned</td><td>NO</td><td>—</td><td>FK → purchase_orders.id (cascadeOnDelete)</td></tr>
+    <tr><td><strong>woo_product_id</strong></td><td>bigint unsigned</td><td>YES</td><td>NULL</td><td>FK → woo_products.id (nullOnDelete)</td></tr>
+    <tr><td><strong>product_name</strong></td><td>varchar(255)</td><td>NO</td><td>—</td><td>Denumire produs (snapshot la momentul creării PO)</td></tr>
+    <tr><td><strong>sku</strong></td><td>varchar(255)</td><td>YES</td><td>NULL</td><td>Codul intern ERP</td></tr>
+    <tr><td><strong>supplier_sku</strong></td><td>varchar(255)</td><td>YES</td><td>NULL</td><td>Codul furnizorului pentru acest produs</td></tr>
+    <tr><td><strong>quantity</strong></td><td>decimal(10,3)</td><td>NO</td><td>—</td><td>Cantitate comandată</td></tr>
+    <tr><td><strong>received_quantity</strong></td><td>decimal(10,3)</td><td>YES</td><td>NULL</td><td>Cantitate efectiv recepționată. NULL = nerecepționat încă; 0 = neprimit; valoare = recepționat parțial/total</td></tr>
+    <tr><td><strong>unit_price</strong></td><td>decimal(10,4)</td><td>YES</td><td>NULL</td><td>Prețul unitar negociat cu furnizorul</td></tr>
+    <tr><td><strong>line_total</strong></td><td>decimal(12,4)</td><td>NO</td><td>0</td><td>quantity × unit_price. Calculat automat în booted()->saving()</td></tr>
+    <tr><td><strong>notes</strong></td><td>text</td><td>YES</td><td>NULL</td><td>Note per linie</td></tr>
+    <tr><td><strong>purchase_request_item_id</strong></td><td>bigint unsigned</td><td>YES</td><td>NULL</td><td>FK → purchase_request_items.id (nullOnDelete). Link înapoi la necesarul sursă</td></tr>
+    <tr><td><strong>sources_json</strong></td><td>text</td><td>YES</td><td>NULL</td><td>JSON array cu toate purchase_request_item_id-urile acoperite de această linie PO (suport pentru agregare mai multor necesare)</td></tr>
+    <tr><td><strong>created_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+    <tr><td><strong>updated_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Indecși &amp; FK:</strong></p>
+<ul>
+  <li><code>FK purchase_order_id → purchase_orders(id)</code> — cascadeOnDelete</li>
+  <li><code>FK woo_product_id → woo_products(id)</code> — nullOnDelete</li>
+  <li><code>FK purchase_request_item_id → purchase_request_items(id)</code> — nullOnDelete</li>
+</ul>
+
+<p><strong>Relații Eloquent:</strong></p>
+<ul>
+  <li><code>purchaseOrder()</code> → BelongsTo PurchaseOrder</li>
+  <li><code>product()</code> → BelongsTo WooProduct (via woo_product_id)</li>
+  <li><code>purchaseRequestItem()</code> → BelongsTo PurchaseRequestItem</li>
+</ul>
+
+<p><strong>Castări:</strong> <code>quantity</code>, <code>received_quantity</code> → <em>decimal:3</em>; <code>unit_price</code> → <em>decimal:4</em>; <code>line_total</code> → <em>decimal:4</em></p>
+
+<p><strong>Automatisme booted():</strong></p>
+<ul>
+  <li><em>saving</em>: recalculează <code>line_total = quantity × unit_price</code></li>
+  <li><em>saved / deleted</em>: apelează <code>$item-&gt;purchaseOrder-&gt;recalculateTotals()</code></li>
+</ul>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODUL EMAIL
+     ═══════════════════════════════════════════════════════════════ -->
+
+<h3 id="tbl-email-messages">5. email_messages</h3>
+<p><strong>Scop:</strong> Istoricul emailurilor importate via IMAP (INBOX, Sent, Archives). Include procesare AI pentru extragere entități business.</p>
+<p><strong>Model Eloquent:</strong> <code>App\Models\EmailMessage</code></p>
+
+<table border="1" cellspacing="0" cellpadding="4">
+  <thead>
+    <tr>
+      <th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>id</strong></td><td>bigint unsigned</td><td>NO</td><td>AUTO_INCREMENT</td><td>Cheie primară</td></tr>
+    <tr><td><strong>imap_uid</strong></td><td>varchar(255)</td><td>NO</td><td>—</td><td>UID-ul mesajului pe serverul IMAP (pentru deduplicare la sync)</td></tr>
+    <tr><td><strong>imap_folder</strong></td><td>varchar(100)</td><td>NO</td><td>INBOX</td><td>Folderul IMAP sursă (INBOX, Sent, Archives)</td></tr>
+    <tr><td><strong>from_email</strong></td><td>varchar(255)</td><td>NO</td><td>—</td><td>Adresa email expeditor</td></tr>
+    <tr><td><strong>from_name</strong></td><td>varchar(255)</td><td>YES</td><td>NULL</td><td>Numele afișat al expeditorului</td></tr>
+    <tr><td><strong>subject</strong></td><td>varchar(500)</td><td>YES</td><td>NULL</td><td>Subiectul emailului</td></tr>
+    <tr><td><strong>body_html</strong></td><td>longtext</td><td>YES</td><td>NULL</td><td>Corpul HTML al emailului (sanitizat la afișare via <code>getBodyDisplayAttribute()</code>)</td></tr>
+    <tr><td><strong>body_text</strong></td><td>longtext</td><td>YES</td><td>NULL</td><td>Versiunea text plain</td></tr>
+    <tr><td><strong>to_recipients</strong></td><td>json</td><td>YES</td><td>NULL</td><td>Array destinatari To: [{email, name}]</td></tr>
+    <tr><td><strong>cc_recipients</strong></td><td>json</td><td>YES</td><td>NULL</td><td>Array destinatari CC: [{email, name}]</td></tr>
+    <tr><td><strong>attachments</strong></td><td>json</td><td>YES</td><td>NULL</td><td>Metadate atașamente: [{name, size, mime_type}] — conținut nedescarcat</td></tr>
+    <tr><td><strong>sent_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Data/ora trimiterii emailului (de pe server IMAP)</td></tr>
+    <tr><td><strong>is_read</strong></td><td>tinyint(1)</td><td>NO</td><td>0</td><td>Marcat ca citit în ERP (independent de starea IMAP)</td></tr>
+    <tr><td><strong>is_flagged</strong></td><td>tinyint(1)</td><td>NO</td><td>0</td><td>Marcat cu steag (follow-up)</td></tr>
+    <tr><td><strong>is_ignored</strong></td><td>tinyint(1)</td><td>YES</td><td>0</td><td>Ignorat din procesarea AI (newsletter, spam, etc.)</td></tr>
+    <tr><td><strong>supplier_id</strong></td><td>bigint unsigned</td><td>YES</td><td>NULL</td><td>FK → suppliers.id (nullOnDelete). Furnizorul asociat (detectat automat sau manual)</td></tr>
+    <tr><td><strong>supplier_contact_id</strong></td><td>bigint unsigned</td><td>YES</td><td>NULL</td><td>FK → supplier_contacts.id (nullOnDelete). Contactul specific din cadrul furnizorului</td></tr>
+    <tr><td><strong>purchase_order_id</strong></td><td>bigint unsigned</td><td>YES</td><td>NULL</td><td>FK → purchase_orders.id (nullOnDelete). Legătura cu un PO (dacă emailul se referă la o comandă)</td></tr>
+    <tr><td><strong>agent_processed_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Data/ora procesării de agentul AI (null = neprocesat)</td></tr>
+    <tr><td><strong>agent_actions</strong></td><td>json</td><td>YES</td><td>NULL</td><td>Rezultatul procesării AI: {type, summary, entities[], price_quotes[], confidence}</td></tr>
+    <tr><td><strong>internal_notes</strong></td><td>text</td><td>YES</td><td>NULL</td><td>Note interne adăugate manual de utilizatori</td></tr>
+    <tr><td><strong>created_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+    <tr><td><strong>updated_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Indecși &amp; FK:</strong></p>
+<ul>
+  <li><code>UNIQUE (imap_uid, imap_folder)</code> — cheie de deduplicare la import</li>
+  <li><code>INDEX (imap_uid)</code></li>
+  <li><code>INDEX (from_email)</code></li>
+  <li><code>INDEX (sent_at)</code></li>
+  <li><code>INDEX (is_read)</code></li>
+  <li><code>INDEX idx_em_supplier_processed (supplier_id, agent_processed_at)</code> — pentru query procesare batch AI</li>
+  <li><code>FK supplier_id → suppliers(id)</code> — nullOnDelete</li>
+  <li><code>FK supplier_contact_id → supplier_contacts(id)</code> — nullOnDelete</li>
+  <li><code>FK purchase_order_id → purchase_orders(id)</code> — nullOnDelete</li>
+</ul>
+
+<p><strong>Relații Eloquent:</strong></p>
+<ul>
+  <li><code>supplier()</code> → BelongsTo Supplier</li>
+  <li><code>supplierContact()</code> → BelongsTo SupplierContact</li>
+  <li><code>purchaseOrder()</code> → BelongsTo PurchaseOrder</li>
+</ul>
+
+<p><strong>Castări:</strong> <code>sent_at</code>, <code>agent_processed_at</code> → <em>datetime</em>; <code>is_read</code>, <code>is_flagged</code> → <em>boolean</em>; <code>to_recipients</code>, <code>cc_recipients</code>, <code>attachments</code>, <code>agent_actions</code> → <em>array</em></p>
+
+<p><strong>Accesori:</strong></p>
+<ul>
+  <li><code>from_label</code> — returnează "Nume &lt;email&gt;" sau doar email</li>
+  <li><code>body_display</code> — HTML sanitizat (elimină script, iframe, event handlers, javascript: URI)</li>
+</ul>
+
+<hr>
+
+<h3 id="tbl-email-entities">6. email_entities</h3>
+<p><strong>Scop:</strong> Entități de business extrase de AI din emailuri (prețuri, date livrare, facturi, termene plată, discounturi).</p>
+<p><strong>Model Eloquent:</strong> direct via DB sau relaţie HasMany de pe EmailMessage (necreat model dedicat)</p>
+
+<table border="1" cellspacing="0" cellpadding="4">
+  <thead>
+    <tr>
+      <th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>id</strong></td><td>bigint unsigned</td><td>NO</td><td>AUTO_INCREMENT</td><td>Cheie primară</td></tr>
+    <tr><td><strong>email_message_id</strong></td><td>bigint unsigned</td><td>NO</td><td>—</td><td>FK → email_messages.id (cascadeOnDelete)</td></tr>
+    <tr><td><strong>entity_type</strong></td><td>varchar(50)</td><td>NO</td><td>—</td><td>Tipul entității: <code>product_price</code>, <code>delivery_date</code>, <code>invoice_number</code>, <code>payment_terms</code>, <code>discount</code>, <code>quantity</code>, <code>out_of_stock</code>, <code>price_increase</code>, <code>general_mention</code></td></tr>
+    <tr><td><strong>raw_text</strong></td><td>text</td><td>YES</td><td>NULL</td><td>Textul exact din email de unde s-a extras entitatea</td></tr>
+    <tr><td><strong>woo_product_id</strong></td><td>bigint unsigned</td><td>YES</td><td>NULL</td><td>FK → woo_products.id (nullOnDelete). Produsul potrivit din catalog (dacă s-a găsit match)</td></tr>
+    <tr><td><strong>product_name_raw</strong></td><td>varchar(500)</td><td>YES</td><td>NULL</td><td>Denumirea produsului menționată în email (înainte de potrivire cu catalogul)</td></tr>
+    <tr><td><strong>amount</strong></td><td>decimal(12,2)</td><td>YES</td><td>NULL</td><td>Valoare numerică extrasă (preț, cantitate, procent discount, etc.)</td></tr>
+    <tr><td><strong>currency</strong></td><td>varchar(10)</td><td>YES</td><td>NULL</td><td>Moneda (RON, EUR, USD, etc.)</td></tr>
+    <tr><td><strong>unit</strong></td><td>varchar(50)</td><td>YES</td><td>NULL</td><td>Unitatea de măsură (buc, kg, m, zile, etc.)</td></tr>
+    <tr><td><strong>date_value</strong></td><td>date</td><td>YES</td><td>NULL</td><td>Dată menționată (ex: dată livrare, dată factură)</td></tr>
+    <tr><td><strong>confidence</strong></td><td>tinyint unsigned</td><td>NO</td><td>80</td><td>Scor de încredere AI 0–100</td></tr>
+    <tr><td><strong>metadata</strong></td><td>json</td><td>YES</td><td>NULL</td><td>Date suplimentare specifice tipului de entitate</td></tr>
+    <tr><td><strong>created_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+    <tr><td><strong>updated_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Indecși &amp; FK:</strong></p>
+<ul>
+  <li><code>FK email_message_id → email_messages(id)</code> — cascadeOnDelete</li>
+  <li><code>FK woo_product_id → woo_products(id)</code> — nullOnDelete</li>
+  <li><code>INDEX (entity_type)</code></li>
+  <li><code>INDEX (email_message_id, entity_type)</code></li>
+  <li><code>INDEX (woo_product_id, entity_type)</code></li>
+</ul>
+
+<hr>
+
+<h3 id="tbl-supplier-price-quotes">7. supplier_price_quotes</h3>
+<p><strong>Scop:</strong> Oferte de preț extrase din emailuri furnizori. Permite urmărirea evoluției prețurilor în timp per furnizor și produs.</p>
+<p><strong>Model Eloquent:</strong> direct via DB (fără model dedicat în versiunea curentă)</p>
+
+<table border="1" cellspacing="0" cellpadding="4">
+  <thead>
+    <tr>
+      <th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>id</strong></td><td>bigint unsigned</td><td>NO</td><td>AUTO_INCREMENT</td><td>Cheie primară</td></tr>
+    <tr><td><strong>supplier_id</strong></td><td>bigint unsigned</td><td>NO</td><td>—</td><td>FK → suppliers.id (cascadeOnDelete)</td></tr>
+    <tr><td><strong>email_message_id</strong></td><td>bigint unsigned</td><td>NO</td><td>—</td><td>FK → email_messages.id (cascadeOnDelete). Emailul sursă al ofertei</td></tr>
+    <tr><td><strong>woo_product_id</strong></td><td>bigint unsigned</td><td>YES</td><td>NULL</td><td>FK → woo_products.id (nullOnDelete). Produsul din catalog (dacă s-a putut potrivi)</td></tr>
+    <tr><td><strong>product_name_raw</strong></td><td>varchar(500)</td><td>NO</td><td>—</td><td>Denumirea produsului exact cum apare în email</td></tr>
+    <tr><td><strong>unit_price</strong></td><td>decimal(12,2)</td><td>NO</td><td>—</td><td>Prețul unitar oferit</td></tr>
+    <tr><td><strong>currency</strong></td><td>varchar(10)</td><td>NO</td><td>RON</td><td>Moneda prețului</td></tr>
+    <tr><td><strong>min_qty</strong></td><td>decimal(10,2)</td><td>YES</td><td>NULL</td><td>Cantitate minimă pentru care se aplică prețul (dacă e specificată)</td></tr>
+    <tr><td><strong>valid_from</strong></td><td>date</td><td>YES</td><td>NULL</td><td>Începutul perioadei de valabilitate a ofertei</td></tr>
+    <tr><td><strong>valid_until</strong></td><td>date</td><td>YES</td><td>NULL</td><td>Sfârșitul perioadei de valabilitate</td></tr>
+    <tr><td><strong>quoted_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Data/ora la care a fost trimis emailul cu oferta</td></tr>
+    <tr><td><strong>notes</strong></td><td>text</td><td>YES</td><td>NULL</td><td>Note suplimentare (condiții speciale, etc.)</td></tr>
+    <tr><td><strong>created_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+    <tr><td><strong>updated_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Indecși &amp; FK:</strong></p>
+<ul>
+  <li><code>FK supplier_id → suppliers(id)</code> — cascadeOnDelete</li>
+  <li><code>FK email_message_id → email_messages(id)</code> — cascadeOnDelete</li>
+  <li><code>FK woo_product_id → woo_products(id)</code> — nullOnDelete</li>
+  <li><code>INDEX (quoted_at)</code></li>
+  <li><code>INDEX (supplier_id, woo_product_id, quoted_at)</code> — pentru istoricul prețurilor per furnizor+produs</li>
+  <li><code>INDEX (woo_product_id, quoted_at)</code> — pentru comparare prețuri între furnizori</li>
+</ul>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODUL CHAT
+     ═══════════════════════════════════════════════════════════════ -->
+
+<h3 id="tbl-chat-logs">8. chat_logs</h3>
+<p><strong>Scop:</strong> Istoricul conversațiilor chatbot-ului AI de pe site-ul malinco.ro. Înregistrează fiecare mesaj user/assistant cu context pagină și consum tokeni.</p>
+<p><strong>Model Eloquent:</strong> <code>App\Models\ChatLog</code></p>
+
+<table border="1" cellspacing="0" cellpadding="4">
+  <thead>
+    <tr>
+      <th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>id</strong></td><td>bigint unsigned</td><td>NO</td><td>AUTO_INCREMENT</td><td>Cheie primară</td></tr>
+    <tr><td><strong>session_id</strong></td><td>varchar(64)</td><td>NO</td><td>—</td><td>ID sesiune chat (generat în widget, persistat în localStorage cu TTL 15 min)</td></tr>
+    <tr><td><strong>ip_address</strong></td><td>varchar(45)</td><td>YES</td><td>NULL</td><td>IP-ul vizitatorului (suportă IPv6)</td></tr>
+    <tr><td><strong>role</strong></td><td>enum</td><td>NO</td><td>—</td><td>Autorul mesajului: <code>user</code> sau <code>assistant</code></td></tr>
+    <tr><td><strong>content</strong></td><td>text</td><td>NO</td><td>—</td><td>Conținutul mesajului</td></tr>
+    <tr><td><strong>has_products</strong></td><td>tinyint(1)</td><td>NO</td><td>0</td><td>True dacă răspunsul a inclus carduri de produse</td></tr>
+    <tr><td><strong>page_url</strong></td><td>varchar(500)</td><td>YES</td><td>NULL</td><td>URL-ul paginii de pe care a inițiat conversația vizitatorul</td></tr>
+    <tr><td><strong>page_title</strong></td><td>varchar(200)</td><td>YES</td><td>NULL</td><td>Titlul paginii (pentru context în admin)</td></tr>
+    <tr><td><strong>input_tokens</strong></td><td>int unsigned</td><td>YES</td><td>NULL</td><td>Tokeni de input consumați (stocați doar pe mesajele <code>assistant</code>)</td></tr>
+    <tr><td><strong>output_tokens</strong></td><td>int unsigned</td><td>YES</td><td>NULL</td><td>Tokeni de output generați (stocați doar pe mesajele <code>assistant</code>)</td></tr>
+    <tr><td><strong>created_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+    <tr><td><strong>updated_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Indecși:</strong></p>
+<ul>
+  <li><code>INDEX (session_id)</code></li>
+  <li><code>INDEX (session_id, created_at)</code> — pentru reconstituirea cronologică a conversației</li>
+</ul>
+
+<p><strong>Castări:</strong> <code>has_products</code> → <em>boolean</em></p>
+
+<p><strong>Metodă statică:</strong> <code>ChatLog::log(...)</code> — helper pentru înregistrare sigură (prinde excepții)</p>
+
+<hr>
+
+<h3 id="tbl-chat-contacts">9. chat_contacts</h3>
+<p><strong>Scop:</strong> Date de contact colectate din conversațiile chatbot. Un record per sesiune, actualizat incremental pe măsură ce vizitatorul furnizează informații.</p>
+<p><strong>Model Eloquent:</strong> <code>App\Models\ChatContact</code></p>
+
+<table border="1" cellspacing="0" cellpadding="4">
+  <thead>
+    <tr>
+      <th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>id</strong></td><td>bigint unsigned</td><td>NO</td><td>AUTO_INCREMENT</td><td>Cheie primară</td></tr>
+    <tr><td><strong>session_id</strong></td><td>varchar(64)</td><td>NO</td><td>—</td><td>UNIQUE. ID sesiune chat (legătură cu chat_logs)</td></tr>
+    <tr><td><strong>email</strong></td><td>varchar(254)</td><td>YES</td><td>NULL</td><td>Adresa email furnizată de vizitator</td></tr>
+    <tr><td><strong>phone</strong></td><td>varchar(30)</td><td>YES</td><td>NULL</td><td>Numărul de telefon furnizat</td></tr>
+    <tr><td><strong>wants_specialist</strong></td><td>tinyint(1)</td><td>NO</td><td>0</td><td>Vizitatorul a solicitat contactul unui specialist (lead calificat)</td></tr>
+    <tr><td><strong>contacted_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Data/ora la care un agent ERP a contactat lead-ul</td></tr>
+    <tr><td><strong>contacted_by</strong></td><td>bigint unsigned</td><td>YES</td><td>NULL</td><td>FK → users.id (nullOnDelete). Userul ERP care a preluat lead-ul</td></tr>
+    <tr><td><strong>summary</strong></td><td>text</td><td>YES</td><td>NULL</td><td>Rezumat AI al conversației (produs de GenerateChatSummaryJob)</td></tr>
+    <tr><td><strong>interested_in</strong></td><td>varchar(500)</td><td>YES</td><td>NULL</td><td>Produse/categorii de interes detectate din conversație</td></tr>
+    <tr><td><strong>created_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+    <tr><td><strong>updated_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Indecși &amp; FK:</strong></p>
+<ul>
+  <li><code>UNIQUE INDEX (session_id)</code></li>
+  <li><code>FK contacted_by → users(id)</code> — nullOnDelete</li>
+</ul>
+
+<p><strong>Relații Eloquent:</strong></p>
+<ul>
+  <li><code>contactedByUser()</code> → BelongsTo User (via contacted_by)</li>
+</ul>
+
+<p><strong>Castări:</strong> <code>wants_specialist</code> → <em>boolean</em>; <code>contacted_at</code> → <em>datetime</em></p>
+
+<p><strong>Metodă statică:</strong> <code>ChatContact::collect(sessionId, email, phone, wantsSpecialist)</code> — upsert sigur, păstrează valorile existente dacă noul parametru e null</p>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODUL AI / SETĂRI
+     ═══════════════════════════════════════════════════════════════ -->
+
+<h3 id="tbl-ai-usage-logs">10. ai_usage_logs</h3>
+<p><strong>Scop:</strong> Monitorizarea consumului și costului API Claude/Gemini per sursă de apel. Permite analiza cheltuielilor AI și optimizarea utilizării.</p>
+<p><strong>Model Eloquent:</strong> <code>App\Models\AiUsageLog</code></p>
+
+<table border="1" cellspacing="0" cellpadding="4">
+  <thead>
+    <tr>
+      <th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>id</strong></td><td>bigint unsigned</td><td>NO</td><td>AUTO_INCREMENT</td><td>Cheie primară</td></tr>
+    <tr><td><strong>source</strong></td><td>varchar(60)</td><td>NO</td><td>—</td><td>Originea apelului AI. Valori: <code>chatbot</code>, <code>email_ai</code>, <code>chat_summary</code>, <code>domain_match</code>, <code>bi_daily</code>, <code>bi_weekly</code>, <code>bi_monthly</code>, <code>product_descriptions</code>, <code>product_titles</code>, <code>product_attributes</code>, <code>product_categories</code>, <code>product_images_eval</code>, <code>product_images_verify</code>, <code>product_dimensions</code>, <code>product_enrich_web</code>, <code>social_caption</code>, <code>social_style_analysis</code>, <code>social_image_gen</code>, <code>template_generation</code></td></tr>
+    <tr><td><strong>model</strong></td><td>varchar(60)</td><td>NO</td><td>—</td><td>Modelul AI folosit (ex: <code>claude-haiku-4-5-20251001</code>, <code>claude-sonnet-4-6</code>)</td></tr>
+    <tr><td><strong>input_tokens</strong></td><td>int unsigned</td><td>NO</td><td>0</td><td>Tokeni de intrare (prompt + context)</td></tr>
+    <tr><td><strong>output_tokens</strong></td><td>int unsigned</td><td>NO</td><td>0</td><td>Tokeni generați în răspuns</td></tr>
+    <tr><td><strong>cost_usd</strong></td><td>decimal(10,6)</td><td>NO</td><td>0</td><td>Costul calculat automat în USD (6 zecimale pentru micro-tranzacții). Formula: (input_tokens/1M × price_input) + (output_tokens/1M × price_output)</td></tr>
+    <tr><td><strong>metadata</strong></td><td>json</td><td>YES</td><td>NULL</td><td>Context suplimentar: session_id (chatbot), product_id (enrichment), email_id (email_ai), etc.</td></tr>
+    <tr><td><strong>created_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+    <tr><td><strong>updated_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Indecși:</strong></p>
+<ul>
+  <li><code>INDEX (source)</code></li>
+  <li><code>INDEX (created_at)</code></li>
+</ul>
+
+<p><strong>Castări:</strong> <code>metadata</code> → <em>array</em>; <code>input_tokens</code>, <code>output_tokens</code> → <em>integer</em>; <code>cost_usd</code> → <em>float</em></p>
+
+<p><strong>Prețuri per model (USD/million tokeni):</strong></p>
+<table border="1" cellspacing="0" cellpadding="4">
+  <thead><tr><th>Model</th><th>Input</th><th>Output</th></tr></thead>
+  <tbody>
+    <tr><td>claude-haiku-4-5</td><td>$0.80</td><td>$4.00</td></tr>
+    <tr><td>claude-sonnet-4-6</td><td>$3.00</td><td>$15.00</td></tr>
+    <tr><td>claude-opus-4-6</td><td>$15.00</td><td>$75.00</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Metode statice:</strong></p>
+<ul>
+  <li><code>AiUsageLog::record(source, model, inputTokens, outputTokens, metadata)</code> — calculează și înregistrează costul</li>
+  <li><code>AiUsageLog::totalCostForPeriod(from, to)</code> — cost total USD într-o perioadă</li>
+</ul>
+
+<p><strong>Accesor:</strong> <code>source_label</code> — returnează eticheta prietenoasă pentru sursă</p>
+
+<hr>
+
+<h3 id="tbl-app-settings">11. app_settings</h3>
+<p><strong>Scop:</strong> Configurări globale ale aplicației stocate în baza de date (key-value store). Suportă valori criptate pentru credențiale sensibile.</p>
+<p><strong>Model Eloquent:</strong> <code>App\Models\AppSetting</code> | Cheie primară: <code>key</code> (string, non-incrementing)</p>
+
+<table border="1" cellspacing="0" cellpadding="4">
+  <thead>
+    <tr>
+      <th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>key</strong></td><td>varchar(255)</td><td>NO</td><td>—</td><td>Cheie primară (string). Ex: <code>logo_path</code>, <code>imap_host</code>, <code>anthropic_api_key</code></td></tr>
+    <tr><td><strong>value</strong></td><td>text</td><td>YES</td><td>NULL</td><td>Valoarea setării. Valorile sensibile sunt stocate criptat via Laravel encrypt()</td></tr>
+    <tr><td><strong>created_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+    <tr><td><strong>updated_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Chei definite (constante pe model):</strong></p>
+<table border="1" cellspacing="0" cellpadding="4">
+  <thead><tr><th>Cheie</th><th>Tip</th><th>Descriere</th></tr></thead>
+  <tbody>
+    <tr><td><code>logo_path</code></td><td>plain</td><td>Cale relativă logo companie</td></tr>
+    <tr><td><code>brand_name</code></td><td>plain</td><td>Denumirea brandului afișată în UI</td></tr>
+    <tr><td><code>pnr_series</code></td><td>plain</td><td>Seria numerelor de necesar (default: PNR)</td></tr>
+    <tr><td><code>pnr_start_number</code></td><td>plain</td><td>Numărul de start pentru PNR</td></tr>
+    <tr><td><code>offer_series</code></td><td>plain</td><td>Seria numerelor de ofertă</td></tr>
+    <tr><td><code>offer_start_number</code></td><td>plain</td><td>Numărul de start pentru oferte</td></tr>
+    <tr><td><code>imap_host</code></td><td>plain</td><td>Server IMAP (ex: mail.malinco.ro)</td></tr>
+    <tr><td><code>imap_port</code></td><td>plain</td><td>Port IMAP (993/143)</td></tr>
+    <tr><td><code>imap_encryption</code></td><td>plain</td><td>Tipul de criptare (ssl/tls)</td></tr>
+    <tr><td><code>imap_username</code></td><td>plain</td><td>Username cont email</td></tr>
+    <tr><td><code>imap_password</code></td><td><strong>criptat</strong></td><td>Parola cont email (criptată)</td></tr>
+    <tr><td><code>anthropic_api_key</code></td><td><strong>criptat</strong></td><td>Cheia API Claude. Fallback automat la env(ANTHROPIC_API_KEY)</td></tr>
+    <tr><td><code>chat_primary_color</code></td><td>plain</td><td>Culoarea primară widget chat</td></tr>
+    <tr><td><code>chat_bot_name</code></td><td>plain</td><td>Numele botului afișat în widget</td></tr>
+    <tr><td><code>chat_subtitle</code></td><td>plain</td><td>Subtitlul din header widget</td></tr>
+    <tr><td><code>chat_welcome_message</code></td><td>plain</td><td>Mesajul de bun venit</td></tr>
+    <tr><td><code>chat_enabled</code></td><td>plain</td><td>Activat/dezactivat widget chat (1/0)</td></tr>
+    <tr><td><code>chat_max_cost_per_session</code></td><td>plain</td><td>Cost maxim USD per sesiune chat (ex: 0.05)</td></tr>
+    <tr><td><code>telegram_bot_token</code></td><td><strong>criptat</strong></td><td>Token bot Telegram pentru notificări lead-uri</td></tr>
+    <tr><td><code>telegram_chat_id</code></td><td>plain</td><td>Chat ID Telegram destinatar notificări</td></tr>
+    <tr><td><code>woo_plugin_api_key</code></td><td><strong>criptat</strong></td><td>Cheia API plugin WordPress malinco-erp-bridge (header X-ERP-Api-Key)</td></tr>
+    <tr><td><code>gemini_api_key</code></td><td><strong>criptat</strong></td><td>Cheia API Google Gemini (generare imagini social media)</td></tr>
+    <tr><td><code>meta_app_id</code></td><td>plain</td><td>App ID Meta (Facebook/Instagram API)</td></tr>
+    <tr><td><code>meta_app_secret</code></td><td><strong>criptat</strong></td><td>App Secret Meta (criptat)</td></tr>
+    <tr><td><code>nav_group_sort_*</code></td><td>plain</td><td>Ordinea grupurilor din navigarea laterală Filament (9 intrări)</td></tr>
+    <tr><td><code>nav_item_sort_*</code></td><td>plain</td><td>Ordinea itemelor individuale din navigare (30+ intrări)</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Cache:</strong> Valorile sunt cacheate 300 secunde cu cheia <code>app_setting:{key}</code>. <code>AppSetting::set()</code> invalidează cache-ul automat.</p>
+
+<p><strong>Metode statice:</strong></p>
+<ul>
+  <li><code>AppSetting::get(key, default)</code> — citire cu cache; fallback la DB dacă cache indisponibil</li>
+  <li><code>AppSetting::set(key, value)</code> — updateOrCreate + invalidare cache</li>
+  <li><code>AppSetting::getEncrypted(key)</code> — decriptare automată; fallback la variabila de mediu corespunzătoare</li>
+  <li><code>AppSetting::setEncrypted(key, value)</code> — criptare automată înainte de stocare</li>
+</ul>
+
+<hr>
+
+<h3 id="tbl-role-permissions">12. role_permissions</h3>
+<p><strong>Scop:</strong> Permisiuni granulare per rol pentru resursele/paginile Filament. Model default-deny: dacă nu există o regulă explicită, accesul este refuzat (cu excepția admin/super_admin).</p>
+<p><strong>Model Eloquent:</strong> <code>App\Models\RolePermission</code></p>
+
+<table border="1" cellspacing="0" cellpadding="4">
+  <thead>
+    <tr>
+      <th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>id</strong></td><td>bigint unsigned</td><td>NO</td><td>AUTO_INCREMENT</td><td>Cheie primară</td></tr>
+    <tr><td><strong>role</strong></td><td>varchar(50)</td><td>NO</td><td>—</td><td>Rolul utilizatorului (ex: <code>buyer</code>, <code>sales</code>, <code>warehouse</code>)</td></tr>
+    <tr><td><strong>resource</strong></td><td>varchar(150)</td><td>NO</td><td>—</td><td>Clasa completă a resursei Filament (ex: <code>App\Filament\App\Resources\PurchaseOrderResource</code>)</td></tr>
+    <tr><td><strong>can_access</strong></td><td>tinyint(1)</td><td>NO</td><td>1</td><td>Poate accesa resursa (vizibilă în navigare)</td></tr>
+    <tr><td><strong>can_create</strong></td><td>tinyint(1)</td><td>NO</td><td>1</td><td>Poate crea înregistrări noi</td></tr>
+    <tr><td><strong>can_edit</strong></td><td>tinyint(1)</td><td>NO</td><td>1</td><td>Poate edita înregistrări existente</td></tr>
+    <tr><td><strong>can_delete</strong></td><td>tinyint(1)</td><td>NO</td><td>0</td><td>Poate șterge înregistrări (implicit <em>false</em> — restricție de securitate)</td></tr>
+    <tr><td><strong>can_view</strong></td><td>tinyint(1)</td><td>NO</td><td>1</td><td>Poate vizualiza detaliile unei înregistrări</td></tr>
+    <tr><td><strong>created_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+    <tr><td><strong>updated_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Indecși:</strong></p>
+<ul>
+  <li><code>UNIQUE (role, resource)</code> — o singură regulă per rol+resursă</li>
+</ul>
+
+<p><strong>Castări:</strong> toate câmpurile <code>can_*</code> → <em>boolean</em></p>
+
+<p><strong>Cache:</strong> Permisiunile per rol sunt cacheate 300 secunde cu cheia <code>role_permissions:{role}</code>. Se invalidează via <code>RolePermission::clearCache(role)</code>.</p>
+
+<p><strong>Logică business:</strong></p>
+<ul>
+  <li><code>RolePermission::forRole(role)</code> — returnează toate permisiunile unui rol, indexate după resource</li>
+  <li><code>RolePermission::check(resource, permission)</code> — verifică o permisiune specifică pentru userul autentificat curent. <em>super_admin</em> și <em>admin</em> au acces la tot implicit</li>
+</ul>
+
+<hr>
+
+<h3 id="tbl-integration-connections">13. integration_connections</h3>
+<p><strong>Scop:</strong> Conexiuni la sisteme externe (WooCommerce, WinMentor CSV, Sameday Courier). Credențialele sunt stocate criptat via cast Eloquent <code>encrypted</code>.</p>
+<p><strong>Model Eloquent:</strong> <code>App\Models\IntegrationConnection</code></p>
+
+<table border="1" cellspacing="0" cellpadding="4">
+  <thead>
+    <tr>
+      <th>Coloană</th><th>Tip</th><th>Nullable</th><th>Default</th><th>Descriere</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>id</strong></td><td>bigint unsigned</td><td>NO</td><td>AUTO_INCREMENT</td><td>Cheie primară</td></tr>
+    <tr><td><strong>location_id</strong></td><td>bigint unsigned</td><td>YES</td><td>NULL</td><td>FK → locations.id (cascadeOnDelete). Nullable — conexiunile pot fi globale (neataşate unei locații)</td></tr>
+    <tr><td><strong>provider</strong></td><td>varchar(255)</td><td>NO</td><td>—</td><td>Tipul de integrare: <code>woocommerce</code>, <code>winmentor_csv</code>, <code>sameday</code></td></tr>
+    <tr><td><strong>name</strong></td><td>varchar(255)</td><td>NO</td><td>—</td><td>Denumire descriptivă a conexiunii (ex: "Magazin Principal")</td></tr>
+    <tr><td><strong>base_url</strong></td><td>varchar(255)</td><td>NO</td><td>—</td><td>URL de bază API (ex: https://malinco.ro). Pentru winmentor_csv: URL-ul fișierului CSV</td></tr>
+    <tr><td><strong>consumer_key</strong></td><td>text</td><td>NO</td><td>—</td><td>Cheia consumer WooCommerce / username Sameday / gol pentru CSV. <strong>Criptat</strong> automat via cast</td></tr>
+    <tr><td><strong>consumer_secret</strong></td><td>text</td><td>NO</td><td>—</td><td>Secretul consumer WooCommerce / parola Sameday. <strong>Criptat</strong> automat via cast</td></tr>
+    <tr><td><strong>verify_ssl</strong></td><td>tinyint(1)</td><td>NO</td><td>1</td><td>Verificare certificat SSL la cereri HTTP</td></tr>
+    <tr><td><strong>is_active</strong></td><td>tinyint(1)</td><td>NO</td><td>1</td><td>Conexiunea este activă și folosită în sync</td></tr>
+    <tr><td><strong>settings</strong></td><td>json</td><td>YES</td><td>NULL</td><td>Setări suplimentare specifice provider-ului: <code>per_page</code>, <code>timeout</code>, <code>push_price_to_site</code>, <code>auto_sync_enabled</code>, <code>sync_interval_minutes</code>, <code>environment</code> (sameday: demo/production), <code>csv_url</code></td></tr>
+    <tr><td><strong>webhook_secret</strong></td><td>text</td><td>YES</td><td>NULL</td><td>Secretul pentru verificarea webhook-urilor WooCommerce. <strong>Criptat</strong> via cast. Generat cu bin2hex(random_bytes(32))</td></tr>
+    <tr><td><strong>created_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+    <tr><td><strong>updated_at</strong></td><td>timestamp</td><td>YES</td><td>NULL</td><td>Timestamps Eloquent</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Indecși &amp; FK:</strong></p>
+<ul>
+  <li><code>UNIQUE (location_id, provider, name)</code></li>
+  <li><code>INDEX (provider, is_active)</code></li>
+  <li><code>FK location_id → locations(id)</code> — cascadeOnDelete (nullable)</li>
+</ul>
+
+<p><strong>Relații Eloquent:</strong></p>
+<ul>
+  <li><code>location()</code> → BelongsTo Location</li>
+  <li><code>syncRuns()</code> → HasMany SyncRun (via connection_id)</li>
+  <li><code>latestSyncRun()</code> → HasOne SyncRun (cea mai recentă)</li>
+  <li><code>wooCategories()</code> → HasMany WooCategory</li>
+  <li><code>wooProducts()</code> → HasMany WooProduct</li>
+  <li><code>samedayAwbs()</code> → HasMany SamedayAwb</li>
+</ul>
+
+<p><strong>Castări:</strong> <code>consumer_key</code>, <code>consumer_secret</code>, <code>webhook_secret</code> → <em>encrypted</em>; <code>verify_ssl</code>, <code>is_active</code> → <em>boolean</em>; <code>settings</code> → <em>array</em></p>
+
+<p><strong>Metode helper:</strong></p>
+<ul>
+  <li><code>isWooCommerce()</code>, <code>isWinmentorCsv()</code>, <code>isSameday()</code></li>
+  <li><code>webhookUrl()</code> — returnează URL-ul public al webhook-ului</li>
+  <li><code>generateWebhookSecret()</code> — generează secret aleatoriu de 64 caractere hex</li>
+  <li><code>resolvePerPage()</code>, <code>resolveTimeoutSeconds()</code> — cu valori implicite sigure</li>
+  <li><code>samedayApiUrl()</code> — URL corect demo/producție pentru Sameday</li>
+</ul>
+
+</section>

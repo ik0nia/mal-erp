@@ -669,6 +669,9 @@
     hideNewConvBar(); // ascunde bannerul cât timp utilizatorul e activ
     scheduleNewConvBar(); // repornește timer-ul de 3 minute
 
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function () { controller.abort(); }, 15000); // 15s timeout
+
     fetch(API_URL + '/chat/message', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -678,8 +681,10 @@
         page_url:   window.location.href,
         page_title: document.title || '',
       }),
+      signal: controller.signal,
     })
     .then(function (r) {
+      clearTimeout(timeoutId);
       if (r.status === 429) throw new Error('429');
       if (!r.ok) throw new Error(r.status);
       return r.json();
@@ -696,8 +701,13 @@
       }
     })
     .catch(function (e) {
+      clearTimeout(timeoutId);
       hideTyping(); isLoading = false;
-      renderMessage('bot', e.message === '429' ? 'Prea multe mesaje. Așteptați un moment.' : 'Eroare de conexiune. Reîncercați.', []);
+      if (e.name === 'AbortError') {
+        renderMessage('bot', 'Răspunsul durează prea mult. Te rugăm să încerci din nou.', []);
+      } else {
+        renderMessage('bot', e.message === '429' ? 'Prea multe mesaje. Așteptați un moment.' : 'Eroare de conexiune. Reîncercați.', []);
+      }
     });
   }
 

@@ -331,7 +331,7 @@ PROMPT;
                 'anthropic-version' => '2023-06-01',
                 'content-type'      => 'application/json',
             ])->timeout(60)->post('https://api.anthropic.com/v1/messages', [
-                'model'      => 'claude-haiku-4-5-20251001',
+                'model'      => config('app.malinco.ai.models.haiku', 'claude-haiku-4-5-20251001'),
                 'max_tokens' => 2048,
                 'messages'   => [['role' => 'user', 'content' => $prompt]],
             ]);

@@ -18,6 +18,11 @@ trait ChecksRolePermissions
         return RolePermission::check(static::permissionKey(), 'can_access');
     }
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return RolePermission::check(static::permissionKey(), 'can_access');
+    }
+
     public static function canCreate(): bool
     {
         return RolePermission::check(static::permissionKey(), 'can_create');

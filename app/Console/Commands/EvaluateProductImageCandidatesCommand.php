@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Anthropic\Client as AnthropicClient;
+use App\Models\AiUsageLog;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -41,7 +42,7 @@ class EvaluateProductImageCandidatesCommand extends Command
         }
 
         $this->claude = new AnthropicClient(apiKey: $apiKey);
-        $this->model  = config('services.anthropic.model', 'claude-haiku-4-5-20251001');
+        $this->model  = config('app.malinco.ai.models.haiku', 'claude-haiku-4-5-20251001');
 
         $limit      = $this->option('limit') ? (int) $this->option('limit') : null;
         $reEvaluate = (bool) $this->option('re-evaluate');
@@ -212,6 +213,11 @@ class EvaluateProductImageCandidatesCommand extends Command
                 ],
             ],
             model: $this->model,
+        );
+
+        AiUsageLog::record('product_images_eval', $this->model,
+            $message->usage->inputTokens  ?? 0,
+            $message->usage->outputTokens ?? 0
         );
 
         $text = $this->extractTextFromMessage($message);

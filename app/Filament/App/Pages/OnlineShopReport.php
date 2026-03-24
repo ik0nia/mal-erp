@@ -11,15 +11,20 @@ class OnlineShopReport extends Page
 {
     use HasDynamicNavSort;
 
-    protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-shopping-cart';
 
-    protected static ?string $navigationGroup = 'Rapoarte';
+    protected static string|\UnitEnum|null $navigationGroup = 'Rapoarte';
 
     protected static ?string $navigationLabel = 'Raport Magazin Online';
 
     protected static ?int $navigationSort = 20;
 
-    protected static string $view = 'filament.app.pages.online-shop-report';
+    protected string $view = 'filament.app.pages.online-shop-report';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return \App\Models\RolePermission::check(static::class, 'can_access');
+    }
 
     public static function canAccess(): bool
     {

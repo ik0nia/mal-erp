@@ -3,13 +3,15 @@
 namespace App\Models;
 
 use App\Concerns\HasLocationScope;
+use App\Enums\HasStatusEnum;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class PurchaseRequest extends Model
 {
-    use HasLocationScope;
+    use HasLocationScope, HasStatusEnum;
 
     public const STATUS_DRAFT            = 'draft';
     public const STATUS_SUBMITTED        = 'submitted';
@@ -17,12 +19,17 @@ class PurchaseRequest extends Model
     public const STATUS_FULLY_ORDERED    = 'fully_ordered';
     public const STATUS_CANCELLED        = 'cancelled';
 
+    public const SOURCE_MANUAL    = 'manual';
+    public const SOURCE_WOO_ORDER = 'woo_order';
+
     protected $fillable = [
         'number',
         'user_id',
         'location_id',
         'status',
         'notes',
+        'woo_order_id',
+        'source_type',
     ];
 
     protected function casts(): array
@@ -52,7 +59,7 @@ class PurchaseRequest extends Model
         });
     }
 
-    public static function statusOptions(): array
+    public static function statusLabels(): array
     {
         return [
             self::STATUS_DRAFT             => 'Draft',
@@ -63,7 +70,7 @@ class PurchaseRequest extends Model
         ];
     }
 
-    public static function statusColors(): array
+    public static function statusColorMap(): array
     {
         return [
             self::STATUS_DRAFT             => 'gray',
@@ -76,14 +83,66 @@ class PurchaseRequest extends Model
 
     public static function getOrCreateDraft(User $user): self
     {
-        return self::query()
-            ->where('user_id', $user->id)
-            ->where('status', self::STATUS_DRAFT)
-            ->first()
-            ?? self::create([
-                'user_id'     => $user->id,
+        return self::firstOrCreate(
+            [
+                'user_id' => $user->id,
+                'status'  => self::STATUS_DRAFT,
+            ],
+            [
                 'location_id' => $user->location_id,
+            ]
+        );
+    }
+
+    public function wooOrder(): BelongsTo
+    {
+        return $this->belongsTo(WooOrder::class);
+    }
+
+    /**
+     * Creează automat un PNR submitted din itemele on_demand ale unei comenzi WooCommerce.
+     * Idempotent — dacă există deja un PNR pentru această comandă, îl returnează.
+     */
+    public static function createFromWooOrder(WooOrder $order): ?self
+    {
+        // Evită dubluri
+        $existing = self::where('woo_order_id', $order->id)->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        // Verifică dacă există produse on_demand în comandă
+        $onDemandItems = $order->items()
+            ->with('product')
+            ->get()
+            ->filter(fn ($item) =>
+                $item->product &&
+                $item->product->procurement_type === WooProduct::PROCUREMENT_ON_DEMAND
+            );
+
+        if ($onDemandItems->isEmpty()) {
+            return null;
+        }
+
+        $request = self::create([
+            'status'       => self::STATUS_SUBMITTED,
+            'notes'        => "Auto-generat din comanda WooCommerce #{$order->number}",
+            'woo_order_id' => $order->id,
+            'source_type'  => self::SOURCE_WOO_ORDER,
+            'location_id'  => $order->location_id,
+        ]);
+
+        foreach ($onDemandItems as $item) {
+            $request->items()->create([
+                'woo_product_id'  => $item->woo_product_id,
+                'quantity'        => $item->quantity,
+                'is_urgent'       => true,
+                'client_reference'=> "Comandă WooCommerce #{$order->number}",
+                'notes'           => $order->billing['first_name'] ?? '' . ' ' . ($order->billing['last_name'] ?? ''),
             ]);
+        }
+
+        return $request;
     }
 
     public function user(): BelongsTo
@@ -103,24 +162,41 @@ class PurchaseRequest extends Model
 
     public function recalculateStatus(): void
     {
-        $items = $this->items()->get(['status']);
+        $items = $this->items()->get(['status', 'quantity', 'ordered_quantity']);
 
         if ($items->isEmpty()) {
             return;
         }
 
-        $total   = $items->count();
-        $ordered = $items->where('status', PurchaseRequestItem::STATUS_ORDERED)->count();
+        // Excludem itemii anulați din calcul
+        $active = $items->where('status', '!=', PurchaseRequestItem::STATUS_CANCELLED);
 
-        if ($ordered === 0) {
+        if ($active->isEmpty()) {
+            // Toți itemii sunt anulați → necesarul devine anulat
+            $this->forceFill(['status' => self::STATUS_CANCELLED])->saveQuietly();
             return;
         }
 
-        $newStatus = $ordered >= $total
-            ? self::STATUS_FULLY_ORDERED
-            : self::STATUS_PARTIALLY_ORDERED;
+        $total = $active->count();
 
-        $this->forceFill(['status' => $newStatus])->saveQuietly();
+        // Un item este "complet comandat" dacă ordered_quantity >= quantity
+        $fullyOrdered = $active->filter(
+            fn ($i) => (float) $i->ordered_quantity >= (float) $i->quantity
+        )->count();
+
+        // Un item este "parțial comandat" dacă ordered_quantity > 0
+        $hasAnyOrdered = $active->filter(
+            fn ($i) => (float) $i->ordered_quantity > 0
+        )->count() > 0;
+
+        if ($fullyOrdered >= $total) {
+            $this->forceFill(['status' => self::STATUS_FULLY_ORDERED])->saveQuietly();
+        } elseif ($hasAnyOrdered) {
+            $this->forceFill(['status' => self::STATUS_PARTIALLY_ORDERED])->saveQuietly();
+        } else {
+            // Niciun item comandat — revenim la submitted
+            $this->forceFill(['status' => self::STATUS_SUBMITTED])->saveQuietly();
+        }
     }
 
     private static function generateNumber(): string

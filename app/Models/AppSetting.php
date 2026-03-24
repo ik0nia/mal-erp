@@ -15,6 +15,15 @@ class AppSetting extends Model
 
     const KEY_LOGO_PATH          = 'logo_path';
     const KEY_BRAND_NAME         = 'brand_name';
+
+    // Date firmă
+    const KEY_COMPANY_NAME       = 'company_name';
+    const KEY_COMPANY_CUI        = 'company_cui';
+    const KEY_COMPANY_REG_COM    = 'company_reg_com';
+    const KEY_COMPANY_ADDRESS    = 'company_address';
+    const KEY_COMPANY_EMAIL      = 'company_email';
+    const KEY_COMPANY_PHONE      = 'company_phone';
+
     const KEY_PNR_SERIES         = 'pnr_series';
     const KEY_PNR_START_NUMBER   = 'pnr_start_number';
     const KEY_OFFER_SERIES       = 'offer_series';
@@ -31,15 +40,27 @@ class AppSetting extends Model
     const KEY_ANTHROPIC_API_KEY  = 'anthropic_api_key'; // stocat criptat
 
     // Chat widget public
-    const KEY_CHAT_PRIMARY_COLOR = 'chat_primary_color';
-    const KEY_CHAT_BOT_NAME      = 'chat_bot_name';
-    const KEY_CHAT_SUBTITLE      = 'chat_subtitle';
-    const KEY_CHAT_WELCOME_MSG   = 'chat_welcome_message';
-    const KEY_CHAT_ENABLED       = 'chat_enabled';
+    const KEY_CHAT_PRIMARY_COLOR        = 'chat_primary_color';
+    const KEY_CHAT_BOT_NAME             = 'chat_bot_name';
+    const KEY_CHAT_SUBTITLE             = 'chat_subtitle';
+    const KEY_CHAT_WELCOME_MSG          = 'chat_welcome_message';
+    const KEY_CHAT_ENABLED              = 'chat_enabled';
+    const KEY_CHAT_MAX_COST_PER_SESSION = 'chat_max_cost_per_session'; // USD, ex: "0.05"
 
     // Telegram notificări lead-uri
     const KEY_TELEGRAM_BOT_TOKEN = 'telegram_bot_token'; // stocat criptat
     const KEY_TELEGRAM_CHAT_ID   = 'telegram_chat_id';
+
+    // Plugin WordPress ERP Bridge
+    const KEY_WOO_PLUGIN_API_KEY = 'woo_plugin_api_key'; // stocat criptat — cheia trimisă în X-ERP-Api-Key
+
+    // Toya Pimcore API (cheia globală — fallback dacă nu e setată pe SupplierFeed)
+    const KEY_TOYA_API_KEY = 'toya_api_key'; // stocat criptat
+
+    // Social Media
+    const KEY_GEMINI_API_KEY      = 'gemini_api_key';      // stocat criptat
+    const KEY_META_APP_ID         = 'meta_app_id';
+    const KEY_META_APP_SECRET     = 'meta_app_secret';     // stocat criptat
 
     public static function getEncrypted(string $key): ?string
     {
@@ -71,6 +92,7 @@ class AppSetting extends Model
         'nav_group_sort_rapoarte'             => ['label' => 'Rapoarte',             'default' => 6],
         'nav_group_sort_produse'              => ['label' => 'Produse',              'default' => 7],
         'nav_group_sort_comunicare'           => ['label' => 'Comunicare',           'default' => 8],
+        'nav_group_sort_social_media'         => ['label' => 'Social Media',         'default' => 9],
     ];
 
     // Iteme navigare — cheie AppSetting => [label, grup, sort implicit]
@@ -108,6 +130,14 @@ class AppSetting extends Model
         // Comunicare
         'nav_item_sort_App_Filament_App_Pages_EmailInboxPage'                    => ['label' => 'Inbox Email',           'group' => 'Comunicare',           'default' => 1],
         'nav_item_sort_App_Filament_App_Pages_EmailCommunicationStatsPage'       => ['label' => 'Statistici',            'group' => 'Comunicare',           'default' => 2],
+        // Social Media
+        'nav_item_sort_App_Filament_App_Resources_SocialPostResource'            => ['label' => 'Postări',               'group' => 'Social Media',         'default' => 1],
+        'nav_item_sort_App_Filament_App_Pages_SocialAccountsPage'                => ['label' => 'Conturi',               'group' => 'Social Media',         'default' => 2],
+        'nav_item_sort_App_Filament_App_Resources_GraphicTemplateResource'       => ['label' => 'Template-uri grafice',  'group' => 'Social Media',         'default' => 10],
+        'nav_item_sort_App_Filament_App_Pages_GraphicTemplateEditorPage'         => ['label' => 'Editor Template',       'group' => 'Social Media',         'default' => 11],
+        'nav_item_sort_App_Filament_App_Pages_GraphicTemplateVisualEditorPage'   => ['label' => 'Editor Vizual',         'group' => 'Social Media',         'default' => 12],
+        // Achiziții (suplimentar)
+        'nav_item_sort_App_Filament_App_Pages_UnassignedItemsPage'               => ['label' => 'Alocare furnizori',     'group' => 'Achiziții',            'default' => 2],
     ];
 
     public static function get(string $key, ?string $default = null): ?string

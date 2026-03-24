@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>Asocieri furnizori → buyers</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:12.5px;color:#1a1a1a;padding:28px 36px}
+h1{font-size:17px;margin-bottom:4px}
+.sub{font-size:11px;color:#777;margin-bottom:28px}
+h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#444;margin:30px 0 10px;padding-bottom:4px;border-bottom:2px solid #ddd}
+/* tabel asocieri */
+table{width:100%;border-collapse:collapse;margin-bottom:8px}
+thead tr{background:#1e3a5f;color:#fff}
+thead th{padding:7px 10px;text-align:left;font-size:11.5px}
+tbody tr:nth-child(even){background:#f5f8fc}
+tbody td{padding:5px 10px;border-bottom:1px solid #e8e8e8}
+.bl{display:flex;gap:5px;flex-wrap:wrap}
+.badge{display:inline-block;padding:1px 8px;border-radius:11px;font-size:10.5px;font-weight:700}
+.b-teo{background:#dbeafe;color:#1d4ed8}
+.b-cristi{background:#ede9fe;color:#6d28d9}
+.b-eli{background:#fce7f3;color:#be185d}
+.b-razvan{background:#dcfce7;color:#15803d}
+.b-madalin{background:#fef3c7;color:#b45309}
+.b-tavi{background:#ffedd5;color:#c2410c}
+.b-mariana{background:#d1fae5;color:#065f46}
+/* tag-uri */
+.tag{display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:600;margin:2px 3px 2px 0}
+.tag-x{background:#fee2e2;color:#b91c1c}
+.tag-m{background:#f3f4f6;color:#374151}
+.tag-nf{background:#fef9c3;color:#854d0e}
+.cnt{font-size:10.5px;color:#aaa;font-weight:400;margin-left:5px}
+/* sectiuni buyer */
+.buyer-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:6px}
+.buyer-card{border:1px solid #e5e5e5;border-radius:8px;overflow:hidden}
+.buyer-header{padding:9px 14px;display:flex;align-items:center;gap:10px}
+.buyer-name{font-size:13px;font-weight:700}
+.buyer-stats{font-size:11px;color:#666;margin-left:auto;text-align:right}
+.buyer-body{padding:10px 14px 12px}
+.buyer-section-title{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#888;margin:8px 0 4px}
+.buyer-section-title:first-child{margin-top:0}
+.supplier-list{display:flex;flex-wrap:wrap;gap:4px}
+.supplier-tag{display:inline-block;padding:1px 7px;border-radius:8px;font-size:10.5px;background:#f0f0f0;color:#333}
+.cat-list{display:flex;flex-wrap:wrap;gap:3px}
+.cat-tag{display:inline-block;padding:1px 7px;border-radius:8px;font-size:10px;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe}
+/* header colors per buyer */
+.h-teo{background:#dbeafe}.h-cristi{background:#ede9fe}.h-eli{background:#fce7f3}
+.h-razvan{background:#dcfce7}.h-madalin{background:#fef3c7}.h-tavi{background:#ffedd5}.h-mariana{background:#d1fae5}
+@media print{
+  body{padding:12px 16px}
+  .buyer-grid{grid-template-columns:repeat(2,1fr)}
+  tbody tr:hover{background:inherit}
+  h2{page-break-after:avoid}
+  .buyer-card{page-break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<h1>Asocieri furnizori → responsabili achiziții</h1>
+<p class="sub">Generat: 17.03.2026 12:38 &nbsp;|&nbsp; Sursa: distribuire furnizori.csv + distribuire furnizori 2.csv</p>
+
+<h2>Responsabili achiziții — detalii per buyer</h2>
+<div class="buyer-grid">
+<div class="buyer-card">
+  <div class="buyer-header h-cristi">
+    <span class="badge b-cristi" style="font-size:12px;padding:3px 12px">Cristian</span>
+    <div class="buyer-stats">
+      <strong>859</strong> produse &nbsp;|&nbsp;
+      <strong>16</strong> furnizori &nbsp;|&nbsp;
+      <strong>89</strong> categorii
+    </div>
+  </div>
+  <div class="buyer-body">
+    <div class="buyer-section-title">Furnizori</div>
+    <div class="supplier-list">
+              <span class="supplier-tag">Amba Fol</span>
+              <span class="supplier-tag">Cemplus</span>
+              <span class="supplier-tag">Coramet</span>
+              <span class="supplier-tag">Endless</span>
+              <span class="supplier-tag">Fatcom Impex</span>
+              <span class="supplier-tag">Incoplast System</span>
+              <span class="supplier-tag">Kober</span>
+              <span class="supplier-tag">Mil Trade</span>
+              <span class="supplier-tag">Olimp Impex</span>
+              <span class="supplier-tag">Sentosa</span>
+              <span class="supplier-tag">Sindaco</span>
+              <span class="supplier-tag">Stoica Mitica Intreprindere Familiala</span>
+              <span class="supplier-tag">Studentii Muncitori Srl</span>
+              <span class="supplier-tag">Temad</span>
+              <span class="supplier-tag">Thenordicmark</span>
+              <span class="supplier-tag">Trend Impex</span>
+          </div>
+  </div>
+</div>
+<div class="buyer-card">
+  <div class="buyer-header h-eli">
+    <span class="badge b-eli" style="font-size:12px;padding:3px 12px">Eli</span>
+    <div class="buyer-stats">
+      <strong>855</strong> produse &nbsp;|&nbsp;
+      <strong>15</strong> furnizori &nbsp;|&nbsp;
+      <strong>92</strong> categorii
+    </div>
+  </div>
+  <div class="buyer-body">
+    <div class="buyer-section-title">Furnizori</div>
+    <div class="supplier-list">
+              <span class="supplier-tag">Austrotherm</span>
+              <span class="supplier-tag">Baumit</span>
+              <span class="supplier-tag">Belmaco</span>
+              <span class="supplier-tag">Calce</span>
+              <span class="supplier-tag">Cemacon</span>
+              <span class="supplier-tag">Cemix</span>
+              <span class="supplier-tag">Dogav Grup</span>
+              <span class="supplier-tag">Fandemo</span>
+              <span class="supplier-tag">Formatt Building Products</span>
+              <span class="supplier-tag">Holcim</span>
+              <span class="supplier-tag">Imcop</span>
+              <span class="supplier-tag">Knauf</span>
+              <span class="supplier-tag">Melinda Impex Steel</span>
+              <span class="supplier-tag">Romcim</span>
+              <span class="supplier-tag">Tal Tedom</span>
+          </div>
+  </div>
+</div>
+<div class="buyer-card">
+  <div class="buyer-header h-madalin">
+    <span class="badge b-madalin" style="font-size:12px;padding:3px 12px">Madalin</span>
+    <div class="buyer-stats">
+      <strong>1015</strong> produse &nbsp;|&nbsp;
+      <strong>10</strong> furnizori &nbsp;|&nbsp;
+      <strong>65</strong> categorii
+    </div>
+  </div>
+  <div class="buyer-body">
+    <div class="buyer-section-title">Furnizori</div>
+    <div class="supplier-list">
+              <span class="supplier-tag">Elbi Electric Lighting</span>
+              <span class="supplier-tag">Electronic</span>
+              <span class="supplier-tag">Eleterm</span>
+              <span class="supplier-tag">Instalcasa</span>
+              <span class="supplier-tag">Levirom</span>
+              <span class="supplier-tag">Melinda Impex Instal</span>
+              <span class="supplier-tag">Poltergeist</span>
+              <span class="supplier-tag">Profilux</span>
+              <span class="supplier-tag">Serstill</span>
+              <span class="supplier-tag">Uniprest</span>
+          </div>
+  </div>
+</div>
+<div class="buyer-card">
+  <div class="buyer-header h-mariana">
+    <span class="badge b-mariana" style="font-size:12px;padding:3px 12px">Mariana</span>
+    <div class="buyer-stats">
+      <strong>960</strong> produse &nbsp;|&nbsp;
+      <strong>12</strong> furnizori &nbsp;|&nbsp;
+      <strong>75</strong> categorii
+    </div>
+  </div>
+  <div class="buyer-body">
+    <div class="buyer-section-title">Furnizori</div>
+    <div class="supplier-list">
+              <span class="supplier-tag">Austrotherm</span>
+              <span class="supplier-tag">Baumit</span>
+              <span class="supplier-tag">Cemacon</span>
+              <span class="supplier-tag">Cemix</span>
+              <span class="supplier-tag">Formatt Building Products</span>
+              <span class="supplier-tag">Holcim</span>
+              <span class="supplier-tag">Imcop</span>
+              <span class="supplier-tag">Knauf</span>
+              <span class="supplier-tag">Melinda Impex Steel</span>
+              <span class="supplier-tag">Romcim</span>
+              <span class="supplier-tag">Tal Tedom</span>
+              <span class="supplier-tag">Tobimar</span>
+          </div>
+  </div>
+</div>
+<div class="buyer-card">
+  <div class="buyer-header h-razvan">
+    <span class="badge b-razvan" style="font-size:12px;padding:3px 12px">Razvan</span>
+    <div class="buyer-stats">
+      <strong>806</strong> produse &nbsp;|&nbsp;
+      <strong>5</strong> furnizori &nbsp;|&nbsp;
+      <strong>27</strong> categorii
+    </div>
+  </div>
+  <div class="buyer-body">
+    <div class="buyer-section-title">Furnizori</div>
+    <div class="supplier-list">
+              <span class="supplier-tag">Dafero</span>
+              <span class="supplier-tag">Euronarcis</span>
+              <span class="supplier-tag">Fischer Fixings Romania</span>
+              <span class="supplier-tag">Sedainvest</span>
+              <span class="supplier-tag">Surubex</span>
+          </div>
+  </div>
+</div>
+<div class="buyer-card">
+  <div class="buyer-header h-tavi">
+    <span class="badge b-tavi" style="font-size:12px;padding:3px 12px">Tavi</span>
+    <div class="buyer-stats">
+      <strong>475</strong> produse &nbsp;|&nbsp;
+      <strong>4</strong> furnizori &nbsp;|&nbsp;
+      <strong>59</strong> categorii
+    </div>
+  </div>
+  <div class="buyer-body">
+    <div class="buyer-section-title">Furnizori</div>
+    <div class="supplier-list">
+              <span class="supplier-tag">Hardex</span>
+              <span class="supplier-tag">Lumytools</span>
+              <span class="supplier-tag">Schuller Eh&#039;klar</span>
+              <span class="supplier-tag">Soudal</span>
+          </div>
+  </div>
+</div>
+<div class="buyer-card">
+  <div class="buyer-header h-teo">
+    <span class="badge b-teo" style="font-size:12px;padding:3px 12px">Teo</span>
+    <div class="buyer-stats">
+      <strong>1225</strong> produse &nbsp;|&nbsp;
+      <strong>19</strong> furnizori &nbsp;|&nbsp;
+      <strong>128</strong> categorii
+    </div>
+  </div>
+  <div class="buyer-body">
+    <div class="buyer-section-title">Furnizori</div>
+    <div class="supplier-list">
+              <span class="supplier-tag">Adidac</span>
+              <span class="supplier-tag">Agropataki</span>
+              <span class="supplier-tag">Alverosal</span>
+              <span class="supplier-tag">Decorland</span>
+              <span class="supplier-tag">Dinamic 92 Distribution</span>
+              <span class="supplier-tag">Godman</span>
+              <span class="supplier-tag">Gunnex</span>
+              <span class="supplier-tag">Hasinto</span>
+              <span class="supplier-tag">Inttech Industry Hunter</span>
+              <span class="supplier-tag">List Irigatii</span>
+              <span class="supplier-tag">Menatwork</span>
+              <span class="supplier-tag">Oberhauser Invest</span>
+              <span class="supplier-tag">Proclau</span>
+              <span class="supplier-tag">Romdaniel</span>
+              <span class="supplier-tag">Romprofix</span>
+              <span class="supplier-tag">Silk Plaster Innovations</span>
+              <span class="supplier-tag">Sola</span>
+              <span class="supplier-tag">Vest Batery</span>
+              <span class="supplier-tag">Vox</span>
+          </div>
+  </div>
+</div>
+</div>
+
+<h2>Asocieri complete <span class="cnt">70 furnizori</span></h2>
+<table>
+  <thead><tr><th style="width:52%">Furnizor</th><th>Responsabili achiziții</th></tr></thead>
+  <tbody>
+      <tr>
+      <td>Adidac</td>
+      <td><div class="bl">
+                  <span class="badge b-teo">Teo</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Agropataki</td>
+      <td><div class="bl">
+                  <span class="badge b-teo">Teo</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Alverosal</td>
+      <td><div class="bl">
+                  <span class="badge b-teo">Teo</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Amba Fol</td>
+      <td><div class="bl">
+                  <span class="badge b-cristi">Cristian</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Austrotherm</td>
+      <td><div class="bl">
+                  <span class="badge b-mariana">Mariana Gardareanu</span>
+                  <span class="badge b-eli">Eli</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Baumit</td>
+      <td><div class="bl">
+                  <span class="badge b-eli">Eli</span>
+                  <span class="badge b-mariana">Mariana Gardareanu</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Belmaco</td>
+      <td><div class="bl">
+                  <span class="badge b-eli">Eli</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Calce</td>
+      <td><div class="bl">
+                  <span class="badge b-eli">Eli</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Cemacon</td>
+      <td><div class="bl">
+                  <span class="badge b-eli">Eli</span>
+                  <span class="badge b-mariana">Mariana Gardareanu</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Cemix</td>
+      <td><div class="bl">
+                  <span class="badge b-mariana">Mariana Gardareanu</span>
+                  <span class="badge b-eli">Eli</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Cemplus</td>
+      <td><div class="bl">
+                  <span class="badge b-cristi">Cristian</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Coramet</td>
+      <td><div class="bl">
+                  <span class="badge b-cristi">Cristian</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Dafero</td>
+      <td><div class="bl">
+                  <span class="badge b-razvan">Razvan</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Decorland</td>
+      <td><div class="bl">
+                  <span class="badge b-teo">Teo</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Dinamic 92 Distribution</td>
+      <td><div class="bl">
+                  <span class="badge b-teo">Teo</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Dogav Grup</td>
+      <td><div class="bl">
+                  <span class="badge b-eli">Eli</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Elbi Electric Lighting</td>
+      <td><div class="bl">
+                  <span class="badge b-madalin">Madalin</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Electronic</td>
+      <td><div class="bl">
+                  <span class="badge b-madalin">Madalin</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Eleterm</td>
+      <td><div class="bl">
+                  <span class="badge b-madalin">Madalin</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Endless</td>
+      <td><div class="bl">
+                  <span class="badge b-cristi">Cristian</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Euronarcis</td>
+      <td><div class="bl">
+                  <span class="badge b-razvan">Razvan</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Fandemo</td>
+      <td><div class="bl">
+                  <span class="badge b-eli">Eli</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Fatcom Impex</td>
+      <td><div class="bl">
+                  <span class="badge b-cristi">Cristian</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Fischer Fixings Romania</td>
+      <td><div class="bl">
+                  <span class="badge b-razvan">Razvan</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Formatt Building Products</td>
+      <td><div class="bl">
+                  <span class="badge b-mariana">Mariana Gardareanu</span>
+                  <span class="badge b-eli">Eli</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Godman</td>
+      <td><div class="bl">
+                  <span class="badge b-teo">Teo</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Gunnex</td>
+      <td><div class="bl">
+                  <span class="badge b-teo">Teo</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Hardex</td>
+      <td><div class="bl">
+                  <span class="badge b-tavi">Tavi</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Hasinto</td>
+      <td><div class="bl">
+                  <span class="badge b-teo">Teo</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Holcim</td>
+      <td><div class="bl">
+                  <span class="badge b-mariana">Mariana Gardareanu</span>
+                  <span class="badge b-eli">Eli</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Imcop</td>
+      <td><div class="bl">
+                  <span class="badge b-eli">Eli</span>
+                  <span class="badge b-mariana">Mariana Gardareanu</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Incoplast System</td>
+      <td><div class="bl">
+                  <span class="badge b-cristi">Cristian</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Instalcasa</td>
+      <td><div class="bl">
+                  <span class="badge b-madalin">Madalin</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Inttech Industry Hunter</td>
+      <td><div class="bl">
+                  <span class="badge b-teo">Teo</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Knauf</td>
+      <td><div class="bl">
+                  <span class="badge b-mariana">Mariana Gardareanu</span>
+                  <span class="badge b-eli">Eli</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Kober</td>
+      <td><div class="bl">
+                  <span class="badge b-cristi">Cristian</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Levirom</td>
+      <td><div class="bl">
+                  <span class="badge b-madalin">Madalin</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>List Irigatii</td>
+      <td><div class="bl">
+                  <span class="badge b-teo">Teo</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Lumytools</td>
+      <td><div class="bl">
+                  <span class="badge b-tavi">Tavi</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Melinda Impex Instal</td>
+      <td><div class="bl">
+                  <span class="badge b-madalin">Madalin</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Melinda Impex Steel</td>
+      <td><div class="bl">
+                  <span class="badge b-eli">Eli</span>
+                  <span class="badge b-mariana">Mariana Gardareanu</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Menatwork</td>
+      <td><div class="bl">
+                  <span class="badge b-teo">Teo</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Mil Trade</td>
+      <td><div class="bl">
+                  <span class="badge b-cristi">Cristian</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Oberhauser Invest</td>
+      <td><div class="bl">
+                  <span class="badge b-teo">Teo</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Olimp Impex</td>
+      <td><div class="bl">
+                  <span class="badge b-cristi">Cristian</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Poltergeist</td>
+      <td><div class="bl">
+                  <span class="badge b-madalin">Madalin</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Proclau</td>
+      <td><div class="bl">
+                  <span class="badge b-teo">Teo</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Profilux</td>
+      <td><div class="bl">
+                  <span class="badge b-madalin">Madalin</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Romcim</td>
+      <td><div class="bl">
+                  <span class="badge b-mariana">Mariana Gardareanu</span>
+                  <span class="badge b-eli">Eli</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Romdaniel</td>
+      <td><div class="bl">
+                  <span class="badge b-teo">Teo</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Romprofix</td>
+      <td><div class="bl">
+                  <span class="badge b-teo">Teo</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Schuller Eh&#039;klar</td>
+      <td><div class="bl">
+                  <span class="badge b-tavi">Tavi</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Sedainvest</td>
+      <td><div class="bl">
+                  <span class="badge b-razvan">Razvan</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Sentosa</td>
+      <td><div class="bl">
+                  <span class="badge b-cristi">Cristian</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Serstill</td>
+      <td><div class="bl">
+                  <span class="badge b-madalin">Madalin</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Silk Plaster Innovations</td>
+      <td><div class="bl">
+                  <span class="badge b-teo">Teo</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Sindaco</td>
+      <td><div class="bl">
+                  <span class="badge b-cristi">Cristian</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Sola</td>
+      <td><div class="bl">
+                  <span class="badge b-teo">Teo</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Soudal</td>
+      <td><div class="bl">
+                  <span class="badge b-tavi">Tavi</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Stoica Mitica Intreprindere Familiala</td>
+      <td><div class="bl">
+                  <span class="badge b-cristi">Cristian</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Studentii Muncitori Srl</td>
+      <td><div class="bl">
+                  <span class="badge b-cristi">Cristian</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Surubex</td>
+      <td><div class="bl">
+                  <span class="badge b-razvan">Razvan</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Tal Tedom</td>
+      <td><div class="bl">
+                  <span class="badge b-eli">Eli</span>
+                  <span class="badge b-mariana">Mariana Gardareanu</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Temad</td>
+      <td><div class="bl">
+                  <span class="badge b-cristi">Cristian</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Thenordicmark</td>
+      <td><div class="bl">
+                  <span class="badge b-cristi">Cristian</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Tobimar</td>
+      <td><div class="bl">
+                  <span class="badge b-mariana">Mariana Gardareanu</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Trend Impex</td>
+      <td><div class="bl">
+                  <span class="badge b-cristi">Cristian</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Uniprest</td>
+      <td><div class="bl">
+                  <span class="badge b-madalin">Madalin</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Vest Batery</td>
+      <td><div class="bl">
+                  <span class="badge b-teo">Teo</span>
+              </div></td>
+    </tr>
+      <tr>
+      <td>Vox</td>
+      <td><div class="bl">
+                  <span class="badge b-teo">Teo</span>
+              </div></td>
+    </tr>
+    </tbody>
+</table>
+
+<h2>Fără asociere — marcați cu X în CSV (intenționat) <span class="cnt">4</span></h2>
+<span class='tag tag-x'>Ebal Com</span><span class='tag tag-x'>Italroman</span><span class='tag tag-x'>Profil Import Export</span><span class='tag tag-x'>Teraplast</span>
+<h2>Fără asociere — nu apar în CSV <span class="cnt">25</span></h2>
+<span class='tag tag-m'>Abelaro</span><span class='tag tag-m'>Budmat</span><span class='tag tag-m'>Den braven</span><span class='tag tag-m'>Eaton Moeller</span><span class='tag tag-m'>Felder</span><span class='tag tag-m'>Giomal Trade</span><span class='tag tag-m'>Kemot</span><span class='tag tag-m'>Kussner</span><span class='tag tag-m'>Manifattura Quatro</span><span class='tag tag-m'>Marbet</span><span class='tag tag-m'>Maxbau Materiale</span><span class='tag tag-m'>Maxcl</span><span class='tag tag-m'>Milesi</span><span class='tag tag-m'>Minet Sa</span><span class='tag tag-m'>Nanochem</span><span class='tag tag-m'>Oam Azi Acelmuvek</span><span class='tag tag-m'>Philips</span><span class='tag tag-m'>Porotherm</span><span class='tag tag-m'>Poxipol</span><span class='tag tag-m'>Procema</span><span class='tag tag-m'>Route Logistic</span><span class='tag tag-m'>Sarkozy Dichtsoffe</span><span class='tag tag-m'>Tabulara</span><span class='tag tag-m'>Termopasty</span><span class='tag tag-m'>Toya Romania</span>
+<h2>Găsiți în CSV dar inexistenți în baza de date <span class="cnt">2</span></h2>
+<span class='tag tag-nf'>Eltechim</span><span class='tag tag-nf'>Rezmives</span>
+</body>
+</html>

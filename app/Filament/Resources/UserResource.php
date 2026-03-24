@@ -8,7 +8,7 @@ use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -18,9 +18,9 @@ class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-users';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-users';
 
-    protected static ?string $navigationGroup = 'Setări';
+    protected static string|\UnitEnum|null $navigationGroup = 'Setări';
 
     protected static ?string $navigationLabel = 'Utilizatori';
 
@@ -76,9 +76,9 @@ class UserResource extends Resource
         return $user->isSuperAdmin() || ! ($record instanceof User && $record->isAdmin());
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\TextInput::make('name')
                     ->label('Nume')
@@ -190,7 +190,8 @@ class UserResource extends Resource
                     ->label('Super admin')
                     ->visible(fn (): bool => static::currentUser()?->isSuperAdmin() ?? false),
             ])
-            ->actions([
+            ->deferFilters(false)
+            ->recordActions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])

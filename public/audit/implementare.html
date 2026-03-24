@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="refresh" content="30">
+<title>ERP Malinco — Implementare Live 2026-03-15</title>
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --border: #30363d;
+    --text: #e6edf3; --muted: #8b949e; --accent: #58a6ff;
+    --done: #3fb950; --running: #d29922; --waiting: #58a6ff; --fail: #f85149;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace; line-height: 1.6; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 1.6rem; color: var(--accent); margin-bottom: 4px; }
+  h2 { font-size: 1.1rem; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 6px; margin: 24px 0 12px; }
+  .subtitle { color: var(--muted); font-size: 0.85rem; margin-bottom: 20px; }
+  .wave { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+  .wave-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .wave-title { font-weight: 700; font-size: 1rem; }
+  .wave-status { font-size: 0.8rem; }
+  .agents { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
+  .agent { background: var(--surface2); border-radius: 6px; padding: 10px 12px; border-left: 3px solid var(--border); }
+  .agent.done { border-left-color: var(--done); }
+  .agent.running { border-left-color: var(--running); }
+  .agent.waiting { border-left-color: var(--waiting); }
+  .agent-name { font-weight: 600; font-size: 0.85rem; }
+  .agent-desc { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  .agent-status { font-size: 0.72rem; margin-top: 5px; }
+  .badge { display: inline-block; font-size: 0.68rem; font-weight: 700; padding: 1px 6px; border-radius: 3px; text-transform: uppercase; }
+  .badge-done { background: #0a2a1a; color: var(--done); border: 1px solid var(--done); }
+  .badge-running { background: #2d2200; color: var(--running); border: 1px solid var(--running); animation: pulse 1.5s infinite; }
+  .badge-waiting { background: #0d1d33; color: var(--waiting); border: 1px solid var(--waiting); }
+  .badge-applied { background: #0a2a1a; color: var(--done); border: 1px solid var(--done); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; text-align: center; }
+  .stat-n { font-size: 2rem; font-weight: 700; }
+  .stat-l { font-size: 0.75rem; color: var(--muted); margin-top: 2px; text-transform: uppercase; }
+  .progress-bar { background: var(--surface2); border-radius: 4px; height: 6px; margin-top: 8px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
+  code { background: #0d1117; border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; font-size: 0.78rem; color: #e3b341; }
+  .footer { text-align: center; color: var(--muted); font-size: 0.78rem; padding: 24px 0; border-top: 1px solid var(--border); margin-top: 32px; }
+  .link-bar { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; margin-bottom: 20px; font-size: 0.85rem; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+  .link-bar a { color: var(--accent); text-decoration: none; }
+  .link-bar a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--border);">
+  <div>
+    <h1>&#9881; ERP Malinco &mdash; Implementare Live</h1>
+    <div class="subtitle">25 agenti implementeaza fix-urile din audit &bull; Auto-refresh: 30s &bull; 2026-03-15</div>
+  </div>
+  <div style="font-size:0.8rem; color:var(--muted); text-align:right;">
+    Val curent: <strong style="color:var(--done);">&#10003; Sprint complet!</strong><br>
+    <span style="color:#3fb950;">25/25 completate &bull; Toate valurile finalizate</span>
+  </div>
+</div>
+
+<div class="link-bar">
+  <span style="color:var(--muted);">Rapoarte:</span>
+  <a href="/audit/report.html">&#128269; Audit Initial (raport 1)</a>
+  <a href="/audit/implementare.html">&#9881; Progres Implementare (pagina curenta)</a>
+  <a href="/audit/report2.html">&#128202; Audit Post-Implementare (raport 2)</a>
+</div>
+
+<!-- STATS -->
+<div class="stats">
+  <div class="stat">
+    <div class="stat-n" style="color:var(--done);">25</div>
+    <div class="stat-l">Completate</div>
+  </div>
+  <div class="stat">
+    <div class="stat-n" style="color:var(--done);">0</div>
+    <div class="stat-l">In lucru</div>
+  </div>
+  <div class="stat">
+    <div class="stat-n" style="color:var(--done);">22/25</div>
+    <div class="stat-l">Fix-uri verificate</div>
+  </div>
+  <div class="stat">
+    <div class="stat-n" style="color:var(--accent);">25</div>
+    <div class="stat-l">Total agenti</div>
+  </div>
+</div>
+
+<!-- PROGRES GLOBAL -->
+<div style="margin-bottom:20px;">
+  <div style="display:flex; justify-content:space-between; font-size:0.82rem; margin-bottom:4px;">
+    <span>Progres global implementare</span>
+    <span style="color:var(--done);">25 / 25 taskuri &bull; Sprint finalizat 2026-03-15</span>
+  </div>
+  <div class="progress-bar" style="height:10px;">
+    <div class="progress-fill" style="width:100%; background: linear-gradient(90deg, #3fb950, #4ade80);"></div>
+  </div>
+</div>
+
+<!-- PATCH-URI APLICATE DEJA -->
+<h2>&#10003; Patch-uri Aplicate Manual (inainte de val 1)</h2>
+<div class="agents">
+  <div class="agent done">
+    <div class="agent-name">CORS Whitelist <span class="badge badge-applied">&#10003; Aplicat</span></div>
+    <div class="agent-desc">ChatController.php &mdash; Access-Control-Allow-Origin: * &rarr; whitelist</div>
+    <div class="agent-status" style="color:var(--done);">app/Http/Controllers/ChatController.php:131</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">RolePermission Default-Deny <span class="badge badge-applied">&#10003; Aplicat</span></div>
+    <div class="agent-desc">RolePermission.php &mdash; ?? true &rarr; ?? false, resurse neconfigurate blocate</div>
+    <div class="agent-status" style="color:var(--done);">app/Models/RolePermission.php:82-86</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">Receptie Marfa Default Qty <span class="badge badge-applied">&#10003; Aplicat</span></div>
+    <div class="agent-desc">ViewPurchaseOrder.php &mdash; default(0) &rarr; default(cantitate comandata)</div>
+    <div class="agent-status" style="color:var(--done);">Pages/ViewPurchaseOrder.php:284</div>
+  </div>
+</div>
+
+<!-- VAL 1 -->
+<h2>Val 1 &mdash; Securitate &amp; Fix-uri Izolate <span style="font-size:0.8rem; color:var(--done); font-weight:400;">&#10003; Complet</span></h2>
+<div class="agents">
+  <div class="agent done">
+    <div class="agent-name">FIX-01 &mdash; IMAP SSL Validation <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc"><code>validate_cert</code> &rarr; <code>!app()-&gt;isLocal()</code>. Prod = SSL activat, local = disabled</div>
+    <div class="agent-status" style="color:var(--done);">app/Jobs/FetchEmailsJob.php:102</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">FIX-02 &mdash; DomPDF XXE Fix <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">Template deja safe ({{ }}). Config publicat: enable_javascript=false, enable_remote=false</div>
+    <div class="agent-status" style="color:var(--done);">config/dompdf.php creat + hardened</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">FIX-03 &mdash; Email HTML XSS <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">sanitizeEmailHtml() in EmailMessage + CSP script-src 'none' pe ruta /email-html</div>
+    <div class="agent-status" style="color:var(--done);">EmailMessage.php + routes/web.php</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">FIX-04 &mdash; Webhook Secret Encryption <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">Cast 'encrypted' adaugat + migratie care recripteaza datele existente. Verificat in DB.</div>
+    <div class="agent-status" style="color:var(--done);">IntegrationConnection.php + migration 2026_03_15_100000</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">FIX-05 &mdash; Rate Limiting Chat <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">Named limiters: chat-message(20/min), chat-contact(10/min), search(60/min). 4 rute search protejate.</div>
+    <div class="agent-status" style="color:var(--done);">AppServiceProvider.php + routes/chat.php + routes/web.php</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">FIX-06 &mdash; exec() &rarr; Symfony Process <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">Process(['node', path, json]) cu timeout 30s. Catch ProcessTimedOutException + Throwable.</div>
+    <div class="agent-status" style="color:var(--done);">NodeImageRenderer.php:96-125</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">FIX-07 &mdash; BrandResource Auth + N+1 <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">Auth deja rezolvata via ChecksRolePermissions trait. N+1 fix: ->with(['suppliers']) adaugat.</div>
+    <div class="agent-status" style="color:var(--done);">BrandResource.php: getEloquentQuery() + with()</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">FIX-08 &mdash; Jobs failed() Handlers <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">15 job-uri modificate. 3 aveau deja failed(). ProcessEmailAIJob: try/catch + marcare email ca failed.</div>
+    <div class="agent-status" style="color:var(--done);">app/Jobs/*.php &mdash; 15/18 jobs actualizate</div>
+  </div>
+</div>
+
+<!-- VAL 2 -->
+<h2>Val 2 &mdash; Backend Fixes <span style="font-size:0.8rem; color:var(--done); font-weight:400;">&#10003; Complet</span></h2>
+<div class="agents">
+  <div class="agent done">
+    <div class="agent-name">FIX-09 &mdash; N+1 PurchaseOrder <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">needsApproval() refactorat: whereIn() unic in loc de N query-uri per produs</div>
+    <div class="agent-status" style="color:var(--done);">app/Models/PurchaseOrder.php</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">FIX-10 &mdash; WooOrderSync Safeguard <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">Guard: daca line_items goala dar items locale exista → log warning, nu sterge</div>
+    <div class="agent-status" style="color:var(--done);">WooOrderSyncService.php + SyncWooOrdersCommand.php</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">FIX-11 &mdash; DB Migrations <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">woo_product_categories: UNIQUE→PRIMARY KEY. Indexes: email_messages(supplier,processed), social_posts(status,scheduled)</div>
+    <div class="agent-status" style="color:var(--done);">migrations 2026_03_15_110000 + 2026_03_15_120000</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">FIX-12 &mdash; Action Guards <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">Delete guard: PurchaseRequest (draft/cancelled), PurchaseOrder (draft/cancelled/rejected)</div>
+    <div class="agent-status" style="color:var(--done);">PurchaseRequestResource.php + PurchaseOrderResource.php</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">FIX-13 &mdash; ViewSupplier + RelationManager <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">ViewSupplier: infolist() complet + ContactsRelationManager. SupplierResource: ProductsRelationManager adaugat.</div>
+    <div class="agent-status" style="color:var(--done);">ViewSupplier.php + SupplierResource.php</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">FIX-14 &mdash; Discontinued Filter <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">BuyerDashboard filtreaza is_discontinued=true. NAV badge recalculat corect.</div>
+    <div class="agent-status" style="color:var(--done);">BuyerDashboardPage.php</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">FIX-15 &mdash; NAV_ITEMS 8 pagini lipsa <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">4 entitati adaugate: GraphicTemplateResource, GraphicTemplateEditorPage, GraphicTemplateVisualEditorPage, UnassignedItemsPage</div>
+    <div class="agent-status" style="color:var(--done);">app/Models/AppSetting.php NAV_ITEMS array</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">FIX-16 &mdash; Chat Timeout + Template Memory <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">widget.js: AbortController 15s + mesaj RO. Editor: setInterval → const + clearInterval pe livewire:navigating</div>
+    <div class="agent-status" style="color:var(--done);">widget.js + graphic-template-visual-editor.blade.php</div>
+  </div>
+</div>
+
+<!-- VAL 3 -->
+<h2>Val 3 &mdash; Refactorizari <span style="font-size:0.8rem; color:var(--done); font-weight:400;">&#10003; Complet</span></h2>
+<div class="agents">
+  <div class="agent done">
+    <div class="agent-name">REF-01 &mdash; ClaudeAiClient centralizat <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">Service creat cu MODEL_SONNET/HAIKU constants, pricing centralizat, rawClient() pt tool-use</div>
+    <div class="agent-status" style="color:var(--done);">app/Services/Ai/ClaudeAiClient.php</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">REF-02 &mdash; StatusEnum trait <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">Trait creat + 4 modele actualizate. statusOptions() &rarr; statusLabels(). Backward compat pastrat.</div>
+    <div class="agent-status" style="color:var(--done);">app/Enums/HasStatusEnum.php + PO, PR, Offer, SocialPost</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">REF-03 &mdash; BaseAiJob abstract <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">getApiKey(), recordUsage() cu try/catch, failed() centralizat. Joburile existente nemodificate.</div>
+    <div class="agent-status" style="color:var(--done);">app/Jobs/BaseAiJob.php</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">REF-04 &mdash; Config centralizat <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">config/app.php malinco.* section adaugata + ChatService + ChatController folosesc config()</div>
+    <div class="agent-status" style="color:var(--done);">config/app.php + ChatService.php + ChatController.php</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">REF-05 &mdash; ImapClient service <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">ImapMailboxService: connect/getFolders/fetchSince/parseMessage. FetchEmailsJob intact.</div>
+    <div class="agent-status" style="color:var(--done);">app/Services/Email/ImapMailboxService.php</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">REF-06 &mdash; ChatService context + GDPR <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">truncateHistory() 6000 chars in buildContextMessages() + CleanupChatLogsCommand + schedule saptamanal</div>
+    <div class="agent-status" style="color:var(--done);">ChatService.php + CleanupChatLogsCommand.php + routes/console.php</div>
+  </div>
+</div>
+
+<!-- VAL 4 -->
+<h2>Val 4 &mdash; Finalizare + Raport 2 <span style="font-size:0.8rem; color:var(--done); font-weight:400;">&#10003; Complet</span></h2>
+<div class="agents">
+  <div class="agent done">
+    <div class="agent-name">FIX-17 &mdash; BaseReportPage abstract <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">50 linii: mount()→loadData()→getReportData(), refresh() cu #[On('refresh')], refreshIntervalSeconds, shouldRegisterNavigation=false</div>
+    <div class="agent-status" style="color:var(--done);">app/Filament/App/Pages/BaseReportPage.php creat</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">FIX-18 &mdash; Performance batch <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">WooClient: retryRequest(3) pe cURL28/503 cu backoff. NecesarMarfa: Cache::remember 5min per user+coverDays. Part C skipped (fara wire:poll).</div>
+    <div class="agent-status" style="color:var(--done);">WooClient.php (11 call sites) + NecesarMarfa.php</div>
+  </div>
+  <div class="agent done">
+    <div class="agent-name">REPORT-2 &mdash; Audit Post-Implementare <span class="badge badge-done">&#10003; Done</span></div>
+    <div class="agent-desc">22/25 fix-uri verificate. Securitate: 8/9, Performanta: 4/4, Arhitectura: 5/5, UX: 5/7. 38KB, 679 linii.</div>
+    <div class="agent-status" style="color:var(--done);"><a href="/audit/report2.html" style="color:#3fb950;">&#128202; public/audit/report2.html — disponibil acum</a></div>
+  </div>
+</div>
+
+<div class="footer">
+  ERP Malinco &bull; Implementare 2026-03-15 &bull; 25 agenti &bull; 4 valuri<br>
+  Aceasta pagina se actualizeaza automat la 30 secunde<br>
+  <span style="color:var(--done);">Raport 1: <a href="/audit/report.html" style="color:var(--accent);">erp.malinco.ro/audit/report.html</a></span>
+</div>
+
+</div>
+</body>
+</html>

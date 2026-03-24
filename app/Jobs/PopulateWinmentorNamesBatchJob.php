@@ -70,4 +70,12 @@ class PopulateWinmentorNamesBatchJob implements ShouldQueue
             $bindings
         );
     }
+
+    public function failed(\Throwable $exception): void
+    {
+        \Illuminate\Support\Facades\Log::error(class_basename(static::class) . ' failed', [
+            'exception' => $exception->getMessage(),
+            'trace'     => $exception->getTraceAsString(),
+        ]);
+    }
 }

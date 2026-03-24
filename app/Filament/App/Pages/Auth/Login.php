@@ -3,9 +3,9 @@
 namespace App\Filament\App\Pages\Auth;
 
 use Filament\Facades\Filament;
-use Filament\Http\Responses\Auth\Contracts\LoginResponse;
+use Filament\Auth\Http\Responses\Contracts\LoginResponse;
 
-class Login extends \Filament\Pages\Auth\Login
+class Login extends \Filament\Auth\Pages\Login
 {
     public function authenticate(): ?LoginResponse
     {

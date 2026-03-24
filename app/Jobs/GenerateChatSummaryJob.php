@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\AiUsageLog;
 use App\Models\AppSetting;
 use App\Models\ChatContact;
 use App\Models\ChatLog;
@@ -70,7 +71,7 @@ PROMPT;
                 'anthropic-version' => '2023-06-01',
                 'content-type'      => 'application/json',
             ])->timeout(25)->post('https://api.anthropic.com/v1/messages', [
-                'model'      => 'claude-haiku-4-5-20251001',
+                'model'      => config('app.malinco.ai.models.haiku', 'claude-haiku-4-5-20251001'),
                 'max_tokens' => 200,
                 'system'     => 'Ești un asistent care extrage date structurate din conversații. Răspunzi DOAR cu JSON valid, fără markdown.',
                 'messages'   => [['role' => 'user', 'content' => $prompt]],
@@ -80,6 +81,12 @@ PROMPT;
                 Log::warning('GenerateChatSummaryJob: API error', ['status' => $response->status()]);
                 return;
             }
+
+            AiUsageLog::record('chat_summary', config('app.malinco.ai.models.haiku', 'claude-haiku-4-5-20251001'),
+                (int) $response->json('usage.input_tokens', 0),
+                (int) $response->json('usage.output_tokens', 0),
+                ['contact_id' => $contact->id]
+            );
 
             $text = $response->json('content.0.text', '');
             // Curăță eventualul markdown ```json ... ```
@@ -98,5 +105,13 @@ PROMPT;
         } catch (\Throwable $e) {
             Log::warning('GenerateChatSummaryJob: eroare', ['error' => $e->getMessage()]);
         }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        Log::error(class_basename(static::class) . ' failed', [
+            'exception' => $exception->getMessage(),
+            'trace'     => $exception->getTraceAsString(),
+        ]);
     }
 }

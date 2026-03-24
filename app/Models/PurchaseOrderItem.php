@@ -19,6 +19,7 @@ class PurchaseOrderItem extends Model
         'notes',
         'purchase_request_item_id',
         'sources_json',
+        'received_quantity',
     ];
 
     protected function casts(): array
@@ -30,6 +31,7 @@ class PurchaseOrderItem extends Model
             'unit_price'               => 'decimal:4',
             'line_total'               => 'decimal:4',
             'purchase_request_item_id' => 'integer',
+            'received_quantity'        => 'decimal:3',
         ];
     }
 

@@ -7,12 +7,12 @@ use Illuminate\Support\Facades\DB;
 
 class ProductEnrichmentProgress extends Page
 {
-    protected static ?string $navigationIcon  = 'heroicon-o-chart-bar';
-    protected static ?string $navigationGroup = 'Integrări';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-chart-bar';
+    protected static string|\UnitEnum|null $navigationGroup = 'Integrări';
     protected static ?string $navigationLabel = 'Progres îmbogățire produse';
     protected static ?int    $navigationSort  = 99;
 
-    protected static string $view = 'filament.app.pages.product-enrichment-progress';
+    protected string $view = 'filament.app.pages.product-enrichment-progress';
 
     /** Auto-refresh every 8 seconds. */
     protected ?string $pollingInterval = '8s';

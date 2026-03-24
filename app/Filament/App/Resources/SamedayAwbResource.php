@@ -18,7 +18,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Resources\Resource;
@@ -37,9 +37,9 @@ class SamedayAwbResource extends Resource
 
     protected static ?string $model = SamedayAwb::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-truck';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-truck';
 
-    protected static ?string $navigationGroup = 'Livrare';
+    protected static string|\UnitEnum|null $navigationGroup = 'Livrare';
 
     protected static ?string $navigationLabel = 'AWB Sameday';
 
@@ -72,11 +72,12 @@ class SamedayAwbResource extends Resource
         return false;
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Section::make('Expeditor')
+                    ->columnSpanFull()
                     ->columns(4)
                     ->schema([
                         Hidden::make('location_id')
@@ -166,6 +167,7 @@ class SamedayAwbResource extends Resource
                             ->columnSpan(4),
                     ]),
                 Section::make('Destinatar')
+                    ->columnSpanFull()
                     ->columns(6)
                     ->schema([
                         Select::make('recipient_type')
@@ -275,6 +277,7 @@ class SamedayAwbResource extends Resource
                             ->columnSpan(6),
                     ]),
                 Section::make('Colet și opțiuni')
+                    ->columnSpanFull()
                     ->columns(6)
                     ->schema([
                         Select::make('package_type')
@@ -420,7 +423,8 @@ class SamedayAwbResource extends Resource
                         SamedayAwb::STATUS_FAILED => 'failed',
                     ]),
             ])
-            ->actions([
+            ->deferFilters(false)
+            ->recordActions([
                 Tables\Actions\Action::make('cancel_awb')
                     ->label('Anulează')
                     ->icon('heroicon-o-x-circle')

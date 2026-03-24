@@ -3,6 +3,7 @@
 namespace App\Console\Commands\BI;
 
 use Anthropic\Client as AnthropicClient;
+use App\Models\AiUsageLog;
 use App\Models\BiAnalysis;
 use App\Models\User;
 use Filament\Notifications\Actions\Action;
@@ -84,7 +85,7 @@ class GenerateWeeklyBiReportCommand extends Command
             $message = $claude->messages->create(
                 maxTokens: 10000,
                 messages:  [['role' => 'user', 'content' => $prompt]],
-                model:     'claude-sonnet-4-6',
+                model:     config('app.malinco.ai.models.sonnet', 'claude-sonnet-4-6'),
             );
 
             $content = '';
@@ -101,6 +102,10 @@ class GenerateWeeklyBiReportCommand extends Command
             $inputTokens  = $message->usage->inputTokens  ?? 0;
             $outputTokens = $message->usage->outputTokens ?? 0;
             $costUsd      = round($inputTokens / 1_000_000 * 3 + $outputTokens / 1_000_000 * 15, 5);
+
+            AiUsageLog::record('bi_weekly', config('app.malinco.ai.models.sonnet', 'claude-sonnet-4-6'), $inputTokens, $outputTokens, [
+                'analysis_id' => $analysis->id,
+            ]);
 
             $analysis->update([
                 'content'          => $content,

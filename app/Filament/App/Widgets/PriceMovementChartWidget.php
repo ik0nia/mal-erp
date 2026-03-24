@@ -10,11 +10,11 @@ use Livewire\Attributes\On;
 
 class PriceMovementChartWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Variație prețuri zilnică';
+    protected ?string $heading = 'Variație prețuri zilnică';
 
-    protected static ?string $maxHeight = '300px';
+    protected ?string $maxHeight = '300px';
 
-    protected static ?string $pollingInterval = null;
+    protected ?string $pollingInterval = null;
 
     /** Controlled by Filament's filter dropdown: 'count' or 'value' */
     public ?string $filter = 'count';

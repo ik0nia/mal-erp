@@ -14,7 +14,7 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use App\Models\AppSetting;
 use Filament\Support\Colors\Color;
-use Filament\Support\Enums\MaxWidth;
+use Filament\Support\Enums\Width;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -32,7 +32,7 @@ class AppPanelProvider extends PanelProvider
             ->path('')
             ->homeUrl('/')
             ->login(\App\Filament\App\Pages\Auth\Login::class)
-            ->maxContentWidth(MaxWidth::Full)
+            ->maxContentWidth(Width::Full)
             ->globalSearch(AppGlobalSearchProvider::class)
             ->globalSearchKeyBindings(['mod+k'])
             ->globalSearchDebounce('300ms')

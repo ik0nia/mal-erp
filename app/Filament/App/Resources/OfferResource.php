@@ -12,9 +12,8 @@ use App\Models\Offer;
 use App\Models\User;
 use App\Models\WooProduct;
 use App\Services\CompanyData\OpenApiCompanyLookupService;
-use Awcodes\TableRepeater\Components\TableRepeater;
-use Awcodes\TableRepeater\Header;
 use Filament\Forms\Components\Actions\Action as FormAction;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
@@ -23,18 +22,16 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
+use Filament\Schemas\Schema;
 use Filament\Notifications\Notification;
 use Throwable;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\Section as InfolistSection;
 use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
-use Filament\Support\Enums\MaxWidth;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -49,9 +46,9 @@ class OfferResource extends Resource
 
     protected static ?string $model = Offer::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
 
-    protected static ?string $navigationGroup = 'Vânzări';
+    protected static string|\UnitEnum|null $navigationGroup = 'Vânzări';
 
     protected static ?string $navigationLabel = 'Oferte';
 
@@ -61,11 +58,12 @@ class OfferResource extends Resource
 
     protected static ?int $navigationSort = 10;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Section::make('Detalii ofertă')
+                    ->columnSpanFull()
                     ->columns(3)
                     ->schema([
                         TextInput::make('number')
@@ -317,50 +315,22 @@ class OfferResource extends Resource
                             ->columnSpanFull(),
                     ]),
                 Section::make('Produse ofertă')
+                    ->columnSpanFull()
                     ->schema([
-                        TableRepeater::make('items')
+                        Repeater::make('items')
                             ->relationship()
                             ->orderColumn('position')
                             ->live()
                             ->defaultItems(0)
                             ->minItems(1)
                             ->addActionLabel('Adaugă produs')
-                            ->addActionAlignment('start')
-                            ->streamlined()
-                            ->stackAt(MaxWidth::Large)
-                            ->emptyLabel('Nu ai produse în ofertă. Adaugă primul produs.')
                             ->reorderable(false)
                             ->reorderableWithButtons(false)
                             ->reorderableWithDragAndDrop(false)
                             ->extraAttributes([
                                 'class' => 'offer-items-repeater',
                             ])
-                            ->headers([
-                                Header::make('thumbnail')
-                                    ->label('Imagine')
-                                    ->width('64px'),
-                                Header::make('woo_product_id')
-                                    ->label('Produs')
-                                    ->markAsRequired(),
-                                Header::make('quantity')
-                                    ->label('Cant.')
-                                    ->markAsRequired()
-                                    ->align('right')
-                                    ->width('100px'),
-                                Header::make('unit_price')
-                                    ->label('Preț unitar')
-                                    ->markAsRequired()
-                                    ->align('right')
-                                    ->width('150px'),
-                                Header::make('discount_percent')
-                                    ->label('Discount %')
-                                    ->align('right')
-                                    ->width('110px'),
-                                Header::make('line_total_preview')
-                                    ->label('Total linie')
-                                    ->align('right')
-                                    ->width('140px'),
-                            ])
+                            ->columns(6)
                             ->addAction(fn (FormAction $action): FormAction => $action
                                 ->extraAttributes([
                                     'data-offer-add-item' => '1',
@@ -455,6 +425,7 @@ class OfferResource extends Resource
                             ->columnSpanFull(),
                     ]),
                 Section::make('Totaluri')
+                    ->columnSpanFull()
                     ->columns(3)
                     ->schema([
                         Placeholder::make('subtotal_live')
@@ -532,7 +503,8 @@ class OfferResource extends Resource
                         return $query->pluck('name', 'id')->all();
                     }),
             ])
-            ->actions([
+            ->deferFilters(false)
+            ->recordActions([
                 Tables\Actions\Action::make('preview')
                     ->label('Preview')
                     ->icon('heroicon-o-eye')
@@ -555,9 +527,9 @@ class OfferResource extends Resource
             ]);
     }
 
-    public static function infolist(Infolist $infolist): Infolist
+    public static function infolist(Schema $schema): Schema
     {
-        return $infolist
+        return $schema
             ->schema([
                 InfolistSection::make('Detalii ofertă')
                     ->columns(3)

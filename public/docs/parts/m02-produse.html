@@ -1,0 +1,652 @@
+<h2 id="produse">Modulul Produse</h2>
+
+<p>
+    Modulul <strong>Produse</strong> este centrul de gestiune al catalogului de articole comercializate prin platforma WooCommerce. Fiecare produs din ERP corespunde unui produs din magazinul online, sau poate fi un produs intern (producție, garanție palet) care nu apare pe site. Din acest modul poți vizualiza stocul în timp real, prețurile, furnizorii asociați, atributele tehnice, istoricul modificărilor de preț și poți controla publicarea pe WooCommerce, totul dintr-o singură interfață.
+</p>
+
+<h2 id="produse-acces">1. Cum accesezi lista de produse</h2>
+
+<p>
+    În bara de navigare din stânga a panoului de aplicație, găsești elementul de meniu <strong>Produse</strong>. Dacă ai drepturi de acces, un clic pe acest element deschide lista completă a produselor disponibile în locația ta curentă.
+</p>
+<p>
+    URL-ul direct este <code>/produse</code> (exemplu: <code>https://erp.malinco.ro/app/produse</code>). Dacă ai accesat vreodată vechea adresă <code>/woo-products</code>, aceasta redirecționează automat (301) către noul URL, deci marcajele vechi din browser rămân funcționale.
+</p>
+<p>
+    Lista afișează toate produsele aferente conexiunii WooCommerce actuale, filtrate implicit pentru locația ta. Utilizatorii cu acces la mai multe locații pot schimba locația din selectorul din bara de sus.
+</p>
+<p>
+    În lista de produse vei găsi coloanele principale: imagine, denumire produs, SKU, furnizor preferat, prețul de vânzare, stocul disponibil, unitatea de măsură și statusul publicării pe site. Unele coloane sunt afișate implicit, altele pot fi activate/dezactivate prin butonul de coloane din bara de acțiuni a tabelului.
+</p>
+
+<h2 id="produse-filtre">2. Filtrele disponibile în lista de produse</h2>
+
+<p>
+    Deasupra listei de produse se află un panou de filtre cu mai multe opțiuni. Filtrele sunt persistate în sesiune — adică dacă aplici un filtru și navighezi pe altă pagină, la revenire filtrul va fi în continuare activ.
+</p>
+
+<h3>Filtre disponibile</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>Filtru</th>
+            <th>Tip</th>
+            <th>Valori posibile / Descriere</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>Tip produs</strong></td>
+            <td>Selecție unică</td>
+            <td>Comercializare, Producție (intern), Garanție palet — filtrează după destinația produsului</td>
+        </tr>
+        <tr>
+            <td><strong>Sursă</strong></td>
+            <td>Selecție unică</td>
+            <td>WooCommerce (produse importate din magazin), WinMentor CSV (produse importate din ERP-ul de contabilitate)</td>
+        </tr>
+        <tr>
+            <td><strong>Status stoc</strong></td>
+            <td>Selecție unică</td>
+            <td>În stoc (<code>instock</code>), Fără stoc (<code>outofstock</code>), La comandă (<code>on_demand</code>)</td>
+        </tr>
+        <tr>
+            <td><strong>Discontinuu</strong></td>
+            <td>Ternar (Da / Nu / Ambele)</td>
+            <td>Afișează doar produsele marcate ca discontinue, doar cele active, sau toate</td>
+        </tr>
+        <tr>
+            <td><strong>Tip aprovizionare</strong></td>
+            <td>Ternar</td>
+            <td>La comandă (<code>on_demand</code>), Din stoc (<code>stock</code>), sau ambele tipuri</td>
+        </tr>
+        <tr>
+            <td><strong>Îmbogățit web</strong></td>
+            <td>Ternar</td>
+            <td>Produse pentru care au fost generate descrieri/atribute cu ajutorul AI-ului (enrichment), versus cele neîmbogățite</td>
+        </tr>
+        <tr>
+            <td><strong>Are imagine</strong></td>
+            <td>Ternar</td>
+            <td>Produse cu imagine principală setată, versus cele fără imagine</td>
+        </tr>
+        <tr>
+            <td><strong>Categorie</strong></td>
+            <td>Selecție cu căutare</td>
+            <td>Lista tuturor categoriilor WooCommerce disponibile; filtrează produsele care aparțin categoriei selectate</td>
+        </tr>
+    </tbody>
+</table>
+
+<p>
+    Pe lângă filtre, bara de căutare textuală acceptă căutare după <strong>denumire</strong>, <strong>SKU</strong>, <strong>slug</strong> sau <strong>categorie</strong>. Căutarea este full-text și insensibilă la majuscule.
+</p>
+<p>
+    Produsele cu <code>woo_id</code> setat dar cu status diferit de <code>publish</code> apar în rezultatele căutării globale cu marcajul <span style="color:#f97316;font-weight:600;">(nepublicat)</span> în portocaliu, pentru o identificare rapidă.
+</p>
+
+<h2 id="produse-campuri">3. Câmpurile unui produs</h2>
+
+<p>
+    Pagina de vizualizare a unui produs (<strong>View</strong>) prezintă toate informațiile disponibile în ERP pentru acel articol, organizate în secțiuni. Iată câmpurile principale și semnificația lor:
+</p>
+
+<h3>Identificare</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>Câmp</th>
+            <th>Descriere</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>SKU</strong></td>
+            <td>Codul unic de identificare al produsului (Stock Keeping Unit). Este același cu codul din WooCommerce și din WinMentor. Nu poate fi duplicat în cadrul aceleiași conexiuni.</td>
+        </tr>
+        <tr>
+            <td><strong>Denumire</strong></td>
+            <td>Titlul produsului, sincronizat cu WooCommerce. Poate conține entități HTML (de ex. <code>&amp;amp;</code>) care sunt decodate automat la afișare.</td>
+        </tr>
+        <tr>
+            <td><strong>Slug</strong></td>
+            <td>Adresa URL prietenoasă a produsului pe site (ex. <code>beton-celular-ytong-10cm</code>). Generat automat de WooCommerce la creare.</td>
+        </tr>
+        <tr>
+            <td><strong>Brand</strong></td>
+            <td>Marca produsului. Dacă în ERP există un brand cu același nume și are logo configurat, acesta se afișează ca imagine; altfel se afișează ca etichetă text albastru.</td>
+        </tr>
+        <tr>
+            <td><strong>Categorie</strong></td>
+            <td>Categoriile WooCommerce din care face parte produsul. Un produs poate aparține mai multor categorii simultan.</td>
+        </tr>
+        <tr>
+            <td><strong>Tip produs</strong></td>
+            <td>Destinația produsului: <em>Comercializare</em> (vânzare prin site), <em>Producție (intern)</em> (materie primă sau semifabricat), <em>Garanție palet</em> (taxă rambursabilă pentru palete).</td>
+        </tr>
+        <tr>
+            <td><strong>WooCommerce ID</strong></td>
+            <td>ID-ul numeric al produsului în WooCommerce. Dacă este gol, produsul există doar în ERP (placeholder sau importat din WinMentor) și nu are corespondent pe site.</td>
+        </tr>
+    </tbody>
+</table>
+
+<h3>Prețuri</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>Câmp</th>
+            <th>Descriere</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>Preț regular</strong></td>
+            <td>Prețul de listă al produsului pe WooCommerce, fără reducere. Afișat în RON.</td>
+        </tr>
+        <tr>
+            <td><strong>Preț reducere</strong></td>
+            <td>Prețul promotional activ, dacă există o campanie de discount activă pe WooCommerce.</td>
+        </tr>
+        <tr>
+            <td><strong>Preț curent</strong></td>
+            <td>Prețul efectiv afișat cumpărătorilor pe site — fie prețul de reducere (dacă există), fie cel regular.</td>
+        </tr>
+    </tbody>
+</table>
+
+<h3>Stoc și disponibilitate</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>Câmp</th>
+            <th>Descriere</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>Status stoc</strong></td>
+            <td><code>instock</code> = În stoc, <code>outofstock</code> = Fără stoc, <code>onbackorder</code> = Precomandă. Reflectă statusul din WooCommerce.</td>
+        </tr>
+        <tr>
+            <td><strong>Stoc WinMentor</strong></td>
+            <td>Cantitatea fizică disponibilă sincronizată din WinMentor, afișată în unitatea de măsură a produsului (buc, m², kg etc.). Se actualizează la fiecare sincronizare de stocuri.</td>
+        </tr>
+        <tr>
+            <td><strong>Unitate măsură</strong></td>
+            <td>Unitatea în care se exprimă cantitățile: buc (bucăți), m² (metri pătrați), ml (metri liniari), kg, t (tone), l (litri), palet, set, cutie, pachet, rolă, sac, foaie, mp.</td>
+        </tr>
+        <tr>
+            <td><strong>Gestionare stoc</strong></td>
+            <td>Dacă WooCommerce urmărește stocul numeric pentru acest produs (<code>manage_stock</code>). Când este activ, WooCommerce actualizează automat disponibilitatea la fiecare comandă.</td>
+        </tr>
+    </tbody>
+</table>
+
+<h3>Status publicare</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>Valoare</th>
+            <th>Semnificație</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>publish</code></td>
+            <td>Produsul este vizibil și activ pe site-ul WooCommerce. Apare în căutări și poate fi cumpărat.</td>
+        </tr>
+        <tr>
+            <td><code>draft</code></td>
+            <td>Produsul este în draft — există în WooCommerce dar nu este vizibil publicului. Util pentru produse în pregătire.</td>
+        </tr>
+        <tr>
+            <td><code>private</code></td>
+            <td>Produsul este privat — vizibil doar pentru utilizatorii logați cu drepturi de administrator pe site.</td>
+        </tr>
+        <tr>
+            <td><code>pending</code></td>
+            <td>Produsul așteaptă aprobare pentru publicare.</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2 id="produse-editare">4. Cum editezi un produs</h2>
+
+<p>
+    Din pagina de vizualizare a unui produs, apasă butonul <strong>Editează</strong> (sau accesează direct <code>/produse/{id}/edit</code>). Formularul de editare este organizat în mai multe secțiuni. Câmpurile disponibile pentru editare sunt:
+</p>
+
+<h3>Secțiunea de bază</h3>
+
+<ul>
+    <li>
+        <strong>Denumire</strong> — titlul produsului. Modificările nu sunt automat trimise la WooCommerce prin formularul de editare; pentru a actualiza denumirea pe site trebuie folosit butonul <em>Resync WooCommerce</em> sau sincronizarea manuală. Câmp text simplu, fără limitare de lungime.
+    </li>
+    <li>
+        <strong>Brand</strong> — câmp text liber. Încearcă să corespundă cu un brand existent în modulul Branduri pentru afișarea logo-ului. Nu este obligatoriu.
+    </li>
+    <li>
+        <strong>Unitate de măsură</strong> — selecție dintr-o listă predefinită: buc, m², ml, kg, t, l, palet, set, cutie, pachet, rolă, sac, foaie, mp. Această unitate este folosită în oferte, comenzi de achiziție și rapoarte de stoc.
+    </li>
+    <li>
+        <strong>Tip produs</strong> — selecție: <em>Comercializare</em>, <em>Producție (intern)</em> sau <em>Garanție palet</em>. Afectează vizibilitatea în rapoarte și în modulul de achiziții.
+    </li>
+</ul>
+
+<h3>Secțiunea dimensiuni și greutate</h3>
+
+<ul>
+    <li>
+        <strong>Greutate (kg)</strong> — greutatea produsului exprimată în kilograme. Câmp numeric. Este folosit pentru calculul costurilor de transport și poate fi sincronizat cu WooCommerce.
+    </li>
+    <li>
+        <strong>Lungime (cm)</strong> — dimensiunea pe lungime în centimetri.
+    </li>
+    <li>
+        <strong>Lățime (cm)</strong> — dimensiunea pe lățime în centimetri.
+    </li>
+    <li>
+        <strong>Înălțime (cm)</strong> — dimensiunea pe înălțime în centimetri.
+    </li>
+</ul>
+
+<p>
+    Dimensiunile și greutatea sunt stocate în ERP și pot fi trimise la WooCommerce prin funcția de Resync cu opțiunea <em>Dimensiuni și greutate</em> selectată.
+</p>
+
+<h3>Secțiunea atribute produs</h3>
+
+<p>
+    Atributele sunt perechi cheie-valoare care descriu caracteristicile tehnice ale produsului (de exemplu: Culoare = Gri, Rezistență termică = 0.55 m²K/W, Clasă de rezistență = C25/30). Poți adăuga, modifica sau șterge atribute direct din formularul de editare prin intermediul unui repeater.
+</p>
+<p>
+    Fiecare atribut are:
+</p>
+<ul>
+    <li><strong>Nume atribut</strong> — eticheta caracteristicii (ex. Material, Culoare, Lungime nominală).</li>
+    <li><strong>Valoare atribut</strong> — valoarea corespunzătoare (ex. Beton, Alb, 600 mm).</li>
+    <li><strong>Utilizat pentru variații</strong> — bifă dacă atributul generează variații de produs în WooCommerce (pentru produse cu variante).</li>
+    <li><strong>Vizibil pe produs</strong> — bifă dacă atributul apare în fișa produsului pe site.</li>
+</ul>
+
+<h3>Secțiunea furnizori asociați</h3>
+
+<p>
+    Poți asocia unul sau mai mulți furnizori unui produs. Detalii complete în secțiunea 6 a acestui manual.
+</p>
+
+<h3>Secțiunea stare specială (La comandă / Discontinuu)</h3>
+
+<ul>
+    <li>
+        <strong>La comandă (toggle)</strong> — marchează produsul ca aprovizionabil exclusiv la cerere. Când este activat, în câmpul <em>Etichetă La comandă</em> poți specifica un text personalizat afișat pe site (ex. "Disponibil în 5-7 zile lucrătoare"). La salvare, ERP-ul trimite automat la WooCommerce setările <code>manage_stock: true</code>, <code>stock_quantity: 0</code>, <code>backorders: yes</code>.
+    </li>
+    <li>
+        <strong>Discontinuu (toggle)</strong> — marchează produsul ca oprit din comercializare. Câmpul <em>Motiv discontinuare</em> permite înregistrarea explicației (ex. producătorul a sistat fabricația). Produsele discontinue apar cu o iconiță roșie în listă și pot fi filtrate separat.
+    </li>
+</ul>
+
+<h3>Notițe interne ERP</h3>
+
+<p>
+    Câmpul <strong>Notițe ERP</strong> (<code>erp_notes</code>) este un câmp text liber, vizibil doar în interiorul ERP-ului, nu pe site. Util pentru observații interne: de ex. „acest produs se vinde doar cu paleți întregi" sau „greutate reală diferă față de fișa tehnică".
+</p>
+
+<p>
+    După efectuarea modificărilor, apasă butonul <strong>Salvează</strong>. Ești redirecționat automat la pagina de vizualizare a produsului. Dacă produsul are un <code>woo_id</code> setat și nu este un placeholder, la salvare se declanșează automat <strong>SyncProductSupplierMetaJob</strong> care trimite în fundal metadatele furnizorului preferat la WooCommerce.
+</p>
+
+<h2 id="produse-publicare">5. Cum publici sau anulezi publicarea unui produs pe WooCommerce</h2>
+
+<p>
+    Din pagina de vizualizare a unui produs, în secțiunea de antet (header), se află butonul <strong>Publică pe site</strong> sau <strong>Trece în draft</strong>, în funcție de statusul curent al produsului.
+</p>
+
+<h3>Publicarea unui produs</h3>
+
+<ol>
+    <li>Deschide produsul dorit din lista de produse.</li>
+    <li>În antetul paginii, dacă produsul are statusul <code>draft</code>, <code>private</code> sau orice alt status diferit de <code>publish</code>, vei vedea butonul verde <strong>Publică pe site</strong> cu o iconiță de ochi.</li>
+    <li>Apasă butonul. Se afișează o fereastră de confirmare cu mesajul: <em>„Ești sigur că vrei să publici acest produs pe WooCommerce? Va deveni vizibil pentru cumpărători."</em></li>
+    <li>Apasă <strong>Da, publică</strong>. ERP-ul trimite un request la WooCommerce cu <code>status: "publish"</code>.</li>
+    <li>Dacă WooCommerce confirmă noua stare, statusul în ERP se actualizează imediat. Dacă există o eroare de comunicare, primești o notificare roșie de avertizare.</li>
+</ol>
+
+<h3>Trecerea în draft (anularea publicării)</h3>
+
+<ol>
+    <li>Din pagina de vizualizare, dacă produsul are statusul <code>publish</code>, butonul din antet se numește <strong>Trece în draft</strong> și are iconiță de ochi tăiat (culoare gri).</li>
+    <li>Apasă butonul și confirmă. ERP-ul trimite la WooCommerce <code>status: "draft"</code>.</li>
+    <li>Produsul dispare imediat din vizualizarea publică a magazinului online.</li>
+</ol>
+
+<p>
+    <strong>Nota 1:</strong> Această acțiune necesită ca produsul să aibă un <code>woo_id</code> valid și o conexiune WooCommerce activă. Produsele placeholder (fără <code>woo_id</code>) nu pot fi publicate din ERP.
+</p>
+<p>
+    <strong>Nota 2:</strong> Dreptul de a publica/anula publicarea este disponibil utilizatorilor cu rol de administrator, manager sau director de vânzări. Agenții și consultanții nu au acces la această acțiune.
+</p>
+
+<h2 id="produse-furnizori">6. Secțiunea furnizori asociați produsului</h2>
+
+<p>
+    Fiecare produs poate fi asociat cu unul sau mai mulți furnizori. Asocierile sunt vizibile în pagina de vizualizare și editabile în formularul de editare. Aceste informații alimentează modulul de Achiziții și sunt folosite la generarea comenzilor de aprovizionare.
+</p>
+
+<h3>Câmpuri disponibile per furnizor asociat</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>Câmp</th>
+            <th>Descriere</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>Furnizor</strong></td>
+            <td>Selecție din lista furnizorilor activi din ERP. Poți căuta după numele furnizorului.</td>
+        </tr>
+        <tr>
+            <td><strong>SKU furnizor</strong></td>
+            <td>Codul de produs folosit de furnizor în propria evidență. Util la comunicarea comenzilor și pentru reconcilierea facturilor.</td>
+        </tr>
+        <tr>
+            <td><strong>Preț achiziție</strong></td>
+            <td>Ultimul preț de cumpărare negociat cu furnizorul pentru acest produs. Câmp numeric.</td>
+        </tr>
+        <tr>
+            <td><strong>Monedă</strong></td>
+            <td>Moneda în care este exprimat prețul de achiziție (implicit RON, dar poate fi EUR, USD etc.).</td>
+        </tr>
+        <tr>
+            <td><strong>Zile livrare</strong></td>
+            <td>Numărul de zile lucrătoare de la plasarea comenzii până la livrarea mărfii (<em>lead time</em>). Folosit la calculul datei estimate de recepție în modulul Achiziții.</td>
+        </tr>
+        <tr>
+            <td><strong>Cantitate minimă comandă</strong></td>
+            <td>Cantitatea minimă pe care furnizorul o acceptă per comandă pentru acest produs. Dacă comanda este sub acest prag, ERP-ul poate afișa un avertisment.</td>
+        </tr>
+        <tr>
+            <td><strong>Furnizor preferat</strong></td>
+            <td>Bifă care marchează un singur furnizor ca furnizor principal pentru acest produs. Furnizorul preferat apare în lista de produse, în oferte și în modulul de achiziții ca opțiune implicită. De asemenea, informațiile despre furnizorul preferat sunt trimise la WooCommerce ca metadate (<code>_furnizor_nume</code>, <code>_furnizor_sku</code>) și pot fi afișate de plugin-ul WordPress.</td>
+        </tr>
+        <tr>
+            <td><strong>Notițe furnizor</strong></td>
+            <td>Câmp text liber pentru observații specifice despre relația cu furnizorul pentru acest produs (ex. condiții speciale, ambalaj minim, cerințe de etichetare).</td>
+        </tr>
+    </tbody>
+</table>
+
+<h3>Adăugarea unui furnizor nou din pagina de vizualizare</h3>
+
+<p>
+    Dacă un produs nu are încă niciun furnizor asociat, în pagina de vizualizare apare butonul <strong>Asociază furnizor</strong>. Apăsând acest buton, se deschide un modal unde poți:
+</p>
+<ul>
+    <li>Selecta un furnizor existent din lista ERP sau crea unul nou completând câmpul cu un nume nou.</li>
+    <li>Specifica imediat SKU-ul furnizorului și prețul de achiziție.</li>
+    <li>Marca furnizorul ca preferat.</li>
+</ul>
+<p>
+    După salvare, relația este creată imediat, iar dacă produsul are <code>woo_id</code>, metadatele furnizorului sunt trimise automat la WooCommerce.
+</p>
+
+<h3>Comunicare rapidă cu furnizorul</h3>
+
+<p>
+    Dacă produsul are furnizori asociați, în pagina de vizualizare apare butonul <strong>Contactează furnizor</strong>. Acesta deschide direct fereastra de comunicare cu contactele furnizorului preferat, facilitând trimiterea unui email de interogare fără a naviga manual la pagina furnizorului.
+</p>
+
+<h2 id="produse-imagini">7. Cum adaugi imagini la un produs</h2>
+
+<p>
+    Imaginile produselor sunt gestionate prin WooCommerce — ERP-ul stochează URL-ul imaginii principale (<code>main_image_url</code>) sincronizat din WooCommerce. Din ERP poți solicita o re-sincronizare a imaginii sau poți iniția o cerere de review de imagini.
+</p>
+
+<h3>Resync imagine din WooCommerce</h3>
+
+<p>
+    Dacă ai actualizat imaginea direct în WooCommerce și vrei să se reflecte și în ERP:
+</p>
+<ol>
+    <li>Deschide produsul în ERP.</li>
+    <li>Apasă butonul <strong>Resync WooCommerce</strong> din antetul paginii (vizibil pentru admin, manager și director vânzări).</li>
+    <li>Selectează opțiunea <strong>Imagine principală</strong> din lista de câmpuri.</li>
+    <li>Apasă <strong>Sincronizează</strong>. URL-ul imaginii se actualizează imediat în ERP.</li>
+</ol>
+
+<h3>Solicitare imagine nouă (Photo Review Request)</h3>
+
+<p>
+    Din pagina de vizualizare a produsului, există posibilitatea de a încărca o imagine candidat și a crea o cerere de evaluare. Această funcționalitate este destinată echipei de conținut:
+</p>
+<ol>
+    <li>Apasă butonul dedicat pentru cerere de imagine (disponibil în secțiunea de acțiuni din infolist).</li>
+    <li>Încarcă o imagine (format acceptat: JPG, PNG, WebP, GIF).</li>
+    <li>Cererea este creată cu statusul <em>pending</em> și poate fi evaluată de utilizatorii cu drept de aprobare.</li>
+</ol>
+
+<h3>Vizualizarea imaginii curente</h3>
+
+<p>
+    Imaginea principală a produsului este afișată în colțul stânga-sus al paginii de vizualizare, la dimensiunea 320×320 pixeli. Dacă produsul nu are imagine, se afișează un placeholder gri cu textul "No Image". În lista de produse, imaginea apare ca thumbnail mic (40×40 px) în prima coloană.
+</p>
+
+<h2 id="produse-atribute">8. Atributele produsului</h2>
+
+<p>
+    Atributele sunt caracteristici tehnice și descriptive ale produsului. Ele apar pe pagina de produs din WooCommerce în secțiunea de specificații tehnice și sunt esențiale pentru filtrarea produselor pe site.
+</p>
+<p>
+    ERP-ul afișează atributele produsului în pagina de vizualizare sub forma unui tabel, în secțiunea <strong>Atribute tehnice</strong>. Fiecare rând din tabel reprezintă o caracteristică.
+</p>
+
+<h3>Tipuri de atribute</h3>
+
+<ul>
+    <li><strong>Atribute locale (ERP)</strong> — stocate direct în baza de date ERP, în tabela <code>woo_product_attributes</code>, ordonate după poziție. Acestea sunt atributele gestionate manual sau generate de AI din ERP.</li>
+    <li><strong>Atribute WooCommerce</strong> — atributele sincronizate din WooCommerce, stocate în câmpul <code>data</code> (JSON). Sunt afișate cu o etichetă distinctivă "WC" în tabelul de atribute din pagina de vizualizare.</li>
+</ul>
+
+<h3>Editarea atributelor</h3>
+
+<p>
+    Din formularul de editare (<strong>Editează</strong>), secțiunea <em>Atribute produs</em> conține un repeater care permite:
+</p>
+<ul>
+    <li>Adăugarea unui atribut nou (butonul <strong>Adaugă atribut</strong>).</li>
+    <li>Modificarea numelui sau valorii unui atribut existent.</li>
+    <li>Ștergerea unui atribut (butonul de delete de pe fiecare rând).</li>
+    <li>Reordonarea atributelor prin drag-and-drop.</li>
+</ul>
+<p>
+    Atributele salvate în ERP sunt sincronizate la WooCommerce prin procesul de îmbogățire automată (<em>enrichment</em>) sau manual prin funcția Resync.
+</p>
+
+<h3>Atribute generate automat de AI</h3>
+
+<p>
+    ERP-ul dispune de o comandă automată (<code>php artisan products:generate-attributes</code>) care folosește Claude AI pentru a genera atribute tehnice pe baza denumirii, descrierii și categoriei produsului. Atributele generate sunt marcate distinct și necesită validare manuală înainte de publicare pe site.
+</p>
+
+<h3>Dimensiuni și greutate</h3>
+
+<p>
+    Câmpurile dedicate pentru dimensiuni fizice (<strong>Lungime</strong>, <strong>Lățime</strong>, <strong>Înălțime</strong> în cm) și <strong>Greutate</strong> (în kg) sunt separate de atributele generale și au câmpuri proprii în formularul de editare. Acestea corespund câmpurilor standard WooCommerce de dimensiuni ale produsului și sunt folosite de modulele de transport și logistică.
+</p>
+
+<h2 id="produse-discontinue">9. Produse discontinue și produse la comandă</h2>
+
+<h3>Produse discontinue</h3>
+
+<p>
+    Un produs <strong>discontinuu</strong> (<code>is_discontinued = true</code>) este un produs care nu mai este comercializat sau aprovizionat, dar care rămâne în evidența ERP-ului din motive de referință istorică (comenzi vechi, oferte arhivate, garanții în curs).
+</p>
+<p>
+    Caracteristici ale produselor discontinue:
+</p>
+<ul>
+    <li>Apar cu o iconiță roșie distinctivă în lista de produse.</li>
+    <li>Nu sunt incluse implicit în sugestiile de aprovizionare din modulul Achiziții.</li>
+    <li>Pot fi filtrate separat folosind filtrul <em>Discontinuu</em> din bara de filtre.</li>
+    <li>La marcare ca discontinuu, se poate specifica un <strong>motiv de discontinuare</strong> (câmp text), vizibil intern pentru echipă.</li>
+    <li>Marcajul nu este transmis automat la WooCommerce — dacă dorești să retragi produsul de pe site, trebuie să îl treci în <code>draft</code> separat folosind butonul de publicare.</li>
+</ul>
+<p>
+    Pentru a <strong>reveni</strong> la starea normală, apasă butonul <strong>Reactivează produsul</strong> din pagina de vizualizare (înlocuiește butonul de discontinuare când produsul este deja marcat).
+</p>
+
+<h3>Produse la comandă (On-Demand)</h3>
+
+<p>
+    Un produs <strong>la comandă</strong> (<code>procurement_type = on_demand</code>) este un produs pe care firma nu îl ține în stoc permanent, ci îl aprovizionează exclusiv după primirea unei comenzi ferme.
+</p>
+<p>
+    Caracteristici ale produselor la comandă:
+</p>
+<ul>
+    <li>Pe site-ul WooCommerce, stocul este setat la 0 cu <code>backorders: yes</code> — cumpărătorii pot plasa comanda chiar dacă nu există stoc fizic.</li>
+    <li>Câmpul <strong>Etichetă La comandă</strong> permite personalizarea mesajului afișat pe site (ex. "Livrare în 7-10 zile lucrătoare", "Disponibil la cerere"). Dacă este lăsat gol, WooCommerce afișează mesajul implicit de precomandă.</li>
+    <li>În lista de produse, coloana de status stoc afișează eticheta <em>La comandă</em> cu culoare portocalie pentru o identificare vizuală rapidă.</li>
+    <li>Produsele la comandă sunt incluse în planificarea achizițiilor și pot fi adăugate în necesarul de marfă în mod normal.</li>
+    <li>La dezactivarea modului La comandă (revenire la stoc normal), ERP-ul trimite automat la WooCommerce setarea <code>backorders: no</code>.</li>
+</ul>
+<p>
+    Diferența față de produsele discontinue: produsele la comandă sunt active și comercializabile, în timp ce produsele discontinue sunt retrase din comercializare. Un produs poate teoretic fi marcat atât discontinuu cât și la comandă, dar practic acestea sunt stări mutual exclusive.
+</p>
+
+<h2 id="produse-sincronizare">10. Sincronizarea cu WooCommerce</h2>
+
+<p>
+    ERP-ul și WooCommerce sunt sincronizate bidirecțional. Înțelegerea direcției și frecvenței sincronizărilor este importantă pentru a ști ce date sunt actualizate automat și când este necesară o intervenție manuală.
+</p>
+
+<h3>Sincronizare automată (WooCommerce → ERP)</h3>
+
+<p>
+    Sincronizarea automată aduce date <strong>din WooCommerce în ERP</strong> și este declanșată de procese planificate (scheduler):
+</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Ce se sincronizează</th>
+            <th>Frecvență</th>
+            <th>Detalii</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>Produse noi și modificate</strong></td>
+            <td>Periodic (la rularea ImportWooProductsJob)</td>
+            <td>Se importă toate câmpurile principale: denumire, prețuri, stoc, status, imagini, categorii, atribute, dimensiuni.</td>
+        </tr>
+        <tr>
+            <td><strong>Categorii</strong></td>
+            <td>Periodic (ImportWooCategoriesJob)</td>
+            <td>Se importă structura ierarhică de categorii din WooCommerce.</td>
+        </tr>
+        <tr>
+            <td><strong>Comenzi</strong></td>
+            <td>La fiecare 5 minute (SyncWooOrdersCommand)</td>
+            <td>Se sincronizează comenzile noi și modificate din WooCommerce în tabela <code>woo_orders</code>.</td>
+        </tr>
+    </tbody>
+</table>
+
+<h3>Sincronizare manuală selectivă (ERP → WooCommerce)</h3>
+
+<p>
+    Anumite modificări făcute în ERP sunt trimise automat sau manual la WooCommerce:
+</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Acțiune în ERP</th>
+            <th>Când se trimite la WooCommerce</th>
+            <th>Ce câmpuri</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Salvarea unui produs cu furnizori</td>
+            <td>Automat, imediat (job în fundal)</td>
+            <td>Metadate furnizor: <code>_furnizor_nume</code>, <code>_furnizor_sku</code></td>
+        </tr>
+        <tr>
+            <td>Activarea modului La comandă</td>
+            <td>Automat, sincron la salvare</td>
+            <td><code>manage_stock: true</code>, <code>stock_quantity: 0</code>, <code>backorders: yes</code></td>
+        </tr>
+        <tr>
+            <td>Dezactivarea modului La comandă</td>
+            <td>Automat, sincron la salvare</td>
+            <td><code>backorders: no</code></td>
+        </tr>
+        <tr>
+            <td>Publicare / Trecere în draft</td>
+            <td>Automat, sincron la apăsarea butonului</td>
+            <td><code>status: "publish"</code> sau <code>status: "draft"</code></td>
+        </tr>
+        <tr>
+            <td>Push prețuri din rapoarte/sincronizare stocuri</td>
+            <td>La declanșarea manuală a push-ului sau automat cu gate stoc</td>
+            <td>Prețuri și status stoc</td>
+        </tr>
+    </tbody>
+</table>
+
+<h3>Resync manual complet dintr-un produs</h3>
+
+<p>
+    Butonul <strong>Resync WooCommerce</strong> din pagina de vizualizare permite refacerea selectivă a datelor din WooCommerce către ERP. Acesta este disponibil doar pentru utilizatorii cu rol de admin, manager sau director vânzări.
+</p>
+<p>
+    La apăsarea butonului se deschide un modal cu o listă de câmpuri pe care le poți sincroniza:
+</p>
+<ul>
+    <li><strong>Imagine principală</strong> — aduce URL-ul imaginii principale din WooCommerce</li>
+    <li><strong>Prețuri</strong> — actualizează regular_price, sale_price și price din WooCommerce</li>
+    <li><strong>Status publicare</strong> — actualizează câmpul <code>status</code> din WooCommerce</li>
+    <li><strong>Stoc</strong> — actualizează <code>stock_status</code> și <code>manage_stock</code></li>
+    <li><strong>Denumire și slug</strong> — actualizează titlul și slug-ul URL</li>
+    <li><strong>Descriere</strong> — actualizează descrierea scurtă și lungă</li>
+    <li><strong>Dimensiuni și greutate</strong> — actualizează greutatea și dimensiunile (L×l×h)</li>
+    <li><strong>Categorii</strong> — resincronizează asocierile cu categoriile WooCommerce</li>
+</ul>
+<p>
+    Poți selecta unul sau mai multe câmpuri simultan. Selectează cel puțin un câmp și apasă <strong>Sincronizează</strong>. Operația se face sincron (în timp real) și la final primești o notificare de confirmare sau de eroare.
+</p>
+
+<h3>Sincronizare bulk a metadatelor furnizorilor</h3>
+
+<p>
+    Dacă ai actualizat furnizorii pentru mai multe produse și vrei să trimiți metadatele tuturor la WooCommerce, poți folosi comanda de consolă:
+</p>
+<pre><code>php artisan woo:sync-supplier-meta</code></pre>
+<p>
+    Aceasta iterează toate produsele cu <code>woo_id</code> setat și furnizori asociați și actualizează meta-câmpurile în WooCommerce prin plugin-ul malinco-erp-bridge.
+</p>
+
+<h3>Sincronizare status produse</h3>
+
+<p>
+    Comanda <code>php artisan woo:sync-product-statuses</code> (disponibilă și ca job planificat) sincronizează statusul de publicare (<code>publish</code>/<code>draft</code>) pentru toate produsele dintr-o conexiune, verificând dacă starea din ERP corespunde cu cea din WooCommerce și corectând discrepanțele.
+</p>
+
+<h3>Observații importante despre sincronizare</h3>
+
+<ul>
+    <li>Modificările de preț făcute direct în WooCommerce (din panoul de administrare WordPress) <strong>nu</strong> se reflectă automat în ERP — este necesară un resync manual cu opțiunea <em>Prețuri</em> selectată.</li>
+    <li>Dacă WooCommerce nu este disponibil (eroare de rețea, maintenance), sincronizările automate eșuează silențios și sunt reîncercate la următorul ciclu. Erorile sunt înregistrate în log-uri.</li>
+    <li>Produsele fără <code>woo_id</code> (placeholder-uri sau importate din WinMentor fără corespondent în magazin) nu pot fi sincronizate cu WooCommerce și sunt excluse din toate operațiile de push/pull.</li>
+    <li>Câmpul <code>data</code> (JSON) al fiecărui produs conține o copie completă a răspunsului WooCommerce din ultima sincronizare și este actualizat de fiecare dată când se face un resync, indiferent de câmpurile selectate.</li>
+</ul>

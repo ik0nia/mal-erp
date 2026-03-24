@@ -8,15 +8,15 @@ use Livewire\Attributes\On;
 
 class SalesChartWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Magazin online: Vânzări';
+    protected ?string $heading = 'Magazin online: Vânzări';
 
-    protected static ?string $maxHeight = '300px';
+    protected ?string $maxHeight = '300px';
 
-    protected static ?string $pollingInterval = null;
+    protected ?string $pollingInterval = null;
 
     protected static ?int $sort = -2;
 
-    protected static string $view = 'filament.widgets.sales-chart-widget';
+    protected string $view = 'filament.widgets.sales-chart-widget';
 
     public string $mode = 'revenue';
 

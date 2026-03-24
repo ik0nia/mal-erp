@@ -1,0 +1,440 @@
+<section id="m07-comenzi-online">
+
+  <h2>Modulul 7 — Comenzi Online</h2>
+
+  <p>
+    Modulul <strong>Comenzi Online</strong> centralizează în ERP toate comenzile plasate de clienți prin magazinul WooCommerce. Datele sunt sincronizate automat din WooCommerce, pot fi vizualizate detaliat, iar din interfață se pot efectua acțiuni directe: schimbarea statusului, adăugarea de note interne, crearea unui AWB Sameday și resincronizarea manuală. Modulul este accesibil din grupul de navigare <em>Comenzi → Comenzi Online</em>.
+  </p>
+
+  <hr>
+
+  <h3>1. Sincronizarea comenzilor din WooCommerce</h3>
+
+  <p>
+    Comenzile online sunt stocate local în baza de date ERP pentru a permite acces rapid, filtrare și acțiuni fără a apela WooCommerce la fiecare vizualizare. Sincronizarea funcționează pe două niveluri:
+  </p>
+
+  <h4>1.1 Sincronizare automată periodică</h4>
+  <p>
+    Un job programat rulează comanda <code>woo:sync-orders</code> la fiecare <strong>15 minute</strong> (via Laravel Scheduler). Aceasta parcurge toate conexiunile WooCommerce active configurate în ERP și aduce ultimele pagini de comenzi (implicit 5 pagini × 100 comenzi/pagină = maximum 500 comenzi per rulare). Logica de sincronizare folosește <em>upsert</em> după <code>connection_id + woo_id</code>, deci o comandă existentă este actualizată, iar una nouă este inserată.
+  </p>
+  <p>
+    Sincronizarea include și un mecanism de protecție (<em>safeguard</em>): dacă WooCommerce returnează zero comenzi la prima pagină, dar în ERP există deja comenzi locale, sincronizarea se oprește automat pentru a evita ștergerea accidentală a datelor.
+  </p>
+
+  <h4>1.2 Sincronizare automată la deschiderea unei comenzi</h4>
+  <p>
+    La fiecare accesare a paginii de vizualizare a unei comenzi (<em>View</em>), ERP face automat o cerere către WooCommerce pentru a aduce datele proaspete ale acelei comenzi specifice. Astfel, statusul, totalul și celelalte câmpuri sunt întotdeauna actuale chiar dacă nu s-a rulat încă job-ul periodic.
+  </p>
+
+  <h4>1.3 Sincronizare per conexiune</h4>
+  <p>
+    Fiecare locație/magazin are propria sa conexiune WooCommerce configurată în ERP. Comenzile sunt asociate atât conexiunii cât și locației, astfel încât utilizatorii văd doar comenzile magazinului lor (principiul <em>location scope</em>).
+  </p>
+
+  <h4>1.4 Creare automată Necesar de Marfă (PNR)</h4>
+  <p>
+    Când o comandă nouă este sincronizată cu statusul <em>pending</em>, <em>processing</em> sau <em>on-hold</em>, sistemul încearcă automat crearea unui Necesar de Marfă (PNR) pentru produsele din comandă care sunt marcate ca „la comandă" (on demand). Aceasta leagă fluxul de comenzi online cu modulul Achiziții.
+  </p>
+
+  <hr>
+
+  <h3>2. Lista comenzilor online — coloane, filtre și stări</h3>
+
+  <p>
+    Pagina de index <em>Comenzi Online</em> afișează un tabel cu toate comenzile sincronizate pentru locația curentă, sortate implicit după data comenzii descrescător (cele mai noi primele).
+  </p>
+
+  <h4>Coloanele din tabel</h4>
+  <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; width:100%;">
+    <thead>
+      <tr>
+        <th>Coloană</th>
+        <th>Descriere</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Comandă</strong></td>
+        <td>Numărul comenzii din WooCommerce, prefixat cu <code>#</code>. Câmp sortabil și căutabil.</td>
+      </tr>
+      <tr>
+        <td><strong>Status</strong></td>
+        <td>Statusul curent al comenzii, afișat ca badge colorat (detalii mai jos).</td>
+      </tr>
+      <tr>
+        <td><strong>Client</strong></td>
+        <td>Numele complet al clientului (prenume + nume din adresa de facturare). Câmp căutabil.</td>
+      </tr>
+      <tr>
+        <td><strong>Email</strong></td>
+        <td>Adresa de email a clientului (coloană ascunsă implicit, poate fi activată).</td>
+      </tr>
+      <tr>
+        <td><strong>Total</strong></td>
+        <td>Valoarea totală a comenzii, cu moneda (ex: <code>125.00 RON</code>). Sortabil.</td>
+      </tr>
+      <tr>
+        <td><strong>Plată</strong></td>
+        <td>Metoda de plată folosită (ex: „Card online", „Ramburs").</td>
+      </tr>
+      <tr>
+        <td><strong>Data</strong></td>
+        <td>Data și ora plasării comenzii, în formatul <code>zz.ll.aaaa HH:mm</code>. Sortabil.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>Stările WooCommerce</h4>
+  <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; width:100%; margin-top:12px;">
+    <thead>
+      <tr>
+        <th>Status (intern)</th>
+        <th>Etichetă afișată</th>
+        <th>Culoare badge</th>
+        <th>Semnificație</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>pending</code></td>
+        <td>În așteptare plată</td>
+        <td style="color:#b45309;">portocaliu</td>
+        <td>Comanda a fost plasată dar plata nu a fost confirmată.</td>
+      </tr>
+      <tr>
+        <td><code>processing</code></td>
+        <td>În procesare</td>
+        <td style="color:#0369a1;">albastru</td>
+        <td>Plata a fost primită, comanda este în curs de pregătire pentru expediere.</td>
+      </tr>
+      <tr>
+        <td><code>on-hold</code></td>
+        <td>În așteptare</td>
+        <td style="color:#6b7280;">gri</td>
+        <td>Comanda este suspendată temporar (ex: verificare manuală a plății).</td>
+      </tr>
+      <tr>
+        <td><code>completed</code></td>
+        <td>Finalizate</td>
+        <td style="color:#15803d;">verde</td>
+        <td>Comanda a fost livrată și finalizată cu succes.</td>
+      </tr>
+      <tr>
+        <td><code>cancelled</code></td>
+        <td>Anulate</td>
+        <td style="color:#dc2626;">roșu</td>
+        <td>Comanda a fost anulată de client sau de operatorul magazinului.</td>
+      </tr>
+      <tr>
+        <td><code>refunded</code></td>
+        <td>Rambursate</td>
+        <td style="color:#dc2626;">roșu</td>
+        <td>Suma a fost returnată clientului.</td>
+      </tr>
+      <tr>
+        <td><code>failed</code></td>
+        <td>Eșuate</td>
+        <td style="color:#dc2626;">roșu</td>
+        <td>Plata a eșuat sau a apărut o eroare la procesarea comenzii.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>Filtre disponibile</h4>
+  <ul>
+    <li><strong>Status</strong> — dropdown cu toate stările WooCommerce; permite filtrarea listei după un anumit status.</li>
+    <li><strong>Dată comandă</strong> — interval cu câmpurile „De la" și „Până la"; filtrează comenzile plasate între două date.</li>
+  </ul>
+
+  <h4>Căutare</h4>
+  <p>
+    Bara de căutare funcționează după numărul comenzii și după numele clientului (prenume sau nume de familie). Căutarea după email este suportată și ea, deoarece datele sunt stocate în câmpul JSON <code>billing</code>.
+  </p>
+
+  <hr>
+
+  <h3>3. Vizualizarea detaliilor unei comenzi</h3>
+
+  <p>
+    Apăsând butonul <strong>Vizualizare</strong> (iconița ochi) sau clic pe numărul comenzii se deschide pagina de detalii. La deschidere, ERP sincronizează automat comanda cu WooCommerce pentru a afișa date actuale.
+  </p>
+
+  <p>Pagina de detalii este structurată în cinci secțiuni:</p>
+
+  <h4>3.1 Secțiunea „Comandă"</h4>
+  <p>
+    Afișează informațiile generale ale comenzii: numărul, statusul curent (badge colorat), data și ora comenzii, metoda de plată (ex: „Ramburs la livrare", „Card online"), data la care a fost marcată ca plătită și nota lăsată de client la plasarea comenzii.
+  </p>
+
+  <h4>3.2 Secțiunea „Client"</h4>
+  <p>
+    Reunește toate datele de contact ale clientului:
+  </p>
+  <ul>
+    <li><strong>Adresă facturare</strong> — nume complet, companie (dacă există), stradă, cod poștal, oraș, județ, țară — compuse din câmpurile JSON <code>billing</code>.</li>
+    <li><strong>Adresă livrare</strong> — la fel, compusă din câmpurile JSON <code>shipping</code>. Dacă adresa de livrare este identică cu cea de facturare (sau goală), se afișează „La fel ca facturarea".</li>
+    <li><strong>Telefon</strong> și <strong>Email</strong> — extrase din adresa de facturare.</li>
+  </ul>
+
+  <h4>3.3 Secțiunea „Produse"</h4>
+  <p>
+    Un tabel cu toate produsele din comandă, fiecare rând conținând:
+  </p>
+  <ul>
+    <li><strong>Produs</strong> — numele produsului din WooCommerce.</li>
+    <li><strong>SKU</strong> — codul intern al produsului (dacă există).</li>
+    <li><strong>Cant.</strong> — cantitatea comandată.</li>
+    <li><strong>Stoc ERP</strong> — stocul disponibil în ERP pentru locația curentă, afișat ca badge verde (suficient) sau roșu (insuficient). Dacă produsul nu este identificat în ERP, badge-ul apare gri cu „–".</li>
+    <li><strong>Preț</strong> — prețul unitar al produsului.</li>
+    <li><strong>Total</strong> — prețul unitar înmulțit cu cantitatea (inclusiv eventuale reduceri).</li>
+  </ul>
+  <p>
+    Coloana „Stoc ERP" este deosebit de utilă: un badge roșu semnalează că nu există suficient stoc pentru a onora comanda, permițând operatorului să acționeze rapid (creare necesar de aprovizionare).
+  </p>
+
+  <h4>3.4 Secțiunea „Totale"</h4>
+  <p>
+    Prezintă defalcarea financiară a comenzii:
+  </p>
+  <ul>
+    <li><strong>Subtotal</strong> — valoarea produselor fără taxe de livrare sau discount.</li>
+    <li><strong>Livrare</strong> — costul transportului.</li>
+    <li><strong>Discount</strong> — reducerile aplicate (cupoane, promoții).</li>
+    <li><strong>TVA</strong> — valoarea taxei pe valoarea adăugată.</li>
+    <li><strong>TOTAL</strong> — suma finală de plată, afișată cu font îngroșat și dimensiune mai mare, cu moneda comenzii.</li>
+  </ul>
+
+  <h4>3.5 Secțiunea „AWB-uri Sameday"</h4>
+  <p>
+    Listează toate AWB-urile Sameday create pentru această comandă. Pentru fiecare AWB se afișează numărul (copiabil cu un clic), statusul (created/cancelled/failed) și data/ora creării. Dacă nu există AWB-uri, secțiunea este goală.
+  </p>
+
+  <hr>
+
+  <h3>4. Schimbarea statusului unei comenzi</h3>
+
+  <p>
+    Din pagina de detalii a comenzii, butonul <strong>„Schimbă status"</strong> (iconița săgeți rotunde, culoare portocalie) din antetul paginii permite actualizarea statusului direct din ERP, fără a accesa panoul WooCommerce.
+  </p>
+
+  <p><strong>Pași:</strong></p>
+  <ol>
+    <li>Deschideți comanda din lista <em>Comenzi Online</em>.</li>
+    <li>Apăsați butonul <strong>Schimbă status</strong> din antetul paginii.</li>
+    <li>În fereastra modală care apare, selectați noul status din lista derulantă. Statusul curent este preselectat implicit.</li>
+    <li>Apăsați <strong>Salvează</strong>.</li>
+  </ol>
+
+  <p>
+    ERP trimite modificarea prin API-ul WooCommerce (<code>updateOrderStatus</code>), după care actualizează și înregistrarea locală. La succes apare o notificare verde „Status actualizat". Dacă WooCommerce returnează o eroare (ex: conexiune întreruptă), apare o notificare roșie cu mesajul erorii, iar statusul rămâne nemodificat.
+  </p>
+
+  <p>
+    <strong>Important:</strong> schimbarea se propagă imediat în WooCommerce, ceea ce poate declanșa email-uri automate către client (ex: trecerea la <code>completed</code> trimite de regulă un email de confirmare livrare, conform setărilor magazinului WooCommerce).
+  </p>
+
+  <p>Statusuri frecvent folosite în operațiunile zilnice:</p>
+  <ul>
+    <li><code>processing</code> — comanda este în lucru, plata a fost confirmată.</li>
+    <li><code>completed</code> — coletul a fost livrat, comanda este finalizată.</li>
+    <li><code>cancelled</code> — comanda a fost anulată (stocul este eliberat automat în WooCommerce).</li>
+    <li><code>on-hold</code> — comanda este suspendată temporar pentru verificare.</li>
+    <li><code>refunded</code> — suma a fost rambursată clientului.</li>
+  </ul>
+
+  <hr>
+
+  <h3>5. Adăugarea unei note interne la comandă</h3>
+
+  <p>
+    Notele permit comunicarea internă între membrii echipei sau transmiterea de mesaje către client prin WooCommerce, fără a schimba statusul comenzii.
+  </p>
+
+  <p><strong>Pași:</strong></p>
+  <ol>
+    <li>Deschideți comanda.</li>
+    <li>Apăsați butonul <strong>„Adaugă notă"</strong> (iconița bulă de conversație, culoare gri) din antetul paginii.</li>
+    <li>În fereastra modală completați câmpul <strong>Notă</strong> cu textul dorit.</li>
+    <li>Dacă doriți ca nota să fie vizibilă și pentru client (apare în email-ul de notificare WooCommerce), activați toggle-ul <strong>„Vizibil pentru client"</strong>. Implicit nota este internă (doar pentru echipă).</li>
+    <li>Apăsați <strong>Salvează</strong>.</li>
+  </ol>
+
+  <p>
+    Nota este trimisă prin API-ul WooCommerce și stocată în istoricul comenzii din panoul WordPress. La succes apare notificarea verde „Notă adăugată". Notele adăugate prin ERP sunt vizibile și în WooCommerce Admin → Comenzi → detalii comandă → secțiunea „Note comandă".
+  </p>
+
+  <p>
+    <strong>Notă internă</strong> (toggle dezactivat) — vizibilă doar în panoul WooCommerce Admin, nu este trimisă clientului.<br>
+    <strong>Notă vizibilă pentru client</strong> (toggle activat) — WooCommerce trimite automat un email de notificare clientului cu textul notei.
+  </p>
+
+  <hr>
+
+  <h3>6. Crearea unui AWB Sameday din comandă</h3>
+
+  <p>
+    Integrarea cu Sameday Courier permite generarea AWB-urilor de expediere direct din ERP, pornind de la datele comenzii WooCommerce. Funcționalitatea este disponibilă dacă există cel puțin o conexiune Sameday activă configurată pentru locația curentă.
+  </p>
+
+  <h4>6.1 Inițierea creării AWB din comandă</h4>
+  <p>
+    Din pagina de detalii a comenzii, apăsați butonul <strong>„Creare AWB Sameday"</strong> (iconița camion, culoare verde) din antetul paginii. Sistemul redirecționează automat către formularul de creare AWB, cu câmpurile completate din datele comenzii:
+  </p>
+  <ul>
+    <li>Numele destinatarului (din <code>billing.first_name</code> + <code>billing.last_name</code>).</li>
+    <li>Telefonul destinatarului (din <code>billing.phone</code>).</li>
+    <li>Email-ul destinatarului (din <code>billing.email</code>).</li>
+    <li>Adresa de livrare (stradă, oraș, județ, cod poștal — din <code>shipping</code> sau, dacă lipsește, din <code>billing</code>).</li>
+    <li>Rambursul (câmpul <code>cod_amount</code>) — completat automat cu totalul comenzii <strong>doar dacă metoda de plată este „Ramburs" (<code>cod</code>)</strong>. La plata online câmpul rămâne 0.</li>
+    <li>Referința internă — populată cu numărul comenzii WooCommerce.</li>
+  </ul>
+
+  <h4>6.2 Câmpurile formularului AWB</h4>
+
+  <p>Formularul de creare AWB este structurat în trei secțiuni:</p>
+
+  <p><strong>Secțiunea Expeditor:</strong></p>
+  <ul>
+    <li><strong>Pickup point Sameday</strong> — punctul de ridicare al coletului (configurat în setările conexiunii Sameday); pre-selectat automat cu primul punct disponibil.</li>
+    <li><strong>Persoană contact</strong> — persoana de contact de la expeditor.</li>
+    <li><strong>Serviciu Sameday</strong> — tipul serviciului de curierat (ex: Standard, Express); pre-selectat cu primul disponibil.</li>
+    <li><strong>Servicii adiționale</strong> — opțiuni extra (ex: livrare sâmbătă, deschidere colet).</li>
+    <li><strong>Interval livrare</strong> — interval orar preferat pentru livrare (disponibil pentru anumite servicii).</li>
+    <li><strong>Ridicare de la terț</strong> — toggle pentru cazul în care coletul nu este ridicat de la punctul de pickup standard.</li>
+  </ul>
+
+  <p><strong>Secțiunea Destinatar:</strong></p>
+  <ul>
+    <li><strong>Tip destinatar</strong> — Persoană fizică sau Persoană juridică (la juridică apar câmpuri suplimentare: companie, CUI, ONRC, bancă, IBAN).</li>
+    <li><strong>Nume destinatar</strong> (obligatoriu) — pre-completat din comandă.</li>
+    <li><strong>Telefon destinatar</strong> (obligatoriu) — pre-completat din comandă.</li>
+    <li><strong>Email destinatar</strong> — pre-completat din comandă.</li>
+    <li><strong>Cod poștal</strong> — pre-completat din comandă.</li>
+    <li><strong>Județ (Sameday)</strong> (obligatoriu) — dropdown cu județele din baza Sameday; trebuie selectat manual dacă pre-completarea nu identifică automat județul.</li>
+    <li><strong>Oraș (Sameday)</strong> (obligatoriu) — dropdown dinamic, populat după selectarea județului.</li>
+    <li><strong>Stradă, Număr, Bloc, Scară, Etaj, Apartament</strong> — câmpuri separate pentru adresă structurată. Dacă lăsați câmpul „Adresă completă (override)" gol, adresa se compune automat din aceste câmpuri.</li>
+  </ul>
+
+  <p><strong>Secțiunea Colet și opțiuni:</strong></p>
+  <ul>
+    <li><strong>Tip trimitere</strong> — Colet, Plic sau Pachet mare.</li>
+    <li><strong>Număr colete</strong> (obligatoriu, minim 1).</li>
+    <li><strong>Greutate / colet (kg)</strong> (obligatoriu) — pre-completat cu greutatea implicită configurată în conexiunea Sameday.</li>
+    <li><strong>Ramburs (RON)</strong> — suma de încasat la livrare; 0 pentru comenzile cu plată online.</li>
+    <li><strong>Valoare asigurată (RON)</strong> — valoarea asigurată a coletului.</li>
+    <li><strong>Referință internă</strong> — pre-completat cu numărul comenzii.</li>
+    <li><strong>Observații cost, Observații client, Observații livrare</strong> — câmpuri libere pentru instrucțiuni suplimentare.</li>
+    <li><strong>Detalii colete</strong> (opțional) — repetor pentru specificarea greutății și dimensiunilor per colet individual.</li>
+  </ul>
+
+  <h4>6.3 Trimiterea și confirmarea</h4>
+  <p>
+    După completarea câmpurilor obligatorii apăsați <strong>Salvează</strong>. ERP trimite cererea de creare AWB către API-ul Sameday. La succes, AWB-ul primit este stocat în baza de date ERP și apare în secțiunea „AWB-uri Sameday" a comenzii. Numărul AWB poate fi copiat direct din interfață cu un singur clic (funcție <em>copyable</em>). Dacă API-ul Sameday returnează o eroare, AWB-ul este salvat cu statusul <code>failed</code> și mesajul de eroare este vizibil în detaliile AWB.
+  </p>
+
+  <hr>
+
+  <h3>7. Urmărirea statusului AWB și gestionarea AWB-urilor</h3>
+
+  <p>
+    Toate AWB-urile create sunt centralizate în secțiunea <em>Livrare → AWB Sameday</em> din meniul principal. Această pagină este disponibilă numai dacă există o conexiune Sameday activă configurată pentru locația curentă.
+  </p>
+
+  <h4>Lista AWB-urilor</h4>
+  <p>
+    Tabelul afișează coloanele: <strong>AWB</strong> (număr copiabil), <strong>Status</strong> (badge colorat), <strong>Magazin</strong> (locația), <strong>Destinatar</strong> (numele clientului), <strong>Oraș</strong>, <strong>Colete</strong> (număr), <strong>Kg/colet</strong> (greutate), <strong>Cost</strong> (costul expedierii calculat de Sameday) și <strong>Creat la</strong> (data/ora).
+  </p>
+
+  <h4>Statusurile AWB</h4>
+  <ul>
+    <li><strong>created</strong> (verde) — AWB-ul a fost creat cu succes în Sameday și coletul urmează să fie ridicat sau este în tranzit.</li>
+    <li><strong>cancelled</strong> (gri) — AWB-ul a fost anulat din ERP.</li>
+    <li><strong>failed</strong> (roșu) — crearea AWB-ului a eșuat din cauza unei erori API sau a unor date invalide.</li>
+  </ul>
+
+  <h4>Acțiunile disponibile pe un AWB</h4>
+  <ul>
+    <li>
+      <strong>Anulează</strong> — anulează AWB-ul în sistemul Sameday. Acțiunea necesită confirmare și este ireversibilă. Disponibilă doar pentru AWB-urile cu statusul <code>created</code>. După anulare statusul devine <code>cancelled</code>.
+    </li>
+    <li>
+      <strong>Detalii</strong> — deschide un modal cu toate datele AWB-ului: destinatar, colet, referință, observații, payload-ul cererii trimise și răspunsul primit de la Sameday (util pentru depanare). Informațiile sunt afișate în format JSON structurat.
+    </li>
+  </ul>
+
+  <h4>Filtrarea AWB-urilor</h4>
+  <p>
+    Lista poate fi filtrată după status (created / cancelled / failed). Câmpul de căutare permite găsirea unui AWB după numărul AWB sau după numele destinatarului.
+  </p>
+
+  <h4>Urmărirea livrării</h4>
+  <p>
+    ERP nu afișează în timp real actualizările de tracking de la Sameday (etapele livrării: în transit, livrat, etc.). Pentru urmărirea detaliată a coletului, numărul AWB (copiabil din ERP) se introduce pe site-ul Sameday (<a href="https://sameday.ro" target="_blank">sameday.ro</a>) sau se comunică clientului pentru auto-urmărire. Numărul AWB este afișat și în secțiunea „AWB-uri Sameday" din pagina comenzii.
+  </p>
+
+  <hr>
+
+  <h3>8. Resincronizarea manuală a unei comenzi cu WooCommerce</h3>
+
+  <p>
+    Deși sincronizarea automată rulează la fiecare 15 minute, există situații când este necesar să aduceți imediat datele actualizate ale unei comenzi specifice: de exemplu, după ce un operator a modificat comanda direct din panoul WooCommerce, sau pentru a verifica dacă plata a fost confirmată.
+  </p>
+
+  <h4>Resync dintr-o pagină de comandă</h4>
+  <p>
+    Din pagina de detalii a comenzii, apăsați butonul <strong>„Resync"</strong> (iconița descărcare din cloud, culoare albastră) din antetul paginii. Apare o fereastră de confirmare cu mesajul „Datele comenzii vor fi actualizate din WooCommerce". Apăsați <strong>Confirmă</strong> pentru a continua.
+  </p>
+  <p>
+    ERP apelează WooCommerce, aduce datele proaspete și actualizează înregistrarea locală (status, total, produse, date client). Pagina se reîncarcă automat cu noile date. La succes apare notificarea „Comandă resincronizată".
+  </p>
+  <p>
+    <strong>Notă:</strong> la fiecare deschidere a paginii de detalii se face oricum o sincronizare automată, deci butonul Resync este util mai ales dacă pagina era deja deschisă și datele s-au modificat între timp în WooCommerce.
+  </p>
+
+  <h4>Resync în masă din lista de comenzi</h4>
+  <p>
+    Din pagina de index <em>Comenzi Online</em>, puteți resincroniza mai multe comenzi simultan:
+  </p>
+  <ol>
+    <li>Bifați comenzile dorite folosind checkbox-urile din stânga fiecărui rând.</li>
+    <li>Din meniul de acțiuni în masă (apare la baza tabelului la selectare), alegeți <strong>„Resync selectate"</strong>.</li>
+    <li>Confirmați acțiunea în fereastra modală.</li>
+  </ol>
+  <p>
+    ERP parcurge fiecare comandă selectată, apelează WooCommerce individual și actualizează statusul, totalul și câmpul <code>data</code> (JSON complet). La finalizare apare notificarea „Resync finalizat". Erorile individuale (ex: o comandă nu mai există în WooCommerce) sunt ignorate și procesarea continuă cu comanda următoare.
+  </p>
+
+  <hr>
+
+  <h3>9. Raportul Comenzi Magazin</h3>
+
+  <p>
+    Pe lângă modulul <em>Comenzi Online</em> (comenzi WooCommerce), există și pagina <strong>Comenzi Magazin</strong>, accesibilă din grupul de navigare <em>Comenzi → Comenzi Magazin</em>.
+  </p>
+
+  <p>
+    Această pagină este rezervată comenzilor primite prin canalele tradiționale (telefon, email, față-în-față) care nu trec prin platforma WooCommerce. Accesul este controlat prin sistemul de permisiuni pe roluri (<code>RolePermission::check</code>), deci nu toți utilizatorii o pot accesa — dreptul de acces se configurează din secțiunea de administrare a rolurilor.
+  </p>
+
+  <p>
+    <strong>Integrare cu modulul Achiziții:</strong> indiferent de sursa comenzii (online sau magazin), dacă produsele comandate au stoc insuficient și sunt marcate ca „la comandă", sistemul creează automat un Necesar de Marfă (PNR) în modulul Achiziții, asigurând astfel lanțul complet: comandă client → necesar aprovizionare → comandă furnizor → recepție marfă → livrare client.
+  </p>
+
+  <hr>
+
+  <h3>Rezumat flux complet — comandă online</h3>
+
+  <ol>
+    <li>Clientul plasează comanda pe <strong>malinco.ro</strong> (WooCommerce).</li>
+    <li>ERP sincronizează automat comanda în max. 15 minute (sau imediat la deschiderea ei).</li>
+    <li>Operatorul vede comanda în <em>Comenzi Online</em>, verifică stocul ERP per produs (badge verde/roșu).</li>
+    <li>Dacă stocul este insuficient, un PNR a fost creat automat în modulul Achiziții.</li>
+    <li>Operatorul schimbă statusul în <code>processing</code> și pregătește coletul.</li>
+    <li>Se creează AWB-ul Sameday direct din comanda ERP — datele clientului sunt pre-completate automat.</li>
+    <li>AWB-ul este imprimat și coletul este predat curierului.</li>
+    <li>Operatorul marchează comanda ca <code>completed</code> — clientul primește email automat de confirmare livrare.</li>
+    <li>AWB-ul rămâne disponibil în ERP pentru referință sau anulare dacă este cazul.</li>
+  </ol>
+
+</section>

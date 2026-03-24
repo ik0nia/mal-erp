@@ -24,11 +24,16 @@ class ProductReviewRequestsPage extends Page implements HasTable
 {
     use HasDynamicNavSort, InteractsWithTable;
 
-    protected static ?string $navigationIcon  = 'heroicon-o-exclamation-triangle';
-    protected static ?string $navigationGroup = 'Produse';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-exclamation-triangle';
+    protected static string|\UnitEnum|null $navigationGroup = 'Produse';
     protected static ?string $navigationLabel = 'Reverificări produse';
     protected static ?int    $navigationSort  = 30;
-    protected static string  $view            = 'filament.app.pages.product-review-requests';
+    protected string  $view            = 'filament.app.pages.product-review-requests';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return \App\Models\RolePermission::check(static::class, 'can_access');
+    }
 
     public static function canAccess(): bool
     {
@@ -105,6 +110,7 @@ class ProductReviewRequestsPage extends Page implements HasTable
                     ])
                     ->default('pending'),
             ])
+            ->deferFilters(false)
             ->actions([
                 TableAction::make('view_photo')
                     ->label('Vezi poza')

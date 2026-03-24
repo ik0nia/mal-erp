@@ -10,7 +10,7 @@ class PrintOffer extends ViewRecord
 {
     protected static string $resource = OfferResource::class;
 
-    protected static string $view = 'filament.app.resources.offer-resource.pages.print-offer';
+    protected string $view = 'filament.app.resources.offer-resource.pages.print-offer';
 
     public function getTitle(): string
     {

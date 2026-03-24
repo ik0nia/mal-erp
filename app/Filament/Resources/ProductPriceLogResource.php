@@ -15,9 +15,9 @@ class ProductPriceLogResource extends Resource
 {
     protected static ?string $model = ProductPriceLog::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-currency-dollar';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-currency-dollar';
 
-    protected static ?string $navigationGroup = 'Integrări';
+    protected static string|\UnitEnum|null $navigationGroup = 'Integrări';
 
     protected static ?string $navigationLabel = 'Price logs';
 
@@ -103,7 +103,8 @@ class ProductPriceLogResource extends Resource
                         'winmentor_csv' => 'WinMentor CSV',
                     ]),
             ])
-            ->actions([
+            ->deferFilters(false)
+            ->recordActions([
                 Tables\Actions\Action::make('details')
                     ->label('Detalii')
                     ->icon('heroicon-o-eye')

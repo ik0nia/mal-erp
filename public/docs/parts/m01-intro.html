@@ -1,0 +1,734 @@
+<h2 id="intro">Introducere în ERP Malinco</h2>
+
+<h3>Ce este ERP Malinco și cui se adresează</h3>
+
+<p>
+  ERP Malinco este o platformă de management integrat dezvoltată specific pentru activitatea comercială
+  a firmei Malinco. Sistemul centralizează toate operațiunile esențiale ale companiei: gestionarea
+  produselor și stocurilor sincronizate cu magazinul online WooCommerce, procesul complet de achiziții
+  de la necesare interne până la recepția mărfii, urmărirea comenzilor online, gestionarea relațiilor cu
+  furnizorii, comunicarea prin email, rapoarte de business intelligence și activitatea pe rețelele sociale.
+</p>
+
+<p>
+  Platforma se adresează tuturor categoriilor de angajați implicați în fluxul comercial:
+</p>
+
+<ul>
+  <li><strong>Consultanți de vânzări</strong> — creează necesare de marfă, gestionează oferte și clienți, urmăresc comenzile online</li>
+  <li>
+    <strong>Manageri de achiziții (Buyers)</strong> — procesează necesarele primite de la consultanți,
+    generează comenzi către furnizori, urmăresc starea aprovizionării
+  </li>
+  <li>
+    <strong>Manageri și directori</strong> — au acces la rapoarte, aprobă comenzile de achiziție care
+    depășesc plafoanele de valoare, monitorizează activitatea generală
+  </li>
+  <li>
+    <strong>Administratori (Super Admin)</strong> — configurează sistemul, gestionează utilizatorii,
+    accesează toate modulele și setările tehnice
+  </li>
+</ul>
+
+<p>
+  Sistemul este construit pe Laravel cu interfața Filament v3 și rulează exclusiv în browser — nu necesită
+  instalare locală. Accesul se face de pe orice dispozitiv conectat la internet, inclusiv de pe mobil
+  (interfața este complet responsivă).
+</p>
+
+<hr>
+
+<h2 id="login">Autentificare — Cum te loghezi</h2>
+
+<h3>Accesarea platformei</h3>
+
+<p>
+  ERP Malinco este disponibil la adresa:
+  <strong><a href="https://erp.malinco.ro">https://erp.malinco.ro</a></strong>
+</p>
+
+<p>
+  La accesarea URL-ului, dacă nu ești autentificat, vei fi redirecționat automat către pagina de login.
+  Pagina de autentificare afișează logo-ul Malinco și un formular simplu cu două câmpuri.
+</p>
+
+<h3>Pașii de autentificare</h3>
+
+<ol>
+  <li>Deschide browserul și navighează la <code>https://erp.malinco.ro</code></li>
+  <li>Introdu adresa de email (ex: <code>ion.popescu@malinco.ro</code>)</li>
+  <li>Introdu parola asociată contului tău</li>
+  <li>Apasă butonul <strong>Autentifică-te</strong> (sau apasă Enter)</li>
+  <li>Sistemul te va redirecționa automat la pagina principală (dashboard)</li>
+</ol>
+
+<p>
+  Dacă ai uitat parola, contactează administratorul sistemului pentru resetare — nu există un flux
+  automat de recuperare parolă prin email în versiunea curentă.
+</p>
+
+<h3>Sesiunea de lucru</h3>
+
+<p>
+  Sesiunea rămâne activă atâta timp cât browserul este deschis. La închiderea browserului sau după o
+  perioadă de inactivitate prelungită, va trebui să te autentifici din nou. Nu este recomandat să
+  folosești opțiunea „Ține-mă minte" pe calculatoare partajate sau publice.
+</p>
+
+<hr>
+
+<h2 id="interfata">Structura interfeței</h2>
+
+<h3>Componentele principale ale ecranului</h3>
+
+<p>Interfața ERP Malinco este împărțită în trei zone principale:</p>
+
+<ol>
+  <li>
+    <strong>Bara de sus (Topbar)</strong> — conține logo-ul aplicației în stânga, câmpul de căutare
+    globală în centru, informațiile utilizatorului curent (nume și rol) în dreapta și meniul de cont
+    (avatar cu opțiuni de profil și deconectare) la extrema dreaptă
+  </li>
+  <li>
+    <strong>Sidebar-ul lateral stâng</strong> — meniul de navigare principal, cu fundal negru
+    (<code>#111827</code>), organizat pe grupuri de module. Item-ul activ este evidențiat cu fundal
+    alb și text negru bold. Pe mobil, sidebar-ul este ascuns implicit și se deschide cu butonul
+    hamburger din bara de sus
+  </li>
+  <li>
+    <strong>Zona de conținut</strong> — ocupă restul ecranului și afișează pagina sau resursa
+    selectată din meniu. Are lățime maximă (<code>full</code>) pentru utilizarea optimă a spațiului
+    pe monitoare mari
+  </li>
+</ol>
+
+<h3>Bara de sus — detalii</h3>
+
+<p>
+  <strong>Căutarea globală</strong> este disponibilă cu scurtătura de tastatură <kbd>Ctrl+K</kbd>
+  (sau <kbd>Cmd+K</kbd> pe Mac). Poți căuta produse după nume sau SKU, furnizori, comenzi de achiziție,
+  necesare și alte înregistrări din sistem. Rezultatele apar instant, cu debounce de 300ms.
+  Produsele care nu sunt publicate pe site apar marcate cu eticheta <em>(nepublicat)</em> în portocaliu.
+</p>
+
+<p>
+  <strong>Informațiile utilizatorului</strong> sunt afișate în dreapta câmpului de căutare: numele
+  complet pe prima linie și rolul (ex: „Manager Achiziții", „Consultant Vânzări") pe a doua linie, cu
+  text mai mic și mai discret. Această zonă nu este vizibilă pe ecrane mici (mobil).
+</p>
+
+<p>
+  <strong>Meniul de cont</strong> (iconița cu avatar) deschide un dropdown cu opțiunile: profil,
+  setări și butonul de deconectare.
+</p>
+
+<h3>Sidebar-ul — grupuri de meniuri</h3>
+
+<p>
+  Navigarea este organizată în grupuri tematice. Ordinea grupurilor poate fi configurată de
+  administratori din setările aplicației. Grupurile standard sunt:
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Grup</th>
+      <th>Descriere</th>
+      <th>Module incluse</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Administrare magazin</strong></td>
+      <td>Gestiunea catalogului de produse</td>
+      <td>Produse, Categorii, Modificări prețuri, Discrepanțe SKU, Cereri asociere EAN</td>
+    </tr>
+    <tr>
+      <td><strong>Achiziții</strong></td>
+      <td>Fluxul complet de aprovizionare</td>
+      <td>Necesare, Alocare furnizori, Generează comandă, Comenzi furnizori, Furnizori, Branduri, Fără furnizor</td>
+    </tr>
+    <tr>
+      <td><strong>Vânzări</strong></td>
+      <td>Relații cu clienții și ofertare</td>
+      <td>Clienți, Oferte</td>
+    </tr>
+    <tr>
+      <td><strong>Comenzi</strong></td>
+      <td>Urmărirea comenzilor primite</td>
+      <td>Comenzi Online, Comenzi Magazin</td>
+    </tr>
+    <tr>
+      <td><strong>Livrare</strong></td>
+      <td>Curierat și expediții</td>
+      <td>AWB Sameday</td>
+    </tr>
+    <tr>
+      <td><strong>Rapoarte</strong></td>
+      <td>Analize și statistici</td>
+      <td>Necesar de marfă, Mișcări stocuri, Raport Magazin Online, Dashboard BI, Analiză BI</td>
+    </tr>
+    <tr>
+      <td><strong>Produse</strong></td>
+      <td>Instrumente de gestiune produse</td>
+      <td>Produse noi WinMentor, Reverificări produse</td>
+    </tr>
+    <tr>
+      <td><strong>Comunicare</strong></td>
+      <td>Email și chat</td>
+      <td>Inbox Email, Statistici email, Jurnale chat</td>
+    </tr>
+    <tr>
+      <td><strong>Social Media</strong></td>
+      <td>Conținut și postări</td>
+      <td>Postări, Conturi, Template-uri grafice, Editor Template, Editor Vizual</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+  Grupurile din sidebar pot fi colapsate (restrânse) printr-un clic pe săgeata din dreapta numelui
+  grupului. Starea de colaps este păstrată în sesiunea de browser.
+</p>
+
+<p>
+  Unele item-uri de meniu afișează un <strong>badge numeric roșu</strong> care indică acțiuni
+  pendinte. De exemplu, „Generează comandă" din grupul Achiziții arată numărul de produse din necesare
+  aprobate care nu au fost încă comandate.
+</p>
+
+<hr>
+
+<h2 id="roluri">Rolurile utilizatorilor</h2>
+
+<h3>Sistemul de permisiuni</h3>
+
+<p>
+  ERP Malinco folosește un sistem de permisiuni bazat pe roluri (<em>Role-Based Access Control</em>).
+  Fiecare utilizator are un rol atribuit, iar fiecare rol are un set de permisiuni granulare per
+  modul: <em>poate accesa</em>, <em>poate crea</em>, <em>poate edita</em>, <em>poate șterge</em>,
+  <em>poate vizualiza</em>.
+</p>
+
+<p>
+  Există două tipuri speciale de utilizatori care depășesc sistemul de roluri:
+</p>
+
+<ul>
+  <li>
+    <strong>Admin</strong> (<code>is_admin = true</code>) — are acces complet la panoul de
+    administrare Filament Admin (dacă există), fără restricții de rol
+  </li>
+  <li>
+    <strong>Super Admin</strong> (<code>is_super_admin = true</code>) — cel mai înalt nivel de acces,
+    implicit este și admin; vede toate datele din sistem indiferent de locație sau restricții de rol;
+    accesează și configurează setările aplicației, inclusiv conexiuni IMAP, chei API, branding
+  </li>
+</ul>
+
+<p>
+  Permisiunile se aplică pe principiul <em>default-deny</em>: dacă pentru un rol nu există o regulă
+  explicită definită pentru o resursă, accesul este refuzat implicit. Permisiunile sunt cache-uite
+  5 minute pentru performanță.
+</p>
+
+<h3>Rolurile operaționale</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Rol (cod intern)</th>
+      <th>Denumire afișată</th>
+      <th>Responsabilități principale</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>consultant_vanzari</code></td>
+      <td>Consultant Vânzări</td>
+      <td>
+        Creează necesare de marfă (PNR) pentru produsele care lipsesc din stoc; gestionează clienți
+        și oferte; urmărește comenzile online ale magazinului; creează AWB-uri Sameday pentru expedieri
+      </td>
+    </tr>
+    <tr>
+      <td><code>manager_achizitii</code></td>
+      <td>Manager Achiziții</td>
+      <td>
+        Procesează necesarele trimise de consultanți; alocă produse la furnizori; generează comenzi
+        de achiziție (PO) pentru furnizori; urmărește starea comenzilor; înregistrează recepția mărfii;
+        are acces la raportul „Necesar de marfă" pentru planificarea aprovizionării
+      </td>
+    </tr>
+    <tr>
+      <td><code>manager</code></td>
+      <td>Manager</td>
+      <td>
+        Aprobă sau respinge comenzile de achiziție care depășesc pragul de valoare al furnizorului;
+        accesează rapoartele de business intelligence; vizualizează activitatea generală;
+        poate vedea și pagina „Generează comandă" pentru monitorizare
+      </td>
+    </tr>
+    <tr>
+      <td><code>director_vanzari</code></td>
+      <td>Director Magazin</td>
+      <td>
+        Acces extins la rapoarte de vânzări și stocuri; monitorizarea performanței magazinului online
+      </td>
+    </tr>
+    <tr>
+      <td><code>director_financiar</code></td>
+      <td>Director Financiar</td>
+      <td>
+        Acces la rapoarte financiare și de business intelligence; monitorizarea costurilor de achiziție
+      </td>
+    </tr>
+    <tr>
+      <td><code>director_economic</code></td>
+      <td>Director Economic</td>
+      <td>
+        Similar cu directorul financiar; acces la date economice agregate și rapoarte
+      </td>
+    </tr>
+    <tr>
+      <td><code>suport_financiar</code></td>
+      <td>Suport Financiar</td>
+      <td>
+        Rol de suport cu acces limitat la funcționalitățile financiare
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Ce poate face fiecare rol — rezumat practic</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Funcționalitate</th>
+      <th>Consultant Vânzări</th>
+      <th>Manager Achiziții</th>
+      <th>Manager</th>
+      <th>Super Admin</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Creare necesare (PNR)</td>
+      <td>Da</td>
+      <td>Da</td>
+      <td>Nu (doar vizualizare)</td>
+      <td>Da</td>
+    </tr>
+    <tr>
+      <td>Generare comenzi furnizori (PO)</td>
+      <td>Nu</td>
+      <td>Da</td>
+      <td>Nu</td>
+      <td>Da</td>
+    </tr>
+    <tr>
+      <td>Aprobare comenzi furnizori</td>
+      <td>Nu</td>
+      <td>Nu</td>
+      <td>Da</td>
+      <td>Da</td>
+    </tr>
+    <tr>
+      <td>Recepție marfă (PO received)</td>
+      <td>Nu</td>
+      <td>Da</td>
+      <td>Nu</td>
+      <td>Da</td>
+    </tr>
+    <tr>
+      <td>Gestionare produse WooCommerce</td>
+      <td>Limitat</td>
+      <td>Limitat</td>
+      <td>Da</td>
+      <td>Da</td>
+    </tr>
+    <tr>
+      <td>Creare oferte și clienți</td>
+      <td>Da</td>
+      <td>Nu</td>
+      <td>Da</td>
+      <td>Da</td>
+    </tr>
+    <tr>
+      <td>Rapoarte BI</td>
+      <td>Nu</td>
+      <td>Limitat</td>
+      <td>Da</td>
+      <td>Da</td>
+    </tr>
+    <tr>
+      <td>Inbox email furnizori</td>
+      <td>Nu</td>
+      <td>Da</td>
+      <td>Nu</td>
+      <td>Da</td>
+    </tr>
+    <tr>
+      <td>Social Media</td>
+      <td>Nu</td>
+      <td>Nu</td>
+      <td>Da</td>
+      <td>Da</td>
+    </tr>
+    <tr>
+      <td>Setări aplicație</td>
+      <td>Nu</td>
+      <td>Nu</td>
+      <td>Nu</td>
+      <td>Da</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+  Permisiunile exacte per modul sunt configurabile de Super Admin din panoul de administrare. Tabelul
+  de mai sus reflectă configurația implicită.
+</p>
+
+<hr>
+
+<h2 id="dashboard">Dashboard-ul principal</h2>
+
+<h3>Pagina de start</h3>
+
+<p>
+  La autentificare, sistemul te redirecționează automat la pagina principală (<code>/</code>).
+  ERP Malinco nu are un dashboard universal unic — în funcție de rolul tău, conținutul paginii de
+  start diferă.
+</p>
+
+<p>
+  Dashboard-ul afișează widget-uri (componente grafice) relevante pentru activitatea fiecărui tip
+  de utilizator. Widget-urile sunt componente live care se actualizează automat sau la reîncărcarea
+  paginii.
+</p>
+
+<h3>Widget-ul: Ultimele modificări de prețuri</h3>
+
+<p>
+  Disponibil utilizatorilor cu permisiunea corespunzătoare (configurat per rol). Afișează un tabel
+  cu ultimele 50 de modificări de prețuri înregistrate în sistem, cu coloanele:
+</p>
+
+<ul>
+  <li><strong>Data</strong> — data și ora modificării (format: zz.ll.aaaa HH:MM)</li>
+  <li><strong>SKU</strong> — codul produsului, copiabil cu un clic</li>
+  <li><strong>Produs</strong> — denumirea completă a produsului</li>
+  <li><strong>Magazin</strong> — locația pentru care s-a modificat prețul</li>
+  <li><strong>Preț vechi</strong> — prețul anterior în RON</li>
+  <li><strong>Preț nou</strong> — noul preț în RON</li>
+  <li><strong>Δ (Delta)</strong> — diferența de preț: verde dacă prețul a crescut, roșu dacă a scăzut</li>
+</ul>
+
+<p>
+  Fiecare rând din tabel este clickabil și duce la pagina de detalii a produsului respectiv.
+</p>
+
+<h3>Widget-ul: Grafic mișcări stoc (StockMovementChartWidget)</h3>
+
+<p>
+  Grafic vizual care arată evoluția intrărilor și ieșirilor de stoc în timp. Util pentru manageri
+  și directori care monitorizează ritmul de aprovizionare și vânzare.
+</p>
+
+<h3>Widget-ul: Grafic mișcări prețuri (PriceMovementChartWidget)</h3>
+
+<p>
+  Grafic care ilustrează tendințele de modificare a prețurilor pe o perioadă selectabilă. Permite
+  identificarea rapidă a produselor cu volatilitate mare de preț.
+</p>
+
+<h3>Widget-ul: Lead-uri chat (ChatLeadsWidget)</h3>
+
+<p>
+  Afișează contactele recente care au interacționat prin chat-ul integrat de pe site-ul
+  malinco.ro. Util pentru echipa de vânzări pentru urmărirea potențialilor clienți.
+</p>
+
+<h3>Widget-ul: Produse noi WinMentor (NewWinmentorProductsWidget)</h3>
+
+<p>
+  Listează produsele importate recent din sistemul WinMentor care nu au fost încă procesate
+  (asociate cu furnizori, completate cu descrieri etc.).
+</p>
+
+<h3>Widget-uri suplimentare</h3>
+
+<ul>
+  <li>
+    <strong>SalesChartWidget</strong> — grafic de vânzări (vizibil în funcție de rol și permisiuni)
+  </li>
+  <li>
+    <strong>OrderStatusChartWidget</strong> — distribuția comenzilor pe statusuri
+  </li>
+  <li>
+    <strong>SupplierMovementChartWidget</strong> — mișcările de stoc pe furnizori
+  </li>
+  <li>
+    <strong>BiStockTrendChartWidget</strong> — tendințe de stoc din modulul BI
+  </li>
+</ul>
+
+<h3>Notificarea „Draft salvat"</h3>
+
+<p>
+  Dacă ai un necesar de marfă (PNR) în stare de draft nesalvat, la fiecare pagină a aplicației
+  apare o bară de atenționare în partea de sus a conținutului, care te îndeamnă să finalizezi și
+  să trimiți necesarul. Aceasta previne pierderea datelor introduse.
+</p>
+
+<hr>
+
+<h2 id="navigare">Navigarea între module</h2>
+
+<h3>Metode de navigare</h3>
+
+<p>ERP Malinco oferă trei modalități principale de navigare:</p>
+
+<ol>
+  <li>
+    <strong>Sidebar-ul lateral</strong> — metoda principală; clic pe orice item din meniu deschide
+    modulul respectiv. Item-ul activ este evidențiat cu fundal alb. Grupurile pot fi colapsate
+    pentru a economisi spațiu vizual
+  </li>
+  <li>
+    <strong>Căutarea globală</strong> (<kbd>Ctrl+K</kbd>) — caută direct după o înregistrare
+    (produs, furnizor, comandă) și navighează direct la ea
+  </li>
+  <li>
+    <strong>Link-uri contextuale</strong> — în interiorul oricărei pagini există link-uri care duc
+    la resurse conexe (ex: dintr-un necesar poți naviga direct la furnizor, din o comandă de
+    achiziție poți accesa necesarul sursă)
+  </li>
+</ol>
+
+<h3>Navigarea în tabele și liste</h3>
+
+<p>
+  Toate listele (tabele cu înregistrări) au funcționalități uniforme:
+</p>
+
+<ul>
+  <li>
+    <strong>Căutare în tabel</strong> — câmpul de search din dreapta sus al tabelului filtrează
+    rezultatele în timp real după coloanele marcate ca searchable
+  </li>
+  <li>
+    <strong>Filtre</strong> — butonul „Filtre" (iconița pâlnie) deschide un panou cu filtre
+    avansate specifice modulului (ex: filtrare după status, furnizor, perioadă, locație)
+  </li>
+  <li>
+    <strong>Sortare</strong> — clic pe antetul unei coloane sortează înregistrările ascendent;
+    al doilea clic — descendent
+  </li>
+  <li>
+    <strong>Paginare</strong> — în partea de jos a tabelului se pot selecta 10, 25, 50 sau 100
+    înregistrări per pagină
+  </li>
+  <li>
+    <strong>Acțiuni per rând</strong> — la hover pe un rând apar butoane de acțiune rapidă
+    (vizualizare, editare, ștergere, alte acțiuni specifice)
+  </li>
+</ul>
+
+<h3>Breadcrumbs și titluri de pagină</h3>
+
+<p>
+  Pe desktop, în partea de sus a zonei de conținut apar breadcrumbs (ex: „Achiziții / Necesare /
+  PNR-20260315-0042") care arată unde ești în ierarhia aplicației și permit navigarea rapidă la
+  nivelul superior. Pe mobil, titlul și breadcrumbs-urile sunt ascunse pentru economisirea spațiului.
+</p>
+
+<h3>Butoanele de acțiune din pagini de detaliu</h3>
+
+<p>
+  Paginile de vizualizare detaliu (ex: vizualizare necesar, vizualizare comandă furnizor) au
+  butoane de acțiune în header (dreapta sus) sau în zona de informații, specifice stării
+  înregistrării. Butoanele disponibile se modifică dinamic în funcție de statusul curent.
+  De exemplu, o comandă de achiziție cu statusul <em>pending_approval</em> afișează butoanele
+  „Aprobă" și „Respinge" — vizibile doar utilizatorilor cu rolul Manager sau Super Admin.
+</p>
+
+<hr>
+
+<h2 id="locatie">Locația / depozitul activ</h2>
+
+<h3>Conceptul de locație în ERP Malinco</h3>
+
+<p>
+  Sistemul gestionează stocuri, prețuri și activitate separată pentru fiecare locație (magazin sau
+  depozit) al companiei. Fiecare utilizator operațional (non-admin) este asociat cu o locație implicită
+  setată de administrator. Această locație determină ce date vede și cu ce date lucrează utilizatorul.
+</p>
+
+<p>
+  Depozitele sunt tratate ca sub-locații ale unui magazin: dacă un utilizator este asociat unui
+  magazin, el vede automat și stocurile din depozitele aferente acelui magazin.
+</p>
+
+<h3>Locația curentă</h3>
+
+<p>
+  Utilizatorii operaționali lucrează implicit cu datele din locația lor atribuită. Filtrele de
+  locație sunt aplicate automat pe toate resursele relevante (stocuri, prețuri, rapoarte). Această
+  filtrare este transparentă și nu necesită configurare manuală la fiecare sesiune.
+</p>
+
+<p>
+  Super Admin și utilizatorii Admin văd datele din <strong>toate locațiile</strong> simultan, fără
+  restricții de filtrare. Ei pot aplica filtre manuale de locație în interfețele care le oferă această
+  opțiune (ex: rapoarte, dashboard-ul de achiziții).
+</p>
+
+<h3>Schimbarea locației asociate unui utilizator</h3>
+
+<p>
+  Locația implicită a unui utilizator se modifică de către Super Admin din panoul de administrare,
+  secțiunea de gestiune utilizatori. Un utilizator operațional nu poate schimba singur locația
+  asociată contului său.
+</p>
+
+<p>
+  Dacă lucrezi temporar în altă locație și ai nevoie să accesezi datele acelei locații, trebuie să
+  contactezi administratorul sistemului pentru a-ți actualiza locația asociată.
+</p>
+
+<hr>
+
+<h2 id="profil">Setări profil și deconectare</h2>
+
+<h3>Accesarea profilului</h3>
+
+<p>
+  Profilul tău de utilizator este accesibil din meniul de cont din bara de sus (iconița cu avatar/
+  inițialele numelui, în dreapta sus). La clic pe această iconiță se deschide un dropdown cu opțiunile:
+</p>
+
+<ul>
+  <li><strong>Profil</strong> — deschide pagina de setări ale contului tău personal</li>
+  <li><strong>Deconectare</strong> — închide sesiunea și te redirecționează la pagina de login</li>
+</ul>
+
+<h3>Ce poți modifica din profil</h3>
+
+<p>
+  Din pagina de profil Filament standard poți actualiza:
+</p>
+
+<ul>
+  <li><strong>Numele afișat</strong> — cum apare numele tău în interfață și în notificări</li>
+  <li><strong>Adresa de email</strong> — adresa folosită pentru autentificare și pentru primirea notificărilor</li>
+  <li><strong>Parola</strong> — poți seta o parolă nouă introducând parola actuală și apoi cea nouă (de două ori pentru confirmare)</li>
+</ul>
+
+<p>
+  Rolul, locația și permisiunile <strong>nu pot fi modificate</strong> din pagina de profil — acestea
+  sunt gestionate exclusiv de administratori.
+</p>
+
+<h3>Deconectarea</h3>
+
+<p>
+  Pentru securitatea datelor companiei, este important să te deconectezi la finalul sesiunii de lucru,
+  mai ales dacă folosești un calculator partajat sau public.
+</p>
+
+<p>Pașii pentru deconectare:</p>
+
+<ol>
+  <li>Clic pe iconița de cont (avatar) din dreapta sus</li>
+  <li>Selectează opțiunea <strong>Deconectare</strong> din dropdown</li>
+  <li>Sistemul îți șterge sesiunea și te redirecționează la pagina de login</li>
+</ol>
+
+<p>
+  Nu există o deconectare automată după un interval fix de inactivitate — sesiunea rămâne activă
+  câtă vreme browser-ul este deschis. Dacă închizi tab-ul (nu fereastra) sesiunea poate rămâne
+  activă pentru alte tab-uri deschise în același browser.
+</p>
+
+<h3>Setări aplicație (Super Admin)</h3>
+
+<p>
+  Utilizatorii cu rolul Super Admin au acces la o secțiune suplimentară, <strong>Setări aplicație</strong>,
+  disponibilă în bara de navigare. Aceasta permite configurarea:
+</p>
+
+<ul>
+  <li>
+    <strong>Branding</strong> — numele aplicației afișat în sidebar și logo-ul (PNG transparent,
+    minim 200px înălțime, maxim 2MB)
+  </li>
+  <li>
+    <strong>Email inbox (IMAP)</strong> — conexiunea read-only la contul de email al companiei pentru
+    importul automat al corespondenței cu furnizorii (server, port, tip criptare, adresă email, parolă)
+  </li>
+  <li>
+    <strong>WooCommerce Plugin Bridge</strong> — cheia secretă de autentificare pentru plugin-ul
+    <code>malinco-erp-bridge</code> instalat pe WordPress, care permite sincronizarea metadatelor
+    produselor între ERP și magazinul online
+  </li>
+  <li>
+    <strong>Inteligență Artificială (Claude)</strong> — cheia API Anthropic pentru procesarea
+    automată a emailurilor de la furnizori (extragere prețuri, date livrare, informații cheie)
+  </li>
+</ul>
+
+<p>
+  Câmpurile sensibile (parole, chei API) sunt stocate criptat în baza de date și nu sunt afișate
+  în formular la deschidere (câmpul apare gol chiar dacă valoarea există). Pentru a actualiza o
+  valoare sensibilă, introdu pur și simplu noua valoare și salvează — dacă lași câmpul gol, valoarea
+  existentă este păstrată neschimbată.
+</p>
+
+<h3>Notificări în aplicație</h3>
+
+<p>
+  Sistemul trimite notificări în-aplicație (toast-uri) pentru acțiunile importante: salvarea cu
+  succes a unui formular, erori de validare, tranziții de status ale comenzilor, aprobare/respingere
+  comenzi de achiziție. Notificările apar în colțul din dreapta jos al ecranului și dispar automat
+  după câteva secunde.
+</p>
+
+<p>
+  Notificările de tip DB (stocate în baza de date) pot fi vizualizate din iconița cu clopoțel din
+  bara de sus — aceasta indică și numărul de notificări necitite printr-un badge numeric.
+</p>
+
+<hr>
+
+<h2 id="mobile">Utilizarea pe mobil și tabletă</h2>
+
+<p>
+  Interfața ERP Malinco este complet responsivă și utilizabilă pe dispozitive mobile. Pe ecrane cu
+  lățime sub 1024px, sidebar-ul este ascuns implicit și se deschide cu butonul hamburger (trei linii
+  orizontale) din bara de sus.
+</p>
+
+<p>
+  Pe mobil, pentru a naviga la un alt modul:
+</p>
+
+<ol>
+  <li>Apasă butonul hamburger (stânga sus)</li>
+  <li>Selectează grupul de meniu dorit (dacă este colapsat, apasă pe el pentru a-l extinde)</li>
+  <li>Apasă pe item-ul de navigare dorit</li>
+  <li>Sidebar-ul se închide automat și conținutul se actualizează</li>
+</ol>
+
+<p>
+  Pe mobil, titlul paginii și breadcrumbs-urile sunt ascunse automat pentru a maximiza spațiul
+  util. Butoanele de acțiune din paginile de detaliu sunt mai mari pe mobil pentru o utilizare mai
+  ușoară cu degetul.
+</p>
+
+<p>
+  Funcționalitatea de scanare cod de bare (disponibilă în unele ecrane) utilizează camera
+  dispozitivului și funcționează optim pe mobil sau tabletă cu cameră integrată.
+</p>

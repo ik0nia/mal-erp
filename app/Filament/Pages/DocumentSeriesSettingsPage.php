@@ -7,7 +7,7 @@ use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 
@@ -15,11 +15,11 @@ class DocumentSeriesSettingsPage extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected static ?string $navigationIcon  = 'heroicon-o-document-text';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-document-text';
     protected static ?string $navigationLabel = 'Serii documente';
     protected static ?string $title           = 'Setări serii documente';
     protected static ?int    $navigationSort  = 99;
-    protected static string  $view            = 'filament.pages.document-series-settings';
+    protected string  $view            = 'filament.pages.document-series-settings';
 
     public array $data = [];
 
@@ -33,9 +33,9 @@ class DocumentSeriesSettingsPage extends Page implements HasForms
         ]);
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Section::make('Oferte')
                     ->columns(2)

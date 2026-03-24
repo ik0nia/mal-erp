@@ -19,20 +19,20 @@ use Illuminate\Support\Facades\DB;
  */
 class SupplierPriceIntelligencePage extends Page
 {
-    protected static ?string $navigationIcon  = 'heroicon-o-currency-dollar';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-currency-dollar';
     protected static ?string $navigationLabel = 'Prețuri din Emailuri';
-    protected static ?string $navigationGroup = 'Comunicare';
+    protected static string|\UnitEnum|null $navigationGroup = 'Comunicare';
     protected static ?int    $navigationSort  = 3;
-    protected static string  $view            = 'filament.app.pages.supplier-price-intelligence';
+    protected string  $view            = 'filament.app.pages.supplier-price-intelligence';
 
     public static function shouldRegisterNavigation(): bool
     {
-        return auth()->user()?->isSuperAdmin() ?? false;
+        return \App\Models\RolePermission::check(static::class, 'can_access');
     }
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isSuperAdmin() ?? false;
+        return \App\Models\RolePermission::check(static::class, 'can_access');
     }
 
     public string $filterSupplier = '';
