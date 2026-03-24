@@ -12,6 +12,7 @@ class SupplierContact extends Model
         'supplier_id',
         'name',
         'role',
+        'department',
         'email',
         'phone',
         'notes',
@@ -22,12 +23,15 @@ class SupplierContact extends Model
         'email_count',
     ];
 
-    protected $casts = [
-        'is_primary'     => 'boolean',
-        'first_seen_at'  => 'datetime',
-        'last_seen_at'   => 'datetime',
-        'email_count'    => 'integer',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'is_primary'    => 'boolean',
+            'first_seen_at' => 'datetime',
+            'last_seen_at'  => 'datetime',
+            'email_count'   => 'integer',
+        ];
+    }
 
     public function supplier(): BelongsTo
     {

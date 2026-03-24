@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use Anthropic\Client as AnthropicClient;
+use App\Models\AiUsageLog;
 use App\Models\BiAnalysis;
 use App\Models\DailyStockMetric;
 use App\Models\ProductPriceLog;
@@ -26,14 +27,17 @@ class GenerateBiAnalysisJob implements ShouldQueue
     public int $tries   = 1;
 
     public function __construct(
-        private readonly int    $analysisId,
-        private readonly string $sections = 'both',   // both | stock | online
-        private readonly Carbon $dateFrom = new Carbon('30 days ago'),
-        private readonly Carbon $dateTo   = new Carbon('now'),
+        private readonly int     $analysisId,
+        private readonly string  $sections = 'both',   // both | stock | online
+        private ?Carbon          $dateFrom = null,
+        private ?Carbon          $dateTo   = null,
     ) {}
 
     public function handle(): void
     {
+        $this->dateFrom ??= Carbon::now()->subDays(30);
+        $this->dateTo   ??= Carbon::now();
+
         $analysis = BiAnalysis::findOrFail($this->analysisId);
 
         try {
@@ -54,7 +58,7 @@ class GenerateBiAnalysisJob implements ShouldQueue
             $message = $claude->messages->create(
                 maxTokens: 12000,
                 messages:  [['role' => 'user', 'content' => $prompt]],
-                model:     'claude-sonnet-4-6',
+                model:     config('app.malinco.ai.models.sonnet', 'claude-sonnet-4-6'),
             );
 
             $content = '';
@@ -71,6 +75,10 @@ class GenerateBiAnalysisJob implements ShouldQueue
             $inputTokens  = $message->usage->inputTokens  ?? 0;
             $outputTokens = $message->usage->outputTokens ?? 0;
             $costUsd      = round($inputTokens / 1_000_000 * 3 + $outputTokens / 1_000_000 * 15, 5);
+
+            AiUsageLog::record('bi_daily', config('app.malinco.ai.models.sonnet', 'claude-sonnet-4-6'), $inputTokens, $outputTokens, [
+                'analysis_id' => $analysis->id,
+            ]);
 
             $analysis->update([
                 'content'          => $content,
@@ -184,16 +192,18 @@ class GenerateBiAnalysisJob implements ShouldQueue
             $stockDroppers = DailyStockMetric::whereBetween('daily_stock_metrics.day', [$metricsFrom, $metricsTo])
                 ->leftJoin('woo_products', 'woo_products.sku', '=', 'daily_stock_metrics.reference_product_id')
                 ->whereRaw("COALESCE(woo_products.product_type, 'shop') = 'shop'")
+                ->where(fn ($q) => $q->whereNull('woo_products.is_discontinued')->orWhere('woo_products.is_discontinued', false))
+                ->whereRaw("COALESCE(woo_products.procurement_type, 'stock') != 'on_demand'")
                 ->selectRaw('daily_stock_metrics.reference_product_id, woo_products.name as product_name, SUM(daily_stock_metrics.daily_available_variation) as total_variation, MIN(daily_stock_metrics.closing_available_qty) as min_qty, MAX(daily_stock_metrics.closing_available_qty) as max_qty')
                 ->groupBy('daily_stock_metrics.reference_product_id', 'woo_products.name')
                 ->orderBy('total_variation')
                 ->limit(15)
                 ->get();
 
-            $inStockCount    = WooProduct::where('stock_status', 'instock')->where('product_type', WooProduct::TYPE_SHOP)->count();
-            $outOfStockCount = WooProduct::where('stock_status', 'outofstock')->where('product_type', WooProduct::TYPE_SHOP)->count();
-            $totalProducts   = WooProduct::where('product_type', WooProduct::TYPE_SHOP)->count();
-            $activeProducts  = WooProduct::where('status', 'publish')->where('product_type', WooProduct::TYPE_SHOP)->count();
+            $inStockCount    = WooProduct::where('stock_status', 'instock')->where('product_type', WooProduct::TYPE_SHOP)->where('is_discontinued', false)->where(fn ($q) => $q->whereNull('procurement_type')->orWhere('procurement_type', '!=', WooProduct::PROCUREMENT_ON_DEMAND))->count();
+            $outOfStockCount = WooProduct::where('stock_status', 'outofstock')->where('product_type', WooProduct::TYPE_SHOP)->where('is_discontinued', false)->where(fn ($q) => $q->whereNull('procurement_type')->orWhere('procurement_type', '!=', WooProduct::PROCUREMENT_ON_DEMAND))->count();
+            $totalProducts   = WooProduct::where('product_type', WooProduct::TYPE_SHOP)->where('is_discontinued', false)->where(fn ($q) => $q->whereNull('procurement_type')->orWhere('procurement_type', '!=', WooProduct::PROCUREMENT_ON_DEMAND))->count();
+            $activeProducts  = WooProduct::where('status', 'publish')->where('product_type', WooProduct::TYPE_SHOP)->where('is_discontinued', false)->where(fn ($q) => $q->whereNull('procurement_type')->orWhere('procurement_type', '!=', WooProduct::PROCUREMENT_ON_DEMAND))->count();
 
             // Prețuri: aceeași granularitate ca stocul (prag 30, nu 45)
             if ($days <= 30) {
@@ -652,6 +662,14 @@ Scrie raportul în ROMÂNĂ, formatat în Markdown (folosește ##, ###, **, list
 
 Fii direct și pragmatic. Evită formulările vagi. Dacă datele nu permit o concluzie clară, spune asta explicit.
 PROMPT;
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        \Illuminate\Support\Facades\Log::error(class_basename(static::class) . ' failed', [
+            'exception' => $exception->getMessage(),
+            'trace'     => $exception->getTraceAsString(),
+        ]);
     }
 
     private function snapshotForStorage(array $metrics): array

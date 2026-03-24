@@ -17,9 +17,12 @@ class EanAssociationRequest extends Model
         'notes',
     ];
 
-    protected $casts = [
-        'processed_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'processed_at' => 'datetime',
+        ];
+    }
 
     const STATUS_PENDING  = 'pending';
     const STATUS_APPROVED = 'approved';

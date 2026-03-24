@@ -9,9 +9,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class IntegrationConnection extends Model
 {
-    public const PROVIDER_WOOCOMMERCE = 'woocommerce';
-    public const PROVIDER_WINMENTOR_CSV = 'winmentor_csv';
-    public const PROVIDER_SAMEDAY = 'sameday';
+    public const PROVIDER_WOOCOMMERCE      = 'woocommerce';
+    public const PROVIDER_WINMENTOR_CSV    = 'winmentor_csv';
+    public const PROVIDER_WINMENTOR_BRIDGE = 'winmentor_bridge';
+    public const PROVIDER_SAMEDAY          = 'sameday';
 
     protected $fillable = [
         'location_id',
@@ -32,8 +33,9 @@ class IntegrationConnection extends Model
             'verify_ssl' => 'boolean',
             'is_active' => 'boolean',
             'settings' => 'array',
-            'consumer_key' => 'encrypted',
-            'consumer_secret' => 'encrypted',
+            'consumer_key' => \Illuminate\Database\Eloquent\Casts\Encrypted::class,
+            'consumer_secret' => \Illuminate\Database\Eloquent\Casts\Encrypted::class,
+            'webhook_secret' => \Illuminate\Database\Eloquent\Casts\Encrypted::class,
             'location_id' => 'integer',
         ];
     }
@@ -47,6 +49,8 @@ class IntegrationConnection extends Model
                 $csvUrl = trim((string) data_get($connection->settings, 'csv_url', $connection->base_url));
                 $connection->base_url = $csvUrl;
                 $connection->consumer_key = '';
+                $connection->consumer_secret = '';
+            } elseif ($connection->provider === self::PROVIDER_WINMENTOR_BRIDGE) {
                 $connection->consumer_secret = '';
             } else {
                 $connection->base_url = rtrim((string) $connection->base_url, '/');
@@ -106,6 +110,36 @@ class IntegrationConnection extends Model
     public function isWinmentorCsv(): bool
     {
         return $this->provider === self::PROVIDER_WINMENTOR_CSV;
+    }
+
+    public function isWinmentorBridge(): bool
+    {
+        return $this->provider === self::PROVIDER_WINMENTOR_BRIDGE;
+    }
+
+    public function bridgeUrl(): string
+    {
+        return rtrim(trim((string) $this->base_url), '/');
+    }
+
+    public function bridgeApiKey(): string
+    {
+        return trim((string) $this->consumer_key);
+    }
+
+    public function bridgeFirma(): string
+    {
+        return trim((string) data_get($this->settings, 'firma', ''));
+    }
+
+    public function bridgeAn(): int
+    {
+        return (int) data_get($this->settings, 'an', now()->year);
+    }
+
+    public function bridgeLuna(): int
+    {
+        return (int) data_get($this->settings, 'luna', now()->month);
     }
 
     public function isSameday(): bool
@@ -179,9 +213,10 @@ class IntegrationConnection extends Model
     public static function providerOptions(): array
     {
         return [
-            self::PROVIDER_WOOCOMMERCE => 'WooCommerce',
-            self::PROVIDER_WINMENTOR_CSV => 'WinMentor CSV',
-            self::PROVIDER_SAMEDAY => 'Sameday Courier',
+            self::PROVIDER_WOOCOMMERCE      => 'WooCommerce',
+            self::PROVIDER_WINMENTOR_CSV    => 'WinMentor CSV',
+            self::PROVIDER_WINMENTOR_BRIDGE => 'WinMentor Bridge',
+            self::PROVIDER_SAMEDAY          => 'Sameday Courier',
         ];
     }
 }

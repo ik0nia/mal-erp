@@ -32,12 +32,15 @@ class EmailEntity extends Model
         'metadata',
     ];
 
-    protected $casts = [
-        'amount'     => 'decimal:2',
-        'confidence' => 'integer',
-        'date_value' => 'date',
-        'metadata'   => 'array',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'amount'     => 'decimal:2',
+            'confidence' => 'integer',
+            'date_value' => 'date',
+            'metadata'   => 'array',
+        ];
+    }
 
     public function email(): BelongsTo
     {

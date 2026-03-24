@@ -8,6 +8,7 @@ use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use App\Filament\App\Search\AppGlobalSearchProvider;
 use Filament\Navigation\NavigationGroup;
+use Filament\Navigation\NavigationItem;
 use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -17,7 +18,7 @@ use Filament\Support\Enums\MaxWidth;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
-use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
@@ -38,23 +39,50 @@ class AppPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Red,
             ])
-            ->brandName(fn () => AppSetting::get(AppSetting::KEY_BRAND_NAME, 'Malinco ERP'))
+            ->brandName(function () {
+                try {
+                    return AppSetting::get(AppSetting::KEY_BRAND_NAME, 'Malinco ERP');
+                } catch (\Throwable $e) {
+                    return config('app.name', 'Malinco ERP');
+                }
+            })
             ->brandLogo(function (): ?string {
-                $path = AppSetting::get(AppSetting::KEY_LOGO_PATH);
-                return $path ? \Illuminate\Support\Facades\Storage::disk('public')->url($path) : null;
+                try {
+                    $path = AppSetting::get(AppSetting::KEY_LOGO_PATH);
+                    return $path ? \Illuminate\Support\Facades\Storage::disk('public')->url($path) : null;
+                } catch (\Throwable $e) {
+                    return null;
+                }
             })
             ->brandLogoHeight('40px')
             ->navigationGroups(
-                collect(AppSetting::NAV_GROUPS)
-                    ->map(fn ($meta, $key) => [
-                        'label' => $meta['label'],
-                        'sort'  => (int) AppSetting::get($key, (string) $meta['default']),
-                    ])
-                    ->sortBy('sort')
-                    ->map(fn ($item) => NavigationGroup::make($item['label']))
-                    ->values()
-                    ->all()
+                (function () {
+                    try {
+                        return collect(AppSetting::NAV_GROUPS)
+                            ->map(fn ($meta, $key) => [
+                                'label' => $meta['label'],
+                                'sort'  => (int) AppSetting::get($key, (string) $meta['default']),
+                            ])
+                            ->sortBy('sort')
+                            ->map(fn ($item) => NavigationGroup::make($item['label']))
+                            ->values()
+                            ->all();
+                    } catch (\Throwable $e) {
+                        return [];
+                    }
+                })()
             )
+            ->navigationItems([
+                NavigationItem::make('Editor Vizual')
+                    ->icon('heroicon-o-paint-brush')
+                    ->group('Social Media')
+                    ->sort(13)
+                    ->url(fn () => route('template-editor.show', \App\Models\GraphicTemplate::first()?->id ?? 1))
+                    ->openUrlInNewTab()
+                    ->hidden(fn () => ! \App\Models\RolePermission::check(
+                        \App\Filament\App\Pages\GraphicTemplateVisualEditorPage::class, 'can_access'
+                    )),
+            ])
             ->discoverResources(in: app_path('Filament/App/Resources'), for: 'App\\Filament\\App\\Resources')
             ->discoverPages(in: app_path('Filament/App/Pages'), for: 'App\\Filament\\App\\Pages')
             ->pages([])
@@ -100,7 +128,7 @@ class AppPanelProvider extends PanelProvider
 .fi-global-search-results-ctn {
     right: auto !important;
     left: 0 !important;
-    width: 100% !important;
+    width: max(100%, min(calc(100% + 400px), 90vw)) !important;
     max-width: none !important;
 }
 .erp-user-info {
@@ -172,6 +200,15 @@ class AppPanelProvider extends PanelProvider
     background-color: rgba(255,255,255,0.08) !important;
     color: #ffffff !important;
 }
+/* ── Purchase Request items table ── */
+.erp-pr-row {
+    display: grid;
+    grid-template-columns: 1fr 64px 126px 72px 82px 32px 32px;
+    gap: 5px;
+    align-items: center;
+}
+.erp-pr-item .erp-act-btn { opacity: 0; transition: opacity 0.12s ease; }
+.erp-pr-item:hover .erp-act-btn { opacity: 1; }
 /* ── Butoane infolist mai mari pe mobil ── */
 @media (max-width: 767px) {
     .fi-in-actions .fi-btn {
@@ -233,7 +270,7 @@ class AppPanelProvider extends PanelProvider
                 StartSession::class,
                 AuthenticateSession::class,
                 ShareErrorsFromSession::class,
-                VerifyCsrfToken::class,
+                PreventRequestForgery::class,
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,

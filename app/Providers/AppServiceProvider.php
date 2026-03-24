@@ -3,6 +3,9 @@
 namespace App\Providers;
 
 use Filament\Support\Facades\FilamentView;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\HtmlString;
 
@@ -21,8 +24,25 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Rate limiters pentru endpoint-uri publice
+        RateLimiter::for('chat-message', function (Request $request) {
+            return Limit::perMinute(20)->by($request->ip());
+        });
+
+        RateLimiter::for('chat-contact', function (Request $request) {
+            return Limit::perMinute(10)->by($request->ip());
+        });
+
+        RateLimiter::for('chat-config', function (Request $request) {
+            return Limit::perMinute(60)->by($request->ip());
+        });
+
+        RateLimiter::for('search', function (Request $request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+
         FilamentView::registerRenderHook(
-            'panels::head.end',
+            \Filament\View\PanelsRenderHook::HEAD_END,
             fn (): HtmlString => new HtmlString(<<<'HTML'
                 <style>
                     .offer-items-repeater td.table-repeater-column {

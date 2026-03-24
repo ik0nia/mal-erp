@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -22,10 +23,12 @@ class PurchaseRequestItem extends Model
         'is_urgent',
         'is_reserved',
         'customer_id',
+        'offer_id',
         'client_reference',
         'notes',
         'status',
         'purchase_order_item_id',
+        'ordered_quantity',
     ];
 
     protected function casts(): array
@@ -36,10 +39,12 @@ class PurchaseRequestItem extends Model
             'supplier_id'           => 'integer',
             'quantity'              => 'decimal:3',
             'needed_by'             => 'date',
-            'is_urgent'             => 'boolean',
-            'is_reserved'           => 'boolean',
-            'customer_id'           => 'integer',
+            'is_urgent'              => 'boolean',
+            'is_reserved'            => 'boolean',
+            'customer_id'            => 'integer',
+            'offer_id'               => 'integer',
             'purchase_order_item_id' => 'integer',
+            'ordered_quantity'       => 'decimal:3',
         ];
     }
 
@@ -93,8 +98,31 @@ class PurchaseRequestItem extends Model
         return $this->belongsTo(Customer::class);
     }
 
+    public function offer(): BelongsTo
+    {
+        return $this->belongsTo(Offer::class);
+    }
+
     public function purchaseOrderItem(): BelongsTo
     {
         return $this->belongsTo(PurchaseOrderItem::class);
+    }
+
+    /**
+     * Cantitatea rămasă necomandată.
+     */
+    protected function remainingQuantity(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): float => max(0, (float) $this->quantity - (float) $this->ordered_quantity),
+        );
+    }
+
+    /**
+     * True dacă toată cantitatea a fost acoperită de PO-uri.
+     */
+    public function isFullyOrdered(): bool
+    {
+        return (float) $this->ordered_quantity >= (float) $this->quantity;
     }
 }

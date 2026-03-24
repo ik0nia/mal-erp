@@ -6,9 +6,25 @@ use Illuminate\Database\Eloquent\Model;
 
 class ChatContact extends Model
 {
-    protected $fillable = ['session_id', 'email', 'phone', 'wants_specialist'];
+    protected $fillable = ['session_id', 'email', 'phone', 'wants_specialist', 'contacted_at', 'contacted_by'];
 
-    protected $casts = ['wants_specialist' => 'boolean'];
+    protected function casts(): array
+    {
+        return [
+            'wants_specialist' => 'boolean',
+            'contacted_at'     => 'datetime',
+        ];
+    }
+
+    public function contactedByUser(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'contacted_by');
+    }
+
+    public function isContacted(): bool
+    {
+        return $this->contacted_at !== null;
+    }
 
     /**
      * Crează sau actualizează contactul pentru o sesiune.

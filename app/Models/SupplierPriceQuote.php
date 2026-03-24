@@ -21,13 +21,16 @@ class SupplierPriceQuote extends Model
         'notes',
     ];
 
-    protected $casts = [
-        'unit_price'  => 'decimal:2',
-        'min_qty'     => 'decimal:2',
-        'valid_from'  => 'date',
-        'valid_until' => 'date',
-        'quoted_at'   => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'unit_price'  => 'decimal:2',
+            'min_qty'     => 'decimal:2',
+            'valid_from'  => 'date',
+            'valid_until' => 'date',
+            'quoted_at'   => 'datetime',
+        ];
+    }
 
     public function supplier(): BelongsTo
     {

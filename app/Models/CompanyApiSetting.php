@@ -21,7 +21,7 @@ class CompanyApiSetting extends Model
     protected function casts(): array
     {
         return [
-            'api_key' => 'encrypted',
+            'api_key' => \Illuminate\Database\Eloquent\Casts\Encrypted::class,
             'timeout' => 'integer',
             'verify_ssl' => 'boolean',
             'is_active' => 'boolean',

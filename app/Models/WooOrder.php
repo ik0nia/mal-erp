@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Concerns\HasLocationScope;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -96,21 +97,29 @@ class WooOrder extends Model
         return $this->hasMany(SamedayAwb::class, 'woo_order_id');
     }
 
-    public function getCustomerNameAttribute(): string
+    protected function customerName(): Attribute
     {
-        $first = (string) data_get($this->billing, 'first_name', '');
-        $last  = (string) data_get($this->billing, 'last_name', '');
+        return Attribute::make(
+            get: function (): string {
+                $first = (string) data_get($this->billing, 'first_name', '');
+                $last  = (string) data_get($this->billing, 'last_name', '');
 
-        return trim($first.' '.$last);
+                return trim($first.' '.$last);
+            },
+        );
     }
 
-    public function getCustomerEmailAttribute(): string
+    protected function customerEmail(): Attribute
     {
-        return (string) data_get($this->billing, 'email', '');
+        return Attribute::make(
+            get: fn (): string => (string) data_get($this->billing, 'email', ''),
+        );
     }
 
-    public function getCustomerPhoneAttribute(): string
+    protected function customerPhone(): Attribute
     {
-        return (string) data_get($this->billing, 'phone', '');
+        return Attribute::make(
+            get: fn (): string => (string) data_get($this->billing, 'phone', ''),
+        );
     }
 }

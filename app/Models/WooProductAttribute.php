@@ -17,9 +17,12 @@ class WooProductAttribute extends Model
         'source',
     ];
 
-    protected $casts = [
-        'is_visible' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'is_visible' => 'boolean',
+        ];
+    }
 
     public function product(): BelongsTo
     {

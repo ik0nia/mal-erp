@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -54,11 +55,13 @@ class EmailMessage extends Model
         return $this->belongsTo(PurchaseOrder::class);
     }
 
-    public function getFromLabelAttribute(): string
+    protected function fromLabel(): Attribute
     {
-        return $this->from_name
-            ? "{$this->from_name} <{$this->from_email}>"
-            : $this->from_email;
+        return Attribute::make(
+            get: fn (): string => $this->from_name
+                ? "{$this->from_name} <{$this->from_email}>"
+                : $this->from_email,
+        );
     }
 
     public function hasAttachments(): bool
@@ -69,20 +72,56 @@ class EmailMessage extends Model
     /**
      * Returnează conținutul HTML curat pentru afișare (fără wrapper html/head/body).
      */
-    public function getBodyDisplayAttribute(): string
+    protected function bodyDisplay(): Attribute
     {
-        $html = $this->body_html ?? '';
+        return Attribute::make(
+            get: function (): string {
+                $html = $this->body_html ?? '';
 
+                if ($html === '') {
+                    return $this->body_text
+                        ? '<pre style="font-family:sans-serif;white-space:pre-wrap">' . htmlspecialchars($this->body_text, ENT_QUOTES, 'UTF-8') . '</pre>'
+                        : '';
+                }
+
+                // Extrage conținutul din <body> dacă există
+                if (preg_match('/<body[^>]*>(.*?)<\/body>/si', $html, $matches)) {
+                    return static::sanitizeEmailHtml(trim($matches[1]));
+                }
+
+                return static::sanitizeEmailHtml($html);
+            },
+        );
+    }
+
+    /**
+     * Sanitizează HTML din email pentru a preveni XSS.
+     * Elimină taguri periculoase, atribute event handler și protocoale javascript:.
+     */
+    public static function sanitizeEmailHtml(string $html): string
+    {
         if ($html === '') {
-            return $this->body_text
-                ? '<pre style="font-family:sans-serif;white-space:pre-wrap">' . htmlspecialchars($this->body_text, ENT_QUOTES, 'UTF-8') . '</pre>'
-                : '';
+            return '';
         }
 
-        // Extrage conținutul din <body> dacă există
-        if (preg_match('/<body[^>]*>(.*?)<\/body>/si', $html, $matches)) {
-            return trim($matches[1]);
-        }
+        // Elimină complet taguri periculoase împreună cu conținutul lor
+        $html = preg_replace('/<(script|iframe|object|embed|form)\b[^>]*>.*?<\/\1>/is', '', $html);
+
+        // Elimină taguri self-closing periculoase
+        $html = preg_replace('/<(script|iframe|object|embed|form)\b[^>]*\/?>/i', '', $html);
+
+        // Elimină atribute event handler (onclick, onerror, onload, etc.)
+        $html = preg_replace('/\s+on\w+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $html);
+
+        // Înlocuiește javascript: cu # în atributele href/src/action
+        $html = preg_replace('/\b(href|src|action)\s*=\s*["\']?\s*javascript\s*:/i', '$1="#" data-blocked="', $html);
+        $html = preg_replace('/javascript\s*:/i', '#', $html);
+
+        // Elimină atributul srcdoc (poate conține HTML arbitrar)
+        $html = preg_replace('/\s+srcdoc\s*=\s*(?:"[^"]*"|\'[^\']*\')/i', '', $html);
+
+        // Elimină data: URLs în href/src (pot conține HTML/JS)
+        $html = preg_replace('/\b(href|src)\s*=\s*["\']data:(?!image\/)[^"\']*["\']/i', '$1="#"', $html);
 
         return $html;
     }

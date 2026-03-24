@@ -14,11 +14,16 @@ class ChatLog extends Model
         'has_products',
         'input_tokens',
         'output_tokens',
+        'page_url',
+        'page_title',
     ];
 
-    protected $casts = [
-        'has_products' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'has_products' => 'boolean',
+        ];
+    }
 
     /**
      * Loghează un mesaj (user sau assistant).
@@ -32,6 +37,8 @@ class ChatLog extends Model
         bool $hasProducts = false,
         int $inputTokens = 0,
         int $outputTokens = 0,
+        ?string $pageUrl = null,
+        ?string $pageTitle = null,
     ): void {
         try {
             static::create([
@@ -42,6 +49,8 @@ class ChatLog extends Model
                 'has_products'  => $hasProducts,
                 'input_tokens'  => $inputTokens  ?: null,
                 'output_tokens' => $outputTokens ?: null,
+                'page_url'      => $pageUrl,
+                'page_title'    => $pageTitle,
             ]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('ChatLog: nu am putut salva', ['error' => $e->getMessage()]);

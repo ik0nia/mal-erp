@@ -30,11 +30,14 @@ class Location extends Model
         'is_active',
     ];
 
-    protected $casts = [
-        'is_active' => 'boolean',
-        'store_id' => 'integer',
-        'company_is_vat_payer' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+            'store_id' => 'integer',
+            'company_is_vat_payer' => 'boolean',
+        ];
+    }
 
     public const TYPE_STORE = 'store';
     public const TYPE_WAREHOUSE = 'warehouse';

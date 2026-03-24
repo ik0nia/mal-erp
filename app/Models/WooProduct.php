@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -10,8 +11,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class WooProduct extends Model
 {
-    public const SOURCE_WOOCOMMERCE = 'woocommerce';
+    public const SOURCE_WOOCOMMERCE  = 'woocommerce';
     public const SOURCE_WINMENTOR_CSV = 'winmentor_csv';
+    public const SOURCE_TOYA_API     = 'toya_api';
 
     public const TYPE_SHOP       = 'shop';
     public const TYPE_PRODUCTION = 'production';
@@ -62,9 +64,23 @@ class WooProduct extends Model
         'dim_length',
         'dim_width',
         'dim_height',
+        'qty_per_inner_box',
+        'qty_per_carton',
+        'cartons_per_pallet',
+        'ean_carton',
         'erp_notes',
         'product_type',
+        'procurement_type',
+        'on_demand_label',
+        'is_discontinued',
+        'discontinued_reason',
+        'min_stock_qty',
+        'max_stock_qty',
+        'substituted_by_id',
     ];
+
+    public const PROCUREMENT_STOCK     = 'stock';
+    public const PROCUREMENT_ON_DEMAND = 'on_demand';
 
     protected function casts(): array
     {
@@ -75,12 +91,27 @@ class WooProduct extends Model
             'manage_stock' => 'boolean',
             'data' => 'array',
             'is_placeholder' => 'boolean',
+            'is_discontinued' => 'boolean',
+            'min_stock_qty'   => 'decimal:2',
+            'max_stock_qty'   => 'decimal:2',
         ];
     }
 
     public function connection(): BelongsTo
     {
         return $this->belongsTo(IntegrationConnection::class, 'connection_id');
+    }
+
+    /** Produsul care înlocuiește acest produs la achiziții viitoare */
+    public function substitutedBy(): BelongsTo
+    {
+        return $this->belongsTo(WooProduct::class, 'substituted_by_id');
+    }
+
+    /** Produsele pe care acest produs le înlocuiește */
+    public function substitutes(): HasMany
+    {
+        return $this->hasMany(WooProduct::class, 'substituted_by_id');
     }
 
     public function attributes(): HasMany
@@ -141,8 +172,10 @@ class WooProduct extends Model
         return $this->hasMany(OfferItem::class, 'woo_product_id');
     }
 
-    public function getDecodedNameAttribute(): string
+    protected function decodedName(): Attribute
     {
-        return html_entity_decode((string) $this->name, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        return Attribute::make(
+            get: fn (): string => html_entity_decode((string) $this->name, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        );
     }
 }
