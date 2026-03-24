@@ -15,6 +15,7 @@ use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
+use Filament\Actions;
 use Filament\Tables;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -136,7 +137,7 @@ class WooOrderResource extends Resource
             ->deferFilters(false)
             ->searchPlaceholder('Caută număr, client...')
             ->recordActions([
-                Tables\Actions\ViewAction::make(),
+                Actions\ViewAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkAction::make('resync_selected')

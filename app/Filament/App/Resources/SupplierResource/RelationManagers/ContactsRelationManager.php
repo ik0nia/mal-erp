@@ -5,6 +5,7 @@ namespace App\Filament\App\Resources\SupplierResource\RelationManagers;
 use Filament\Forms;
 use Filament\Schemas\Schema;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Actions;
 use Filament\Tables;
 use Filament\Tables\Table;
 
@@ -145,13 +146,13 @@ class ContactsRelationManager extends RelationManager
             ])
             ->defaultSort('email_count', 'desc')
             ->headerActions([
-                Tables\Actions\CreateAction::make()
+                Actions\CreateAction::make()
                     ->label('Adaugă contact')
                     ->mutateFormDataUsing(fn (array $data) => array_merge($data, ['source' => 'manual'])),
             ])
             ->recordActions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Actions\EditAction::make(),
+                Actions\DeleteAction::make(),
             ]);
     }
 }

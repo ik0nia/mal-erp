@@ -28,6 +28,7 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Actions as TableActions;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -169,10 +170,10 @@ class PurchaseRequestResource extends Resource
             ])
             ->deferFilters(false)
             ->recordActions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make()
+                TableActions\ViewAction::make(),
+                TableActions\EditAction::make()
                     ->visible(fn (PurchaseRequest $record): bool => static::canEdit($record)),
-                Tables\Actions\DeleteAction::make()
+                TableActions\DeleteAction::make()
                     ->visible(fn (PurchaseRequest $record): bool => static::canDelete($record))
                     ->requiresConfirmation(),
                 Tables\Actions\Action::make('submit')

@@ -232,8 +232,14 @@ class RolePermissionsPage extends Page implements HasForms
         return str_replace(['\\', '/'], '_', $key);
     }
 
-    protected function getFormActions(): array
+    protected function getHeaderActions(): array
     {
-        return [];
+        return [
+            \Filament\Actions\Action::make('save')
+                ->label('Salvează permisiunile')
+                ->action('save')
+                ->color('primary')
+                ->visible(fn (): bool => (bool) $this->selectedRole),
+        ];
     }
 }

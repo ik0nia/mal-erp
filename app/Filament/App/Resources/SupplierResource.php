@@ -16,6 +16,7 @@ use Filament\Infolists;
 use Filament\Schemas\Schema;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Actions;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\DB;
@@ -830,8 +831,8 @@ class SupplierResource extends Resource
             ])
             ->deferFilters(false)
             ->recordActions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make()
+                Actions\ViewAction::make(),
+                Actions\EditAction::make()
                     ->visible(fn () => ! auth()->user()?->isConsultantVanzari()),
 
                 Tables\Actions\Action::make('create_po')
@@ -956,8 +957,8 @@ class SupplierResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make()
-                        ->before(function (Tables\Actions\DeleteBulkAction $action, \Illuminate\Database\Eloquent\Collection $records): void {
+                    Actions\DeleteBulkAction::make()
+                        ->before(function (Actions\DeleteBulkAction $action, \Illuminate\Database\Eloquent\Collection $records): void {
                             $withProducts = $records->filter(fn (Supplier $s) => $s->products()->exists());
                             if ($withProducts->isNotEmpty()) {
                                 $names = $withProducts->pluck('name')->join(', ');

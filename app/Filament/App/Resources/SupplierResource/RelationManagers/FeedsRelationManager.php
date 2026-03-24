@@ -9,6 +9,7 @@ use Filament\Schemas\Schema;
 use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Actions;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Auth;
@@ -179,7 +180,7 @@ class FeedsRelationManager extends RelationManager
                     ->placeholder('—'),
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make()
+                Actions\CreateAction::make()
                     ->label('Adaugă feed'),
             ])
             ->recordActions([
@@ -201,11 +202,11 @@ class FeedsRelationManager extends RelationManager
                             ->send();
                     }),
 
-                Tables\Actions\EditAction::make()
+                Actions\EditAction::make()
                     ->label('Editează')
                     ->button(),
 
-                Tables\Actions\DeleteAction::make()
+                Actions\DeleteAction::make()
                     ->label('Șterge')
                     ->button()
                     ->color('danger'),

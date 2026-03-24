@@ -16,6 +16,7 @@ use Filament\Schemas\Schema;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
+use Filament\Actions;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -268,7 +269,7 @@ class SocialPostResource extends Resource
             ])
             ->deferFilters(false)
             ->recordActions([
-                Tables\Actions\ViewAction::make(),
+                Actions\ViewAction::make(),
             ])
             ->bulkActions([]);
     }

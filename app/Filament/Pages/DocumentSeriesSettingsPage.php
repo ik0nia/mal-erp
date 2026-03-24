@@ -90,8 +90,13 @@ class DocumentSeriesSettingsPage extends Page implements HasForms
             ->send();
     }
 
-    protected function getFormActions(): array
+    protected function getHeaderActions(): array
     {
-        return [];
+        return [
+            \Filament\Actions\Action::make('save')
+                ->label('Salvează setările')
+                ->action('save')
+                ->color('primary'),
+        ];
     }
 }

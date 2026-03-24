@@ -21,6 +21,7 @@ use Filament\Forms\Get;
 use Filament\Schemas\Schema;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Actions;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -456,7 +457,7 @@ class IntegrationConnectionResource extends Resource
                             '<pre style="white-space: pre-wrap;">'.e(json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)).'</pre>'
                         );
                     }),
-                Tables\Actions\EditAction::make(),
+                Actions\EditAction::make(),
                 Tables\Actions\Action::make('test_connection')
                     ->label('Test connection')
                     ->icon('heroicon-o-signal')
@@ -707,7 +708,7 @@ class IntegrationConnectionResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }

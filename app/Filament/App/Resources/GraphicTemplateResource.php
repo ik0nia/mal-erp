@@ -9,6 +9,7 @@ use App\Models\GraphicTemplate;
 use Filament\Forms;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
+use Filament\Actions;
 use Filament\Tables;
 use Filament\Tables\Table;
 
@@ -169,8 +170,8 @@ class GraphicTemplateResource extends Resource
                     ->color('primary')
                     ->url(fn ($record) => route('template-editor.show', $record))
                     ->openUrlInNewTab(),
-                Tables\Actions\EditAction::make()->label('Setări'),
-                Tables\Actions\DeleteAction::make(),
+                Actions\EditAction::make()->label('Setări'),
+                Actions\DeleteAction::make(),
             ]);
     }
 
