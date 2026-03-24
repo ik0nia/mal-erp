@@ -33,9 +33,9 @@ class IntegrationConnection extends Model
             'verify_ssl' => 'boolean',
             'is_active' => 'boolean',
             'settings' => 'array',
-            'consumer_key' => \Illuminate\Database\Eloquent\Casts\Encrypted::class,
-            'consumer_secret' => \Illuminate\Database\Eloquent\Casts\Encrypted::class,
-            'webhook_secret' => \Illuminate\Database\Eloquent\Casts\Encrypted::class,
+            'consumer_key' => 'encrypted',
+            'consumer_secret' => 'encrypted',
+            'webhook_secret' => 'encrypted',
             'location_id' => 'integer',
         ];
     }

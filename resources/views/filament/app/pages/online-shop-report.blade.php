@@ -43,49 +43,59 @@
     </div>
 
     {{-- Stat cards --}}
-    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1rem;">
+    <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
 
-        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
-            <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Total vânzări</div>
-            <div class="mt-1 text-2xl font-bold text-primary-600 dark:text-primary-400">{{ number_format($this->statRevenue, 2, ',', '.') }}</div>
-            <div class="mt-1 text-xs text-gray-400">lei (fără anulate)</div>
-        </div>
-
-        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
-            <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Comenzi active</div>
-            <div class="mt-1 text-2xl font-bold text-gray-800 dark:text-gray-100">{{ number_format($this->statOrders) }}</div>
-            <div class="mt-1 text-xs text-gray-400">fără anulate/eșuate</div>
-        </div>
-
-        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
-            <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Medie/comandă</div>
-            <div class="mt-1 text-2xl font-bold text-gray-800 dark:text-gray-100">{{ number_format($this->statAvgOrder, 2, ',', '.') }}</div>
-            <div class="mt-1 text-xs text-gray-400">lei</div>
-        </div>
-
-        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
-            <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Finalizate</div>
-            <div class="mt-1 text-2xl font-bold text-success-600 dark:text-success-400">{{ number_format($this->statCompleted) }}</div>
-            <div class="mt-1 text-xs text-gray-400">
-                @if($this->statOrders > 0)
-                    {{ round($this->statCompleted / $this->statOrders * 100) }}% din total
-                @else
-                    &mdash;
-                @endif
+        <x-filament::section class="!p-0">
+            <div class="p-4">
+                <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Total vânzări</div>
+                <div class="mt-1 text-2xl font-bold text-primary-600 dark:text-primary-400">{{ number_format($this->statRevenue, 2, ',', '.') }}</div>
+                <div class="mt-1 text-xs text-gray-400">lei (fără anulate)</div>
             </div>
-        </div>
+        </x-filament::section>
 
-        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
-            <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">În procesare</div>
-            <div class="mt-1 text-2xl font-bold text-warning-600 dark:text-warning-400">{{ number_format($this->statProcessing) }}</div>
-            <div class="mt-1 text-xs text-gray-400">
-                @if($this->statOrders > 0)
-                    {{ round($this->statProcessing / $this->statOrders * 100) }}% din total
-                @else
-                    &mdash;
-                @endif
+        <x-filament::section class="!p-0">
+            <div class="p-4">
+                <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Comenzi active</div>
+                <div class="mt-1 text-2xl font-bold text-gray-800 dark:text-gray-100">{{ number_format($this->statOrders) }}</div>
+                <div class="mt-1 text-xs text-gray-400">fără anulate/eșuate</div>
             </div>
-        </div>
+        </x-filament::section>
+
+        <x-filament::section class="!p-0">
+            <div class="p-4">
+                <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Medie/comandă</div>
+                <div class="mt-1 text-2xl font-bold text-gray-800 dark:text-gray-100">{{ number_format($this->statAvgOrder, 2, ',', '.') }}</div>
+                <div class="mt-1 text-xs text-gray-400">lei</div>
+            </div>
+        </x-filament::section>
+
+        <x-filament::section class="!p-0">
+            <div class="p-4">
+                <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Finalizate</div>
+                <div class="mt-1 text-2xl font-bold text-success-600 dark:text-success-400">{{ number_format($this->statCompleted) }}</div>
+                <div class="mt-1 text-xs text-gray-400">
+                    @if($this->statOrders > 0)
+                        {{ round($this->statCompleted / $this->statOrders * 100) }}% din total
+                    @else
+                        &mdash;
+                    @endif
+                </div>
+            </div>
+        </x-filament::section>
+
+        <x-filament::section class="!p-0">
+            <div class="p-4">
+                <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">În procesare</div>
+                <div class="mt-1 text-2xl font-bold text-warning-600 dark:text-warning-400">{{ number_format($this->statProcessing) }}</div>
+                <div class="mt-1 text-xs text-gray-400">
+                    @if($this->statOrders > 0)
+                        {{ round($this->statProcessing / $this->statOrders * 100) }}% din total
+                    @else
+                        &mdash;
+                    @endif
+                </div>
+            </div>
+        </x-filament::section>
 
     </div>
 
@@ -102,17 +112,17 @@
     {{-- Root category cards --}}
     @if(count($this->categoryData) > 0)
     @php $maxCatRevenue = max(array_column($this->categoryData, 'revenue')) ?: 1; @endphp
-    <div>
-        <h3 class="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-200">Vânzări pe categorii principale</h3>
+    <x-filament::section>
+        <x-slot name="heading">Vânzări pe categorii principale</x-slot>
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             @foreach($this->categoryData as $cat)
-            <div class="rounded-xl border border-gray-200 bg-white p-3 dark:border-white/10 dark:bg-gray-900">
+            <div class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-white/10 dark:bg-white/5">
                 <div class="truncate text-xs font-semibold text-gray-700 dark:text-gray-200" title="{{ $cat['name'] }}">{{ $cat['name'] }}</div>
                 <div class="mt-1 text-lg font-bold text-gray-800 dark:text-gray-100">
                     {{ number_format($cat['revenue'], 0, ',', '.') }}
                     <span class="text-xs font-normal text-gray-400">lei</span>
                 </div>
-                <div class="mt-1.5 h-1.5 w-full rounded-full bg-gray-100 dark:bg-white/10">
+                <div class="mt-1.5 h-1.5 w-full rounded-full bg-gray-200 dark:bg-white/10">
                     <div class="h-1.5 rounded-full bg-primary-500"
                          style="width: {{ round($cat['revenue'] / $maxCatRevenue * 100) }}%"></div>
                 </div>
@@ -120,7 +130,7 @@
             </div>
             @endforeach
         </div>
-    </div>
+    </x-filament::section>
     @endif
 
     {{-- Supplier + Brand tables --}}
@@ -129,13 +139,11 @@
         {{-- Top furnizori --}}
         @if(count($this->supplierData) > 0)
         @php $maxSupRevenue = max(array_column($this->supplierData, 'revenue')) ?: 1; @endphp
-        <div class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900 overflow-hidden">
-            <div class="px-4 py-3 border-b border-gray-100 dark:border-white/5">
-                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">Top furnizori</h3>
-            </div>
-            <div class="divide-y divide-gray-100 dark:divide-white/5">
+        <x-filament::section>
+            <x-slot name="heading">Top furnizori</x-slot>
+            <div class="-mx-6 -mb-6 divide-y divide-gray-100 dark:divide-white/5">
                 @foreach($this->supplierData as $s)
-                <div class="px-4 py-3">
+                <div class="px-6 py-3">
                     <div class="flex items-center justify-between mb-1">
                         <span class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ $s['name'] }}</span>
                         <span class="text-sm font-semibold text-gray-800 dark:text-gray-100">{{ number_format($s['revenue'], 2, ',', '.') }} lei</span>
@@ -148,19 +156,17 @@
                 </div>
                 @endforeach
             </div>
-        </div>
+        </x-filament::section>
         @endif
 
         {{-- Top brand-uri --}}
         @if(count($this->brandData) > 0)
         @php $maxBrandRevenue = max(array_column($this->brandData, 'revenue')) ?: 1; @endphp
-        <div class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900 overflow-hidden">
-            <div class="px-4 py-3 border-b border-gray-100 dark:border-white/5">
-                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">Top brand-uri</h3>
-            </div>
-            <div class="divide-y divide-gray-100 dark:divide-white/5">
+        <x-filament::section>
+            <x-slot name="heading">Top brand-uri</x-slot>
+            <div class="-mx-6 -mb-6 divide-y divide-gray-100 dark:divide-white/5">
                 @foreach($this->brandData as $b)
-                <div class="px-4 py-3">
+                <div class="px-6 py-3">
                     <div class="flex items-center justify-between mb-1">
                         <span class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ $b['name'] }}</span>
                         <span class="text-sm font-semibold text-gray-800 dark:text-gray-100">{{ number_format($b['revenue'], 2, ',', '.') }} lei</span>
@@ -173,24 +179,22 @@
                 </div>
                 @endforeach
             </div>
-        </div>
+        </x-filament::section>
         @endif
 
     </div>
 
     {{-- Status breakdown table --}}
     @if(count($this->statusData) > 0)
-    <div class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900 overflow-hidden">
-        <div class="px-4 py-3 border-b border-gray-100 dark:border-white/5">
-            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">Detaliu comenzi pe status</h3>
-        </div>
-        <div class="overflow-x-auto">
+    <x-filament::section>
+        <x-slot name="heading">Detaliu comenzi pe status</x-slot>
+        <div class="-mx-6 -mb-6 overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-white/5">
-                        <th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
-                        <th class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Comenzi</th>
-                        <th class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Valoare (lei)</th>
+                        <th class="px-6 py-2 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
+                        <th class="px-6 py-2 text-right text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Comenzi</th>
+                        <th class="px-6 py-2 text-right text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Valoare (lei)</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-white/5">
@@ -207,7 +211,7 @@
                     @endphp
                     @foreach($this->statusData as $s)
                     <tr>
-                        <td class="px-4 py-2.5">
+                        <td class="px-6 py-2.5">
                             <span class="rounded-full px-2.5 py-0.5 text-xs font-medium
                                 @switch($s['status'])
                                     @case('completed') bg-success-100 text-success-700 dark:bg-success-900/40 dark:text-success-400 @break
@@ -219,25 +223,25 @@
                                 @endswitch
                             ">{{ $statusLabels[$s['status']] ?? $s['status'] }}</span>
                         </td>
-                        <td class="px-4 py-2.5 text-right text-gray-600 dark:text-gray-400">{{ number_format($s['cnt']) }}</td>
-                        <td class="px-4 py-2.5 text-right font-semibold text-gray-800 dark:text-gray-200">{{ number_format($s['revenue'], 2, ',', '.') }}</td>
+                        <td class="px-6 py-2.5 text-right text-gray-600 dark:text-gray-400">{{ number_format($s['cnt']) }}</td>
+                        <td class="px-6 py-2.5 text-right font-semibold text-gray-800 dark:text-gray-200">{{ number_format($s['revenue'], 2, ',', '.') }}</td>
                     </tr>
                     @endforeach
                 </tbody>
                 <tfoot>
                     <tr class="border-t-2 border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5">
-                        <td class="px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200">Total</td>
-                        <td class="px-4 py-2.5 text-right text-sm font-semibold text-gray-700 dark:text-gray-200">
+                        <td class="px-6 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200">Total</td>
+                        <td class="px-6 py-2.5 text-right text-sm font-semibold text-gray-700 dark:text-gray-200">
                             {{ number_format(array_sum(array_column($this->statusData, 'cnt'))) }}
                         </td>
-                        <td class="px-4 py-2.5 text-right text-sm font-bold text-primary-600 dark:text-primary-400">
+                        <td class="px-6 py-2.5 text-right text-sm font-bold text-primary-600 dark:text-primary-400">
                             {{ number_format(array_sum(array_column($this->statusData, 'revenue')), 2, ',', '.') }}
                         </td>
                     </tr>
                 </tfoot>
             </table>
         </div>
-    </div>
+    </x-filament::section>
     @endif
 
 </x-filament-panels::page>

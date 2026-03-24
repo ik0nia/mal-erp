@@ -132,7 +132,7 @@ class CompanyApiSettingResource extends Resource
                     ->sortable(),
             ])
             ->recordActions([
-                Tables\Actions\Action::make('test')
+                Actions\Action::make('test')
                     ->label('Test API')
                     ->icon('heroicon-o-signal')
                     ->color('info')
@@ -157,7 +157,7 @@ class CompanyApiSettingResource extends Resource
                 Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
+                Actions\BulkActionGroup::make([
                     Actions\DeleteBulkAction::make(),
                 ]),
             ]);

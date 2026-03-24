@@ -8,7 +8,7 @@ use App\Models\ProductReviewRequest;
 use App\Models\WooProduct;
 use Filament\Actions\Action;
 use Filament\Pages\Page;
-use Filament\Tables\Actions\Action as TableAction;
+use Filament\Actions\Action as TableAction;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;

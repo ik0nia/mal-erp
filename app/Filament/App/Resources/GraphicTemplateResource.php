@@ -164,7 +164,7 @@ class GraphicTemplateResource extends Resource
                     ->since(),
             ])
             ->recordActions([
-                Tables\Actions\Action::make('visual_editor')
+                Actions\Action::make('visual_editor')
                     ->label('Editor vizual')
                     ->icon('heroicon-o-paint-brush')
                     ->color('primary')

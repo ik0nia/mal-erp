@@ -5,7 +5,7 @@
 
         <button
             wire:click="setTab('placeholder')"
-            class="rounded-xl border p-4 text-left transition hover:shadow-md focus:outline-none
+            class="fi-section rounded-xl border p-4 text-left transition hover:shadow-md focus:outline-none
                 {{ $this->activeTab === 'placeholder' ? 'border-warning-400 bg-warning-50 dark:bg-warning-950/20' : 'border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900' }}"
         >
             <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Doar în WinMentor</div>
@@ -15,7 +15,7 @@
 
         <button
             wire:click="setTab('no_sku')"
-            class="rounded-xl border p-4 text-left transition hover:shadow-md focus:outline-none
+            class="fi-section rounded-xl border p-4 text-left transition hover:shadow-md focus:outline-none
                 {{ $this->activeTab === 'no_sku' ? 'border-danger-400 bg-danger-50 dark:bg-danger-950/20' : 'border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900' }}"
         >
             <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Pe site, fără SKU</div>
@@ -25,7 +25,7 @@
 
         <button
             wire:click="setTab('no_mentor')"
-            class="rounded-xl border p-4 text-left transition hover:shadow-md focus:outline-none
+            class="fi-section rounded-xl border p-4 text-left transition hover:shadow-md focus:outline-none
                 {{ $this->activeTab === 'no_mentor' ? 'border-info-400 bg-info-50 dark:bg-info-950/20' : 'border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900' }}"
         >
             <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Pe site, fără WinMentor</div>
@@ -33,13 +33,15 @@
             <div class="mt-1 text-xs text-gray-400">SKU prezent, fără stoc din contabilitate</div>
         </button>
 
-        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
-            <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Total discrepanțe</div>
-            <div class="mt-1 text-3xl font-bold text-gray-800 dark:text-gray-100">
-                {{ number_format($this->statPlaceholder + $this->statNoSku + $this->statOnSiteNoMentor) }}
+        <x-filament::section class="!p-0">
+            <div class="p-4">
+                <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Total discrepanțe</div>
+                <div class="mt-1 text-3xl font-bold text-gray-800 dark:text-gray-100">
+                    {{ number_format($this->statPlaceholder + $this->statNoSku + $this->statOnSiteNoMentor) }}
+                </div>
+                <div class="mt-1 text-xs text-gray-400">produse cu date incomplete</div>
             </div>
-            <div class="mt-1 text-xs text-gray-400">produse cu date incomplete</div>
-        </div>
+        </x-filament::section>
 
     </div>
 

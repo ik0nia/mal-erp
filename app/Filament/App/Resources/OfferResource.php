@@ -506,12 +506,12 @@ class OfferResource extends Resource
             ])
             ->deferFilters(false)
             ->recordActions([
-                Tables\Actions\Action::make('preview')
+                Actions\Action::make('preview')
                     ->label('Preview')
                     ->icon('heroicon-o-eye')
                     ->url(fn (Offer $record): string => static::getUrl('view', ['record' => $record]))
                     ->openUrlInNewTab(),
-                Tables\Actions\Action::make('print')
+                Actions\Action::make('print')
                     ->label('Print')
                     ->icon('heroicon-o-printer')
                     ->url(fn (Offer $record): string => static::getUrl('print', [
@@ -522,7 +522,7 @@ class OfferResource extends Resource
                 Actions\EditAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
+                Actions\BulkActionGroup::make([
                     Actions\DeleteBulkAction::make(),
                 ]),
             ]);

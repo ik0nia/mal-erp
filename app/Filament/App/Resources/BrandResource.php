@@ -146,7 +146,7 @@ class BrandResource extends Resource
                 Actions\EditAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
+                Actions\BulkActionGroup::make([
                     Actions\DeleteBulkAction::make(),
                 ]),
             ])

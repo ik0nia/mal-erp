@@ -109,7 +109,7 @@ class WooCategoryResource extends Resource
             ])
             ->deferFilters(false)
             ->recordActions([
-                Tables\Actions\Action::make('details')
+                Actions\Action::make('details')
                     ->label('Detalii')
                     ->icon('heroicon-o-eye')
                     ->modalSubmitAction(false)

@@ -425,7 +425,7 @@ class SamedayAwbResource extends Resource
             ])
             ->deferFilters(false)
             ->recordActions([
-                Tables\Actions\Action::make('cancel_awb')
+                Actions\Action::make('cancel_awb')
                     ->label('Anulează')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
@@ -477,7 +477,7 @@ class SamedayAwbResource extends Resource
                                 ->send();
                         }
                     }),
-                Tables\Actions\Action::make('details')
+                Actions\Action::make('details')
                     ->label('Detalii')
                     ->icon('heroicon-o-eye')
                     ->modalSubmitAction(false)

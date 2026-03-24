@@ -28,7 +28,7 @@
         </div>
 
         {{-- Tabel items --}}
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+        <x-filament::section class="!p-0 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
@@ -171,16 +171,18 @@
                     </tbody>
                 </table>
             </div>
-        </div>
+        </x-filament::section>
 
         {{-- Notă informatională --}}
-        <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-            <p class="text-xs text-blue-700 dark:text-blue-300">
-                <x-heroicon-o-information-circle class="w-4 h-4 inline mr-1"/>
-                După alocare, produsele apar automat în pagina <strong>Generează comandă</strong> a buyer-ului responsabil pentru furnizorul selectat.
-                Furnizorii marcați cu <strong>★</strong> sunt cei preferați pentru produsul respectiv.
-            </p>
-        </div>
+        <x-filament::section>
+            <div class="flex items-start gap-2 text-xs text-info-700 dark:text-info-300">
+                <x-heroicon-o-information-circle class="w-4 h-4 shrink-0 mt-0.5"/>
+                <p>
+                    După alocare, produsele apar automat în pagina <strong>Generează comandă</strong> a buyer-ului responsabil pentru furnizorul selectat.
+                    Furnizorii marcați cu <strong>★</strong> sunt cei preferați pentru produsul respectiv.
+                </p>
+            </div>
+        </x-filament::section>
     @endif
 
 </x-filament-panels::page>

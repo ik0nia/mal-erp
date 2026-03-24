@@ -835,7 +835,7 @@ class SupplierResource extends Resource
                 Actions\EditAction::make()
                     ->visible(fn () => ! auth()->user()?->isConsultantVanzari()),
 
-                Tables\Actions\Action::make('create_po')
+                Actions\Action::make('create_po')
                     ->label('Creează PO')
                     ->icon('heroicon-o-shopping-cart')
                     ->color('success')
@@ -843,7 +843,7 @@ class SupplierResource extends Resource
                         'supplier_id' => $record->id,
                     ])),
 
-                Tables\Actions\Action::make('move_products')
+                Actions\Action::make('move_products')
                     ->label('Mută produse')
                     ->icon('heroicon-o-arrows-right-left')
                     ->color('warning')
@@ -956,7 +956,7 @@ class SupplierResource extends Resource
                     }),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
+                Actions\BulkActionGroup::make([
                     Actions\DeleteBulkAction::make()
                         ->before(function (Actions\DeleteBulkAction $action, \Illuminate\Database\Eloquent\Collection $records): void {
                             $withProducts = $records->filter(fn (Supplier $s) => $s->products()->exists());

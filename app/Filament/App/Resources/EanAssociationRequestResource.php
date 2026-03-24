@@ -80,7 +80,7 @@ class EanAssociationRequestResource extends Resource
             ])
             ->deferFilters(false)
             ->recordActions([
-                Tables\Actions\Action::make('approve')
+                Actions\Action::make('approve')
                     ->label('Aprobă')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
@@ -101,7 +101,7 @@ class EanAssociationRequestResource extends Resource
                             ->send();
                     }),
 
-                Tables\Actions\Action::make('reject')
+                Actions\Action::make('reject')
                     ->label('Respinge')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')

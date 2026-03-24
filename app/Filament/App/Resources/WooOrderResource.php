@@ -9,7 +9,7 @@ use App\Filament\App\Resources\WooOrderResource\Pages;
 use App\Models\ProductStock;
 use App\Models\WooOrder;
 use App\Models\WooProduct;
-use Filament\Infolists\Components\Actions\Action as InfolistAction;
+use Filament\Actions\Action as InfolistAction;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
@@ -140,7 +140,7 @@ class WooOrderResource extends Resource
                 Actions\ViewAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkAction::make('resync_selected')
+                Actions\BulkAction::make('resync_selected')
                     ->label('Resync selectate')
                     ->icon('heroicon-o-cloud-arrow-down')
                     ->requiresConfirmation()

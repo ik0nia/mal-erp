@@ -437,7 +437,7 @@ class IntegrationConnectionResource extends Resource
             ->deferFilters(false)
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('latestSyncRun'))
             ->recordActions([
-                Tables\Actions\Action::make('view')
+                Actions\Action::make('view')
                     ->label('View')
                     ->icon('heroicon-o-eye')
                     ->modalHeading(fn (IntegrationConnection $record): string => "Conexiune: {$record->name}")
@@ -458,7 +458,7 @@ class IntegrationConnectionResource extends Resource
                         );
                     }),
                 Actions\EditAction::make(),
-                Tables\Actions\Action::make('test_connection')
+                Actions\Action::make('test_connection')
                     ->label('Test connection')
                     ->icon('heroicon-o-signal')
                     ->color('info')
@@ -519,7 +519,7 @@ class IntegrationConnectionResource extends Resource
                                 ->send();
                         }
                     }),
-                Tables\Actions\Action::make('import_categories')
+                Actions\Action::make('import_categories')
                     ->label('Import categories')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('warning')
@@ -534,7 +534,7 @@ class IntegrationConnectionResource extends Resource
                             ->body('Job-ul de import categorii a fost trimis în coadă.')
                             ->send();
                     }),
-                Tables\Actions\Action::make('import_products')
+                Actions\Action::make('import_products')
                     ->label('Import products')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('warning')
@@ -549,7 +549,7 @@ class IntegrationConnectionResource extends Resource
                             ->body('Job-ul de import produse a fost trimis în coadă.')
                             ->send();
                     }),
-                Tables\Actions\Action::make('import_all')
+                Actions\Action::make('import_all')
                     ->label('Import all')
                     ->icon('heroicon-o-arrow-path')
                     ->color('primary')
@@ -567,7 +567,7 @@ class IntegrationConnectionResource extends Resource
                             ->body('Categorii + produse au fost trimise în coadă, în ordinea corectă.')
                             ->send();
                     }),
-                Tables\Actions\Action::make('import_winmentor_stock')
+                Actions\Action::make('import_winmentor_stock')
                     ->label('Import stoc/preț CSV')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('warning')
@@ -634,7 +634,7 @@ class IntegrationConnectionResource extends Resource
                             ->body("Job-ul WinMentor a fost trimis în coadă (run #{$run->id}).")
                             ->send();
                     }),
-                Tables\Actions\Action::make('sync_runs')
+                Actions\Action::make('sync_runs')
                     ->label('Sync runs')
                     ->icon('heroicon-o-clock')
                     ->url(fn (IntegrationConnection $record): string => SyncRunResource::getUrl('index', [
@@ -642,7 +642,7 @@ class IntegrationConnectionResource extends Resource
                             'connection_id' => ['value' => (string) $record->id],
                         ],
                     ])),
-                Tables\Actions\Action::make('price_logs')
+                Actions\Action::make('price_logs')
                     ->label('Price logs')
                     ->icon('heroicon-o-currency-dollar')
                     ->visible(fn (IntegrationConnection $record): bool => $record->isWinmentorCsv())
@@ -652,7 +652,7 @@ class IntegrationConnectionResource extends Resource
                             'source' => ['value' => IntegrationConnection::PROVIDER_WINMENTOR_CSV],
                         ],
                     ])),
-                Tables\Actions\Action::make('view_categories')
+                Actions\Action::make('view_categories')
                     ->label('Vezi categorii')
                     ->icon('heroicon-o-tag')
                     ->visible(fn (IntegrationConnection $record): bool => $record->isWooCommerce())
@@ -661,7 +661,7 @@ class IntegrationConnectionResource extends Resource
                             'connection_id' => ['value' => (string) $record->id],
                         ],
                     ])),
-                Tables\Actions\Action::make('view_products')
+                Actions\Action::make('view_products')
                     ->label('Vezi produse')
                     ->icon('heroicon-o-shopping-bag')
                     ->visible(fn (IntegrationConnection $record): bool => $record->isWooCommerce())
@@ -670,7 +670,7 @@ class IntegrationConnectionResource extends Resource
                             'connection_id' => ['value' => (string) $record->id],
                         ],
                     ])),
-                Tables\Actions\Action::make('webhook')
+                Actions\Action::make('webhook')
                     ->label('Webhook')
                     ->icon('heroicon-o-bolt')
                     ->color('gray')
@@ -707,7 +707,7 @@ class IntegrationConnectionResource extends Resource
                     }),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
+                Actions\BulkActionGroup::make([
                     Actions\DeleteBulkAction::make(),
                 ]),
             ]);

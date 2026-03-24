@@ -63,7 +63,7 @@ class ProductsRelationManager extends RelationManager
             ])
             ->defaultSort('name')
             ->recordActions([
-                Tables\Actions\Action::make('move_to_supplier')
+                Actions\Action::make('move_to_supplier')
                     ->label('Mută la furnizor')
                     ->icon('heroicon-o-arrow-right-circle')
                     ->color('warning')

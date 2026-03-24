@@ -184,7 +184,7 @@ class FeedsRelationManager extends RelationManager
                     ->label('Adaugă feed'),
             ])
             ->recordActions([
-                Tables\Actions\Action::make('sync')
+                Actions\Action::make('sync')
                     ->label('Sincronizează')
                     ->icon('heroicon-o-arrow-path')
                     ->color('success')

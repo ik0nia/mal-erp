@@ -20,8 +20,8 @@ use Filament\Notifications\Notification;
 use Filament\Forms;
 use App\Models\Brand;
 use Filament\Schemas\Schema;
-use Filament\Infolists\Components\Actions;
-use Filament\Infolists\Components\Actions\Action as InfolistAction;
+
+use Filament\Actions\Action as InfolistAction;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\Section;
@@ -504,7 +504,7 @@ class WooProductResource extends Resource
             ->defaultSort('name')
             ->actionsPosition(\Filament\Tables\Enums\ActionsPosition::BeforeColumns)
             ->recordActions([
-                Tables\Actions\Action::make('add_to_necesar')
+                Actions\Action::make('add_to_necesar')
                     ->label('Necesar')
                     ->icon('heroicon-o-shopping-cart')
                     ->button()
