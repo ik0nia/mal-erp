@@ -160,7 +160,7 @@ class SupplierResource extends Resource
                                         ->live(),
                                     Forms\Components\TextInput::make('conditions.delivery.pickup_address')
                                         ->label('Adresă depozit ridicare')
-                                        ->visible(fn (Forms\Get $get) => (bool) $get('conditions.delivery.pickup_available'))
+                                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('conditions.delivery.pickup_available'))
                                         ->columnSpanFull(),
                                     Forms\Components\Textarea::make('conditions.delivery.note')
                                         ->label('Note livrare')
@@ -319,12 +319,12 @@ class SupplierResource extends Resource
                                         Forms\Components\TextInput::make('conditions.payment.net_days')
                                             ->label('Zile termen custom')
                                             ->numeric()->minValue(0)->nullable()
-                                            ->visible(fn (Forms\Get $get) => $get('conditions.payment.default_term') === 'custom'),
+                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('conditions.payment.default_term') === 'custom'),
                                         Forms\Components\TextInput::make('conditions.payment.advance_percent')
                                             ->label('Procent avans (%)')
                                             ->helperText('Procentul din valoarea comenzii care trebuie plătit în avans.')
                                             ->numeric()->minValue(0)->maxValue(100)->suffix('%')->nullable()
-                                            ->visible(fn (Forms\Get $get) => $get('conditions.payment.default_term') === 'avans_partial'),
+                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('conditions.payment.default_term') === 'avans_partial'),
                                         Forms\Components\Select::make('conditions.payment.currency')
                                             ->label('Monedă facturare')
                                             ->helperText('Moneda în care furnizorul emite facturile.')
@@ -888,8 +888,8 @@ class SupplierResource extends Resource
                                 ->searchable()
                                 ->bulkToggleable()
                                 ->columns(1)
-                                ->visible(fn (Forms\Get $get): bool => $get('mode') === 'selected')
-                                ->required(fn (Forms\Get $get): bool => $get('mode') === 'selected'),
+                                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => $get('mode') === 'selected')
+                                ->required(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => $get('mode') === 'selected'),
                         ];
                     })
                     ->modalHeading(fn (Supplier $record): string => 'Mută produse de la: ' . $record->name)
