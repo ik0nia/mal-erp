@@ -401,7 +401,7 @@ class ViewPurchaseOrder extends ViewRecord
                     })->values()->all();
 
                     return [
-                        \Filament\Forms\Components\Grid::make(4)->schema([
+                        \Filament\Schemas\Components\Grid::make(4)->schema([
                             TextInput::make('invoice_series')->label('Serie factură'),
                             TextInput::make('invoice_number')->label('Număr factură'),
                             \Filament\Forms\Components\DatePicker::make('invoice_date')->label('Data factură')->displayFormat('d.m.Y'),
@@ -428,7 +428,7 @@ class ViewPurchaseOrder extends ViewRecord
                             ->deletable(false)
                             ->reorderable(false),
 
-                        \Filament\Forms\Components\Grid::make(2)->schema([
+                        \Filament\Schemas\Components\Grid::make(2)->schema([
                             TextInput::make('transport_cost')
                                 ->label('Cost transport (se adaugă)')
                                 ->numeric()->default(0)->suffix('RON')
