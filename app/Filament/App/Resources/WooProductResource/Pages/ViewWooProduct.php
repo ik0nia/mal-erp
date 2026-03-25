@@ -173,11 +173,12 @@ class ViewWooProduct extends ViewRecord
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $product->getRouteKey()]));
                 }),
 
+            // Hidden from header but needed for $wire.mountAction('add_to_necesar') from infolist body
             Actions\Action::make('add_to_necesar')
                 ->label('Adaugă la necesar')
                 ->icon('heroicon-o-shopping-cart')
                 ->color('danger')
-                ->extraAttributes(['class' => 'hidden'])
+                ->hidden()
                 ->modalHeading(fn () => 'Adaugă la necesar: '.($this->record->decoded_name ?? $this->record->name))
                 ->modalDescription(fn () => $this->record->substituted_by_id
                     ? '⚠️ Atenție: acest produs are un înlocuitor setat. Considerați să comandați "' . ($this->record->substitutedBy?->name ?? '') . '" în schimb.'
