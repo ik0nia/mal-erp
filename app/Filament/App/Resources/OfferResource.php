@@ -803,7 +803,7 @@ class OfferResource extends Resource
         $productId = (int) ($get('woo_product_id') ?? 0);
 
         if ($productId <= 0) {
-            return new HtmlString('<span class="inline-flex h-8 w-8 items-center justify-center rounded bg-gray-100 text-[9px] text-gray-400">No Img</span>');
+            return new HtmlString('<span style="display:inline-flex;height:2rem;width:2rem;align-items:center;justify-content:center;border-radius:0.25rem;background:#f3f4f6;color:#9ca3af;font-size:9px;">No Img</span>');
         }
 
         static $imageCache = [];
@@ -821,7 +821,7 @@ class OfferResource extends Resource
             : 'https://placehold.co/56x56?text=No+Img';
 
         return new HtmlString(
-            '<img src="'.$resolvedImage.'" alt="Produs" class="h-8 w-8 rounded object-cover ring-1 ring-gray-200/70" />'
+            '<img src="'.$resolvedImage.'" alt="Produs" style="height:2rem;width:2rem;border-radius:0.25rem;object-fit:cover;border:1px solid #e5e7eb;" />'
         );
     }
 
