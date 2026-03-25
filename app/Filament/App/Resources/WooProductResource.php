@@ -1151,7 +1151,7 @@ class WooProductResource extends Resource
 
             // Etichete inline
             . '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">'
-            . '<span style="background:#f3f4f6;color:#374151;border-radius:6px;padding:2px 8px;font-size:0.78rem;cursor:copy;" onclick="navigator.clipboard.writeText(\'' . $sku . '\')" title="Click pentru a copia SKU">SKU: ' . $sku . '</span>'
+            . '<span style="background:#f3f4f6;color:#374151;border-radius:6px;padding:2px 8px;font-size:0.78rem;cursor:pointer;position:relative;" onclick="navigator.clipboard.writeText(\'' . $sku . '\');var t=this.querySelector(\'.ct\');t.style.display=\'block\';setTimeout(function(){t.style.display=\'none\'},1200)">SKU: ' . $sku . '<span class="ct" style="display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#111827;color:#fff;font-size:0.7rem;padding:2px 8px;border-radius:4px;white-space:nowrap;z-index:10;">Copiat!</span></span>'
             . '<span style="background:#f3f4f6;color:' . $sourceClr . ';border-radius:6px;padding:2px 8px;font-size:0.78rem;">' . $source . '</span>'
             . '<span style="background:#f3f4f6;color:' . $stockClr . ';border-radius:6px;padding:2px 8px;font-size:0.78rem;">' . $stockLbl . '</span>'
             . ($location !== '-' ? '<span style="background:#f3f4f6;color:#374151;border-radius:6px;padding:2px 8px;font-size:0.78rem;">' . $location . '</span>' : '')

@@ -31,7 +31,12 @@
   .bi-flag--gray { background:#f3f4f6; color:#4b5563; }
   .bi-empty { display:flex; align-items:center; justify-content:center; padding:3rem 0; color:#9ca3af; font-size:0.875rem; }
   .bi-footer { padding:0.5rem 1.25rem; font-size:0.75rem; color:#9ca3af; border-top:1px solid #f3f4f6; }
+  .copy-sku { position:relative; cursor:pointer; }
+  .copy-sku:hover { text-decoration:underline; }
+  .copy-sku .copy-tooltip { display:none; position:absolute; bottom:100%; left:50%; transform:translateX(-50%); background:#111827; color:#fff; font-size:0.7rem; padding:2px 8px; border-radius:4px; white-space:nowrap; z-index:10; }
+  .copy-sku.copied .copy-tooltip { display:block; }
   </style>
+  <script>function copySku(el,sku){navigator.clipboard.writeText(sku);el.classList.add('copied');setTimeout(()=>el.classList.remove('copied'),1200);}</script>
 
   @php
     $deltaPositive = $this->stockDelta >= 0;
@@ -109,7 +114,7 @@
             @foreach($this->velocityRows as $vIdx => $row)
               @php $daysNoMove = $row['days_since_last_movement']; @endphp
               <tr wire:key="vel-{{ $vIdx }}" @if($row['product_id'] ?? null) onclick="window.location='{{ \App\Filament\App\Resources\WooProductResource::getUrl('view', ['record' => $row['product_id']]) }}'" style="cursor:pointer;" @endif>
-                <td style="font-family:monospace; font-size:0.75rem; color:#6b7280; cursor:copy;" onclick="event.stopPropagation();navigator.clipboard.writeText('{{ $row['sku'] }}')" title="Click pentru a copia SKU">{{ $row['sku'] }}</td>
+                <td class="copy-sku" style="font-family:monospace; font-size:0.75rem; color:#6b7280;" onclick="event.stopPropagation();copySku(this,'{{ $row['sku'] }}')"><span class="copy-tooltip">Copiat!</span>{{ $row['sku'] }}</td>
                 <td style="max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#1f2937;">{{ $row['product_name'] ?? '—' }}</td>
                 @if($this->velocityTab === 'fast')
                   <td style="text-align:right; color:#4b5563;">{{ (float)$row['avg_out_qty_7d'] > 0 ? number_format($row['avg_out_qty_7d'], 1, '.', '') : '—' }}</td>
@@ -165,7 +170,7 @@
             @foreach($this->alertRows as $aIdx => $row)
               @php $daysLeft = $row['days_left']; @endphp
               <tr wire:key="alert-{{ $aIdx }}" @if($row['product_id'] ?? null) onclick="window.location='{{ \App\Filament\App\Resources\WooProductResource::getUrl('view', ['record' => $row['product_id']]) }}'" style="cursor:pointer;" @endif>
-                <td style="font-family:monospace; font-size:0.75rem; color:#6b7280; cursor:copy;" onclick="event.stopPropagation();navigator.clipboard.writeText('{{ $row['sku'] }}')" title="Click pentru a copia SKU">{{ $row['sku'] }}</td>
+                <td class="copy-sku" style="font-family:monospace; font-size:0.75rem; color:#6b7280;" onclick="event.stopPropagation();copySku(this,'{{ $row['sku'] }}')"><span class="copy-tooltip">Copiat!</span>{{ $row['sku'] }}</td>
                 <td style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#1f2937;">{{ $row['name'] }}</td>
                 <td style="text-align:right;">@if($row['closing_qty'] <= 0)<span style="color:#dc2626; font-weight:600;">0</span>@else{{ number_format($row['closing_qty'], 0, ',', '.') }}@endif</td>
                 <td style="text-align:right; color:#4b5563;">{{ $row['closing_price'] !== null ? number_format($row['closing_price'], 2, ',', '.') . ' RON' : '—' }}</td>
