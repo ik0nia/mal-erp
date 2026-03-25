@@ -1,12 +1,66 @@
-<div class="space-y-6">
+<style>
+.ppi-filters { display:flex; flex-wrap:wrap; gap:1rem; margin-bottom:0.75rem; }
+.ppi-filter  { flex:1 1 10rem; min-width:0; }
+.ppi-filter label { display:block; font-size:0.75rem; font-weight:500; color:#6b7280; margin-bottom:0.25rem; }
+.ppi-filter select, .ppi-filter input { width:100%; border-radius:0.5rem; border:1px solid #d1d5db; padding:0.4rem 0.5rem; font-size:0.875rem; background:#fff; }
+.ppi-checks { display:flex; flex-wrap:wrap; align-items:center; gap:1rem; }
+.ppi-checks label { display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.875rem; font-weight:500; color:#374151; }
+.ppi-stat-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:1rem; }
+@@media(min-width:640px){ .ppi-stat-grid { grid-template-columns:repeat(4, minmax(0, 1fr)); } }
+.ppi-stat { border-radius:0.75rem; border:1px solid #e5e7eb; background:#fff; padding:1rem; }
+.ppi-stat-label { font-size:0.75rem; font-weight:500; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; }
+.ppi-stat-value { margin-top:0.25rem; font-size:1.875rem; font-weight:700; color:#111827; }
+.ppi-stat--danger { border-color:#fecaca; }
+.ppi-stat--danger .ppi-stat-label, .ppi-stat--danger .ppi-stat-value { color:#dc2626; }
+.ppi-stat--warning { border-color:#fde68a; }
+.ppi-stat--warning .ppi-stat-label, .ppi-stat--warning .ppi-stat-value { color:#d97706; }
+.ppi-supplier { border-radius:0.75rem; border:1px solid #e5e7eb; background:#fff; overflow:hidden; margin-bottom:1.5rem; }
+.ppi-supplier--urgent { border-left:4px solid #ef4444; }
+.ppi-supplier-header { display:flex; align-items:center; justify-content:space-between; padding:1rem 1.5rem; border-bottom:1px solid #f3f4f6; background:#f9fafb; }
+.ppi-supplier-info { display:flex; align-items:center; gap:0.75rem; }
+.ppi-supplier-icon { width:2.5rem; height:2.5rem; border-radius:0.375rem; background:#f3f4f6; display:flex; align-items:center; justify-content:center; }
+.ppi-supplier-name { font-weight:600; color:#111827; }
+.ppi-supplier-meta { font-size:0.875rem; color:#6b7280; }
+.ppi-btn-po { display:inline-flex; align-items:center; gap:0.5rem; padding:0.5rem 1rem; background:#4f46e5; color:#fff; font-size:0.875rem; font-weight:500; border-radius:0.5rem; border:none; cursor:pointer; }
+.ppi-btn-po:hover { background:#4338ca; }
+.ppi-table { width:100%; font-size:0.875rem; border-collapse:collapse; }
+.ppi-table th { padding:0.5rem 1rem; text-align:left; font-size:0.75rem; font-weight:500; color:#6b7280; text-transform:uppercase; border-bottom:1px solid #f3f4f6; }
+.ppi-table td { padding:0.75rem 1rem; border-bottom:1px solid #f9fafb; vertical-align:top; }
+.ppi-table tr:hover { background:#f9fafb; }
+.ppi-table .text-right { text-align:right; }
+.ppi-table .text-center { text-align:center; }
+.ppi-urgent-row { background:#fef2f2; }
+.ppi-badge { display:inline-flex; align-items:center; padding:0.125rem 0.375rem; border-radius:0.25rem; font-size:0.75rem; font-weight:500; }
+.ppi-badge--danger { background:#fee2e2; color:#b91c1c; }
+.ppi-badge--warning { background:#fef3c7; color:#92400e; }
+.ppi-product-name { font-weight:500; color:#111827; }
+.ppi-sku { font-size:0.75rem; color:#9ca3af; font-family:monospace; }
+.ppi-discontinued { display:inline-flex; align-items:center; gap:0.25rem; font-size:0.75rem; font-weight:500; color:#dc2626; margin-top:0.25rem; }
+.ppi-link { font-size:0.75rem; color:#4f46e5; font-family:monospace; text-decoration:none; }
+.ppi-link:hover { text-decoration:underline; }
+.ppi-woo-section { margin-top:1.5rem; }
+.ppi-woo-header { font-size:1.125rem; font-weight:600; color:#1f2937; margin-bottom:0.75rem; display:flex; align-items:center; gap:0.5rem; }
+.ppi-woo-count { margin-left:0.5rem; padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.75rem; font-weight:700; background:#ffedd5; color:#c2410c; }
+.ppi-woo-table { border-radius:0.75rem; border:1px solid #fed7aa; background:#fff; overflow:hidden; }
+.ppi-woo-table th { background:#fff7ed; color:#c2410c; padding:0.5rem 1rem; text-align:left; font-weight:500; font-size:0.875rem; }
+.ppi-woo-table td { padding:0.75rem 1rem; border-bottom:1px solid #ffedd5; font-size:0.875rem; }
+.ppi-status { padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.75rem; font-weight:500; }
+.ppi-status--submitted { background:#fef3c7; color:#92400e; }
+.ppi-status--other { background:#dbeafe; color:#1e40af; }
+.ppi-empty { text-align:center; padding:4rem 0; color:#9ca3af; }
+.ppi-empty p { font-size:1.125rem; font-weight:500; }
+.ppi-empty .sub { font-size:0.875rem; margin-top:0.25rem; }
+.ppi-reset { margin-left:auto; font-size:0.75rem; color:#6b7280; text-decoration:underline; background:none; border:none; cursor:pointer; }
+</style>
+
+<div style="display:flex; flex-direction:column; gap:1.5rem;">
 
     {{-- Filtre --}}
-    <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
-        <div class="flex flex-wrap gap-4 mb-3">
-            <div class="flex-1 min-w-40">
-                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Furnizor</label>
-                <select wire:model.live="filterSupplierId"
-                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">
+    <x-filament::section>
+        <div class="ppi-filters">
+            <div class="ppi-filter">
+                <label>Furnizor</label>
+                <select wire:model.live="filterSupplierId">
                     <option value="">Toți furnizorii</option>
                     @foreach($supplierOptions as $id => $name)
                         <option value="{{ $id }}">{{ $name }}</option>
@@ -14,10 +68,9 @@
                 </select>
             </div>
 
-            <div class="flex-1 min-w-40">
-                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Locație</label>
-                <select wire:model.live="filterLocationId"
-                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">
+            <div class="ppi-filter">
+                <label>Locație</label>
+                <select wire:model.live="filterLocationId">
                     <option value="">Toate locațiile</option>
                     @foreach($locationOptions as $id => $name)
                         <option value="{{ $id }}">{{ $name }}</option>
@@ -26,10 +79,9 @@
             </div>
 
             @if(!empty($consultantOptions))
-            <div class="flex-1 min-w-40">
-                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Consultant</label>
-                <select wire:model.live="filterConsultantId"
-                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">
+            <div class="ppi-filter">
+                <label>Consultant</label>
+                <select wire:model.live="filterConsultantId">
                     <option value="">Toți consultanții</option>
                     @foreach($consultantOptions as $id => $name)
                         <option value="{{ $id }}">{{ $name }}</option>
@@ -38,256 +90,220 @@
             </div>
             @endif
 
-            <div class="flex-1 min-w-36">
-                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Necesar de la</label>
-                <input type="date" wire:model.live="filterNeededByFrom"
-                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">
+            <div class="ppi-filter">
+                <label>Necesar de la</label>
+                <input type="date" wire:model.live="filterNeededByFrom">
             </div>
 
-            <div class="flex-1 min-w-36">
-                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Necesar până la</label>
-                <input type="date" wire:model.live="filterNeededByTo"
-                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">
+            <div class="ppi-filter">
+                <label>Necesar până la</label>
+                <input type="date" wire:model.live="filterNeededByTo">
             </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-4">
-            <label class="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" wire:model.live="showUrgentOnly"
-                       class="rounded border-gray-300 text-danger-600 focus:ring-danger-500">
-                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Doar urgente</span>
+        <div class="ppi-checks">
+            <label>
+                <input type="checkbox" wire:model.live="showUrgentOnly">
+                <span>Doar urgente</span>
             </label>
-
-            <label class="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" wire:model.live="showReservedOnly"
-                       class="rounded border-gray-300 text-warning-600 focus:ring-warning-500">
-                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Doar rezervate</span>
+            <label>
+                <input type="checkbox" wire:model.live="showReservedOnly">
+                <span>Doar rezervate</span>
             </label>
-
             @if($filterSupplierId || $filterLocationId || $filterConsultantId || $filterNeededByFrom || $filterNeededByTo || $showUrgentOnly || $showReservedOnly)
-                <button wire:click="resetFilters"
-                        class="ml-auto text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline">
-                    Resetează filtre
-                </button>
+                <button wire:click="resetFilters" class="ppi-reset">Resetează filtre</button>
             @endif
         </div>
-    </div>
+    </x-filament::section>
 
     {{-- Stat cards --}}
-    <style>
-    .ppi-stat-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:1rem; }
-    @@media(min-width:640px){ .ppi-stat-grid { grid-template-columns:repeat(4, minmax(0, 1fr)); } }
-    </style>
     <div class="ppi-stat-grid">
-        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
-            <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Total în așteptare</p>
-            <p class="mt-1 text-3xl font-bold text-gray-900 dark:text-white">{{ $totalPending }}</p>
+        <div class="ppi-stat">
+            <p class="ppi-stat-label">Total în așteptare</p>
+            <p class="ppi-stat-value">{{ $totalPending }}</p>
         </div>
-        <div class="rounded-xl border border-danger-200 bg-white p-4 dark:border-danger-800 dark:bg-gray-900">
-            <p class="text-xs font-medium uppercase tracking-wide text-danger-600 dark:text-danger-400">Urgente</p>
-            <p class="mt-1 text-3xl font-bold text-danger-600 dark:text-danger-400">{{ $totalUrgent }}</p>
+        <div class="ppi-stat ppi-stat--danger">
+            <p class="ppi-stat-label">Urgente</p>
+            <p class="ppi-stat-value">{{ $totalUrgent }}</p>
         </div>
-        <div class="rounded-xl border border-warning-200 bg-white p-4 dark:border-warning-700 dark:bg-gray-900">
-            <p class="text-xs font-medium uppercase tracking-wide text-warning-600 dark:text-warning-400">Rezervate</p>
-            <p class="mt-1 text-3xl font-bold text-warning-600 dark:text-warning-400">{{ $totalReserved }}</p>
+        <div class="ppi-stat ppi-stat--warning">
+            <p class="ppi-stat-label">Rezervate</p>
+            <p class="ppi-stat-value">{{ $totalReserved }}</p>
         </div>
-        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
-            <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Furnizori afectați</p>
-            <p class="mt-1 text-3xl font-bold text-gray-900 dark:text-white">{{ $totalSuppliers }}</p>
+        <div class="ppi-stat">
+            <p class="ppi-stat-label">Furnizori afectați</p>
+            <p class="ppi-stat-value">{{ $totalSuppliers }}</p>
         </div>
     </div>
 
     {{-- Grupuri furnizori --}}
     @if(empty($supplierGroups))
-        <div class="text-center py-16 text-gray-400 dark:text-gray-500">
-            <x-filament::icon icon="heroicon-o-check-circle" class="w-12 h-12 mx-auto mb-3 text-success-400"/>
-            <p class="text-lg font-medium">Niciun necesar în așteptare</p>
-            <p class="text-sm mt-1">Toate necesarele trimise au fost procesate.</p>
+        <div class="ppi-empty">
+            <x-filament::icon icon="heroicon-o-check-circle" style="width:3rem; height:3rem; margin:0 auto 0.75rem; color:#34d399;"/>
+            <p>Niciun necesar în așteptare</p>
+            <p class="sub">Toate necesarele trimise au fost procesate.</p>
         </div>
     @else
-        <div class="space-y-6">
-            @foreach($supplierGroups as $group)
-                <div class="rounded-xl border bg-white dark:bg-gray-900 overflow-hidden
-                            {{ $group['urgent_count'] > 0 ? 'border-l-4 border-l-danger-500 border-gray-200 dark:border-gray-700' : 'border-gray-200 dark:border-white/10' }}">
-
-                    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-white/5">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                                <x-filament::icon icon="heroicon-o-truck" class="w-5 h-5 text-gray-400"/>
-                            </div>
-                            <div>
-                                <h3 class="font-semibold text-gray-900 dark:text-white">{{ $group['supplier_name'] }}</h3>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">
-                                    {{ $group['items_count'] }} {{ Str::plural('produs', $group['items_count']) }}
-                                    @if($group['urgent_count'] > 0)
-                                        &bull; <span class="text-danger-600 font-medium">{{ $group['urgent_count'] }} urgent{{ $group['urgent_count'] > 1 ? 'e' : '' }}</span>
-                                    @endif
-                                </p>
-                            </div>
+        @foreach($supplierGroups as $group)
+            <div class="ppi-supplier {{ $group['urgent_count'] > 0 ? 'ppi-supplier--urgent' : '' }}">
+                <div class="ppi-supplier-header">
+                    <div class="ppi-supplier-info">
+                        <div class="ppi-supplier-icon">
+                            <x-filament::icon icon="heroicon-o-truck" style="width:1.25rem; height:1.25rem; color:#9ca3af;"/>
                         </div>
-
                         <div>
-                            <button wire:click="createPoForSupplier({{ $group['supplier_id'] }})"
-                                    class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">
-                                <x-filament::icon icon="heroicon-o-shopping-bag" class="w-4 h-4"/>
-                                Creează PO — {{ $group['supplier_name'] }}
-                            </button>
+                            <div class="ppi-supplier-name">{{ $group['supplier_name'] }}</div>
+                            <div class="ppi-supplier-meta">
+                                {{ $group['items_count'] }} {{ Str::plural('produs', $group['items_count']) }}
+                                @if($group['urgent_count'] > 0)
+                                    &bull; <span style="color:#dc2626; font-weight:500;">{{ $group['urgent_count'] }} urgent{{ $group['urgent_count'] > 1 ? 'e' : '' }}</span>
+                                @endif
+                            </div>
                         </div>
                     </div>
-
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead>
-                                <tr class="text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
-                                    <th class="px-4 py-2 text-left font-medium">Produs / SKU</th>
-                                    <th class="px-4 py-2 text-right font-medium">Cant.</th>
-                                    <th class="px-4 py-2 text-left font-medium">Necesar până la</th>
-                                    <th class="px-4 py-2 text-center font-medium">Flags</th>
-                                    <th class="px-4 py-2 text-left font-medium">Consultant / Locație</th>
-                                    <th class="px-4 py-2 text-left font-medium">Justificație</th>
-                                    <th class="px-4 py-2 text-left font-medium">Necesar</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50">
-                                @foreach($group['items'] as $item)
-                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30
-                                               {{ $item['is_urgent'] ? 'bg-danger-50 dark:bg-danger-900/10' : '' }}">
-                                        <td class="px-4 py-3">
-                                            <p class="font-medium text-gray-900 dark:text-white">{{ $item['product_name'] }}</p>
-                                            @if($item['sku'])
-                                                <p class="text-xs text-gray-400 font-mono">{{ $item['sku'] }}</p>
-                                            @endif
-                                            @if($item['is_discontinued'] ?? false)
-                                                <span class="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400 mt-1">
-                                                    <x-filament::icon icon="heroicon-o-archive-box-x-mark" class="w-3 h-3"/>
-                                                    Fără reaprovizionare — nu mai comanda
-                                                </span>
-                                            @endif
-                                        </td>
-                                        <td class="px-4 py-3 text-right">
-                                            <span class="font-medium text-gray-900 dark:text-white">
-                                                {{ number_format($item['quantity'], 0) }}
-                                            </span>
-                                            @if(($item['ordered_quantity'] ?? 0) > 0)
-                                                <div class="text-xs text-warning-600 dark:text-warning-400 mt-0.5">
-                                                    +{{ number_format($item['ordered_quantity'], 0) }} cmd.
-                                                </div>
-                                            @endif
-                                        </td>
-                                        <td class="px-4 py-3 text-gray-600 dark:text-gray-300">
-                                            @if($item['needed_by'])
-                                                <span class="{{ \Carbon\Carbon::createFromFormat('d.m.Y', $item['needed_by'])->isPast() ? 'text-danger-600 font-medium' : '' }}">
-                                                    {{ $item['needed_by'] }}
-                                                </span>
-                                            @else
-                                                —
-                                            @endif
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <div class="flex items-center justify-center gap-1">
-                                                @if($item['is_urgent'])
-                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-danger-100 text-danger-700 dark:bg-danger-900/30 dark:text-danger-400">
-                                                        Urgent
-                                                    </span>
-                                                @endif
-                                                @if($item['is_reserved'])
-                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-warning-100 text-warning-700 dark:bg-warning-900/30 dark:text-warning-400">
-                                                        Rezervat
-                                                    </span>
-                                                @endif
-                                            </div>
-                                        </td>
-                                        <td class="px-4 py-3 text-gray-600 dark:text-gray-300">
-                                            <div>{{ $item['consultant'] ?? '—' }}</div>
-                                            @if($item['location'])
-                                                <div class="text-xs text-gray-400">{{ $item['location'] }}</div>
-                                            @endif
-                                        </td>
-                                        <td class="px-4 py-3 text-gray-600 dark:text-gray-300">
-                                            @if($item['is_reserved'] && $item['client_reference'])
-                                                <span class="text-xs font-mono bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
-                                                    {{ $item['client_reference'] }}
-                                                </span>
-                                            @elseif($item['notes'])
-                                                <span class="text-xs text-gray-500">{{ Str::limit($item['notes'], 50) }}</span>
-                                            @else
-                                                <span class="text-gray-300">—</span>
-                                            @endif
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <a href="{{ route('filament.app.resources.purchase-requests.view', ['record' => $item['request_id']]) }}"
-                                               class="text-xs text-primary-600 hover:text-primary-700 font-mono">
-                                                {{ $item['request_number'] }}
-                                            </a>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
+                    <button wire:click="createPoForSupplier({{ $group['supplier_id'] }})" class="ppi-btn-po">
+                        <x-filament::icon icon="heroicon-o-shopping-bag" style="width:1rem; height:1rem;"/>
+                        Creează PO — {{ $group['supplier_name'] }}
+                    </button>
                 </div>
-            @endforeach
-        </div>
+
+                <div style="overflow-x:auto;">
+                    <table class="ppi-table">
+                        <thead>
+                            <tr>
+                                <th>Produs / SKU</th>
+                                <th class="text-right">Cant.</th>
+                                <th>Necesar până la</th>
+                                <th class="text-center">Flags</th>
+                                <th>Consultant / Locație</th>
+                                <th>Justificație</th>
+                                <th>Necesar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($group['items'] as $item)
+                                <tr class="{{ $item['is_urgent'] ? 'ppi-urgent-row' : '' }}">
+                                    <td>
+                                        <div class="ppi-product-name">{{ $item['product_name'] }}</div>
+                                        @if($item['sku'])
+                                            <div class="ppi-sku">{{ $item['sku'] }}</div>
+                                        @endif
+                                        @if($item['is_discontinued'] ?? false)
+                                            <span class="ppi-discontinued">
+                                                <x-filament::icon icon="heroicon-o-archive-box-x-mark" style="width:0.75rem; height:0.75rem;"/>
+                                                Fără reaprovizionare — nu mai comanda
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td class="text-right">
+                                        <span style="font-weight:500; color:#111827;">{{ number_format($item['quantity'], 0) }}</span>
+                                        @if(($item['ordered_quantity'] ?? 0) > 0)
+                                            <div style="font-size:0.75rem; color:#d97706; margin-top:0.125rem;">+{{ number_format($item['ordered_quantity'], 0) }} cmd.</div>
+                                        @endif
+                                    </td>
+                                    <td style="color:#4b5563;">
+                                        @if($item['needed_by'])
+                                            <span style="{{ \Carbon\Carbon::createFromFormat('d.m.Y', $item['needed_by'])->isPast() ? 'color:#dc2626; font-weight:500;' : '' }}">
+                                                {{ $item['needed_by'] }}
+                                            </span>
+                                        @else
+                                            —
+                                        @endif
+                                    </td>
+                                    <td class="text-center">
+                                        <div style="display:flex; align-items:center; justify-content:center; gap:0.25rem;">
+                                            @if($item['is_urgent'])
+                                                <span class="ppi-badge ppi-badge--danger">Urgent</span>
+                                            @endif
+                                            @if($item['is_reserved'])
+                                                <span class="ppi-badge ppi-badge--warning">Rezervat</span>
+                                            @endif
+                                        </div>
+                                    </td>
+                                    <td style="color:#4b5563;">
+                                        <div>{{ $item['consultant'] ?? '—' }}</div>
+                                        @if($item['location'])
+                                            <div style="font-size:0.75rem; color:#9ca3af;">{{ $item['location'] }}</div>
+                                        @endif
+                                    </td>
+                                    <td style="color:#4b5563;">
+                                        @if($item['is_reserved'] && $item['client_reference'])
+                                            <span style="font-size:0.75rem; font-family:monospace; background:#f3f4f6; padding:0.125rem 0.375rem; border-radius:0.25rem;">
+                                                {{ $item['client_reference'] }}
+                                            </span>
+                                        @elseif($item['notes'])
+                                            <span style="font-size:0.75rem; color:#6b7280;">{{ Str::limit($item['notes'], 50) }}</span>
+                                        @else
+                                            <span style="color:#d1d5db;">—</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <a href="{{ route('filament.app.resources.purchase-requests.view', ['record' => $item['request_id']]) }}" class="ppi-link">
+                                            {{ $item['request_number'] }}
+                                        </a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @endforeach
     @endif
 
     {{-- Comenzi WooCommerce cu produse "La comandă" --}}
     @php $wooOrders = $this->getWooOrdersPendingProcurement(); @endphp
     @if($wooOrders->isNotEmpty())
-        <div class="mt-2">
-            <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3 flex items-center gap-2">
-                <x-filament::icon icon="heroicon-o-shopping-cart" class="w-5 h-5 text-warning-500"/>
+        <div class="ppi-woo-section">
+            <div class="ppi-woo-header">
+                <x-filament::icon icon="heroicon-o-shopping-cart" style="width:1.25rem; height:1.25rem; color:#d97706;"/>
                 Comenzi online — produse la comandă
-                <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">
-                    {{ $wooOrders->count() }}
-                </span>
-            </h2>
-            <div class="rounded-xl border border-orange-200 bg-white dark:border-orange-800 dark:bg-gray-900 overflow-hidden">
-                <table class="w-full text-sm">
-                    <thead class="bg-orange-50 dark:bg-orange-900/30">
+                <span class="ppi-woo-count">{{ $wooOrders->count() }}</span>
+            </div>
+            <div class="ppi-woo-table">
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
                         <tr>
-                            <th class="text-left px-4 py-2 text-orange-700 dark:text-orange-300 font-medium">Comandă WooCommerce</th>
-                            <th class="text-left px-4 py-2 text-orange-700 dark:text-orange-300 font-medium">Client</th>
-                            <th class="text-left px-4 py-2 text-orange-700 dark:text-orange-300 font-medium">Produse la comandă</th>
-                            <th class="text-left px-4 py-2 text-orange-700 dark:text-orange-300 font-medium">PNR</th>
-                            <th class="text-left px-4 py-2 text-orange-700 dark:text-orange-300 font-medium">Status PNR</th>
+                            <th class="ppi-woo-table th">Comandă WooCommerce</th>
+                            <th class="ppi-woo-table th">Client</th>
+                            <th class="ppi-woo-table th">Produse la comandă</th>
+                            <th class="ppi-woo-table th">PNR</th>
+                            <th class="ppi-woo-table th">Status PNR</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-orange-100 dark:divide-orange-900">
+                    <tbody>
                         @foreach($wooOrders as $pnr)
-                            <tr class="hover:bg-orange-50 dark:hover:bg-orange-900/20">
-                                <td class="px-4 py-3">
+                            <tr style="border-bottom:1px solid #ffedd5;">
+                                <td class="ppi-woo-table td">
                                     @if($pnr->wooOrder)
-                                        <a href="{{ route('filament.app.resources.woo-orders.view', ['record' => $pnr->wooOrder->id]) }}"
-                                           class="font-mono text-primary-600 hover:underline">
+                                        <a href="{{ route('filament.app.resources.woo-orders.view', ['record' => $pnr->wooOrder->id]) }}" class="ppi-link" style="font-family:monospace;">
                                             #{{ $pnr->wooOrder->number }}
                                         </a>
-                                        <div class="text-xs text-gray-400">{{ $pnr->wooOrder->order_date?->format('d.m.Y') }}</div>
+                                        <div style="font-size:0.75rem; color:#9ca3af;">{{ $pnr->wooOrder->order_date?->format('d.m.Y') }}</div>
                                     @else
-                                        <span class="text-gray-400">—</span>
+                                        <span style="color:#9ca3af;">—</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
+                                <td class="ppi-woo-table td" style="color:#374151;">
                                     @if($pnr->wooOrder)
                                         {{ ($pnr->wooOrder->billing['first_name'] ?? '') . ' ' . ($pnr->wooOrder->billing['last_name'] ?? '') }}
                                     @endif
                                 </td>
-                                <td class="px-4 py-3">
+                                <td class="ppi-woo-table td">
                                     @foreach($pnr->items as $item)
-                                        <div class="text-xs text-gray-700 dark:text-gray-300">
+                                        <div style="font-size:0.75rem; color:#374151;">
                                             {{ $item->product_name }}
-                                            <span class="text-orange-600 font-semibold">× {{ $item->quantity }}</span>
+                                            <span style="color:#c2410c; font-weight:600;">× {{ $item->quantity }}</span>
                                         </div>
                                     @endforeach
                                 </td>
-                                <td class="px-4 py-3">
-                                    <a href="{{ route('filament.app.resources.purchase-requests.view', ['record' => $pnr->id]) }}"
-                                       class="font-mono text-xs text-primary-600 hover:underline">
+                                <td class="ppi-woo-table td">
+                                    <a href="{{ route('filament.app.resources.purchase-requests.view', ['record' => $pnr->id]) }}" class="ppi-link">
                                         {{ $pnr->number }}
                                     </a>
                                 </td>
-                                <td class="px-4 py-3">
-                                    <span class="px-2 py-0.5 rounded-full text-xs font-medium
-                                        {{ $pnr->status === 'submitted' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' }}">
+                                <td class="ppi-woo-table td">
+                                    <span class="ppi-status {{ $pnr->status === 'submitted' ? 'ppi-status--submitted' : 'ppi-status--other' }}">
                                         {{ \App\Models\PurchaseRequest::statusOptions()[$pnr->status] ?? $pnr->status }}
                                     </span>
                                 </td>

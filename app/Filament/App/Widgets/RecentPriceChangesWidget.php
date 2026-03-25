@@ -25,7 +25,7 @@ class RecentPriceChangesWidget extends BaseWidget
                 ProductPriceLog::query()
                     ->with(['product', 'location'])
                     ->latest('changed_at')
-                    ->limit(50)
+                    ->limit(15)
             )
             ->recordUrl(fn (ProductPriceLog $record): ?string => $record->woo_product_id
                 ? \App\Filament\App\Resources\WooProductResource::getUrl('view', ['record' => $record->woo_product_id])
