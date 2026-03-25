@@ -33,15 +33,13 @@
             <div class="mt-1 text-xs text-gray-400">SKU prezent, fără stoc din contabilitate</div>
         </button>
 
-        <x-filament::section class="!p-0">
-            <div class="p-4">
-                <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Total discrepanțe</div>
-                <div class="mt-1 text-3xl font-bold text-gray-800 dark:text-gray-100">
-                    {{ number_format($this->statPlaceholder + $this->statNoSku + $this->statOnSiteNoMentor) }}
-                </div>
-                <div class="mt-1 text-xs text-gray-400">produse cu date incomplete</div>
+        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
+            <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Total discrepanțe</div>
+            <div class="mt-1 text-3xl font-bold text-gray-800 dark:text-gray-100">
+                {{ number_format($this->statPlaceholder + $this->statNoSku + $this->statOnSiteNoMentor) }}
             </div>
-        </x-filament::section>
+            <div class="mt-1 text-xs text-gray-400">produse cu date incomplete</div>
+        </div>
 
     </div>
 

@@ -1,7 +1,7 @@
 <x-filament-panels::page>
 
     {{-- Filtre --}}
-    <x-filament::section class="mb-6">
+    <div class="mb-6 rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
         <div class="flex flex-wrap gap-4 mb-3">
             {{-- Furnizor --}}
             <div class="flex-1 min-w-40">
@@ -76,34 +76,26 @@
                 </button>
             @endif
         </div>
-    </x-filament::section>
+    </div>
 
     {{-- Stat cards --}}
     <div class="grid grid-cols-2 gap-4 sm:grid-cols-4 mb-6">
-        <x-filament::section class="!p-0">
-            <div class="p-4">
-                <p class="text-sm text-gray-500 dark:text-gray-400">Total în așteptare</p>
-                <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ $totalPending }}</p>
-            </div>
-        </x-filament::section>
-        <x-filament::section class="!p-0 border-danger-200 dark:border-danger-800">
-            <div class="p-4">
-                <p class="text-sm text-danger-600 dark:text-danger-400">Urgente</p>
-                <p class="text-3xl font-bold text-danger-600 dark:text-danger-400 mt-1">{{ $totalUrgent }}</p>
-            </div>
-        </x-filament::section>
-        <x-filament::section class="!p-0 border-warning-200 dark:border-warning-700">
-            <div class="p-4">
-                <p class="text-sm text-warning-600 dark:text-warning-400">Rezervate</p>
-                <p class="text-3xl font-bold text-warning-600 dark:text-warning-400 mt-1">{{ $totalReserved }}</p>
-            </div>
-        </x-filament::section>
-        <x-filament::section class="!p-0">
-            <div class="p-4">
-                <p class="text-sm text-gray-500 dark:text-gray-400">Furnizori afectați</p>
-                <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ $totalSuppliers }}</p>
-            </div>
-        </x-filament::section>
+        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Total în așteptare</p>
+            <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ $totalPending }}</p>
+        </div>
+        <div class="rounded-xl border border-danger-200 bg-white p-4 dark:border-danger-800 dark:bg-gray-900">
+            <p class="text-sm text-danger-600 dark:text-danger-400">Urgente</p>
+            <p class="text-3xl font-bold text-danger-600 dark:text-danger-400 mt-1">{{ $totalUrgent }}</p>
+        </div>
+        <div class="rounded-xl border border-warning-200 bg-white p-4 dark:border-warning-700 dark:bg-gray-900">
+            <p class="text-sm text-warning-600 dark:text-warning-400">Rezervate</p>
+            <p class="text-3xl font-bold text-warning-600 dark:text-warning-400 mt-1">{{ $totalReserved }}</p>
+        </div>
+        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Furnizori afectați</p>
+            <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ $totalSuppliers }}</p>
+        </div>
     </div>
 
     @if(empty($supplierGroups))
@@ -115,7 +107,7 @@
     @else
         <div class="space-y-6">
             @foreach($supplierGroups as $group)
-                <x-filament::section class="{{ $group['urgent_count'] > 0 ? 'border-l-4 border-l-danger-500' : '' }} overflow-hidden !p-0">
+                <div class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900 overflow-hidden {{ $group['urgent_count'] > 0 ? 'border-l-4 border-l-danger-500' : '' }}">
 
                     {{-- Header furnizor --}}
                     <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-white/5">
@@ -234,7 +226,7 @@
                             </tbody>
                         </table>
                     </div>
-                </x-filament::section>
+                </div>
             @endforeach
         </div>
     @endif
@@ -250,7 +242,7 @@
                     {{ $wooOrders->count() }}
                 </span>
             </h2>
-            <x-filament::section class="!p-0 border-warning-200 dark:border-warning-800 overflow-hidden">
+            <div class="rounded-xl border border-warning-200 bg-white dark:border-warning-800 dark:bg-gray-900 overflow-hidden">
                 <table class="w-full text-sm">
                     <thead class="bg-warning-50 dark:bg-warning-900/30">
                         <tr>
@@ -304,7 +296,7 @@
                         @endforeach
                     </tbody>
                 </table>
-            </x-filament::section>
+            </div>
         </div>
     @endif
 

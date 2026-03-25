@@ -28,7 +28,7 @@
         </div>
 
         {{-- Tabel items --}}
-        <x-filament::section class="!p-0 overflow-hidden">
+        <div class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
@@ -171,10 +171,10 @@
                     </tbody>
                 </table>
             </div>
-        </x-filament::section>
+        </div>
 
         {{-- Notă informatională --}}
-        <x-filament::section>
+        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
             <div class="flex items-start gap-2 text-xs text-info-700 dark:text-info-300">
                 <x-heroicon-o-information-circle class="w-4 h-4 shrink-0 mt-0.5"/>
                 <p>
@@ -182,7 +182,7 @@
                     Furnizorii marcați cu <strong>★</strong> sunt cei preferați pentru produsul respectiv.
                 </p>
             </div>
-        </x-filament::section>
+        </div>
     @endif
 
 </x-filament-panels::page>
