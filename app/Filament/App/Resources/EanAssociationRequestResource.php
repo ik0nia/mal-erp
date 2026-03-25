@@ -44,6 +44,7 @@ class EanAssociationRequestResource extends Resource
                 Tables\Columns\TextColumn::make('product.sku')
                     ->label('SKU curent')
                     ->fontFamily('mono')
+                    ->copyable()
                     ->color('gray'),
 
                 Tables\Columns\TextColumn::make('requestedBy.name')
