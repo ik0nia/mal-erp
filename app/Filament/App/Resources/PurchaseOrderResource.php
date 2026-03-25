@@ -307,7 +307,8 @@ class PurchaseOrderResource extends Resource
                             TextEntry::make('product_name')->label('Produs'),
                             TextEntry::make('sku')->label('SKU intern')->placeholder('—'),
                             TextEntry::make('supplier_sku')->label('SKU furnizor')->placeholder('—'),
-                            TextEntry::make('quantity')->label('Cant. comandată'),
+                            TextEntry::make('quantity')->label('Cant. comandată')
+                                ->formatStateUsing(fn ($state) => $state !== null ? (floor((float)$state) == (float)$state ? number_format((float)$state, 0, '.', '') : number_format((float)$state, 2, '.', '')) : '—'),
                             TextEntry::make('received_quantity')
                                 ->label('Cant. recepționată')
                                 ->placeholder('—')

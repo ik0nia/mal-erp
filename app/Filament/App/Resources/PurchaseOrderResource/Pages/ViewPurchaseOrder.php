@@ -17,7 +17,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Placeholder;
 use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Get;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
@@ -431,11 +431,11 @@ class ViewPurchaseOrder extends ViewRecord
                                     $total += $lineTotal;
                                 }
                                 $totalFormatted = number_format($total, 2, ',', '.');
-                                $totalWithVat = number_format($total * 1.19, 2, ',', '.');
+                                $totalWithVat = number_format($total * 1.21, 2, ',', '.');
                                 return new HtmlString("
                                     <div style=\"display:flex;justify-content:flex-end;gap:24px;padding:12px 0;border-top:2px solid #e5e7eb;font-size:0.95rem;\">
                                         <div><span style=\"color:#6b7280;\">Total fără TVA:</span> <strong>{$totalFormatted} RON</strong></div>
-                                        <div><span style=\"color:#6b7280;\">Total cu TVA (19%):</span> <strong>{$totalWithVat} RON</strong></div>
+                                        <div><span style=\"color:#6b7280;\">Total cu TVA (21%):</span> <strong>{$totalWithVat} RON</strong></div>
                                     </div>
                                 ");
                             }),
