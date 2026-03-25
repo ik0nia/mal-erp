@@ -40,10 +40,15 @@ if ($pullCode !== 0) {
     exit("Pull failed: {$pullLog}");
 }
 
-// Dacă s-a schimbat ceva, curăță cache view
+// Dacă s-a schimbat ceva, regenerează autoload și curăță cache
 if (strpos($pullLog, 'Already up to date') === false) {
+    exec("cd {$repoPath} && composer dump-autoload -o 2>&1", $autoloadOut);
+    file_put_contents($logFile, "[{$ts}] dump-autoload: " . implode(' ', $autoloadOut) . "\n", FILE_APPEND);
+
     exec("php /var/www/erp/artisan view:clear 2>&1", $viewOut);
-    file_put_contents($logFile, "[{$ts}] view:clear: " . implode(' ', $viewOut) . "\n\n", FILE_APPEND);
+    exec("php /var/www/erp/artisan cache:clear 2>&1", $cacheOut);
+    file_put_contents($logFile, "[{$ts}] view:clear: " . implode(' ', $viewOut) . "\n", FILE_APPEND);
+    file_put_contents($logFile, "[{$ts}] cache:clear: " . implode(' ', $cacheOut) . "\n\n", FILE_APPEND);
 }
 
 http_response_code(200);
