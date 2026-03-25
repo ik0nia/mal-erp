@@ -1,50 +1,61 @@
 <x-filament-panels::page>
 
+    <style>
+    .sku-stats { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:1rem; }
+    @@media(min-width:768px){ .sku-stats { grid-template-columns:repeat(4, minmax(0, 1fr)); } }
+    .sku-stat { border-radius:0.75rem; border:1px solid #e5e7eb; background:#fff; padding:1rem; text-align:left; cursor:pointer; transition:box-shadow 0.15s; }
+    .sku-stat:hover { box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); }
+    .sku-stat:focus { outline:none; }
+    .sku-stat--active-warning { border-color:#fbbf24; background:#fffbeb; }
+    .sku-stat--active-danger { border-color:#f87171; background:#fef2f2; }
+    .sku-stat--active-info { border-color:#60a5fa; background:#eff6ff; }
+    .sku-stat-label { font-size:0.75rem; font-weight:500; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; }
+    .sku-stat-value { margin-top:0.25rem; font-size:1.875rem; font-weight:700; }
+    .sku-stat-value--warning { color:#d97706; }
+    .sku-stat-value--danger { color:#dc2626; }
+    .sku-stat-value--info { color:#2563eb; }
+    .sku-stat-value--gray { color:#1f2937; }
+    .sku-stat-sub { margin-top:0.25rem; font-size:0.75rem; color:#9ca3af; }
+    .sku-stat--static { cursor:default; }
+    .sku-stat--static:hover { box-shadow:none; }
+    </style>
+
     {{-- Stats --}}
-    <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+    <div class="sku-stats">
 
-        <button
-            wire:click="setTab('placeholder')"
-            class="rounded-xl border p-4 text-left transition hover:shadow-md focus:outline-none
-                {{ $this->activeTab === 'placeholder' ? 'border-warning-400 bg-warning-50 dark:border-warning-500 dark:bg-warning-950/20' : 'border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900' }}"
-        >
-            <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Doar în WinMentor</div>
-            <div class="mt-1 text-3xl font-bold text-warning-600 dark:text-warning-400">{{ number_format($this->statPlaceholder) }}</div>
-            <div class="mt-1 text-xs text-gray-400">din care cu stoc: {{ number_format($this->statPlaceholderWithStock) }}</div>
+        <button wire:click="setTab('placeholder')"
+            class="sku-stat {{ $this->activeTab === 'placeholder' ? 'sku-stat--active-warning' : '' }}">
+            <div class="sku-stat-label">Doar în WinMentor</div>
+            <div class="sku-stat-value sku-stat-value--warning">{{ number_format($this->statPlaceholder) }}</div>
+            <div class="sku-stat-sub">din care cu stoc: {{ number_format($this->statPlaceholderWithStock) }}</div>
         </button>
 
-        <button
-            wire:click="setTab('no_sku')"
-            class="rounded-xl border p-4 text-left transition hover:shadow-md focus:outline-none
-                {{ $this->activeTab === 'no_sku' ? 'border-danger-400 bg-danger-50 dark:border-danger-500 dark:bg-danger-950/20' : 'border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900' }}"
-        >
-            <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Pe site, fără SKU</div>
-            <div class="mt-1 text-3xl font-bold text-danger-600 dark:text-danger-400">{{ number_format($this->statNoSku) }}</div>
-            <div class="mt-1 text-xs text-gray-400">nu pot fi legate de WinMentor</div>
+        <button wire:click="setTab('no_sku')"
+            class="sku-stat {{ $this->activeTab === 'no_sku' ? 'sku-stat--active-danger' : '' }}">
+            <div class="sku-stat-label">Pe site, fără SKU</div>
+            <div class="sku-stat-value sku-stat-value--danger">{{ number_format($this->statNoSku) }}</div>
+            <div class="sku-stat-sub">nu pot fi legate de WinMentor</div>
         </button>
 
-        <button
-            wire:click="setTab('no_mentor')"
-            class="rounded-xl border p-4 text-left transition hover:shadow-md focus:outline-none
-                {{ $this->activeTab === 'no_mentor' ? 'border-info-400 bg-info-50 dark:border-info-500 dark:bg-info-950/20' : 'border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900' }}"
-        >
-            <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Pe site, fără WinMentor</div>
-            <div class="mt-1 text-3xl font-bold text-info-600 dark:text-info-400">{{ number_format($this->statOnSiteNoMentor) }}</div>
-            <div class="mt-1 text-xs text-gray-400">SKU prezent, fără stoc din contabilitate</div>
+        <button wire:click="setTab('no_mentor')"
+            class="sku-stat {{ $this->activeTab === 'no_mentor' ? 'sku-stat--active-info' : '' }}">
+            <div class="sku-stat-label">Pe site, fără WinMentor</div>
+            <div class="sku-stat-value sku-stat-value--info">{{ number_format($this->statOnSiteNoMentor) }}</div>
+            <div class="sku-stat-sub">SKU prezent, fără stoc din contabilitate</div>
         </button>
 
-        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
-            <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Total discrepanțe</div>
-            <div class="mt-1 text-3xl font-bold text-gray-800 dark:text-gray-100">
+        <div class="sku-stat sku-stat--static">
+            <div class="sku-stat-label">Total discrepanțe</div>
+            <div class="sku-stat-value sku-stat-value--gray">
                 {{ number_format($this->statPlaceholder + $this->statNoSku + $this->statOnSiteNoMentor) }}
             </div>
-            <div class="mt-1 text-xs text-gray-400">produse cu date incomplete</div>
+            <div class="sku-stat-sub">produse cu date incomplete</div>
         </div>
 
     </div>
 
     {{-- Tab label --}}
-    <div class="text-sm text-gray-500 dark:text-gray-400 -mb-2">
+    <div style="font-size:0.875rem; color:#6b7280; margin-bottom:-0.5rem;">
         @if($this->activeTab === 'placeholder')
             Produse prezente în WinMentor (contabilitate) dar care <strong>nu există pe site</strong>.
         @elseif($this->activeTab === 'no_sku')

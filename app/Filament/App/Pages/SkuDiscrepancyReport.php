@@ -121,6 +121,7 @@ class SkuDiscrepancyReport extends Page implements HasTable
                         default => 'gray',
                     }),
             ])
+            ->recordUrl(fn (WooProduct $record): string => \App\Filament\App\Resources\WooProductResource::getUrl('view', ['record' => $record]))
             ->defaultSort('name')
             ->paginated([25, 50, 100]);
     }
