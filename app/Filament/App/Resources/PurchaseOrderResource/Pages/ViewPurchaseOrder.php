@@ -165,9 +165,16 @@ class ViewPurchaseOrder extends ViewRecord
 
                     $lines = [];
                     foreach ($this->record->items as $item) {
-                        $line = "- {$item->product_name}";
+                        $line  = "- {$item->product_name}";
+                        $codes = [];
+                        if ($item->sku) {
+                            $codes[] = "BARCODE: {$item->sku}";
+                        }
                         if ($item->supplier_sku) {
-                            $line .= " (ref. {$item->supplier_sku})";
+                            $codes[] = "cod produs: {$item->supplier_sku}";
+                        }
+                        if ($codes) {
+                            $line .= ' (' . implode(' | ', $codes) . ')';
                         }
                         $line    .= ": {$item->quantity} buc.";
                         $lines[] = $line;
@@ -262,11 +269,18 @@ class ViewPurchaseOrder extends ViewRecord
                     // Construiește mesajul
                     $lines = [];
                     foreach ($this->record->items as $item) {
-                        $line = "• {$item->product_name}";
-                        if ($item->supplier_sku) {
-                            $line .= " (ref. {$item->supplier_sku})";
+                        $line  = "• {$item->product_name}";
+                        $codes = [];
+                        if ($item->sku) {
+                            $codes[] = "BARCODE: {$item->sku}";
                         }
-                        $line    .= ": {$item->quantity} buc.";
+                        if ($item->supplier_sku) {
+                            $codes[] = "cod produs: {$item->supplier_sku}";
+                        }
+                        if ($codes) {
+                            $line .= ' (' . implode(' | ', $codes) . ')';
+                        }
+                        $line .= ": {$item->quantity} buc.";
                         if ($item->unit_price > 0) {
                             $line .= " × " . number_format($item->unit_price, 2, ',', '.') . " lei";
                         }
