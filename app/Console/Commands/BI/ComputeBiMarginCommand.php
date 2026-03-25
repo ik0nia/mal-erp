@@ -213,9 +213,8 @@ class ComputeBiMarginCommand extends Command
         // ----------------------------------------------------------------
         // 5. Șterge rândurile existente și inserează în bulk
         // ----------------------------------------------------------------
-        DB::table('bi_product_margin_current')
-            ->where('calculated_for_day', $day)
-            ->delete();
+        // Truncate entire table — it's a "current" snapshot, not historical
+        DB::table('bi_product_margin_current')->truncate();
 
         // Insert in chunks
         foreach (array_chunk($marginRows, 500) as $chunk) {
