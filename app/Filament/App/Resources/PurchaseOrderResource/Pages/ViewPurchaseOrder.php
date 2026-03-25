@@ -428,24 +428,49 @@ class ViewPurchaseOrder extends ViewRecord
                             ->deletable(false)
                             ->reorderable(false),
 
+                        \Filament\Forms\Components\Grid::make(2)->schema([
+                            TextInput::make('transport_cost')
+                                ->label('Cost transport (se adaugă)')
+                                ->numeric()->default(0)->suffix('RON')
+                                ->live(onBlur: true),
+                            TextInput::make('discount_value')
+                                ->label('Discount (se scade)')
+                                ->numeric()->default(0)->suffix('RON')
+                                ->live(onBlur: true),
+                        ]),
+
                         Placeholder::make('total_reception')
                             ->label('')
                             ->content(function (Get $get): HtmlString {
                                 $items = $get('items') ?? [];
-                                $total = 0;
-                                $lines = [];
+                                $subtotal = 0;
+                                $totalQty = 0;
                                 foreach ($items as $item) {
                                     $qty = (float) ($item['qty'] ?? 0);
                                     $price = (float) ($item['price'] ?? 0);
-                                    $lineTotal = $qty * $price;
-                                    $total += $lineTotal;
+                                    $subtotal += $qty * $price;
+                                    $totalQty += $qty;
                                 }
-                                $totalFormatted = number_format($total, 2, ',', '.');
-                                $totalWithVat = number_format($total * 1.21, 2, ',', '.');
+                                $transport = (float) ($get('transport_cost') ?? 0);
+                                $discount = (float) ($get('discount_value') ?? 0);
+                                $total = $subtotal + $transport - $discount;
+
+                                $adjustPerUnit = $totalQty > 0 ? ($transport - $discount) / $totalQty : 0;
+                                $adjustText = '';
+                                if ($transport > 0 || $discount > 0) {
+                                    $sign = $adjustPerUnit >= 0 ? '+' : '';
+                                    $adjustText = "<div style=\"color:#6b7280;font-size:0.8rem;\">Ajustare/buc: {$sign}" . number_format($adjustPerUnit, 4, ',', '.') . " RON</div>";
+                                }
+
+                                $subtotalFmt = number_format($subtotal, 2, ',', '.');
+                                $totalFmt = number_format($total, 2, ',', '.');
+                                $totalVat = number_format($total * 1.21, 2, ',', '.');
                                 return new HtmlString("
-                                    <div style=\"display:flex;justify-content:flex-end;gap:24px;padding:12px 0;border-top:2px solid #e5e7eb;font-size:0.95rem;\">
-                                        <div><span style=\"color:#6b7280;\">Total fără TVA:</span> <strong>{$totalFormatted} RON</strong></div>
-                                        <div><span style=\"color:#6b7280;\">Total cu TVA (21%):</span> <strong>{$totalWithVat} RON</strong></div>
+                                    <div style=\"display:flex;justify-content:flex-end;gap:24px;align-items:center;padding:12px 0;border-top:2px solid #e5e7eb;font-size:0.95rem;flex-wrap:wrap;\">
+                                        <div><span style=\"color:#6b7280;\">Subtotal produse:</span> <strong>{$subtotalFmt} RON</strong></div>
+                                        <div><span style=\"color:#6b7280;\">Total fără TVA:</span> <strong>{$totalFmt} RON</strong></div>
+                                        <div><span style=\"color:#6b7280;\">Total cu TVA (21%):</span> <strong>{$totalVat} RON</strong></div>
+                                        {$adjustText}
                                     </div>
                                 ");
                             }),
@@ -465,12 +490,18 @@ class ViewPurchaseOrder extends ViewRecord
 
                     $itemsById = $this->record->items->keyBy('id');
 
+                    // Calculate per-unit adjustment from transport/discount
+                    $transport = (float) ($data['transport_cost'] ?? 0);
+                    $discount = (float) ($data['discount_value'] ?? 0);
+                    $totalQty = collect($data['items'])->sum(fn ($r) => (float) ($r['qty'] ?? 0));
+                    $adjustPerUnit = $totalQty > 0 ? ($transport - $discount) / $totalQty : 0;
+
                     foreach ($data['items'] as $row) {
                         $itemId = (int) ($row['id'] ?? 0);
                         $orderItem = $itemId ? $itemsById->get($itemId) : null;
 
                         $receivedQty = (float) ($row['qty'] ?? 0);
-                        $price = (float) ($row['price'] ?? 0);
+                        $price = (float) ($row['price'] ?? 0) + $adjustPerUnit;
 
                         if ($orderItem) {
                             // Existing item — update received qty and price
