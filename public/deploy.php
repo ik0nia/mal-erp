@@ -47,8 +47,10 @@ if (strpos($pullLog, 'Already up to date') === false) {
 
     exec("php /var/www/erp/artisan view:clear 2>&1", $viewOut);
     exec("php /var/www/erp/artisan cache:clear 2>&1", $cacheOut);
+    exec("php /var/www/erp/artisan filament:cache-components 2>&1", $filamentOut);
     file_put_contents($logFile, "[{$ts}] view:clear: " . implode(' ', $viewOut) . "\n", FILE_APPEND);
-    file_put_contents($logFile, "[{$ts}] cache:clear: " . implode(' ', $cacheOut) . "\n\n", FILE_APPEND);
+    file_put_contents($logFile, "[{$ts}] cache:clear: " . implode(' ', $cacheOut) . "\n", FILE_APPEND);
+    file_put_contents($logFile, "[{$ts}] filament:cache-components: " . implode(' ', $filamentOut) . "\n\n", FILE_APPEND);
 }
 
 http_response_code(200);
