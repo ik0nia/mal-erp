@@ -509,7 +509,7 @@ class WooProductResource extends Resource
                     ->label('Necesar')
                     ->icon('heroicon-o-shopping-cart')
                     ->button()
-                    ->size(\Filament\Support\Enums\ActionSize::Medium)
+                    ->size(\Filament\Support\Enums\Size::Medium)
                     ->color('warning')
                     ->extraAttributes(['style' => 'background-color:#f97316;color:white;border-color:#ea6c00;font-weight:600;'])
                     ->modalHeading(fn (WooProduct $record) => 'Adaugă la necesar: '.($record->decoded_name ?? $record->name))
@@ -634,14 +634,14 @@ class WooProductResource extends Resource
                         ->label('Editează')
                         ->icon('heroicon-o-pencil')
                         ->color('gray')
-                        ->size(\Filament\Support\Enums\ActionSize::Small)
+                        ->size(\Filament\Support\Enums\Size::Small)
                         ->visible(fn (WooProduct $record): bool => WooProductResource::canEdit($record))
                         ->url(fn (WooProduct $record) => WooProductResource::getUrl('edit', ['record' => $record->id], panel: 'app')),
                     InfolistAction::make('contact_supplier')
                         ->label('Contact furnizor')
                         ->icon('heroicon-o-phone')
                         ->color('gray')
-                        ->size(\Filament\Support\Enums\ActionSize::Small)
+                        ->size(\Filament\Support\Enums\Size::Small)
                         ->visible(function (WooProduct $record): bool {
                             $record->loadMissing('suppliers');
                             return $record->suppliers->isNotEmpty();
@@ -655,7 +655,7 @@ class WooProductResource extends Resource
                         ->label(fn (WooProduct $record): string => $record->status === 'publish' ? 'Trece în draft' : 'Publică pe site')
                         ->icon(fn (WooProduct $record): string => $record->status === 'publish' ? 'heroicon-o-eye-slash' : 'heroicon-o-eye')
                         ->color(fn (WooProduct $record): string => $record->status === 'publish' ? 'gray' : 'success')
-                        ->size(\Filament\Support\Enums\ActionSize::Small)
+                        ->size(\Filament\Support\Enums\Size::Small)
                         ->visible(function (WooProduct $record): bool {
                             if ($record->is_placeholder || ! $record->woo_id || ! $record->connection_id) {
                                 return false;
@@ -699,7 +699,7 @@ class WooProductResource extends Resource
                         ->label('Reverificare')
                         ->icon('heroicon-o-exclamation-triangle')
                         ->color('warning')
-                        ->size(\Filament\Support\Enums\ActionSize::Small)
+                        ->size(\Filament\Support\Enums\Size::Small)
                         ->modalHeading(fn (WooProduct $record) => 'Reverificare: '.($record->decoded_name ?? $record->name))
                         ->modalDescription('Descrie ce anume trebuie verificat sau modificat la acest produs.')
                         ->modalWidth('lg')
@@ -741,7 +741,7 @@ class WooProductResource extends Resource
                         ->label('Asociază furnizor')
                         ->icon('heroicon-o-link')
                         ->color('success')
-                        ->size(\Filament\Support\Enums\ActionSize::Small)
+                        ->size(\Filament\Support\Enums\Size::Small)
                         ->visible(function (WooProduct $record): bool {
                             $record->loadMissing('suppliers');
                             return $record->suppliers->isEmpty();
@@ -821,7 +821,7 @@ class WooProductResource extends Resource
                             ? 'heroicon-o-arrow-uturn-left'
                             : 'heroicon-o-archive-box-x-mark')
                         ->color(fn (WooProduct $record): string => $record->is_discontinued ? 'success' : 'danger')
-                        ->size(\Filament\Support\Enums\ActionSize::Small)
+                        ->size(\Filament\Support\Enums\Size::Small)
                         ->visible(function (): bool {
                             $user = auth()->user();
                             return $user instanceof User && (
@@ -881,7 +881,7 @@ class WooProductResource extends Resource
                         ->color(fn (WooProduct $record): string => $record->procurement_type === WooProduct::PROCUREMENT_ON_DEMAND
                             ? 'gray'
                             : 'warning')
-                        ->size(\Filament\Support\Enums\ActionSize::Small)
+                        ->size(\Filament\Support\Enums\Size::Small)
                         ->visible(function (): bool {
                             $user = auth()->user();
                             return $user instanceof User && (

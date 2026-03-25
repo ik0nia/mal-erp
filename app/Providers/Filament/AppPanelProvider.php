@@ -91,12 +91,19 @@ class AppPanelProvider extends PanelProvider
             ->renderHook(
                 \Filament\View\PanelsRenderHook::HEAD_END,
                 fn () => new \Illuminate\Support\HtmlString('<style>
-/* ── Global Search ── */
-.fi-topbar nav {
+/* ── Global Search (v4) ── */
+.fi-topbar {
     width: 100% !important;
 }
-.fi-topbar nav > div.ms-auto {
-    margin-left: 0.75rem !important;
+.fi-topbar-end {
+    flex-grow: 1 !important;
+    flex-shrink: 1 !important;
+    min-width: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+}
+.fi-global-search-ctn {
     flex-grow: 1 !important;
     flex-shrink: 1 !important;
     min-width: 0 !important;
@@ -135,9 +142,10 @@ class AppPanelProvider extends PanelProvider
     margin-left: auto !important;
     text-align: right !important;
     align-items: flex-end !important;
+    flex-shrink: 0 !important;
 }
 .fi-topbar .fi-user-menu {
-    margin-left: 0.5rem !important;
+    flex-shrink: 0 !important;
 }
 /* ── Sidebar negru ── */
 .fi-sidebar {
@@ -159,7 +167,7 @@ class AppPanelProvider extends PanelProvider
 .fi-sidebar-group-label {
     color: rgba(255,255,255,0.45) !important;
 }
-/* Items normale */
+/* Items normale — v4: fi-sidebar-item-btn (nu fi-sidebar-item-button) */
 .fi-sidebar-item-label {
     color: rgba(255,255,255,0.85) !important;
 }
@@ -167,38 +175,43 @@ class AppPanelProvider extends PanelProvider
     color: rgba(255,255,255,0.6) !important;
 }
 /* Hover */
-.fi-sidebar-item-button:hover {
+.fi-sidebar-item-btn:hover {
     background-color: rgba(255,255,255,0.18) !important;
 }
-.fi-sidebar-item-button:hover .fi-sidebar-item-label,
-.fi-sidebar-item-button:hover .fi-sidebar-item-icon {
+.fi-sidebar-item-btn:hover .fi-sidebar-item-label,
+.fi-sidebar-item-btn:hover .fi-sidebar-item-icon {
     color: #ffffff !important;
 }
-/* Item activ — fi-active e pe <li>, nu pe <a> */
-.fi-sidebar-item.fi-active .fi-sidebar-item-button,
-.fi-sidebar-item.fi-active .fi-sidebar-item-button:hover {
+/* Item activ — fi-active e pe <li> */
+.fi-sidebar-item.fi-active .fi-sidebar-item-btn,
+.fi-sidebar-item.fi-active .fi-sidebar-item-btn:hover {
     background-color: #ffffff !important;
 }
 .fi-sidebar-item.fi-active .fi-sidebar-item-label,
-.fi-sidebar-item.fi-active .fi-sidebar-item-button:hover .fi-sidebar-item-label {
+.fi-sidebar-item.fi-active .fi-sidebar-item-btn:hover .fi-sidebar-item-label {
     color: #111827 !important;
     font-weight: 600;
 }
 .fi-sidebar-item.fi-active .fi-sidebar-item-icon,
-.fi-sidebar-item.fi-active .fi-sidebar-item-button:hover .fi-sidebar-item-icon {
+.fi-sidebar-item.fi-active .fi-sidebar-item-btn:hover .fi-sidebar-item-icon {
     color: #111827 !important;
 }
 /* Badge-uri navigație */
-.fi-sidebar-item-badge {
+.fi-sidebar-item-badge-ctn .fi-badge {
     background-color: #dc2626 !important;
     color: #ffffff !important;
 }
-.fi-sidebar-group-collapse-button {
+/* v4: fi-sidebar-group-collapse-btn (nu fi-sidebar-group-collapse-button) */
+.fi-sidebar-group-collapse-btn {
     color: rgba(255,255,255,0.4) !important;
 }
-.fi-sidebar-group-collapse-button:hover {
+.fi-sidebar-group-collapse-btn:hover {
     background-color: rgba(255,255,255,0.08) !important;
     color: #ffffff !important;
+}
+/* Group btn hover (săgeată collapse grup) */
+.fi-sidebar-group-btn {
+    color: rgba(255,255,255,0.45) !important;
 }
 /* ── Purchase Request items table ── */
 .erp-pr-row {

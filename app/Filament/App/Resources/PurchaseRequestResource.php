@@ -308,7 +308,7 @@ class PurchaseRequestResource extends Resource
                                     ->label('Modifică cantitate')
                                     ->icon('heroicon-o-pencil-square')
                                     ->color('warning')
-                                    ->size(\Filament\Support\Enums\ActionSize::Small)
+                                    ->size(\Filament\Support\Enums\Size::Small)
                                     ->visible(fn (PurchaseRequestItem $record): bool =>
                                         $record->status === PurchaseRequestItem::STATUS_PENDING
                                     )
@@ -333,7 +333,7 @@ class PurchaseRequestResource extends Resource
                                     ->label('Șterge produs')
                                     ->icon('heroicon-o-x-circle')
                                     ->color('danger')
-                                    ->size(\Filament\Support\Enums\ActionSize::Small)
+                                    ->size(\Filament\Support\Enums\Size::Small)
                                     ->visible(fn (PurchaseRequestItem $record): bool =>
                                         $record->status === PurchaseRequestItem::STATUS_PENDING
                                     )
