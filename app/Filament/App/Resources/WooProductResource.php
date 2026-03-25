@@ -626,7 +626,8 @@ class WooProductResource extends Resource
                             ->label('')
                             ->view('filament.infolist.product-header')
                             ->columnSpanFull(),
-                    ]),
+                    ])
+                    ->columnSpanFull(),
 
                 // ── Acțiuni utilitare stânga (edit, contact) ────────────────
                 Actions::make([
