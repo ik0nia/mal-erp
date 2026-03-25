@@ -401,11 +401,20 @@ class ViewPurchaseOrder extends ViewRecord
                     })->values()->all();
 
                     return [
+                        \Filament\Forms\Components\Grid::make(4)->schema([
+                            TextInput::make('invoice_series')->label('Serie factură'),
+                            TextInput::make('invoice_number')->label('Număr factură'),
+                            \Filament\Forms\Components\DatePicker::make('invoice_date')->label('Data factură')->displayFormat('d.m.Y'),
+                            \Filament\Forms\Components\DatePicker::make('invoice_due_date')->label('Scadență factură')->displayFormat('d.m.Y'),
+                        ]),
+
                         Repeater::make('items')
                             ->label('')
                             ->schema([
                                 Hidden::make('id'),
-                                TextInput::make('name')->label('Produs')->disabled()->dehydrated(false)->columnSpan(3),
+                                TextInput::make('name')->label('Produs')
+                                    ->disabled(fn (\Filament\Schemas\Components\Utilities\Get $get) => !empty($get('id')))
+                                    ->columnSpan(3),
                                 TextInput::make('ordered_qty')->label('Comandat')->disabled()->dehydrated(false)->suffix('buc.'),
                                 TextInput::make('qty')->label('Recepționat')->numeric()->minValue(0)->suffix('buc.')->required()
                                     ->live(onBlur: true),
@@ -414,7 +423,8 @@ class ViewPurchaseOrder extends ViewRecord
                             ])
                             ->columns(6)
                             ->default($defaultItems)
-                            ->addable(false)
+                            ->addable(true)
+                            ->addActionLabel('+ Adaugă produs suplimentar')
                             ->deletable(false)
                             ->reorderable(false),
 
@@ -456,29 +466,37 @@ class ViewPurchaseOrder extends ViewRecord
                     $itemsById = $this->record->items->keyBy('id');
 
                     foreach ($data['items'] as $row) {
-                        $orderItem = $itemsById->get((int) $row['id']);
-                        if (! $orderItem) {
-                            continue;
+                        $itemId = (int) ($row['id'] ?? 0);
+                        $orderItem = $itemId ? $itemsById->get($itemId) : null;
+
+                        $receivedQty = (float) ($row['qty'] ?? 0);
+                        $price = (float) ($row['price'] ?? 0);
+
+                        if ($orderItem) {
+                            // Existing item — update received qty and price
+                            $orderedQty = (float) $orderItem->quantity;
+                            $shortfall  = max(0, $orderedQty - $receivedQty);
+
+                            $orderItem->update([
+                                'received_quantity' => $receivedQty,
+                                'unit_price'        => $price,
+                            ]);
+
+                            if ($shortfall > 0) {
+                                $hasShortfall = true;
+                                $shortfallProducts[] = $orderItem->product_name;
+                                $this->revertShortfallToRequestItems($orderItem, $shortfall, $affectedRequestIds);
+                            }
+                        } elseif ($receivedQty > 0 && !empty($row['name'])) {
+                            // New item added during reception (extra product)
+                            $this->record->items()->create([
+                                'product_name'      => $row['name'],
+                                'quantity'           => $receivedQty,
+                                'received_quantity'  => $receivedQty,
+                                'unit_price'         => $price,
+                                'notes'              => 'Adăugat la recepție (suplimentar)',
+                            ]);
                         }
-
-                        $receivedQty = (float) ($row['qty'] ?? (float) $orderItem->quantity);
-                        $orderedQty  = (float) $orderItem->quantity;
-                        $shortfall   = max(0, $orderedQty - $receivedQty);
-
-                        $orderItem->update([
-                            'received_quantity' => $receivedQty,
-                            'unit_price'        => (float) $row['price'],
-                        ]);
-
-                        if ($shortfall <= 0) {
-                            continue;
-                        }
-
-                        $hasShortfall      = true;
-                        $shortfallProducts[] = $orderItem->product_name;
-
-                        // Returnăm shortfall-ul la request items (backorder)
-                        $this->revertShortfallToRequestItems($orderItem, $shortfall, $affectedRequestIds);
                     }
 
                     foreach (array_unique($affectedRequestIds) as $requestId) {
@@ -486,10 +504,14 @@ class ViewPurchaseOrder extends ViewRecord
                     }
 
                     $this->record->update([
-                        'status'         => PurchaseOrder::STATUS_RECEIVED,
-                        'received_at'    => now(),
-                        'received_by'    => auth()->id(),
-                        'received_notes' => $data['received_notes'] ?? null,
+                        'status'           => PurchaseOrder::STATUS_RECEIVED,
+                        'received_at'      => now(),
+                        'received_by'      => auth()->id(),
+                        'received_notes'   => $data['received_notes'] ?? null,
+                        'invoice_series'   => $data['invoice_series'] ?? null,
+                        'invoice_number'   => $data['invoice_number'] ?? null,
+                        'invoice_date'     => $data['invoice_date'] ?? null,
+                        'invoice_due_date' => $data['invoice_due_date'] ?? null,
                     ]);
 
                     // Update last purchase info on product-supplier pivot

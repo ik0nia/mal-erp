@@ -36,6 +36,10 @@ class PurchaseOrder extends Model
         'received_at',
         'received_by',
         'received_notes',
+        'invoice_series',
+        'invoice_number',
+        'invoice_date',
+        'invoice_due_date',
     ];
 
     protected function casts(): array
@@ -50,7 +54,9 @@ class PurchaseOrder extends Model
             'rejected_at'  => 'datetime',
             'sent_at'      => 'datetime',
             'received_at'  => 'datetime',
-            'received_by'  => 'integer',
+            'received_by'    => 'integer',
+            'invoice_date'   => 'date',
+            'invoice_due_date' => 'date',
         ];
     }
 

@@ -297,6 +297,10 @@ class PurchaseOrderResource extends Resource
                     TextEntry::make('received_at')->label('Recepționat la')->dateTime('d.m.Y H:i')->placeholder('—'),
                     TextEntry::make('receivedBy.name')->label('Recepționat de')->placeholder('—'),
                     TextEntry::make('received_notes')->label('Observații recepție')->placeholder('—')->columnSpanFull(),
+                    TextEntry::make('invoice_series')->label('Serie factură')->placeholder('—'),
+                    TextEntry::make('invoice_number')->label('Număr factură')->placeholder('—'),
+                    TextEntry::make('invoice_date')->label('Data factură')->date('d.m.Y')->placeholder('—'),
+                    TextEntry::make('invoice_due_date')->label('Scadență factură')->date('d.m.Y')->placeholder('—'),
                 ]),
 
             InfolistSection::make('Produse comandate')
