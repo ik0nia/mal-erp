@@ -64,13 +64,14 @@ class PurchaseRequestItem extends Model
                         $item->sku = $product->sku;
                     }
 
-                    // auto-fill preferred supplier
+                    // auto-fill supplier: preferred first, then sole supplier
                     if (! $item->supplier_id) {
-                        $preferred = ProductSupplier::where('woo_product_id', $item->woo_product_id)
-                            ->where('is_preferred', true)
-                            ->first();
+                        $suppliers = ProductSupplier::where('woo_product_id', $item->woo_product_id)->get();
+                        $preferred = $suppliers->firstWhere('is_preferred', true);
                         if ($preferred) {
                             $item->supplier_id = $preferred->supplier_id;
+                        } elseif ($suppliers->count() === 1) {
+                            $item->supplier_id = $suppliers->first()->supplier_id;
                         }
                     }
                 }
