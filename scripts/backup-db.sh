@@ -1,5 +1,5 @@
 #!/bin/bash
-BACKUP_DIR="/var/www/erp/storage/backups"
+BACKUP_DIR="/mnt/backups/db"
 DATE=$(date +%Y-%m-%d_%H-%M)
 FILE="${BACKUP_DIR}/erp_malinco_${DATE}.sql.gz"
 mkdir -p "$BACKUP_DIR"
