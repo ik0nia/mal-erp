@@ -1219,7 +1219,7 @@ class WooProductResource extends Resource
             $rows .= "<tr style=\"border-bottom:1px solid #e5e7eb;\">
                 <td style=\"padding:6px 12px;font-size:0.875rem;\">{$date}</td>
                 <td style=\"padding:6px 12px;font-size:0.875rem;font-family:monospace;font-weight:600;\">{$price}</td>
-                <td style=\"padding:6px 12px;font-size:0.75rem;color:#6b7280;\">{$priceWithVat} <span style=\"color:#9ca3af;\">(+TVA)</span></td>
+                <td style=\"padding:6px 12px;font-size:0.75rem;color:#6b7280;\">{$priceWithVat} <span style=\"color:#9ca3af;\">(TVA inclus)</span></td>
                 <td style=\"padding:6px 12px;font-size:0.875rem;\">{$uom}</td>
                 <td style=\"padding:6px 12px;\">{$supplierHtml}</td>
                 <td style=\"padding:6px 12px;\">{$source}</td>
