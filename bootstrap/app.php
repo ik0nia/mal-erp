@@ -14,11 +14,6 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Support\Facades\Route::middleware([
                 \Illuminate\Routing\Middleware\SubstituteBindings::class,
             ])->group(base_path('routes/webhooks.php'));
-
-            // Chat routes — publice, fără CSRF/auth; throttle per-rută în chat.php
-            \Illuminate\Support\Facades\Route::middleware([
-                \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            ])->group(base_path('routes/chat.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
