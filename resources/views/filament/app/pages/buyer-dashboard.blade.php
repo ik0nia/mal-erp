@@ -127,11 +127,12 @@
                         </div>
 
                         <div>
-                            <button wire:click="createPoForSupplier({{ $group['supplier_id'] }})"
-                                    class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">
+                            <a href="{{ $group['create_po_url'] }}"
+                               class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors"
+                               style="text-decoration:none;">
                                 <x-filament::icon icon="heroicon-o-shopping-bag" class="w-4 h-4"/>
                                 Crează PO
-                            </button>
+                            </a>
                         </div>
                     </div>
 

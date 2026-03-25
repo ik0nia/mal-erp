@@ -163,6 +163,7 @@ class BuyerDashboardPage extends Page
                 return [
                     'supplier_id'   => $supplierId,
                     'supplier_name' => $supplier?->name ?? 'Fără furnizor',
+                    'create_po_url' => PurchaseOrderResource::getUrl('create', ['supplier_id' => $supplierId]),
                     'items_count'   => $group->count(),
                     'urgent_count'  => $group->where('is_urgent', true)->count(),
                     'items'         => $group->map(fn (PurchaseRequestItem $item): array => [

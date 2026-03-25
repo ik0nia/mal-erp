@@ -110,10 +110,10 @@
                             </div>
                         </div>
                     </div>
-                    <button wire:click="createPoForSupplier({{ $group['supplier_id'] }})" class="ppi-btn-po">
+                    <a href="{{ $group['create_po_url'] }}" class="ppi-btn-po" style="text-decoration:none;">
                         <x-filament::icon icon="heroicon-o-shopping-bag" style="width:1rem; height:1rem;"/>
                         Creează PO — {{ $group['supplier_name'] }}
-                    </button>
+                    </a>
                 </div>
 
                 <div style="overflow-x:auto;">
