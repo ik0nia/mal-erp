@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\PurchaseOrder;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
@@ -21,36 +22,42 @@ class PurchaseOrderExcelExport
         $sheet->setTitle('Comandă furnizor');
 
         // Column widths
-        $sheet->getColumnDimension('A')->setWidth(6);   // Nr.
-        $sheet->getColumnDimension('B')->setWidth(45);  // Denumire produs
-        $sheet->getColumnDimension('C')->setWidth(18);  // SKU
-        $sheet->getColumnDimension('D')->setWidth(18);  // Cod furnizor
-        $sheet->getColumnDimension('E')->setWidth(12);  // Cantitate
+        $sheet->getColumnDimension('A')->setWidth(6);
+        $sheet->getColumnDimension('B')->setWidth(45);
+        $sheet->getColumnDimension('C')->setWidth(18);
+        $sheet->getColumnDimension('D')->setWidth(18);
+        $sheet->getColumnDimension('E')->setWidth(12);
 
-        $burgundy = '8B1A1A';
-        $darkGray = '374151';
-        $lightGray = 'F3F4F6';
+        $burgundy  = 'FF8B1A1A';
+        $white     = 'FFFFFFFF';
+        $grayText  = 'FF6B7280';
+        $lightGray = 'FFF3F4F6';
+        $borderGray = 'FFD1D5DB';
+        $footerGray = 'FF9CA3AF';
+        $darkText   = 'FF374151';
 
         // --- HEADER: Company info ---
         $row = 1;
         $sheet->mergeCells("A{$row}:E{$row}");
         $sheet->setCellValue("A{$row}", 'SC MALINCO PRODEX SRL');
         $sheet->getStyle("A{$row}")->applyFromArray([
-            'font'      => ['bold' => true, 'size' => 14, 'color' => new Color($burgundy)],
+            'font'      => ['bold' => true, 'size' => 14, 'color' => ['argb' => $burgundy]],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT],
         ]);
 
         $row++;
         $sheet->mergeCells("A{$row}:E{$row}");
-        $sheet->setCellValue("A{$row}", 'CUI: RO18aborting | Reg. com.: J05/1234/2006');
-        $sheet->getStyle("A{$row}")->getFont()->setSize(9)->setColor(new Color('6B7280'));
+        $sheet->setCellValue("A{$row}", 'CUI: RO18223680 | Reg. com.: J05/1551/2006');
+        $sheet->getStyle("A{$row}")->applyFromArray([
+            'font' => ['size' => 9, 'color' => ['argb' => $grayText]],
+        ]);
 
         // --- HEADER: Order info ---
         $row += 2;
         $sheet->mergeCells("A{$row}:E{$row}");
         $sheet->setCellValue("A{$row}", "COMANDĂ FURNIZOR — {$order->number}");
         $sheet->getStyle("A{$row}")->applyFromArray([
-            'font'      => ['bold' => true, 'size' => 13, 'color' => new Color($burgundy)],
+            'font'      => ['bold' => true, 'size' => 13, 'color' => ['argb' => $burgundy]],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT],
         ]);
 
@@ -81,7 +88,9 @@ class PurchaseOrderExcelExport
             ])->filter()->implode('  |  ');
             $sheet->mergeCells("A{$row}:E{$row}");
             $sheet->setCellValue("A{$row}", $contactInfo);
-            $sheet->getStyle("A{$row}")->getFont()->setSize(9)->setColor(new Color('6B7280'));
+            $sheet->getStyle("A{$row}")->applyFromArray([
+                'font' => ['size' => 9, 'color' => ['argb' => $grayText]],
+            ]);
         }
 
         // --- TABLE HEADER ---
@@ -95,10 +104,10 @@ class PurchaseOrderExcelExport
         }
 
         $sheet->getStyle("A{$headerRow}:E{$headerRow}")->applyFromArray([
-            'font'      => ['bold' => true, 'size' => 10, 'color' => new Color('FFFFFF')],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => new Color($burgundy)],
+            'font'      => ['bold' => true, 'size' => 10, 'color' => ['argb' => $white]],
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => $burgundy]],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
-            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => new Color($burgundy)]],
+            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => $burgundy]]],
         ]);
         $sheet->getRowDimension($headerRow)->setRowHeight(28);
 
@@ -110,24 +119,21 @@ class PurchaseOrderExcelExport
 
             $sheet->setCellValue("A{$row}", $nr);
             $sheet->setCellValue("B{$row}", $item->product_name);
-            $sheet->setCellValueExplicit("C{$row}", $item->sku ?? '—', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            $sheet->setCellValueExplicit("D{$row}", $item->supplier_sku ?? '—', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit("C{$row}", $item->sku ?? '—', DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit("D{$row}", $item->supplier_sku ?? '—', DataType::TYPE_STRING);
             $sheet->setCellValue("E{$row}", $item->quantity);
 
-            // Alignment
             $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $sheet->getStyle("E{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-            // Zebra striping
             if ($nr % 2 === 0) {
                 $sheet->getStyle("A{$row}:E{$row}")->applyFromArray([
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => new Color($lightGray)],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => $lightGray]],
                 ]);
             }
 
-            // Borders
             $sheet->getStyle("A{$row}:E{$row}")->applyFromArray([
-                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => new Color('D1D5DB')]],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => $borderGray]]],
             ]);
 
             $sheet->getRowDimension($row)->setRowHeight(22);
@@ -140,7 +146,7 @@ class PurchaseOrderExcelExport
         $sheet->setCellValue("E{$row}", $order->items->sum('quantity'));
         $sheet->getStyle("A{$row}:E{$row}")->applyFromArray([
             'font'    => ['bold' => true, 'size' => 10],
-            'borders' => ['top' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => new Color($burgundy)]],
+            'borders' => ['top' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['argb' => $burgundy]]],
         ]);
         $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
         $sheet->getStyle("E{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
@@ -158,7 +164,9 @@ class PurchaseOrderExcelExport
         $row += 2;
         $sheet->mergeCells("A{$row}:E{$row}");
         $sheet->setCellValue("A{$row}", 'Document generat automat — SC Malinco Prodex SRL');
-        $sheet->getStyle("A{$row}")->getFont()->setSize(8)->setColor(new Color('9CA3AF'));
+        $sheet->getStyle("A{$row}")->applyFromArray([
+            'font' => ['size' => 8, 'color' => ['argb' => $footerGray]],
+        ]);
 
         // Print settings
         $sheet->getPageSetup()->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_LANDSCAPE);
