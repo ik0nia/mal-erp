@@ -1574,8 +1574,8 @@ class WooProductResource extends Resource
             $valueColor = static::variationInlineColor($valueVariation);
             $position = $index + 1;
             $dayLabel = static::formatMetricDay($metric->day);
-            $closingQty = number_format((float) $metric->closing_total_qty, 3, '.', ',').' buc';
-            $qtyText = static::formatSignedMetric($qtyVariation, 3, ' buc');
+            $closingQty = static::formatQty((float) $metric->closing_total_qty).' buc';
+            $qtyText = static::formatSignedQty($qtyVariation, ' buc');
             $valueText = static::formatSignedCurrency($valueVariation);
 
             $rows[] = '<tr>'
@@ -1627,19 +1627,19 @@ class WooProductResource extends Resource
         $latestDay = static::formatMetricDay($latest->day);
         $sum7 = $metrics->take(7)->sum(fn (DailyStockMetric $metric): float => (float) $metric->daily_total_variation);
         $sum30 = $metrics->sum(fn (DailyStockMetric $metric): float => (float) $metric->daily_total_variation);
-        $closingQty = number_format((float) $latest->closing_total_qty, 3, '.', ',').' buc';
+        $closingQty = static::formatQty((float) $latest->closing_total_qty).' buc';
         $color = static::variationInlineColor($latestVariation);
 
         return new HtmlString(
             '<div style="border:1px solid #e5e7eb;border-radius:0.75rem;padding:0.9rem;background:#fff;">'
             .'<div style="font-size:0.8rem;color:#6b7280;">Variație cantitate</div>'
             .'<div style="margin-top:0.35rem;font-size:1.35rem;font-weight:700;color:'.$color.';">'
-            .static::formatSignedMetric($latestVariation, 3, ' buc')
+            .static::formatSignedQty($latestVariation, ' buc')
             .'</div>'
             .'<div style="margin-top:0.2rem;font-size:0.8rem;color:#6b7280;">Ultima zi: '.$latestDay.'</div>'
             .'<div style="margin-top:0.55rem;display:flex;gap:0.7rem;flex-wrap:wrap;font-size:0.8rem;color:#374151;">'
-            .'<span>7 poziții: <strong>'.static::formatSignedMetric($sum7, 3, ' buc').'</strong></span>'
-            .'<span>30 poziții: <strong>'.static::formatSignedMetric($sum30, 3, ' buc').'</strong></span>'
+            .'<span>7 poziții: <strong>'.static::formatSignedQty($sum7, ' buc').'</strong></span>'
+            .'<span>30 poziții: <strong>'.static::formatSignedQty($sum30, ' buc').'</strong></span>'
             .'<span>Stoc final: <strong>'.$closingQty.'</strong></span>'
             .'</div>'
             .'</div>'
@@ -1692,6 +1692,25 @@ class WooProductResource extends Resource
         }
 
         $formatted = number_format(abs($value), $decimals, '.', ',');
+        $sign = $value > 0 ? '+' : ($value < 0 ? '-' : '');
+
+        return trim("{$sign}{$formatted}{$suffix}");
+    }
+
+    private static function formatQty(float $value): string
+    {
+        return floor($value) == $value
+            ? number_format($value, 0, '.', '')
+            : number_format($value, 2, '.', '');
+    }
+
+    private static function formatSignedQty(?float $value, string $suffix = ''): string
+    {
+        if ($value === null) {
+            return '-';
+        }
+
+        $formatted = static::formatQty(abs($value));
         $sign = $value > 0 ? '+' : ($value < 0 ? '-' : '');
 
         return trim("{$sign}{$formatted}{$suffix}");
