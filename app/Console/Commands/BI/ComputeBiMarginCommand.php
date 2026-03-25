@@ -85,14 +85,13 @@ class ComputeBiMarginCommand extends Command
             ->keyBy('woo_product_id');
 
         // ----------------------------------------------------------------
-        // 3. Preîncarcă ultimele prețuri din product_price_logs
+        // 3. Preîncarcă ultimele prețuri de achiziție din product_purchase_price_logs
         // ----------------------------------------------------------------
-        $latestPriceLogs = DB::table('product_price_logs')
+        $latestPriceLogs = DB::table('product_purchase_price_logs')
             ->whereIn('woo_product_id', $wooProductIds)
-            ->where('source', 'winmentor_lista')
-            ->where('changed_at', '<=', $day . ' 23:59:59')
-            ->select(['woo_product_id', 'new_price', 'changed_at'])
-            ->orderByDesc('changed_at')
+            ->where('acquired_at', '<=', $day)
+            ->select(['woo_product_id', 'unit_price', 'supplier_id', 'supplier_name_raw', 'acquired_at'])
+            ->orderByDesc('acquired_at')
             ->get()
             ->unique('woo_product_id')
             ->keyBy('woo_product_id');
@@ -120,11 +119,17 @@ class ComputeBiMarginCommand extends Command
             $supplierId = null;
             $supplierName = null;
 
-            // Priority 1: ProductPriceLog (winmentor_lista)
-            $priceLog = $latestPriceLogs->get($wooId);
-            if ($priceLog && (float) $priceLog->new_price > 0) {
-                $purchasePrice = (float) $priceLog->new_price;
+            // Priority 1: ProductPurchasePriceLog (actual purchase prices)
+            $priceLog = $wooId ? $latestPriceLogs->get($wooId) : null;
+            if ($priceLog && (float) $priceLog->unit_price > 0) {
+                $purchasePrice = (float) $priceLog->unit_price;
                 $purchasePriceSource = 'purchase_log';
+                if ($priceLog->supplier_id) {
+                    $supplierId = (int) $priceLog->supplier_id;
+                }
+                if ($priceLog->supplier_name_raw) {
+                    $supplierName = $priceLog->supplier_name_raw;
+                }
             }
 
             // Priority 2: Preferred supplier → purchase_price
