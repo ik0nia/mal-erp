@@ -10,7 +10,7 @@ class SalesChartWidget extends ChartWidget
 {
     protected ?string $heading = 'Magazin online: Vânzări';
 
-    protected ?string $maxHeight = '300px';
+    protected ?string $maxHeight = '260px';
 
     protected ?string $pollingInterval = null;
 
