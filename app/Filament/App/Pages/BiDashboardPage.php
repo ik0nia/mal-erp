@@ -36,6 +36,16 @@ class BiDashboardPage extends Page
     public int    $inStock       = 0;
     public int    $outOfStock    = 0;
 
+    // ── Margin KPI ─────────────────────────────────────────────────────────
+    public float  $stockValueCost       = 0;
+    public float  $grossMarginTotal     = 0;
+    public float  $grossMarginPct       = 0;
+    public int    $productsWithCostData = 0;
+    public string $marginTab            = 'top_margin';
+
+    /** @var array<int, array<string, mixed>> */
+    public array  $marginRows           = [];
+
     // ── Alerte ───────────────────────────────────────────────────────────────
     public string $alertDay = '—';
     public int    $countP0  = 0;
@@ -60,6 +70,8 @@ class BiDashboardPage extends Page
     public function mount(): void
     {
         $this->loadKpi();
+        $this->loadMarginKpi();
+        $this->loadMarginRows();
         $this->loadAlerts();
         $this->loadVelocityRows();
     }
@@ -74,6 +86,12 @@ class BiDashboardPage extends Page
     {
         $this->velocityTab = $tab;
         $this->loadVelocityRows();
+    }
+
+    public function setMarginTab(string $tab): void
+    {
+        $this->marginTab = $tab;
+        $this->loadMarginRows();
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
@@ -103,6 +121,63 @@ class BiDashboardPage extends Page
                 ? round($this->stockDelta / $prevVal * 100, 2)
                 : 0.0;
         }
+    }
+
+    private function loadMarginKpi(): void
+    {
+        $last = DB::table('bi_inventory_kpi_daily')->orderByDesc('day')->first();
+
+        if (! $last) {
+            return;
+        }
+
+        $this->stockValueCost       = round((float) ($last->inventory_value_cost_closing_total ?? 0), 2);
+        $this->grossMarginTotal     = round((float) ($last->gross_margin_total ?? 0), 2);
+        $this->grossMarginPct       = round((float) ($last->gross_margin_pct ?? 0), 2);
+        $this->productsWithCostData = (int) ($last->products_with_cost_data ?? 0);
+    }
+
+    private function loadMarginRows(): void
+    {
+        $query = DB::table('bi_product_margin_current')
+            ->select(
+                'sku',
+                'product_name',
+                'sale_price',
+                'purchase_price',
+                'margin_pct',
+                'stock_qty',
+                'stock_margin_total',
+                'supplier_name',
+                'product_id',
+                'calculated_for_day',
+            );
+
+        if ($this->marginTab === 'top_margin') {
+            $query->orderByDesc('margin_pct')->orderByDesc('stock_margin_total');
+        } else {
+            // negative_margin: marjă < 10%
+            $query->where('margin_pct', '<', 10)
+                  ->orderBy('margin_pct')
+                  ->orderByDesc('stock_margin_total');
+        }
+
+        $this->marginRows = $query
+            ->limit(50)
+            ->get()
+            ->map(fn ($r) => [
+                'sku'                => $r->sku,
+                'product_name'       => $r->product_name ?? '—',
+                'sale_price'         => (float) $r->sale_price,
+                'purchase_price'     => (float) $r->purchase_price,
+                'margin_pct'         => (float) $r->margin_pct,
+                'stock_qty'          => (float) $r->stock_qty,
+                'stock_margin_total' => (float) $r->stock_margin_total,
+                'supplier_name'      => $r->supplier_name,
+                'product_id'         => $r->product_id,
+                'calculated_for_day' => $r->calculated_for_day,
+            ])
+            ->toArray();
     }
 
     private function loadAlerts(): void

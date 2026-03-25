@@ -44,4 +44,16 @@ class ProductPurchasePriceLog extends Model
         }
         return $this->supplier_name_raw ?? '—';
     }
+
+    /**
+     * Get the latest purchase price for a product.
+     */
+    public static function getLatestPrice(int $wooProductId, ?string $beforeDate = null): ?float
+    {
+        $query = static::where('woo_product_id', $wooProductId);
+        if ($beforeDate) {
+            $query->where('acquired_at', '<=', $beforeDate);
+        }
+        return $query->latest('acquired_at')->value('unit_price');
+    }
 }
