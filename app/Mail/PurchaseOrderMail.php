@@ -40,7 +40,7 @@ class PurchaseOrderMail extends Mailable
         $excelFilename = str_replace('/', '-', $this->order->number) . '.xlsx';
 
         return [
-            Attachment::fromData($pdf->output(), $pdfFilename)
+            Attachment::fromData(fn () => $pdf->output(), $pdfFilename)
                 ->withMime('application/pdf'),
             Attachment::fromPath($excelPath)
                 ->as($excelFilename)
