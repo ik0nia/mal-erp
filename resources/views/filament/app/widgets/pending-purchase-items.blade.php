@@ -53,6 +53,7 @@
 .ppi-reset { margin-left:auto; font-size:0.75rem; color:#6b7280; text-decoration:underline; background:none; border:none; cursor:pointer; }
 </style>
 
+<x-filament-widgets::widget>
 <div style="display:flex; flex-direction:column; gap:1.5rem;">
 
     {{-- Filtre --}}
@@ -316,3 +317,4 @@
     @endif
 
 </div>
+</x-filament-widgets::widget>

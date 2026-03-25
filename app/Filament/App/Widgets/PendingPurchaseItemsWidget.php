@@ -15,14 +15,7 @@ class PendingPurchaseItemsWidget extends Widget
 {
     protected string $view = 'filament.app.widgets.pending-purchase-items';
 
-    protected int|string|array $columnSpan = [
-        'default' => 'full',
-        'sm' => 'full',
-        'md' => 'full',
-        'lg' => 'full',
-        'xl' => 'full',
-        '2xl' => 'full',
-    ];
+    protected int|string|array $columnSpan = 'full';
 
     protected static ?int $sort = -10;
 
