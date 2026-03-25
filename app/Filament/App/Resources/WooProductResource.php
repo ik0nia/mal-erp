@@ -823,13 +823,6 @@ class WooProductResource extends Resource
                             : 'heroicon-o-archive-box-x-mark')
                         ->color(fn (WooProduct $record): string => $record->is_discontinued ? 'success' : 'danger')
                         ->size(\Filament\Support\Enums\Size::Small)
-                        ->visible(function (): bool {
-                            $user = auth()->user();
-                            return $user instanceof User && (
-                                $user->isAdmin() ||
-                                in_array($user->role, [User::ROLE_MANAGER, User::ROLE_DIRECTOR_VANZARI], true)
-                            );
-                        })
                         ->requiresConfirmation()
                         ->modalHeading(fn (WooProduct $record): string => $record->is_discontinued
                             ? 'Reactivezi reaprovizionarea?'
@@ -883,13 +876,6 @@ class WooProductResource extends Resource
                             ? 'gray'
                             : 'warning')
                         ->size(\Filament\Support\Enums\Size::Small)
-                        ->visible(function (): bool {
-                            $user = auth()->user();
-                            return $user instanceof User && (
-                                $user->isAdmin() ||
-                                in_array($user->role, [User::ROLE_MANAGER, User::ROLE_DIRECTOR_VANZARI], true)
-                            );
-                        })
                         ->requiresConfirmation()
                         ->modalHeading(fn (WooProduct $record): string => $record->procurement_type === WooProduct::PROCUREMENT_ON_DEMAND
                             ? 'Scoți din modul "La comandă"?'
