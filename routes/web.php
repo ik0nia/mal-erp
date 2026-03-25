@@ -25,8 +25,12 @@ Route::middleware(['web', 'auth'])->group(function () {
 
     // Raport PDF — furnizori fără persoane de contact
     Route::get('/rapoarte/furnizori-fara-contact', function () {
-        $suppliers = \App\Models\Supplier::withCount(['contacts', 'products'])
+        $suppliers = \App\Models\Supplier::withCount([
+                'contacts',
+                'products' => fn ($q) => $q->where('is_discontinued', false),
+            ])
             ->having('contacts_count', 0)
+            ->having('products_count', '>', 0)
             ->where('is_active', true)
             ->with(['buyer', 'buyers'])
             ->orderByDesc('products_count')
