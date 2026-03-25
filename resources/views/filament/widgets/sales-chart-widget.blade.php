@@ -1,6 +1,5 @@
 @php
-    use Filament\Widgets\View\Components\ChartWidgetComponent;
-    use Illuminate\View\ComponentAttributeBag;
+    use Filament\Support\Facades\FilamentView;
 
     $color       = $this->getColor();
     $heading     = $this->getHeading();
@@ -9,21 +8,17 @@
 @endphp
 
 <x-filament-widgets::widget class="fi-wi-chart">
-    <div class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900 overflow-hidden">
-
-        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-white/5">
-            <span class="font-semibold text-gray-900 dark:text-white text-sm">{{ $heading }}</span>
-            <div class="flex items-center gap-2">
-                {{-- Dropdown: Valoare / Cantitate --}}
-                <x-filament::input.wrapper inline-prefix wire:target="mode">
+    <x-filament::section :description="$description" :heading="$heading">
+        <x-slot name="headerEnd">
+            <div class="flex items-center gap-2 sm:-my-2">
+                <x-filament::input.wrapper inline-prefix wire:target="mode" class="w-max">
                     <x-filament::input.select inline-prefix wire:model.live="mode">
                         <option value="revenue">Valoare (lei)</option>
                         <option value="orders">Comenzi (nr)</option>
                     </x-filament::input.select>
                 </x-filament::input.wrapper>
 
-                {{-- Dropdown: An --}}
-                <x-filament::input.wrapper inline-prefix wire:target="year">
+                <x-filament::input.wrapper inline-prefix wire:target="year" class="w-max">
                     <x-filament::input.select inline-prefix wire:model.live="year">
                         @foreach ($this->getAvailableYears() as $value => $label)
                             <option value="{{ $value }}">{{ $label }}</option>
@@ -31,48 +26,85 @@
                     </x-filament::input.select>
                 </x-filament::input.wrapper>
             </div>
-        </div>
+        </x-slot>
 
-        <div class="p-4">
         <div
             @if ($pollingInterval = $this->getPollingInterval())
                 wire:poll.{{ $pollingInterval }}="updateChartData"
             @endif
         >
             <div
-                x-load
+                @if (FilamentView::hasSpaMode())
+                    x-load="visible"
+                @else
+                    x-load
+                @endif
                 x-load-src="{{ \Filament\Support\Facades\FilamentAsset::getAlpineComponentSrc('chart', 'filament/widgets') }}"
                 wire:ignore
-                data-chart-type="{{ $type }}"
                 x-data="chart({
                     cachedData: @js($this->getCachedData()),
-                    maxHeight: @js($maxHeight = $this->getMaxHeight()),
                     options: @js($this->getOptions()),
                     type: @js($type),
                 })"
-                {{
-                    (new ComponentAttributeBag)
-                        ->color(ChartWidgetComponent::class, $color)
-                        ->class([
-                            'fi-wi-chart-canvas-ctn',
-                            'fi-wi-chart-canvas-ctn-no-aspect-ratio' => filled($maxHeight),
-                        ])
-                }}
+                @class([
+                    match ($color) {
+                        'gray' => null,
+                        default => 'fi-color-custom',
+                    },
+                    is_string($color) ? "fi-color-{$color}" : null,
+                ])
             >
                 <canvas
                     x-ref="canvas"
-                    @if ($maxHeight)
+                    @if ($maxHeight = $this->getMaxHeight())
                         style="max-height: {{ $maxHeight }}"
                     @endif
                 ></canvas>
 
-                <span x-ref="backgroundColorElement" class="fi-wi-chart-bg-color"></span>
-                <span x-ref="borderColorElement" class="fi-wi-chart-border-color"></span>
-                <span x-ref="gridColorElement" class="fi-wi-chart-grid-color"></span>
-                <span x-ref="textColorElement" class="fi-wi-chart-text-color"></span>
+                <span
+                    x-ref="backgroundColorElement"
+                    @class([
+                        match ($color) {
+                            'gray' => 'text-gray-100 dark:text-gray-800',
+                            default => 'text-custom-50 dark:text-custom-400/10',
+                        },
+                    ])
+                    @style([
+                        \Filament\Support\get_color_css_variables(
+                            $color,
+                            shades: [50, 400],
+                            alias: 'widgets::chart-widget.background',
+                        ) => $color !== 'gray',
+                    ])
+                ></span>
+
+                <span
+                    x-ref="borderColorElement"
+                    @class([
+                        match ($color) {
+                            'gray' => 'text-gray-400',
+                            default => 'text-custom-500 dark:text-custom-400',
+                        },
+                    ])
+                    @style([
+                        \Filament\Support\get_color_css_variables(
+                            $color,
+                            shades: [400, 500],
+                            alias: 'widgets::chart-widget.border',
+                        ) => $color !== 'gray',
+                    ])
+                ></span>
+
+                <span
+                    x-ref="gridColorElement"
+                    class="text-gray-200 dark:text-gray-800"
+                ></span>
+
+                <span
+                    x-ref="textColorElement"
+                    class="text-gray-500 dark:text-gray-400"
+                ></span>
             </div>
         </div>
-        </div>
-
-    </div>
+    </x-filament::section>
 </x-filament-widgets::widget>
