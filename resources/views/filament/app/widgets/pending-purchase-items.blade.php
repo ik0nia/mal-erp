@@ -56,66 +56,14 @@
 <x-filament-widgets::widget>
 <div style="display:flex; flex-direction:column; gap:1.5rem;">
 
-    {{-- Filtre --}}
-    <x-filament::section>
-        <div class="ppi-filters">
-            <div class="ppi-filter">
-                <label>Furnizor</label>
-                <select wire:model.live="filterSupplierId">
-                    <option value="">Toți furnizorii</option>
-                    @foreach($supplierOptions as $id => $name)
-                        <option value="{{ $id }}">{{ $name }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="ppi-filter">
-                <label>Locație</label>
-                <select wire:model.live="filterLocationId">
-                    <option value="">Toate locațiile</option>
-                    @foreach($locationOptions as $id => $name)
-                        <option value="{{ $id }}">{{ $name }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            @if(!empty($consultantOptions))
-            <div class="ppi-filter">
-                <label>Consultant</label>
-                <select wire:model.live="filterConsultantId">
-                    <option value="">Toți consultanții</option>
-                    @foreach($consultantOptions as $id => $name)
-                        <option value="{{ $id }}">{{ $name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            @endif
-
-            <div class="ppi-filter">
-                <label>Necesar de la</label>
-                <input type="date" wire:model.live="filterNeededByFrom">
-            </div>
-
-            <div class="ppi-filter">
-                <label>Necesar până la</label>
-                <input type="date" wire:model.live="filterNeededByTo">
-            </div>
-        </div>
-
-        <div class="ppi-checks">
-            <label>
-                <input type="checkbox" wire:model.live="showUrgentOnly">
-                <span>Doar urgente</span>
-            </label>
-            <label>
-                <input type="checkbox" wire:model.live="showReservedOnly">
-                <span>Doar rezervate</span>
-            </label>
-            @if($filterSupplierId || $filterLocationId || $filterConsultantId || $filterNeededByFrom || $filterNeededByTo || $showUrgentOnly || $showReservedOnly)
-                <button wire:click="resetFilters" class="ppi-reset">Resetează filtre</button>
-            @endif
-        </div>
-    </x-filament::section>
+    {{-- Titlu --}}
+    <div style="display:flex; align-items:center; gap:0.5rem;">
+        <x-filament::icon icon="heroicon-o-clipboard-document-list" style="width:1.5rem; height:1.5rem; color:#dc2626;" />
+        <h2 style="font-size:1.25rem; font-weight:700; color:#111827; margin:0;">Necesare de comandat</h2>
+        @if($totalPending > 0)
+            <span style="background:#fee2e2; color:#dc2626; font-size:0.75rem; font-weight:700; padding:0.125rem 0.5rem; border-radius:9999px;">{{ $totalPending }}</span>
+        @endif
+    </div>
 
     {{-- Stat cards --}}
     <div class="ppi-stat-grid">
