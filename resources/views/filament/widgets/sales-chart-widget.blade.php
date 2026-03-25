@@ -10,7 +10,7 @@
 <x-filament-widgets::widget class="fi-wi-chart">
     <x-filament::section :description="$description" :heading="$heading">
         <x-slot name="headerEnd">
-            <div class="flex items-center gap-2 sm:-my-2">
+            <div style="display:flex; align-items:center; gap:0.5rem; margin:-0.5rem 0;">
                 <x-filament::input.wrapper inline-prefix wire:target="mode" class="w-max">
                     <x-filament::input.select inline-prefix wire:model.live="mode">
                         <option value="revenue">Valoare (lei)</option>
