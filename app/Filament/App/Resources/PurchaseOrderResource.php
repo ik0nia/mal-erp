@@ -792,9 +792,9 @@ class PurchaseOrderResource extends Resource
         // If neither requests nor recommendation data, show placeholder
         if ($count === 0 && (! is_array($rec))) {
             if (blank($json)) {
-                return new HtmlString('<span class="text-xs text-gray-400">—</span>');
+                return new HtmlString('<span style="font-size:12px;color:#9ca3af">—</span>');
             }
-            return new HtmlString('<span class="text-xs text-gray-400 italic">velocitate</span>');
+            return new HtmlString('<span style="font-size:12px;color:#9ca3af;font-style:italic">velocitate</span>');
         }
 
         // Button label
@@ -805,10 +805,10 @@ class PurchaseOrderResource extends Resource
         }
 
         // ---- helper: row cu label / valoare ----
-        $row = fn (string $label, string $value, string $valueClass = 'text-gray-900 font-medium'): string =>
-            '<div class="flex items-center justify-between gap-4 px-3 py-2">'
-            .'<span class="text-sm text-gray-500">'.$label.'</span>'
-            .'<span class="text-sm '.$valueClass.'">'.$value.'</span>'
+        $row = fn (string $label, string $value, string $valueStyle = 'color:#111827;font-weight:500'): string =>
+            '<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:8px 12px">'
+            .'<span style="font-size:14px;color:#6b7280">'.$label.'</span>'
+            .'<span style="font-size:14px;'.$valueStyle.'">'.$value.'</span>'
             .'</div>';
 
         // ---- Section 1: request sources ----
@@ -826,30 +826,30 @@ class PurchaseOrderResource extends Resource
             $requestId   = (int) ($src['request_id'] ?? 0);
             $url         = $requestId ? '/purchase-requests/'.$requestId : null;
             $urgentBadge = ! empty($src['is_urgent'])
-                ? '<span class="ml-2 inline-flex items-center rounded-md px-2 py-0.5 text-xs font-bold bg-red-100 text-red-700 ring-1 ring-red-200">URGENT</span>'
+                ? '<span style="margin-left:8px;display:inline-flex;align-items:center;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700;background:#fee2e2;color:#b91c1c;outline:1px solid #fecaca">URGENT</span>'
                 : '';
 
             $link = $url
                 ? '<a href="'.e($url).'" target="_blank" rel="noopener"
-                        class="text-base font-bold text-primary-600 hover:text-primary-700 hover:underline inline-flex items-center gap-1.5">
+                        style="font-size:16px;font-weight:700;color:#8B1A1A;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
                         '.$number.'
-                        <svg class="h-3.5 w-3.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <svg style="width:14px;height:14px;flex-shrink:0;opacity:.7;display:inline;vertical-align:middle" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                         </svg>
                       </a>'
-                : '<span class="text-base font-bold text-gray-800">'.$number.'</span>';
+                : '<span style="font-size:16px;font-weight:700;color:#1f2937">'.$number.'</span>';
 
-            $rows .= '<div class="rounded-lg border border-gray-200 overflow-hidden">';
+            $rows .= '<div style="border-radius:8px;border:1px solid #e5e7eb;overflow:hidden">';
             // header card
-            $rows .= '<div class="flex items-center gap-2 bg-gray-50 px-3 py-2.5 border-b border-gray-200">'.$link.$urgentBadge.'</div>';
+            $rows .= '<div style="display:flex;align-items:center;gap:8px;background:#f9fafb;padding:8px 12px;border-bottom:1px solid #e5e7eb">'.$link.$urgentBadge.'</div>';
             // rows alternante
-            $rows .= '<div class="divide-y divide-gray-100">';
+            $rows .= '<div>';
             $rows .= $row('Creat de', $consultant);
             if ($location)    $rows .= $row('Locație', $location);
             if ($requestedAt) $rows .= $row('Data cererii', $requestedAt);
-            if ($neededBy)    $rows .= $row('Necesar până la', '<span class="font-semibold text-amber-700">'.$neededBy.'</span>', '');
-            if ($clientRef)   $rows .= $row('Ref. client', '<span class="font-semibold text-orange-700">'.$clientRef.'</span> <span class="ml-1 text-xs bg-orange-100 text-orange-600 rounded px-1.5 py-0.5 font-medium">rezervat</span>', '');
-            $rows .= $row('Cantitate solicitată', '<span class="text-base font-bold text-gray-900">'.$qty.' buc.</span>', '');
+            if ($neededBy)    $rows .= $row('Necesar până la', '<span style="font-weight:600;color:#b45309">'.$neededBy.'</span>', '');
+            if ($clientRef)   $rows .= $row('Ref. client', '<span style="font-weight:600;color:#c2410c">'.$clientRef.'</span> <span style="margin-left:4px;font-size:12px;background:#fff7ed;color:#ea580c;border-radius:4px;padding:2px 6px;font-weight:500">rezervat</span>', '');
+            $rows .= $row('Cantitate solicitată', '<span style="font-size:16px;font-weight:700;color:#111827">'.$qty.' buc.</span>', '');
             $rows .= '</div>';
             $rows .= '</div>';
         }
@@ -870,16 +870,16 @@ class PurchaseOrderResource extends Resource
             $totalRec   = (float) ($rec['total_recommended'] ?? 0);
             $method     = $rec['calc_method'] ?? null;
 
-            $recSection .= '<div class="rounded-lg border border-blue-200 overflow-hidden">';
-            $recSection .= '<div class="bg-blue-50 px-3 py-2.5 border-b border-blue-200">';
-            $recSection .= '<span class="text-sm font-bold text-blue-800">Recomandare cantitate</span>';
+            $recSection .= '<div style="border-radius:8px;border:1px solid #bfdbfe;overflow:hidden">';
+            $recSection .= '<div style="background:#eff6ff;padding:8px 12px;border-bottom:1px solid #bfdbfe">';
+            $recSection .= '<span style="font-size:14px;font-weight:700;color:#1e40af">Recomandare cantitate</span>';
             $recSection .= '</div>';
-            $recSection .= '<div class="divide-y divide-gray-100">';
+            $recSection .= '<div>';
 
             if ($fromReq > 0) {
                 $recSection .= $row('Din necesare', number_format($fromReq, 0, '.', '').' buc.');
                 if ($reserved > 0) {
-                    $recSection .= $row('— din care rezervate client', '<span class="text-orange-700 font-semibold">'.number_format($reserved, 0, '.', '').' buc.</span>', '');
+                    $recSection .= $row('— din care rezervate client', '<span style="color:#c2410c;font-weight:600">'.number_format($reserved, 0, '.', '').' buc.</span>', '');
                 }
                 if ($general > 0) {
                     $recSection .= $row('— din care pt. stoc general', number_format($general, 0, '.', '').' buc.');
@@ -907,14 +907,14 @@ class PurchaseOrderResource extends Resource
                     'velocity'  => 'Suplimentar pt. stoc magazin',
                     default     => 'Suplimentar magazin',
                 };
-                $recSection .= $row($methodLabel, '<span class="text-blue-700 font-bold">+'.number_format($addStore, 0, '.', '').' buc.</span>', '');
+                $recSection .= $row($methodLabel, '<span style="color:#1d4ed8;font-weight:700">+'.number_format($addStore, 0, '.', '').' buc.</span>', '');
             }
 
             $recSection .= '</div>';
             // Total footer
-            $recSection .= '<div class="flex items-center justify-between bg-blue-600 px-3 py-3">';
-            $recSection .= '<span class="text-sm font-bold text-white">Total recomandat</span>';
-            $recSection .= '<span class="text-lg font-black text-white">'.number_format($totalRec, 0, '.', '').' buc.</span>';
+            $recSection .= '<div style="display:flex;align-items:center;justify-content:space-between;background:#2563eb;padding:12px">';
+            $recSection .= '<span style="font-size:14px;font-weight:700;color:#fff">Total recomandat</span>';
+            $recSection .= '<span style="font-size:18px;font-weight:900;color:#fff">'.number_format($totalRec, 0, '.', '').' buc.</span>';
             $recSection .= '</div>';
             $recSection .= '</div>';
         }
@@ -936,10 +936,10 @@ class PurchaseOrderResource extends Resource
                         $isSale    = filled($product->sale_price) && (float) $product->sale_price < (float) $product->regular_price;
                         if ($isSale) {
                             $regular   = number_format((float) $product->regular_price, 2, ',', '.').' RON';
-                            $priceHtml = '<span class="text-sm font-bold text-green-700">'.$formatted.'</span>'
-                                        .' <span class="text-xs text-gray-400 line-through">'.$regular.'</span>';
+                            $priceHtml = '<span style="font-size:14px;font-weight:700;color:#15803d">'.$formatted.'</span>'
+                                        .' <span style="font-size:12px;color:#9ca3af;text-decoration:line-through">'.$regular.'</span>';
                         } else {
-                            $priceHtml = '<span class="text-sm font-bold text-gray-700">'.$formatted.'</span>';
+                            $priceHtml = '<span style="font-size:14px;font-weight:700;color:#374151">'.$formatted.'</span>';
                         }
                     }
                 }
@@ -947,23 +947,23 @@ class PurchaseOrderResource extends Resource
             $productUrl  = $productId ? '/produse/'.$productId : null;
             $nameHtml    = $productUrl
                 ? '<a href="'.e($productUrl).'" target="_blank" rel="noopener"
-                       class="text-sm font-semibold text-primary-600 hover:text-primary-700 hover:underline inline-flex items-center gap-1.5 leading-snug">
+                       style="font-size:14px;font-weight:600;color:#8B1A1A;text-decoration:none;display:inline-flex;align-items:center;gap:6px;line-height:1.4">
                        '.e($displayName).'
-                       <svg class="h-3.5 w-3.5 shrink-0 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                       <svg style="width:14px;height:14px;flex-shrink:0;opacity:.7;display:inline;vertical-align:middle" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                          <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                        </svg>
                      </a>'
-                : '<span class="text-sm font-semibold text-gray-900">'.e($displayName).'</span>';
+                : '<span style="font-size:14px;font-weight:600;color:#111827">'.e($displayName).'</span>';
 
-            $productHeaderHtml = '<div class="px-6 py-3 bg-gray-50 border-b border-gray-200 space-y-1">'
+            $productHeaderHtml = '<div style="padding:12px 24px;background:#f9fafb;border-bottom:1px solid #e5e7eb">'
                 .'<div>'.$nameHtml.'</div>'
-                .($priceHtml ? '<p class="flex items-center gap-2">'.
-                    '<span class="text-xs text-gray-400">Preț vânzare:</span> '.$priceHtml.'</p>' : '')
+                .($priceHtml ? '<p style="display:flex;align-items:center;gap:8px;margin-top:4px">'.
+                    '<span style="font-size:12px;color:#9ca3af">Preț vânzare:</span> '.$priceHtml.'</p>' : '')
                 .'</div>';
         }
 
         $sectionTitle = $count > 0
-            ? '<p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Necesare</p>'
+            ? '<p style="font-size:12px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Necesare</p>'
             : '';
 
         $html = <<<HTML
