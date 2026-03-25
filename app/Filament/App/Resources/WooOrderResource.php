@@ -338,7 +338,7 @@ class WooOrderResource extends Resource
                         RepeatableEntry::make('samedayAwbs')
                             ->label('')
                             ->schema([
-                                TextEntry::make('awb_number')->label('AWB')->copyable()->placeholder('-'),
+                                TextEntry::make('awb_number')->label('AWB')->copyable()->copyMessage('Copiat!')->placeholder('-'),
                                 TextEntry::make('status')
                                     ->label('Status')
                                     ->badge()

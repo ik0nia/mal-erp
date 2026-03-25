@@ -226,7 +226,7 @@ class StockMovementsReport extends Page implements HasTable
                     ->wrap(),
                 TextColumn::make('product.sku')
                     ->label('SKU')
-                    ->copyable()
+                    ->copyable()->copyMessage('Copiat!')
                     ->placeholder('-'),
                 TextColumn::make('total_movement')
                     ->label('Mișcare totală')

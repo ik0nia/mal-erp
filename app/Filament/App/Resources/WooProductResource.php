@@ -358,7 +358,7 @@ class WooProductResource extends Resource
                 TextColumn::make('sku')
                     ->label('SKU')
                     ->placeholder('-')
-                    ->copyable()
+                    ->copyable()->copyMessage('Copiat!')
                     ->toggleable(),
                 TextColumn::make('preferred_supplier')
                     ->label('Furnizor')

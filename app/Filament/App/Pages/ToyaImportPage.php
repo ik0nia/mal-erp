@@ -132,7 +132,7 @@ class ToyaImportPage extends Page implements HasTable
                 TextColumn::make('sku')
                     ->label('Cod Toya')
                     ->searchable()
-                    ->copyable()
+                    ->copyable()->copyMessage('Copiat!')
                     ->sortable()
                     ->fontFamily('mono'),
 

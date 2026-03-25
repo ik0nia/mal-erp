@@ -101,13 +101,13 @@ class ContactsRelationManager extends RelationManager
 
                 Tables\Columns\TextColumn::make('email')
                     ->label('Email')
-                    ->copyable()
+                    ->copyable()->copyMessage('Copiat!')
                     ->icon('heroicon-o-envelope')
                     ->url(fn ($record) => $record->email ? "mailto:{$record->email}" : null),
 
                 Tables\Columns\TextColumn::make('phone')
                     ->label('Telefon')
-                    ->copyable()
+                    ->copyable()->copyMessage('Copiat!')
                     ->icon('heroicon-o-phone'),
 
                 Tables\Columns\TextColumn::make('email_count')

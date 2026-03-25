@@ -381,7 +381,7 @@ class SamedayAwbResource extends Resource
                     ->label('AWB')
                     ->searchable()
                     ->placeholder('-')
-                    ->copyable(),
+                    ->copyable()->copyMessage('Copiat!'),
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status')
                     ->badge()

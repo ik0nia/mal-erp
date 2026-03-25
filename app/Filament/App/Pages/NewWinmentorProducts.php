@@ -63,7 +63,7 @@ class NewWinmentorProducts extends Page implements HasTable
                 TextColumn::make('sku')
                     ->label('SKU')
                     ->searchable()
-                    ->copyable()
+                    ->copyable()->copyMessage('Copiat!')
                     ->sortable(),
 
                 TextColumn::make('name')

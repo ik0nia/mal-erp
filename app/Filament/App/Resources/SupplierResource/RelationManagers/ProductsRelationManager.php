@@ -31,7 +31,7 @@ class ProductsRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('sku')
                     ->label('SKU')
                     ->fontFamily(\Filament\Support\Enums\FontFamily::Mono)
-                    ->copyable()
+                    ->copyable()->copyMessage('Copiat!')
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('name')

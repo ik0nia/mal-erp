@@ -33,7 +33,7 @@ class EanAssociationRequestResource extends Resource
                 Tables\Columns\TextColumn::make('ean')
                     ->label('EAN scanat')
                     ->searchable()
-                    ->copyable()
+                    ->copyable()->copyMessage('Copiat!')
                     ->fontFamily('mono'),
 
                 Tables\Columns\TextColumn::make('product.name')
@@ -44,7 +44,7 @@ class EanAssociationRequestResource extends Resource
                 Tables\Columns\TextColumn::make('product.sku')
                     ->label('SKU curent')
                     ->fontFamily('mono')
-                    ->copyable()
+                    ->copyable()->copyMessage('Copiat!')
                     ->color('gray'),
 
                 Tables\Columns\TextColumn::make('requestedBy.name')

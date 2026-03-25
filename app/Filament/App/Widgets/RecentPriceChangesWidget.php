@@ -38,7 +38,7 @@ class RecentPriceChangesWidget extends BaseWidget
                     ->sortable(),
                 Tables\Columns\TextColumn::make('product.sku')
                     ->label('SKU')
-                    ->copyable()
+                    ->copyable()->copyMessage('Copiat!')
                     ->placeholder('-'),
                 Tables\Columns\TextColumn::make('product.name')
                     ->label('Produs')

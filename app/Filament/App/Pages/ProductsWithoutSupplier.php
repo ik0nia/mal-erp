@@ -85,7 +85,7 @@ class ProductsWithoutSupplier extends Page implements HasTable
                     ->label('SKU')
                     ->searchable()
                     ->sortable()
-                    ->copyable()
+                    ->copyable()->copyMessage('Copiat!')
                     ->fontFamily('mono')
                     ->width('120px'),
 

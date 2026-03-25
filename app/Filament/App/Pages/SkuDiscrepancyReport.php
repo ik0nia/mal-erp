@@ -94,7 +94,7 @@ class SkuDiscrepancyReport extends Page implements HasTable
                     ->label('SKU')
                     ->searchable()
                     ->placeholder('-')
-                    ->copyable(),
+                    ->copyable()->copyMessage('Copiat!'),
                 TextColumn::make('name')
                     ->label('Denumire')
                     ->formatStateUsing(fn (WooProduct $record): string => $record->decoded_name)

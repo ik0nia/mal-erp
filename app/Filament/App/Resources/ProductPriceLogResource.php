@@ -45,7 +45,7 @@ class ProductPriceLogResource extends Resource
                 Tables\Columns\TextColumn::make('product.sku')
                     ->label('SKU')
                     ->searchable()
-                    ->copyable()
+                    ->copyable()->copyMessage('Copiat!')
                     ->placeholder('-'),
                 Tables\Columns\TextColumn::make('product.name')
                     ->label('Produs')

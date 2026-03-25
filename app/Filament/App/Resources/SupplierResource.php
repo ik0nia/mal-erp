@@ -522,7 +522,7 @@ class SupplierResource extends Resource
                     Infolists\Components\TextEntry::make('vat_number')
                         ->label('CUI / CIF')
                         ->placeholder('—')
-                        ->copyable(),
+                        ->copyable()->copyMessage('Copiat!'),
 
                     Infolists\Components\TextEntry::make('reg_number')
                         ->label('Nr. Reg. Com.')
@@ -531,7 +531,7 @@ class SupplierResource extends Resource
                     Infolists\Components\TextEntry::make('bank_account')
                         ->label('IBAN')
                         ->placeholder('—')
-                        ->copyable(),
+                        ->copyable()->copyMessage('Copiat!'),
 
                     Infolists\Components\TextEntry::make('bank_name')
                         ->label('Bancă')
@@ -735,13 +735,13 @@ class SupplierResource extends Resource
                                 ->icon('heroicon-o-envelope')
                                 ->url(fn ($state) => $state ? "mailto:{$state}" : null)
                                 ->placeholder('—')
-                                ->copyable(),
+                                ->copyable()->copyMessage('Copiat!'),
 
                             Infolists\Components\TextEntry::make('phone')
                                 ->label('Telefon')
                                 ->icon('heroicon-o-phone')
                                 ->placeholder('—')
-                                ->copyable(),
+                                ->copyable()->copyMessage('Copiat!'),
 
                             Infolists\Components\IconEntry::make('is_primary')
                                 ->label('Principal')
@@ -796,7 +796,7 @@ class SupplierResource extends Resource
                     ->listWithLineBreaks()
                     ->limitList(1)
                     ->placeholder('-')
-                    ->copyable()
+                    ->copyable()->copyMessage('Copiat!')
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('vat_number')
