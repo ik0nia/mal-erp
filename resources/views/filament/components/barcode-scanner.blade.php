@@ -275,7 +275,7 @@
         class="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
         title="Scanează cod de bare"
     >
-        <x-heroicon-o-camera class="w-5 h-5" />
+        <x-filament::icon icon="heroicon-o-camera" class="w-5 h-5" />
     </button>
 
     <template x-teleport="body">
@@ -295,7 +295,7 @@
             <div class="flex items-center justify-between px-4 py-3 flex-shrink-0"
                 x-bind:style="(detected || notFound || associating || submitted) ? 'background:#fff; border-bottom:1px solid #e5e7eb;' : 'background:#111827;'">
                 <div class="flex items-center gap-2">
-                    <x-heroicon-o-camera class="w-5 h-5"
+                    <x-filament::icon icon="heroicon-o-camera" class="w-5 h-5"
                         x-bind:class="detected ? 'text-green-600' : (notFound || submitted) ? 'text-gray-400' : 'text-red-400'" />
                     <span class="font-semibold text-sm"
                         x-bind:style="(detected || notFound || associating || submitted) ? 'color:#111827;' : 'color:#fff;'"
@@ -314,7 +314,7 @@
                     <button type="button" @click.prevent="close()"
                         class="flex items-center justify-center w-8 h-8 rounded-lg"
                         x-bind:class="(detected || notFound || associating || submitted) ? 'text-gray-400 hover:text-gray-700' : 'text-gray-400 hover:text-white'">
-                        <x-heroicon-o-x-mark class="w-5 h-5" />
+                        <x-filament::icon icon="heroicon-o-x-mark" class="w-5 h-5" />
                     </button>
                 </div>
             </div>

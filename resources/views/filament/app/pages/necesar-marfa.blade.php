@@ -151,7 +151,7 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
     <div x-show="activeTab === 'urgent'">
         @if($this->urgentProducts->isEmpty())
             <div class="rounded-xl border border-success-200 bg-success-50 p-6 text-center dark:border-success-400/20 dark:bg-success-950/20">
-                <x-heroicon-o-check-circle class="mx-auto h-8 w-8 text-success-500" />
+                <x-filament::icon icon="heroicon-o-check-circle" class="mx-auto h-8 w-8 text-success-500" />
                 <p class="mt-2 text-success-700 dark:text-success-300 font-medium">Niciun produs cu stoc critic și mișcare recentă.</p>
             </div>
         @else
@@ -269,7 +269,7 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
     <div x-show="activeTab === 'soon'">
         @if($this->soonProducts->isEmpty())
             <div class="rounded-xl border border-success-200 bg-success-50 p-6 text-center dark:border-success-400/20 dark:bg-success-950/20">
-                <x-heroicon-o-check-circle class="mx-auto h-8 w-8 text-success-500" />
+                <x-filament::icon icon="heroicon-o-check-circle" class="mx-auto h-8 w-8 text-success-500" />
                 <p class="mt-2 text-success-700 dark:text-success-300 font-medium">Niciun produs cu epuizare iminentă în 7–14 zile.</p>
             </div>
         @else
@@ -654,7 +654,7 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
         @elseif($this->suppliers->isNotEmpty())
             <div style="border:1.5px dashed #d1d5db;border-radius:0.75rem;padding:3rem;text-align:center;background-color:#f9fafb;">
                 <div style="margin:0 auto 0.75rem;width:3rem;height:3rem;border-radius:9999px;background:#e5e7eb;display:flex;align-items:center;justify-content:center;">
-                    <x-heroicon-o-building-storefront style="width:1.5rem;height:1.5rem;color:#6b7280;" />
+                    <x-filament::icon icon="heroicon-o-building-storefront" style="width:1.5rem;height:1.5rem;color:#6b7280;" />
                 </div>
                 <p style="font-size:1rem;font-weight:600;color:#374151;">Niciun furnizor selectat</p>
                 <p style="margin-top:0.25rem;font-size:0.875rem;color:#6b7280;">Folosește lista de mai sus pentru a alege furnizorul.</p>

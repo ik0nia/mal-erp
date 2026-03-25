@@ -188,7 +188,7 @@
                              wire:target="generatePreview">
                     @else
                         <div class="aspect-square rounded-lg bg-gray-100 dark:bg-gray-800 flex flex-col items-center justify-center gap-3 text-gray-400">
-                            <x-heroicon-o-photo class="w-16 h-16 opacity-30" />
+                            <x-filament::icon icon="heroicon-o-photo" class="w-16 h-16 opacity-30" />
                             <p class="text-sm">Apasă "Generează Preview"</p>
                         </div>
                     @endif

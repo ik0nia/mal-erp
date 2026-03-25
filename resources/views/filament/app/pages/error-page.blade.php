@@ -4,11 +4,11 @@
         <div class="mb-6 flex items-center justify-center w-24 h-24 rounded-full
             {{ $code === 403 ? 'bg-danger-50 dark:bg-danger-950' : 'bg-warning-50 dark:bg-warning-950' }}">
             @if($code === 403)
-                <x-heroicon-o-lock-closed class="w-12 h-12 text-danger-500" />
+                <x-filament::icon icon="heroicon-o-lock-closed" class="w-12 h-12 text-danger-500" />
             @elseif($code === 404)
-                <x-heroicon-o-magnifying-glass class="w-12 h-12 text-warning-500" />
+                <x-filament::icon icon="heroicon-o-magnifying-glass" class="w-12 h-12 text-warning-500" />
             @else
-                <x-heroicon-o-exclamation-triangle class="w-12 h-12 text-warning-500" />
+                <x-filament::icon icon="heroicon-o-exclamation-triangle" class="w-12 h-12 text-warning-500" />
             @endif
         </div>
 
@@ -37,7 +37,7 @@
             class="fi-btn fi-btn-size-md inline-grid grid-flow-col items-center gap-1.5 font-semibold rounded-lg px-4 py-2
                 bg-primary-600 hover:bg-primary-500 text-white shadow-sm transition"
         >
-            <x-heroicon-o-home class="w-4 h-4" />
+            <x-filament::icon icon="heroicon-o-home" class="w-4 h-4" />
             Înapoi la dashboard
         </a>
 

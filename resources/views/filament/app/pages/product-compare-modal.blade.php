@@ -18,7 +18,7 @@
                     <a href="{{ \App\Filament\App\Resources\WooProductResource::getUrl('view', ['record' => $p->id]) }}"
                        target="_blank"
                        class="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
-                        <x-heroicon-o-arrow-top-right-on-square class="w-3 h-3"/>
+                        <x-filament::icon icon="heroicon-o-arrow-top-right-on-square" class="w-3 h-3"/>
                         Deschide
                     </a>
                 @endif
@@ -33,7 +33,7 @@
                     @if($img)
                         <img src="{{ $img }}" alt="{{ $p->name }}" class="max-h-44 max-w-full object-contain p-2">
                     @else
-                        <x-heroicon-o-photo class="w-16 h-16 text-gray-300"/>
+                        <x-filament::icon icon="heroicon-o-photo" class="w-16 h-16 text-gray-300"/>
                     @endif
                 </div>
 
@@ -103,7 +103,7 @@
 @if($record->reasoning)
     <div class="mt-4 mx-2 mb-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-4 py-3">
         <p class="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-1 flex items-center gap-1">
-            <x-heroicon-o-sparkles class="w-3.5 h-3.5"/> Motivare AI
+            <x-filament::icon icon="heroicon-o-sparkles" class="w-3.5 h-3.5"/> Motivare AI
             @if($record->confidence)
                 <span class="ml-auto font-normal text-amber-600">
                     Încredere: {{ round($record->confidence * 100) }}%

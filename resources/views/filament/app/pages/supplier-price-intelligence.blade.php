@@ -53,7 +53,7 @@
     <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         @if($quotes->isEmpty())
             <div class="p-12 text-center text-gray-400">
-                <x-heroicon-o-currency-dollar class="w-12 h-12 mx-auto mb-3 opacity-30"/>
+                <x-filament::icon icon="heroicon-o-currency-dollar" class="w-12 h-12 mx-auto mb-3 opacity-30"/>
                 <p class="text-sm">Nu există prețuri extrase încă.</p>
                 <p class="text-xs mt-1 text-gray-300">Procesarea AI a emailurilor va extrage prețurile automat.</p>
             </div>

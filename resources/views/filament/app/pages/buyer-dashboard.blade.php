@@ -100,7 +100,7 @@
 
     @if(empty($supplierGroups))
         <div class="text-center py-16 text-gray-400 dark:text-gray-500">
-            <x-heroicon-o-check-circle class="w-12 h-12 mx-auto mb-3 text-success-400"/>
+            <x-filament::icon icon="heroicon-o-check-circle" class="w-12 h-12 mx-auto mb-3 text-success-400"/>
             <p class="text-lg font-medium">Niciun necesar în așteptare</p>
             <p class="text-sm mt-1">Toate necesarele trimise au fost procesate.</p>
         </div>
@@ -113,7 +113,7 @@
                     <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-white/5">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                                <x-heroicon-o-truck class="w-5 h-5 text-gray-400"/>
+                                <x-filament::icon icon="heroicon-o-truck" class="w-5 h-5 text-gray-400"/>
                             </div>
                             <div>
                                 <h3 class="font-semibold text-gray-900 dark:text-white">{{ $group['supplier_name'] }}</h3>
@@ -129,7 +129,7 @@
                         <div>
                             <button wire:click="createPoForSupplier({{ $group['supplier_id'] }})"
                                     class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">
-                                <x-heroicon-o-shopping-bag class="w-4 h-4"/>
+                                <x-filament::icon icon="heroicon-o-shopping-bag" class="w-4 h-4"/>
                                 Crează PO
                             </button>
                         </div>
@@ -160,7 +160,7 @@
                                             @endif
                                             @if($item['is_discontinued'] ?? false)
                                                 <span class="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400 mt-1">
-                                                    <x-heroicon-o-archive-box-x-mark class="w-3 h-3"/>
+                                                    <x-filament::icon icon="heroicon-o-archive-box-x-mark" class="w-3 h-3"/>
                                                     Fără reaprovizionare — nu mai comanda
                                                 </span>
                                             @endif
@@ -236,7 +236,7 @@
     @if($wooOrders->isNotEmpty())
         <div class="mt-8">
             <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3 flex items-center gap-2">
-                <x-heroicon-o-shopping-cart class="w-5 h-5 text-warning-500"/>
+                <x-filament::icon icon="heroicon-o-shopping-cart" class="w-5 h-5 text-warning-500"/>
                 Comenzi online — produse la comandă
                 <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-bold bg-warning-100 text-warning-700 dark:bg-warning-900 dark:text-warning-300">
                     {{ $wooOrders->count() }}

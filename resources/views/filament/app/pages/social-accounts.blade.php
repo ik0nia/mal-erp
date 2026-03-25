@@ -4,7 +4,7 @@
 
     @if($accounts->isEmpty())
         <div class="text-center py-12 text-gray-400">
-            <x-heroicon-o-share class="w-12 h-12 mx-auto mb-3 opacity-40" />
+            <x-filament::icon icon="heroicon-o-share" class="w-12 h-12 mx-auto mb-3 opacity-40" />
             <p class="text-lg font-medium">Niciun cont conectat</p>
             <p class="text-sm mt-1">Adaugă un cont Facebook din butonul de sus.</p>
         </div>
@@ -111,7 +111,7 @@
 
         @if(empty($references))
             <div class="text-center py-8 text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
-                <x-heroicon-o-photo class="w-10 h-10 mx-auto mb-2 opacity-30" />
+                <x-filament::icon icon="heroicon-o-photo" class="w-10 h-10 mx-auto mb-2 opacity-30" />
                 <p class="text-sm">Nicio referință încărcată</p>
                 <p class="text-xs mt-1">Folosește butonul "Încarcă referințe vizuale" din sus.</p>
             </div>

@@ -70,7 +70,7 @@
         >
             <div class="flex-shrink-0 mt-0.5">
                 <div class="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                    <x-heroicon-o-user class="w-4 h-4 text-orange-600 dark:text-orange-400"/>
+                    <x-filament::icon icon="heroicon-o-user" class="w-4 h-4 text-orange-600 dark:text-orange-400"/>
                 </div>
             </div>
 
@@ -127,7 +127,7 @@
                     {{-- Rezumat AI --}}
                     @if($session->summary)
                     <div class="flex items-start gap-1.5">
-                        <x-heroicon-o-cpu-chip class="w-3.5 h-3.5 text-indigo-400 flex-shrink-0 mt-0.5"/>
+                        <x-filament::icon icon="heroicon-o-cpu-chip" class="w-3.5 h-3.5 text-indigo-400 flex-shrink-0 mt-0.5"/>
                         <span class="text-xs text-indigo-700 dark:text-indigo-300 italic">{{ $session->summary }}</span>
                     </div>
                     @endif
@@ -246,7 +246,7 @@
                             Client
                         @else
                             <span class="inline-flex items-center gap-1">
-                                <x-heroicon-o-cpu-chip class="w-3 h-3"/>
+                                <x-filament::icon icon="heroicon-o-cpu-chip" class="w-3 h-3"/>
                                 Bot
                             </span>
                         @endif

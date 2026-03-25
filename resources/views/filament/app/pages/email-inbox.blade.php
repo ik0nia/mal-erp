@@ -246,7 +246,7 @@
         <div class="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-gray-950">
 
             <div x-show="!selectedId" class="flex-1 flex flex-col items-center justify-center text-gray-400">
-                <x-heroicon-o-envelope class="w-12 h-12 mb-3 opacity-30"/>
+                <x-filament::icon icon="heroicon-o-envelope" class="w-12 h-12 mb-3 opacity-30"/>
                 <p class="text-sm">Selectează un email din listă</p>
             </div>
 

@@ -34,7 +34,7 @@
 
   @if ($allAnalyses->isEmpty() && !$pendingId)
     <div class="flex flex-col items-center justify-center py-24 text-center">
-      <x-heroicon-o-chart-bar class="w-14 h-14 text-gray-300 dark:text-gray-600 mb-4"/>
+      <x-filament::icon icon="heroicon-o-chart-bar" class="w-14 h-14 text-gray-300 dark:text-gray-600 mb-4"/>
       <h3 class="text-lg font-semibold text-gray-600 dark:text-gray-300">Nicio analiză generată încă</h3>
       <p class="text-sm text-gray-400 mt-1 max-w-sm">
         Apasă <strong>„Generează analiză nouă"</strong> din dreapta sus.
@@ -121,7 +121,7 @@
                   class="text-gray-200 dark:text-gray-600 hover:text-red-500 transition shrink-0 mt-0.5"
                   title="Șterge"
                 >
-                  <x-heroicon-o-trash class="w-3.5 h-3.5"/>
+                  <x-filament::icon icon="heroicon-o-trash" class="w-3.5 h-3.5"/>
                 </button>
               </div>
             </div>

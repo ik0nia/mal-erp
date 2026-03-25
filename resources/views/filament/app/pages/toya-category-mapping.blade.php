@@ -34,7 +34,7 @@
 
     @if($stats['total'] === 0)
         <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 text-center mb-6">
-            <x-heroicon-o-sparkles class="w-10 h-10 text-blue-400 mx-auto mb-3" />
+            <x-filament::icon icon="heroicon-o-sparkles" class="w-10 h-10 text-blue-400 mx-auto mb-3" />
             <p class="text-blue-700 dark:text-blue-300 font-medium">Nicio propunere încă.</p>
             <p class="text-blue-600 dark:text-blue-400 text-sm mt-1">
                 Apasă <strong>„Pornește 15 agenți AI"</strong> din dreapta sus pentru a genera propunerile de categorii.

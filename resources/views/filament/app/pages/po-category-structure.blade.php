@@ -40,7 +40,7 @@
         <details class="group border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden" open>
             <summary class="flex items-center justify-between px-4 py-2.5 cursor-pointer bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 select-none">
                 <div class="flex items-center gap-2">
-                    <x-heroicon-o-chevron-right class="w-4 h-4 text-indigo-500 transition-transform group-open:rotate-90"/>
+                    <x-filament::icon icon="heroicon-o-chevron-right" class="w-4 h-4 text-indigo-500 transition-transform group-open:rotate-90"/>
                     <span class="font-semibold text-sm text-indigo-800 dark:text-indigo-300">{{ $catName }}</span>
                     <span class="text-xs text-indigo-500 font-normal">({{ count($products) }} produse)</span>
                 </div>
