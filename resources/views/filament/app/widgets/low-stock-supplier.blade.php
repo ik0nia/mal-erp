@@ -71,7 +71,7 @@
                                         </a>
                                     </div>
                                 </td>
-                                <td class="ls-sku" onclick="navigator.clipboard.writeText('{{ $row->sku }}').then(()=>{this.style.color='#22c55e';setTimeout(()=>this.style.color='',1000)})" title="Click pentru a copia SKU">{{ $row->sku }}</td>
+                                <td class="ls-sku" onclick="navigator.clipboard.writeText('{{ $row->sku }}');new FilamentNotification().title('Copiat!').success().duration(2000).send()">{{ $row->sku }}</td>
                                 <td>
                                     <a href="{{ \App\Filament\App\Resources\SupplierResource::getUrl('view', ['record' => $row->supplier_id]) }}" class="ls-supplier-link">
                                         {{ $row->supplier_name }}
