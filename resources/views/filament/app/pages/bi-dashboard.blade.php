@@ -109,8 +109,8 @@
             @foreach($this->velocityRows as $vIdx => $row)
               @php $daysNoMove = $row['days_since_last_movement']; @endphp
               <tr wire:key="vel-{{ $vIdx }}">
-                <td style="font-family:monospace; font-size:0.75rem; color:#4b5563;">{{ $row['sku'] }}</td>
-                <td style="max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#1f2937;" title="{{ $row['product_name'] ?? $row['sku'] }}">{{ $row['product_name'] ?? '—' }}</td>
+                <td style="font-family:monospace; font-size:0.75rem; color:#6b7280; cursor:pointer;" onclick="navigator.clipboard.writeText('{{ $row['sku'] }}').then(()=>{this.style.color='#22c55e';setTimeout(()=>this.style.color='',1000)})" title="Click pentru a copia">{{ $row['sku'] }}</td>
+                <td style="max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">@if($row['product_id'] ?? null)<a href="{{ \App\Filament\App\Resources\WooProductResource::getUrl('view', ['record' => $row['product_id']]) }}" style="color:#1f2937; text-decoration:none;" onmouseover="this.style.color='#dc2626';this.style.textDecoration='underline'" onmouseout="this.style.color='#1f2937';this.style.textDecoration='none'" title="{{ $row['product_name'] ?? '' }}">{{ $row['product_name'] ?? '—' }}</a>@else{{ $row['product_name'] ?? '—' }}@endif</td>
                 @if($this->velocityTab === 'fast')
                   <td style="text-align:right; color:#4b5563;">{{ (float)$row['avg_out_qty_7d'] > 0 ? number_format($row['avg_out_qty_7d'], 1, '.', '') : '—' }}</td>
                   <td style="text-align:right; color:#2563eb; font-weight:600;">{{ (float)$row['avg_out_qty_30d'] > 0 ? number_format($row['avg_out_qty_30d'], 1, '.', '') : '—' }}</td>
@@ -165,8 +165,8 @@
             @foreach($this->alertRows as $aIdx => $row)
               @php $daysLeft = $row['days_left']; @endphp
               <tr wire:key="alert-{{ $aIdx }}">
-                <td style="font-family:monospace; font-size:0.75rem; color:#4b5563;">{{ $row['sku'] }}</td>
-                <td style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#1f2937;" title="{{ $row['name'] }}">{{ $row['name'] }}</td>
+                <td style="font-family:monospace; font-size:0.75rem; color:#6b7280; cursor:pointer;" onclick="navigator.clipboard.writeText('{{ $row['sku'] }}').then(()=>{this.style.color='#22c55e';setTimeout(()=>this.style.color='',1000)})" title="Click pentru a copia">{{ $row['sku'] }}</td>
+                <td style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">@if($row['product_id'] ?? null)<a href="{{ \App\Filament\App\Resources\WooProductResource::getUrl('view', ['record' => $row['product_id']]) }}" style="color:#1f2937; text-decoration:none;" onmouseover="this.style.color='#dc2626';this.style.textDecoration='underline'" onmouseout="this.style.color='#1f2937';this.style.textDecoration='none'" title="{{ $row['name'] }}">{{ $row['name'] }}</a>@else{{ $row['name'] }}@endif</td>
                 <td style="text-align:right;">@if($row['closing_qty'] <= 0)<span style="color:#dc2626; font-weight:600;">0</span>@else{{ number_format($row['closing_qty'], 0, ',', '.') }}@endif</td>
                 <td style="text-align:right; color:#4b5563;">{{ $row['closing_price'] !== null ? number_format($row['closing_price'], 2, ',', '.') . ' RON' : '—' }}</td>
                 <td style="text-align:right; font-weight:500; color:#111827;">{{ number_format($row['stock_value'], 0, ',', '.') }} RON</td>

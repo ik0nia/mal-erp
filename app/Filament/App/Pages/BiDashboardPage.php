@@ -137,6 +137,7 @@ class BiDashboardPage extends Page
             ->leftJoin('woo_products as p', 'p.sku', '=', 'v.reference_product_id')
             ->select(
                 'v.reference_product_id as sku',
+                'p.id as product_id',
                 'p.name as product_name',
                 'v.avg_out_qty_7d',
                 'v.avg_out_qty_30d',
@@ -187,10 +188,11 @@ class BiDashboardPage extends Page
             ->where(fn ($q) => $q->whereNull('p.procurement_type')->orWhere('p.procurement_type', '!=', 'on_demand'))
             ->orderByRaw('COALESCE(a.days_left_estimate, 9999) ASC, a.stock_value DESC')
             ->limit(200)
-            ->select('a.*')
+            ->select('a.*', 'p.id as product_id')
             ->get()
             ->map(fn ($r) => [
                 'sku'              => $r->reference_product_id,
+                'product_id'       => $r->product_id,
                 'name'             => $r->product_name ?? '—',
                 'closing_qty'      => (float) $r->closing_qty,
                 'closing_price'    => $r->closing_price !== null ? (float) $r->closing_price : null,
