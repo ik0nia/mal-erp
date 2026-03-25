@@ -412,8 +412,48 @@ class ViewPurchaseOrder extends ViewRecord
                             ->label('')
                             ->schema([
                                 Hidden::make('id'),
+                                // Existing items: show name as disabled text
                                 TextInput::make('name')->label('Produs')
-                                    ->disabled(fn (\Filament\Schemas\Components\Utilities\Get $get) => !empty($get('id')))
+                                    ->disabled()
+                                    ->dehydrated()
+                                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => !empty($get('id')))
+                                    ->columnSpan(3),
+                                // New items: searchable select from supplier's products
+                                \Filament\Forms\Components\Select::make('woo_product_id')
+                                    ->label('Selectează produs')
+                                    ->searchable()
+                                    ->getSearchResultsUsing(function (string $search) {
+                                        $supplierId = $this->record->supplier_id;
+                                        return \App\Models\WooProduct::query()
+                                            ->where(function ($q) use ($search) {
+                                                $q->where('name', 'like', "%{$search}%")
+                                                  ->orWhere('sku', 'like', "%{$search}%");
+                                            })
+                                            ->when($supplierId, function ($q) use ($supplierId) {
+                                                $q->whereHas('suppliers', fn ($s) => $s->where('suppliers.id', $supplierId));
+                                            })
+                                            ->limit(20)
+                                            ->get()
+                                            ->mapWithKeys(fn ($p) => [$p->id => $p->name . ' [' . $p->sku . ']'])
+                                            ->all();
+                                    })
+                                    ->afterStateUpdated(function ($state, \Filament\Forms\Set $set) {
+                                        if ($state) {
+                                            $product = \App\Models\WooProduct::find($state);
+                                            if ($product) {
+                                                $set('name', $product->name . ' [' . $product->sku . ']');
+                                                // Get last purchase price
+                                                $lastPrice = \App\Models\ProductPurchasePriceLog::where('woo_product_id', $product->id)
+                                                    ->latest('acquired_at')
+                                                    ->value('unit_price');
+                                                if ($lastPrice) {
+                                                    $set('price', round((float) $lastPrice, 2));
+                                                }
+                                            }
+                                        }
+                                    })
+                                    ->live()
+                                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => empty($get('id')))
                                     ->columnSpan(3),
                                 TextInput::make('ordered_qty')->label('Comandat')->disabled()->dehydrated(false)->suffix('buc.'),
                                 TextInput::make('qty')->label('Recepționat')->numeric()->minValue(0)->suffix('buc.')->required()
@@ -518,10 +558,24 @@ class ViewPurchaseOrder extends ViewRecord
                                 $shortfallProducts[] = $orderItem->product_name;
                                 $this->revertShortfallToRequestItems($orderItem, $shortfall, $affectedRequestIds);
                             }
-                        } elseif ($receivedQty > 0 && !empty($row['name'])) {
+                        } elseif ($receivedQty > 0 && (!empty($row['name']) || !empty($row['woo_product_id']))) {
                             // New item added during reception (extra product)
+                            $productName = $row['name'] ?? '';
+                            $sku = null;
+                            $wooProductId = $row['woo_product_id'] ?? null;
+
+                            if ($wooProductId) {
+                                $product = \App\Models\WooProduct::find($wooProductId);
+                                if ($product) {
+                                    $productName = $product->name;
+                                    $sku = $product->sku;
+                                }
+                            }
+
                             $this->record->items()->create([
-                                'product_name'      => $row['name'],
+                                'product_name'      => $productName,
+                                'sku'               => $sku,
+                                'woo_product_id'    => $wooProductId,
                                 'quantity'           => $receivedQty,
                                 'received_quantity'  => $receivedQty,
                                 'unit_price'         => $price,
