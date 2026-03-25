@@ -776,7 +776,7 @@ class WooProductResource extends Resource
                                         ->required()
                                         ->maxLength(255),
                                 ])
-                                ->createOptionAction(fn (\Filament\Forms\Components\Actions\Action $action) =>
+                                ->createOptionAction(fn (\Filament\Actions\Action $action) =>
                                     $action
                                         ->modalHeading('Furnizor nou')
                                         ->modalSubmitActionLabel('Creează')
@@ -1203,7 +1203,7 @@ class WooProductResource extends Resource
                     'autofocus' => 'autofocus',
                 ])
                 ->prefixAction(
-                    \Filament\Forms\Components\Actions\Action::make('qty_decrease')
+                    \Filament\Actions\Action::make('qty_decrease')
                         ->icon('heroicon-o-minus')
                         ->extraAttributes(['tabindex' => '-1'])
                         ->action(fn (\Filament\Forms\Get $get, \Filament\Forms\Set $set) =>
@@ -1211,7 +1211,7 @@ class WooProductResource extends Resource
                         )
                 )
                 ->suffixAction(
-                    \Filament\Forms\Components\Actions\Action::make('qty_increase')
+                    \Filament\Actions\Action::make('qty_increase')
                         ->icon('heroicon-o-plus')
                         ->extraAttributes(['tabindex' => '-1'])
                         ->action(fn (\Filament\Forms\Get $get, \Filament\Forms\Set $set) =>

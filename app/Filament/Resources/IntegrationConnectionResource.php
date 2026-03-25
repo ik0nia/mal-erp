@@ -309,7 +309,7 @@ class IntegrationConnectionResource extends Resource
                             ->dehydrated(false)
                             ->default(fn (?IntegrationConnection $record): string => $record?->exists ? $record->webhookUrl() : '— salvează conexiunea mai întâi —')
                             ->suffixAction(
-                                Forms\Components\Actions\Action::make('copy_webhook_url')
+                                \Filament\Actions\Action::make('copy_webhook_url')
                                     ->icon('heroicon-o-clipboard-document')
                                     ->action(fn () => null)
                                     ->extraAttributes(['x-on:click' => 'navigator.clipboard.writeText($el.closest(".fi-input-wrp").querySelector("input").value)'])

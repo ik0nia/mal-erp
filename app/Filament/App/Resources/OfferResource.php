@@ -12,7 +12,7 @@ use App\Models\Offer;
 use App\Models\User;
 use App\Models\WooProduct;
 use App\Services\CompanyData\OpenApiCompanyLookupService;
-use Filament\Forms\Components\Actions\Action as FormAction;
+use Filament\Actions\Action as FormAction;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
