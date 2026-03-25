@@ -25,15 +25,16 @@ class ComputeBiMarginCommand extends Command
         // ----------------------------------------------------------------
         $products = DB::table('daily_stock_metrics as dsm')
             ->where('dsm.day', $day)
-            ->where('dsm.closing_total_qty', '>', 0)
             ->leftJoin('woo_products as wp', 'wp.sku', '=', 'dsm.reference_product_id')
             ->whereRaw("COALESCE(wp.product_type, 'shop') = 'shop'")
+            ->groupBy('dsm.reference_product_id')
+            ->havingRaw('SUM(dsm.closing_total_qty) > 0')
             ->select([
                 'dsm.reference_product_id',
-                'dsm.woo_product_id',
-                'dsm.closing_total_qty as stock_qty',
-                'dsm.closing_sell_price as sell_price',
-                'wp.price as woo_price',
+                DB::raw('MAX(dsm.woo_product_id) as woo_product_id'),
+                DB::raw('SUM(dsm.closing_total_qty) as stock_qty'),
+                DB::raw('MAX(dsm.closing_sell_price) as sell_price'),
+                DB::raw('MAX(wp.price) as woo_price'),
             ])
             ->get();
 
