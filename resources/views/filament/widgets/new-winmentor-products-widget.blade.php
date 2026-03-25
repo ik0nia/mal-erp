@@ -7,19 +7,16 @@
 @@media(min-width:768px){ .wm-stat { flex:1 1 0; } }
 </style>
 <x-filament-widgets::widget>
-    <x-filament::section>
+    <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
         <div class="wm-stats">
             @foreach($data['stats'] as $stat)
             <a href="{{ $data['pageUrl'] }}"
                class="wm-stat rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 px-4 py-3 shadow-sm hover:shadow-md transition-shadow">
                 <div class="flex items-center gap-2 mb-1">
-                    <x-filament::icon
-                        :icon="$stat['icon']"
-                        class="h-4 w-4
-                            {{ $stat['color'] === 'warning' ? 'text-warning-500' : '' }}
-                            {{ $stat['color'] === 'success' ? 'text-success-500' : '' }}
-                            {{ $stat['color'] === 'danger'  ? 'text-danger-500'  : '' }}"
-                    />
+                    {!! svg($stat['icon'], 'h-4 w-4 shrink-0 '
+                        .($stat['color'] === 'warning' ? 'text-warning-500' : '')
+                        .($stat['color'] === 'success' ? ' text-success-500' : '')
+                        .($stat['color'] === 'danger'  ? ' text-danger-500'  : '')) !!}
                     <span class="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">
                         {{ $stat['label'] }}
                     </span>
@@ -33,6 +30,6 @@
             </a>
             @endforeach
         </div>
-    </x-filament::section>
+    </div>
 </x-filament-widgets::widget>
 @endif

@@ -1206,7 +1206,7 @@ class WooProductResource extends Resource
                     \Filament\Actions\Action::make('qty_decrease')
                         ->icon('heroicon-o-minus')
                         ->extraAttributes(['tabindex' => '-1'])
-                        ->action(fn (\Filament\Forms\Get $get, \Filament\Forms\Set $set) =>
+                        ->action(fn (\Filament\Schemas\Components\Utilities\Get $get, \Filament\Schemas\Components\Utilities\Set $set) =>
                             $set('quantity', max(1, (int) $get('quantity') - 1))
                         )
                 )
@@ -1214,7 +1214,7 @@ class WooProductResource extends Resource
                     \Filament\Actions\Action::make('qty_increase')
                         ->icon('heroicon-o-plus')
                         ->extraAttributes(['tabindex' => '-1'])
-                        ->action(fn (\Filament\Forms\Get $get, \Filament\Forms\Set $set) =>
+                        ->action(fn (\Filament\Schemas\Components\Utilities\Get $get, \Filament\Schemas\Components\Utilities\Set $set) =>
                             $set('quantity', (int) $get('quantity') + 1)
                         )
                 ),

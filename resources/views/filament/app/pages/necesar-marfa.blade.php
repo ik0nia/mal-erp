@@ -40,38 +40,38 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
 
     {{-- Stat cards + filtru acoperire --}}
     <div class="flex flex-wrap items-stretch gap-4">
-        <x-filament::section class="!p-0">
+        <div class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900 overflow-hidden">
             <div class="p-4">
                 <p class="text-sm text-gray-500 dark:text-gray-400">Furnizori afectați</p>
                 <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ $this->statSuppliers }}</p>
             </div>
-        </x-filament::section>
-        <x-filament::section class="!p-0 border-warning-200 bg-warning-50 dark:border-warning-400/20 dark:bg-warning-950/20">
+        </div>
+        <div class="rounded-xl border border-warning-200 bg-warning-50 dark:border-warning-400/20 dark:bg-warning-950/20 overflow-hidden">
             <div class="p-4">
                 <p class="text-sm text-warning-700 dark:text-warning-300">Produse afectate</p>
                 <p class="mt-1 text-2xl font-bold text-warning-700 dark:text-warning-300">{{ $this->statProducts }}</p>
             </div>
-        </x-filament::section>
-        <x-filament::section class="!p-0 border-danger-200 bg-danger-50 dark:border-danger-400/20 dark:bg-danger-950/20">
+        </div>
+        <div class="rounded-xl border border-danger-200 bg-danger-50 dark:border-danger-400/20 dark:bg-danger-950/20 overflow-hidden">
             <div class="p-4">
                 <p class="text-sm text-danger-700 dark:text-danger-300">Stoc zero</p>
                 <p class="mt-1 text-2xl font-bold text-danger-700 dark:text-danger-300">{{ $this->statZeroStock }}</p>
             </div>
-        </x-filament::section>
-        <x-filament::section class="!p-0 border-danger-300 bg-danger-100 dark:border-danger-400/30 dark:bg-danger-900/30">
+        </div>
+        <div class="rounded-xl border border-danger-300 bg-danger-100 dark:border-danger-400/30 dark:bg-danger-900/30 overflow-hidden">
             <div class="p-4">
                 <p class="text-sm font-medium text-danger-800 dark:text-danger-200">Urgente (&lt;7 zile)</p>
                 <p class="mt-1 text-2xl font-bold text-danger-800 dark:text-danger-200">{{ $this->statUrgent }}</p>
             </div>
-        </x-filament::section>
-        <x-filament::section class="!p-0 border-warning-300 bg-warning-100 dark:border-warning-400/30 dark:bg-warning-900/30">
+        </div>
+        <div class="rounded-xl border border-warning-300 bg-warning-100 dark:border-warning-400/30 dark:bg-warning-900/30 overflow-hidden">
             <div class="p-4">
                 <p class="text-sm font-medium text-warning-800 dark:text-warning-200">Curând (7–14 zile)</p>
                 <p class="mt-1 text-2xl font-bold text-warning-800 dark:text-warning-200">{{ $this->statSoon }}</p>
             </div>
-        </x-filament::section>
+        </div>
 
-        <x-filament::section class="!p-0 ml-auto">
+        <div class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900 overflow-hidden ml-auto">
             <div class="flex items-center gap-3 px-4 py-3">
                 <label class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
                     Acoperire comandă (zile):
@@ -85,7 +85,7 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                 />
                 <span class="text-xs text-gray-400 dark:text-gray-500">zile</span>
             </div>
-        </x-filament::section>
+        </div>
     </div>
 
     {{-- Banner selecție + buton Creează necesar --}}

@@ -9,11 +9,11 @@
 @endphp
 
 <x-filament-widgets::widget class="fi-wi-chart">
-    <x-filament::section :description="$description" :heading="$heading">
+    <div class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900 overflow-hidden">
 
-        <x-slot name="afterHeader">
-            <div class="flex items-center gap-2 sm:-my-2">
-
+        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-white/5">
+            <span class="font-semibold text-gray-900 dark:text-white text-sm">{{ $heading }}</span>
+            <div class="flex items-center gap-2">
                 {{-- Dropdown: Valoare / Cantitate --}}
                 <x-filament::input.wrapper inline-prefix wire:target="mode">
                     <x-filament::input.select inline-prefix wire:model.live="mode">
@@ -30,10 +30,10 @@
                         @endforeach
                     </x-filament::input.select>
                 </x-filament::input.wrapper>
-
             </div>
-        </x-slot>
+        </div>
 
+        <div class="p-4">
         <div
             @if ($pollingInterval = $this->getPollingInterval())
                 wire:poll.{{ $pollingInterval }}="updateChartData"
@@ -72,6 +72,7 @@
                 <span x-ref="textColorElement" class="fi-wi-chart-text-color"></span>
             </div>
         </div>
+        </div>
 
-    </x-filament::section>
+    </div>
 </x-filament-widgets::widget>

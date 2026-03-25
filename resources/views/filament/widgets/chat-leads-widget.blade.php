@@ -6,20 +6,18 @@
 <div>
 @if(count($leadsData) > 0)
 <x-filament-widgets::widget>
-    <x-filament::section>
-        <x-slot name="heading">
-            <div class="flex items-center gap-2">
-                <x-heroicon-o-chat-bubble-left-ellipsis class="w-4 h-4 text-warning-500"/>
-                Lead-uri chat necontactate
-                <span class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full
-                             bg-warning-100 dark:bg-warning-900/40
-                             text-warning-700 dark:text-warning-400 text-xs font-bold">
-                    {{ count($leadsData) }}
-                </span>
-            </div>
-        </x-slot>
+    <div class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900 overflow-hidden">
+        <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-white/5">
+            <x-heroicon-o-chat-bubble-left-ellipsis class="w-4 h-4 text-warning-500"/>
+            <span class="font-semibold text-gray-900 dark:text-white text-sm">Lead-uri chat necontactate</span>
+            <span class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full
+                         bg-warning-100 dark:bg-warning-900/40
+                         text-warning-700 dark:text-warning-400 text-xs font-bold">
+                {{ count($leadsData) }}
+            </span>
+        </div>
 
-        <div class="divide-y divide-gray-100 dark:divide-white/5 -mx-6 -mb-6">
+        <div class="divide-y divide-gray-100 dark:divide-white/5">
             @foreach($leadsData as $lead)
             <div class="flex items-center gap-4 px-6 py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                 <div class="flex-1 min-w-0">
@@ -52,7 +50,7 @@
             </div>
             @endforeach
         </div>
-    </x-filament::section>
+    </div>
 </x-filament-widgets::widget>
 @endif
 

@@ -214,9 +214,9 @@ class StockMovementsReport extends Page implements HasTable
                     }))
                     ->when($categoryId, fn ($q) => $q->whereIn('woo_product_id', $this->categoryProductIds($categoryId)))
                     ->groupBy('woo_product_id')
-                    ->orderByDesc(DB::raw('SUM(ABS(daily_total_variation))'))
                     ->limit(100)
             )
+            ->defaultSort('total_movement', 'desc')
             ->columns([
                 TextColumn::make('product.name')
                     ->label('Produs')

@@ -1,15 +1,13 @@
 <x-filament-widgets::widget>
-    <x-filament::section>
-        <x-slot name="heading">
-            <div class="flex items-center gap-2">
-                <x-heroicon-o-exclamation-triangle class="h-5 w-5 text-red-500" />
-                <span>Produse fără stoc</span>
-                @if($total > 0)
-                    <x-filament::badge color="danger">{{ $total }}</x-filament::badge>
-                @endif
-            </div>
-        </x-slot>
-
+    <div class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900 overflow-hidden">
+        <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-white/5">
+            <x-heroicon-o-exclamation-triangle class="h-5 w-5 text-red-500" />
+            <span class="font-semibold text-gray-900 dark:text-white text-sm">Produse fără stoc</span>
+            @if($total > 0)
+                <x-filament::badge color="danger">{{ $total }}</x-filament::badge>
+            @endif
+        </div>
+        <div class="p-4">
         @if(empty($rows))
             <p class="text-sm text-gray-500 py-4 text-center">Nu există produse fără stoc cu rulaj activ.</p>
         @else
@@ -57,5 +55,6 @@
                 <p class="text-xs text-gray-400 mt-3 text-right">Afișate 50 din {{ $total }}. Sortate după viteză descrescătoare.</p>
             @endif
         @endif
-    </x-filament::section>
+        </div>
+    </div>
 </x-filament-widgets::widget>

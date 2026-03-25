@@ -213,6 +213,12 @@ class AppPanelProvider extends PanelProvider
 .fi-sidebar-group-btn {
     color: rgba(255,255,255,0.45) !important;
 }
+/* Filament v4 icon safety net: prevent unsized SVG icons from appearing huge */
+[data-slot="icon"]:not([class*="w-"]):not([class*="h-"]):not([class*="size-"]):not(.fi-icon) {
+    width: 1.25rem;
+    height: 1.25rem;
+    display: inline-block;
+}
 /* ── Purchase Request items table ── */
 .erp-pr-row {
     display: grid;

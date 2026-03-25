@@ -17,9 +17,9 @@ use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Get;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
-use Filament\Forms\Set;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Schemas\Components\Section as InfolistSection;
 use Filament\Infolists\Components\TextEntry;
@@ -555,53 +555,58 @@ class PurchaseOrderResource extends Resource
             ->nullable();
 
         if ($isCreate) {
-            // CREATE: 10 câmpuri vizibile + 7 Hidden la sfârșit
+            // CREATE: layout 6 coloane — Row1: thumbnail|produs(×2)|cantitate|context(×2)
+            //                            Row2: sku|sku-furnizor|stoc|7z|epuizare|note
             $schema = [
-                // 1. thumbnail
+                // Row 1 ────────────────────────────────────── 6 cols
                 Placeholder::make('thumbnail')
                     ->label('')->hiddenLabel()
                     ->content(fn (Get $get): HtmlString => static::productThumbnail($get('woo_product_id')))
-                    ->extraAttributes(['class' => 'w-12']),
-                // 2. woo_product_id
-                $productSelectField,
-                // 3. sku — vizibil, readonly, auto-fill
-                TextInput::make('sku')->label('SKU')->readOnly()->nullable(),
-                // 4. supplier_sku
-                TextInput::make('supplier_sku')->label('SKU furnizor')->nullable(),
-                // 5. quantity
+                    ->columnSpan(1),
+
+                $productSelectField->columnSpan(2),
+
                 TextInput::make('quantity')
                     ->label('Cantitate')->numeric()->minValue(0.001)
                     ->formatStateUsing(fn ($state) => $state !== null ? (float) $state : null)
-                    ->placeholder(fn (Get $get): ?string => $get('quantity_hint') ? (string)(int)$get('quantity_hint') : null)
-                    ->live(onBlur: true),
-                // 6. col_stock — citește din info_stock Hidden
+                    ->placeholder(fn (Get $get): ?string => $get('quantity_hint') ? '→ '.((string)(int)$get('quantity_hint')) : null)
+                    ->live(onBlur: true)
+                    ->columnSpan(1),
+
+                Placeholder::make('sources_info')
+                    ->label('Context')->hiddenLabel()
+                    ->content(fn (Get $get): HtmlString => static::renderSourcesInfo($get('sources_json'), $get('recommendation_json'), $get('product_name'), (int) $get('woo_product_id')))
+                    ->columnSpan(2),
+
+                // Row 2 ────────────────────────────────────── 6 cols
+                TextInput::make('sku')->label('SKU intern')->readOnly()->nullable()->columnSpan(1),
+                TextInput::make('supplier_sku')->label('SKU furnizor')->nullable()->columnSpan(1),
+
                 Placeholder::make('col_stock')
-                    ->label('Stoc actual')->hiddenLabel()
+                    ->label('Stoc')
                     ->content(fn (Get $get): HtmlString => new HtmlString(
                         $get('info_stock') !== null && $get('info_stock') !== ''
-                            ? '<span class="text-sm font-mono">'.number_format((float)$get('info_stock'), 0, ',', '.').'</span>'
+                            ? '<span class="text-sm font-mono font-medium">'.number_format((float)$get('info_stock'), 0, ',', '.').'</span>'
                             : '<span class="text-gray-300 text-sm">—</span>'
-                    )),
-                // 7. col_sales_7d — citește din info_sales_7d Hidden
+                    ))
+                    ->columnSpan(1),
+
                 Placeholder::make('col_sales_7d')
-                    ->label('Vânz. 7z')->hiddenLabel()
+                    ->label('Vânz. 7z')
                     ->content(fn (Get $get): HtmlString => new HtmlString(
                         $get('info_sales_7d') !== null && $get('info_sales_7d') !== ''
                             ? '<span class="text-sm font-mono text-blue-600">'.number_format((float)$get('info_sales_7d'), 1, ',', '.').'</span>'
                             : '<span class="text-gray-300 text-sm">—</span>'
-                    )),
-                // 8. col_days_stockout — citește din info_days_stockout Hidden
+                    ))
+                    ->columnSpan(1),
+
                 Placeholder::make('col_days_stockout')
-                    ->label('Epuizare')->hiddenLabel()
-                    ->content(fn (Get $get): HtmlString => new HtmlString(
-                        static::renderDaysToStockout($get('info_days_stockout'))
-                    )),
-                // 9. sources_info
-                Placeholder::make('sources_info')
-                    ->label('Surse')->hiddenLabel()
-                    ->content(fn (Get $get): HtmlString => static::renderSourcesInfo($get('sources_json'), $get('recommendation_json'), $get('product_name'), (int) $get('woo_product_id'))),
-                // 10. notes
-                TextInput::make('notes')->label('Notițe')->nullable(),
+                    ->label('Epuizare')
+                    ->content(fn (Get $get): HtmlString => new HtmlString(static::renderDaysToStockout($get('info_days_stockout'))))
+                    ->columnSpan(1),
+
+                TextInput::make('notes')->label('Notițe')->nullable()->columnSpan(1),
+
                 // Hidden — stocaj date
                 Hidden::make('product_name'),
                 Hidden::make('sources_json'),
@@ -657,7 +662,7 @@ class PurchaseOrderResource extends Resource
             ->label('')
             ->relationship('items')
             ->schema($schema)
-            ->columns($isCreate ? 10 : 10)
+            ->columns($isCreate ? 6 : 10)
             ->defaultItems($isCreate ? 0 : 1)
             ->addActionLabel('Adaugă produs');
     }
@@ -898,59 +903,42 @@ class PurchaseOrderResource extends Resource
             : '';
 
         $html = <<<HTML
-<div x-data="{ open: false }" class="inline-block" id="{$uid}">
-    <button type="button" @click.stop="open = true"
-            class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium
-                   bg-primary-50 text-primary-700 hover:bg-primary-100 border border-primary-200
-                   transition-colors cursor-pointer">
-        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+<div style="display:inline-block;position:relative">
+    <button type="button"
+            onclick="var m=this.nextElementSibling;m.style.cssText='display:flex;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;padding:1rem;background:rgba(17,24,39,.6)'"
+            style="display:inline-flex;align-items:center;gap:4px;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:500;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;cursor:pointer;transition:background .15s">
+        <svg style="width:12px;height:12px;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
         {$label}
     </button>
 
-    <template x-teleport="body">
-        <div x-show="open" x-cloak @keydown.escape.window="open = false"
-             class="fixed inset-0 z-[500] flex items-center justify-center p-4">
+    <div style="display:none"
+         onclick="if(event.target===this)this.style.display='none'">
 
-            <div @click="open = false"
-                 x-transition:enter="transition ease-out duration-200"
-                 x-transition:enter-start="opacity-0"
-                 x-transition:enter-end="opacity-100"
-                 x-transition:leave="transition ease-in duration-150"
-                 x-transition:leave-start="opacity-100"
-                 x-transition:leave-end="opacity-0"
-                 class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"></div>
+        <div onclick="event.stopPropagation()"
+             style="position:relative;width:100%;max-width:32rem;background:white;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden">
 
-            <div @click.stop
-                 x-transition:enter="transition ease-out duration-200"
-                 x-transition:enter-start="opacity-0 scale-95 translate-y-2"
-                 x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-                 x-transition:leave="transition ease-in duration-150"
-                 x-transition:leave-start="opacity-100 scale-100"
-                 x-transition:leave-end="opacity-0 scale-95"
-                 class="relative w-full max-w-lg bg-white rounded-xl shadow-xl ring-1 ring-gray-950/5 overflow-hidden dark:bg-gray-900 dark:ring-white/10">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid #e5e7eb">
+                <h3 style="font-size:15px;font-weight:600;color:#111827;margin:0">Detalii cantitate</h3>
+                <button type="button"
+                        onclick="this.closest('[style*=position\\:fixed]').style.display='none'"
+                        style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:6px;background:none;border:none;cursor:pointer;color:#9ca3af">
+                    <svg style="width:20px;height:20px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
 
-                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-white/10">
-                    <h3 class="text-base font-semibold text-gray-950 dark:text-white">Detalii cantitate</h3>
-                    <button type="button" @click="open = false"
-                            class="fi-icon-btn relative flex items-center justify-center rounded-lg outline-none transition duration-75 focus-visible:ring-2 h-8 w-8 text-gray-400 hover:text-gray-500 focus-visible:ring-primary-600 dark:text-gray-500 dark:hover:text-gray-400">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
-                </div>
+            {$productHeaderHtml}
 
-                {$productHeaderHtml}
-
-                <div class="px-6 py-5 space-y-3 max-h-[75vh] overflow-y-auto">
-                    {$sectionTitle}
-                    {$rows}
-                    {$recSection}
-                </div>
+            <div style="padding:20px 24px;max-height:70vh;overflow-y:auto;display:flex;flex-direction:column;gap:12px">
+                {$sectionTitle}
+                {$rows}
+                {$recSection}
             </div>
         </div>
-    </template>
+    </div>
 </div>
 HTML;
 
