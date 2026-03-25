@@ -48,7 +48,6 @@ class RolePermissionsPage extends Page implements HasForms
             'App\\Filament\\App\\Pages\\ProductsWithoutSupplier'           => ['label' => 'Fără furnizor',         'group' => 'Achiziții'],
             'App\\Filament\\App\\Pages\\SupplierPriceIntelligencePage'     => ['label' => 'Prețuri din Emailuri',  'group' => 'Comunicare'],
             // Comunicare
-            'App\\Filament\\App\\Pages\\ChatLogsPage'                      => ['label' => 'Chat logs',             'group' => 'Comunicare'],
             'App\\Filament\\App\\Pages\\EmailInboxPage'                    => ['label' => 'Email inbox',           'group' => 'Comunicare'],
             'App\\Filament\\App\\Pages\\EmailCommunicationStatsPage'       => ['label' => 'Statistici email',      'group' => 'Comunicare'],
             // Vânzări
