@@ -1,170 +1,169 @@
+<style>
+.ua-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; }
+.ua-badge { display:inline-flex; align-items:center; padding:0.25rem 0.75rem; border-radius:9999px; font-size:0.875rem; font-weight:500; }
+.ua-badge--warning { background:#fef3c7; color:#92400e; }
+.ua-badge--danger { background:#fee2e2; color:#991b1b; }
+.ua-btn-save-all { display:inline-flex; align-items:center; gap:0.5rem; padding:0.5rem 1rem; background:#dc2626; color:#fff; font-size:0.875rem; font-weight:500; border-radius:0.5rem; border:none; cursor:pointer; }
+.ua-btn-save-all:hover { background:#b91c1c; }
+.ua-table-wrap { border-radius:0.75rem; border:1px solid #e5e7eb; background:#fff; overflow:hidden; }
+.ua-table { width:100%; font-size:0.875rem; border-collapse:collapse; }
+.ua-table th { padding:0.75rem 1rem; text-align:left; font-size:0.75rem; font-weight:500; color:#6b7280; text-transform:uppercase; border-bottom:1px solid #e5e7eb; background:#f9fafb; }
+.ua-table td { padding:0.75rem 1rem; border-bottom:1px solid #f3f4f6; vertical-align:top; }
+.ua-table tr:hover td { background:#f9fafb; }
+.ua-urgent-row td { background:#fef2f2; }
+.ua-urg-badge { display:inline-flex; align-items:center; padding:0.125rem 0.375rem; border-radius:0.25rem; font-size:0.75rem; font-weight:700; background:#fee2e2; color:#b91c1c; margin-right:0.5rem; flex-shrink:0; }
+.ua-product-name { font-weight:500; color:#111827; }
+.ua-sku { font-size:0.75rem; color:#9ca3af; font-family:monospace; }
+.ua-link { font-size:0.75rem; color:#dc2626; font-family:monospace; text-decoration:none; }
+.ua-link:hover { text-decoration:underline; }
+.ua-alloc { display:flex; align-items:center; gap:0.5rem; }
+.ua-alloc select { flex:1; border-radius:0.5rem; border:1px solid #d1d5db; padding:0.4rem 0.5rem; font-size:0.875rem; background:#fff; }
+.ua-btn-alloc { flex-shrink:0; display:inline-flex; align-items:center; gap:0.25rem; padding:0.5rem 0.75rem; background:#16a34a; color:#fff; font-size:0.75rem; font-weight:500; border-radius:0.5rem; border:none; cursor:pointer; }
+.ua-btn-alloc:hover { background:#15803d; }
+.ua-btn-alloc:disabled { opacity:0.5; }
+.ua-note { border-radius:0.75rem; border:1px solid #e5e7eb; background:#fff; padding:1rem; margin-top:1rem; }
+.ua-note p { font-size:0.75rem; color:#374151; display:flex; align-items:flex-start; gap:0.5rem; }
+.ua-empty { text-align:center; padding:4rem 0; color:#9ca3af; }
+.ua-empty p { font-size:1.125rem; font-weight:500; }
+.ua-empty .sub { font-size:0.875rem; margin-top:0.25rem; }
+</style>
+
 <x-filament-panels::page>
 
     @if(empty($items))
-        <div class="text-center py-16 text-gray-400 dark:text-gray-500">
-            <x-filament::icon icon="heroicon-o-check-circle" class="w-12 h-12 mx-auto mb-3 text-success-400"/>
-            <p class="text-lg font-medium">Toate produsele au furnizor alocat</p>
-            <p class="text-sm mt-1">Nu există necesare în așteptare fără furnizor.</p>
+        <div class="ua-empty">
+            <x-filament::icon icon="heroicon-o-check-circle" style="width:3rem; height:3rem; margin:0 auto 0.75rem; color:#34d399;"/>
+            <p>Toate produsele au furnizor alocat</p>
+            <p class="sub">Nu există necesare în așteptare fără furnizor.</p>
         </div>
     @else
-        {{-- Header cu statistici + buton Salvează toate --}}
-        <div class="flex items-center justify-between mb-6">
-            <div class="flex items-center gap-3">
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-warning-100 text-warning-800 dark:bg-warning-900/30 dark:text-warning-300">
+        <div class="ua-header">
+            <div style="display:flex; align-items:center; gap:0.75rem;">
+                <span class="ua-badge ua-badge--warning">
                     {{ count($items) }} {{ count($items) === 1 ? 'produs fără furnizor' : 'produse fără furnizor' }}
                 </span>
                 @php $urgentCount = collect($items)->where('is_urgent', true)->count(); @endphp
                 @if($urgentCount > 0)
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-danger-100 text-danger-800 dark:bg-danger-900/30 dark:text-danger-300">
+                    <span class="ua-badge ua-badge--danger">
                         {{ $urgentCount }} urgent{{ $urgentCount > 1 ? 'e' : '' }}
                     </span>
                 @endif
             </div>
-            <button wire:click="saveAll"
-                    class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">
-                <x-filament::icon icon="heroicon-o-check" class="w-4 h-4"/>
+            <button wire:click="saveAll" class="ua-btn-save-all">
+                <x-filament::icon icon="heroicon-o-check" style="width:1rem; height:1rem;"/>
                 Alocă toate selecțiile
             </button>
         </div>
 
-        {{-- Tabel items --}}
-        <div class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
+        <div class="ua-table-wrap">
+            <div style="overflow-x:auto;">
+                <table class="ua-table">
                     <thead>
-                        <tr class="text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                            <th class="px-4 py-3 text-left font-medium">Produs / SKU</th>
-                            <th class="px-4 py-3 text-right font-medium">Cant.</th>
-                            <th class="px-4 py-3 text-left font-medium">Necesar până la</th>
-                            <th class="px-4 py-3 text-left font-medium">Consultant / Locație</th>
-                            <th class="px-4 py-3 text-left font-medium">Justificație</th>
-                            <th class="px-4 py-3 text-left font-medium">Necesar</th>
-                            <th class="px-4 py-3 text-left font-medium" style="min-width: 280px">Alocare furnizor</th>
+                        <tr>
+                            <th>Produs / SKU</th>
+                            <th style="text-align:right;">Cant.</th>
+                            <th>Necesar până la</th>
+                            <th>Consultant / Locație</th>
+                            <th>Justificație</th>
+                            <th>Necesar</th>
+                            <th style="min-width:280px;">Alocare furnizor</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50">
+                    <tbody>
                         @foreach($items as $item)
-                            <tr wire:key="item-{{ $item['id'] }}"
-                                class="hover:bg-gray-50 dark:hover:bg-gray-700/30
-                                       {{ $item['is_urgent'] ? 'bg-danger-50/60 dark:bg-danger-900/10' : '' }}">
-
-                                {{-- Produs --}}
-                                <td class="px-4 py-3">
-                                    <div class="flex items-center gap-2">
+                            <tr wire:key="item-{{ $item['id'] }}" class="{{ $item['is_urgent'] ? 'ua-urgent-row' : '' }}">
+                                <td>
+                                    <div style="display:flex; align-items:center; gap:0.5rem;">
                                         @if($item['is_urgent'])
-                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-danger-100 text-danger-700 dark:bg-danger-900/30 dark:text-danger-400 shrink-0">URG</span>
+                                            <span class="ua-urg-badge">URG</span>
                                         @endif
                                         <div>
-                                            <p class="font-medium text-gray-900 dark:text-white">{{ $item['product_name'] }}</p>
+                                            <div class="ua-product-name">{{ $item['product_name'] }}</div>
                                             @if($item['sku'])
-                                                <p class="text-xs text-gray-400 font-mono">{{ $item['sku'] }}</p>
+                                                <div class="ua-sku">{{ $item['sku'] }}</div>
                                             @endif
                                         </div>
                                     </div>
                                 </td>
-
-                                {{-- Cantitate --}}
-                                <td class="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">
+                                <td style="text-align:right; font-weight:500; color:#111827;">
                                     {{ number_format($item['quantity'], 0) }}
                                 </td>
-
-                                {{-- Necesar până la --}}
-                                <td class="px-4 py-3 text-gray-600 dark:text-gray-300">
+                                <td style="color:#4b5563;">
                                     @if($item['needed_by'])
-                                        @php
-                                            $isPast = \Carbon\Carbon::createFromFormat('d.m.Y', $item['needed_by'])->isPast();
-                                        @endphp
-                                        <span class="{{ $isPast ? 'text-danger-600 dark:text-danger-400 font-medium' : '' }}">
+                                        @php $isPast = \Carbon\Carbon::createFromFormat('d.m.Y', $item['needed_by'])->isPast(); @endphp
+                                        <span style="{{ $isPast ? 'color:#dc2626; font-weight:500;' : '' }}">
                                             {{ $item['needed_by'] }}
                                             @if($isPast)
-                                                <span class="text-xs ml-1">(expirat)</span>
+                                                <span style="font-size:0.75rem; margin-left:0.25rem;">(expirat)</span>
                                             @endif
                                         </span>
                                     @else
-                                        <span class="text-gray-300">—</span>
+                                        <span style="color:#d1d5db;">—</span>
                                     @endif
                                 </td>
-
-                                {{-- Consultant / Locație --}}
-                                <td class="px-4 py-3 text-gray-600 dark:text-gray-300">
+                                <td style="color:#4b5563;">
                                     <div>{{ $item['consultant'] ?? '—' }}</div>
                                     @if($item['location'])
-                                        <div class="text-xs text-gray-400">{{ $item['location'] }}</div>
+                                        <div style="font-size:0.75rem; color:#9ca3af;">{{ $item['location'] }}</div>
                                     @endif
                                 </td>
-
-                                {{-- Justificație --}}
-                                <td class="px-4 py-3 text-gray-500 dark:text-gray-400">
+                                <td style="color:#6b7280;">
                                     @if($item['is_reserved'] && $item['client_reference'])
-                                        <span class="inline-flex items-center gap-1 text-xs">
-                                            <x-filament::icon icon="heroicon-s-bookmark" class="w-3 h-3 text-warning-500"/>
-                                            <span class="font-mono bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">{{ $item['client_reference'] }}</span>
+                                        <span style="font-size:0.75rem; display:inline-flex; align-items:center; gap:0.25rem;">
+                                            <x-filament::icon icon="heroicon-s-bookmark" style="width:0.75rem; height:0.75rem; color:#d97706;"/>
+                                            <span style="font-family:monospace; background:#f3f4f6; padding:0.125rem 0.375rem; border-radius:0.25rem;">{{ $item['client_reference'] }}</span>
                                         </span>
                                     @elseif($item['notes'])
-                                        <span class="text-xs">{{ Str::limit($item['notes'], 40) }}</span>
+                                        <span style="font-size:0.75rem;">{{ Str::limit($item['notes'], 40) }}</span>
                                     @else
-                                        <span class="text-gray-300">—</span>
+                                        <span style="color:#d1d5db;">—</span>
                                     @endif
                                 </td>
-
-                                {{-- Link necesar --}}
-                                <td class="px-4 py-3">
-                                    <a href="{{ route('filament.app.resources.purchase-requests.view', ['record' => $item['request_id']]) }}"
-                                       class="text-xs text-primary-600 hover:text-primary-700 font-mono">
+                                <td>
+                                    <a href="{{ route('filament.app.resources.purchase-requests.view', ['record' => $item['request_id']]) }}" class="ua-link">
                                         {{ $item['request_number'] }}
                                     </a>
                                 </td>
-
-                                {{-- Alocare furnizor --}}
-                                <td class="px-4 py-3">
-                                    <div class="flex items-center gap-2">
-                                        <div class="flex-1">
-                                            <select wire:model="selectedSuppliers.{{ $item['id'] }}"
-                                                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">
-                                                <option value="">— Selectează furnizor —</option>
-
-                                                @if(!empty($item['suggested']))
-                                                    <optgroup label="✓ Furnizori cunoscuți pentru acest produs">
-                                                        @foreach($item['suggested'] as $s)
-                                                            <option value="{{ $s['id'] }}">
-                                                                {{ $s['is_preferred'] ? '★ ' : '' }}{{ $s['name'] }}
-                                                                @if($s['price'])
-                                                                    ({{ number_format($s['price'], 2, ',', '.') }} RON)
-                                                                @endif
-                                                            </option>
-                                                        @endforeach
-                                                    </optgroup>
-                                                    <optgroup label="Alți furnizori">
-                                                        @foreach($allSuppliers as $id => $name)
-                                                            @if(!in_array($id, $item['suggested_ids']))
-                                                                <option value="{{ $id }}">{{ $name }}</option>
-                                                            @endif
-                                                        @endforeach
-                                                    </optgroup>
-                                                @else
-                                                    {{-- Produs fără furnizori cunoscuți —  toți furnizorii --}}
-                                                    @foreach($allSuppliers as $id => $name)
-                                                        <option value="{{ $id }}">{{ $name }}</option>
+                                <td>
+                                    <div class="ua-alloc">
+                                        <select wire:model="selectedSuppliers.{{ $item['id'] }}">
+                                            <option value="">— Selectează furnizor —</option>
+                                            @if(!empty($item['suggested']))
+                                                <optgroup label="✓ Furnizori cunoscuți">
+                                                    @foreach($item['suggested'] as $s)
+                                                        <option value="{{ $s['id'] }}">
+                                                            {{ $s['is_preferred'] ? '★ ' : '' }}{{ $s['name'] }}
+                                                            @if($s['price']) ({{ number_format($s['price'], 2, ',', '.') }} RON) @endif
+                                                        </option>
                                                     @endforeach
-                                                @endif
-                                            </select>
-
-                                            @if(empty($item['suggested']))
-                                                <p class="text-xs text-gray-400 mt-1">
-                                                    <x-filament::icon icon="heroicon-o-exclamation-circle" class="w-3 h-3 inline"/> Produs fără furnizori configurați
-                                                </p>
+                                                </optgroup>
+                                                <optgroup label="Alți furnizori">
+                                                    @foreach($allSuppliers as $id => $name)
+                                                        @if(!in_array($id, $item['suggested_ids']))
+                                                            <option value="{{ $id }}">{{ $name }}</option>
+                                                        @endif
+                                                    @endforeach
+                                                </optgroup>
+                                            @else
+                                                @foreach($allSuppliers as $id => $name)
+                                                    <option value="{{ $id }}">{{ $name }}</option>
+                                                @endforeach
                                             @endif
-                                        </div>
-
+                                        </select>
                                         <button wire:click="saveAssignment({{ $item['id'] }})"
                                                 wire:loading.attr="disabled"
                                                 wire:target="saveAssignment({{ $item['id'] }})"
-                                                class="shrink-0 inline-flex items-center gap-1 px-3 py-2 bg-success-600 hover:bg-success-700 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors">
-                                            <x-filament::icon icon="heroicon-o-check" class="w-3.5 h-3.5"/>
+                                                class="ua-btn-alloc">
+                                            <x-filament::icon icon="heroicon-o-check" style="width:0.875rem; height:0.875rem;"/>
                                             <span wire:loading.remove wire:target="saveAssignment({{ $item['id'] }})">Alocă</span>
                                             <span wire:loading wire:target="saveAssignment({{ $item['id'] }})">...</span>
                                         </button>
                                     </div>
+                                    @if(empty($item['suggested']))
+                                        <p style="font-size:0.75rem; color:#9ca3af; margin-top:0.25rem; display:flex; align-items:center; gap:0.25rem;">
+                                            <x-filament::icon icon="heroicon-o-exclamation-circle" style="width:0.75rem; height:0.75rem;"/> Produs fără furnizori configurați
+                                        </p>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach
@@ -173,15 +172,12 @@
             </div>
         </div>
 
-        {{-- Notă informatională --}}
-        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
-            <div class="flex items-start gap-2 text-xs text-info-700 dark:text-info-300">
-                <x-filament::icon icon="heroicon-o-information-circle" class="w-4 h-4 shrink-0 mt-0.5"/>
-                <p>
-                    După alocare, produsele apar automat în pagina <strong>Generează comandă</strong> a buyer-ului responsabil pentru furnizorul selectat.
-                    Furnizorii marcați cu <strong>★</strong> sunt cei preferați pentru produsul respectiv.
-                </p>
-            </div>
+        <div class="ua-note">
+            <p>
+                <x-filament::icon icon="heroicon-o-information-circle" style="width:1rem; height:1rem; flex-shrink:0; margin-top:0.125rem; color:#2563eb;"/>
+                După alocare, produsele apar automat în pagina <strong>Generează comandă</strong> a buyer-ului responsabil pentru furnizorul selectat.
+                Furnizorii marcați cu <strong>★</strong> sunt cei preferați pentru produsul respectiv.
+            </p>
         </div>
     @endif
 
