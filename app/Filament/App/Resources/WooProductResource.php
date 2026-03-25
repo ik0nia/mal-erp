@@ -1165,10 +1165,12 @@ class WooProductResource extends Resource
                     ->schema([
                         TextEntry::make('purchase_price_history')
                             ->label('')
+                            ->hiddenLabel()
                             ->state(fn (WooProduct $record): HtmlString => static::renderPurchasePriceHistory($record))
                             ->html(),
                     ])
-                    ->hidden(fn (WooProduct $record): bool => $record->purchasePriceLogs()->doesntExist()),
+                    ->hidden(fn (WooProduct $record): bool => $record->purchasePriceLogs()->doesntExist())
+                    ->visible(fn (): bool => auth()->user()?->email === 'codrut@ikonia.ro'),
 
                 Section::make('Payload brut (Woo)')
                     ->collapsible()
@@ -1190,7 +1192,7 @@ class WooProductResource extends Resource
         $logs = $record->purchasePriceLogs()->with('supplier')->get();
 
         if ($logs->isEmpty()) {
-            return new HtmlString('<p class="text-sm text-gray-400">Nu există istoric.</p>');
+            return new HtmlString('<p style="font-size:0.875rem;color:#9ca3af;">Nu există istoric.</p>');
         }
 
         $rows = '';
@@ -1200,41 +1202,41 @@ class WooProductResource extends Resource
             $priceWithVat = number_format((float) $log->unit_price * 1.21, 2, '.', ' ') . ' ' . $log->currency;
             $uom = e($log->uom ?? '—');
             $source = match ($log->source) {
-                'winmentor_import' => '<span class="text-xs text-gray-400">WinMentor</span>',
-                'crm'              => '<span class="text-xs text-blue-500">CRM</span>',
-                default            => '<span class="text-xs text-gray-400">Manual</span>',
+                'winmentor_import' => '<span style="font-size:0.75rem;color:#9ca3af;">WinMentor</span>',
+                'crm'              => '<span style="font-size:0.75rem;color:#3b82f6;">CRM</span>',
+                default            => '<span style="font-size:0.75rem;color:#9ca3af;">Manual</span>',
             };
 
             if ($log->supplier) {
                 $supplierUrl = \App\Filament\App\Resources\SupplierResource::getUrl('view', ['record' => $log->supplier_id]);
-                $supplierHtml = '<a href="' . e($supplierUrl) . '" class="text-primary-600 hover:underline text-sm">' . e($log->supplier->name) . '</a>';
+                $supplierHtml = '<a href="' . e($supplierUrl) . '" style="color:#8B1A1A;text-decoration:none;font-size:0.875rem;" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">' . e($log->supplier->name) . '</a>';
             } elseif ($log->supplier_name_raw) {
-                $supplierHtml = '<span class="text-sm text-gray-500 italic">' . e($log->supplier_name_raw) . '</span>';
+                $supplierHtml = '<span style="font-size:0.875rem;color:#6b7280;font-style:italic;">' . e($log->supplier_name_raw) . '</span>';
             } else {
-                $supplierHtml = '<span class="text-sm text-gray-400">—</span>';
+                $supplierHtml = '<span style="font-size:0.875rem;color:#9ca3af;">—</span>';
             }
 
-            $rows .= "<tr class=\"border-b border-gray-100 dark:border-gray-700\">
-                <td class=\"py-1.5 px-3 text-sm\">{$date}</td>
-                <td class=\"py-1.5 px-3 text-sm font-mono font-semibold\">{$price}</td>
-                <td class=\"py-1.5 px-3 text-xs text-gray-500\">{$priceWithVat} <span class=\"text-gray-400\">(+TVA)</span></td>
-                <td class=\"py-1.5 px-3 text-sm\">{$uom}</td>
-                <td class=\"py-1.5 px-3\">{$supplierHtml}</td>
-                <td class=\"py-1.5 px-3\">{$source}</td>
+            $rows .= "<tr style=\"border-bottom:1px solid #e5e7eb;\">
+                <td style=\"padding:6px 12px;font-size:0.875rem;\">{$date}</td>
+                <td style=\"padding:6px 12px;font-size:0.875rem;font-family:monospace;font-weight:600;\">{$price}</td>
+                <td style=\"padding:6px 12px;font-size:0.75rem;color:#6b7280;\">{$priceWithVat} <span style=\"color:#9ca3af;\">(+TVA)</span></td>
+                <td style=\"padding:6px 12px;font-size:0.875rem;\">{$uom}</td>
+                <td style=\"padding:6px 12px;\">{$supplierHtml}</td>
+                <td style=\"padding:6px 12px;\">{$source}</td>
             </tr>";
         }
 
         return new HtmlString("
-            <div class=\"overflow-x-auto\">
-                <table class=\"w-full text-left\">
+            <div style=\"overflow-x:auto;\">
+                <table style=\"width:100%;text-align:left;border-collapse:collapse;\">
                     <thead>
-                        <tr class=\"border-b border-gray-200 dark:border-gray-600 text-xs text-gray-500 uppercase\">
-                            <th class=\"py-2 px-3\">Data</th>
-                            <th class=\"py-2 px-3\">Preț achiziție</th>
-                            <th class=\"py-2 px-3\">cu TVA 21%</th>
-                            <th class=\"py-2 px-3\">U.M.</th>
-                            <th class=\"py-2 px-3\">Furnizor</th>
-                            <th class=\"py-2 px-3\">Sursă</th>
+                        <tr style=\"border-bottom:2px solid #d1d5db;\">
+                            <th style=\"padding:8px 12px;font-size:0.75rem;color:#6b7280;text-transform:uppercase;font-weight:600;\">Data</th>
+                            <th style=\"padding:8px 12px;font-size:0.75rem;color:#6b7280;text-transform:uppercase;font-weight:600;\">Preț achiziție</th>
+                            <th style=\"padding:8px 12px;font-size:0.75rem;color:#6b7280;text-transform:uppercase;font-weight:600;\">cu TVA 21%</th>
+                            <th style=\"padding:8px 12px;font-size:0.75rem;color:#6b7280;text-transform:uppercase;font-weight:600;\">U.M.</th>
+                            <th style=\"padding:8px 12px;font-size:0.75rem;color:#6b7280;text-transform:uppercase;font-weight:600;\">Furnizor</th>
+                            <th style=\"padding:8px 12px;font-size:0.75rem;color:#6b7280;text-transform:uppercase;font-weight:600;\">Sursă</th>
                         </tr>
                     </thead>
                     <tbody>{$rows}</tbody>
