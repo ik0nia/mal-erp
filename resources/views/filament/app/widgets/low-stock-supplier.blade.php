@@ -1,13 +1,15 @@
 <x-filament-widgets::widget>
-    <div class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900 overflow-hidden">
-        <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-white/5">
-            <x-heroicon-o-arrow-trending-down class="h-5 w-5 text-orange-500" />
-            <span class="font-semibold text-gray-900 dark:text-white text-sm">Produse care se epuizează</span>
-            @if($total > 0)
-                <x-filament::badge color="warning">{{ $total }}</x-filament::badge>
-            @endif
-        </div>
-        <div class="p-4">
+    <x-filament::section>
+        <x-slot name="heading">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+                <x-filament::icon icon="heroicon-o-arrow-trending-down" class="h-5 w-5 text-warning-500" />
+                <span>Produse care se epuizează</span>
+                @if($total > 0)
+                    <x-filament::badge color="warning">{{ $total }}</x-filament::badge>
+                @endif
+            </div>
+        </x-slot>
+
         @if(empty($rows))
             <p class="text-sm text-gray-500 py-4 text-center">Nu există produse cu stoc critic.</p>
         @else
@@ -27,19 +29,19 @@
                         @foreach($rows as $row)
                             @php
                                 $days = (float) $row->days_to_stockout;
-                                $daysColor = $days <= 3 ? 'text-red-600' : ($days <= 7 ? 'text-orange-500' : 'text-yellow-600');
-                                $daysBg    = $days <= 3 ? 'bg-red-50' : ($days <= 7 ? 'bg-orange-50' : 'bg-yellow-50');
+                                $daysColor = $days <= 3 ? 'text-danger-600' : ($days <= 7 ? 'text-warning-500' : 'text-warning-600');
                             @endphp
                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                                 <td class="py-2 pr-4">
-                                    <div class="flex items-center gap-2">
+                                    <div style="display:flex; align-items:center; gap:0.5rem;">
                                         @if($row->main_image_url)
-                                            <img src="{{ $row->main_image_url }}" class="h-7 w-7 rounded object-cover ring-1 ring-gray-200/70 shrink-0" loading="lazy" />
+                                            <img src="{{ $row->main_image_url }}" style="height:1.75rem; width:1.75rem; border-radius:0.25rem; object-fit:cover; flex-shrink:0;" loading="lazy" />
                                         @else
-                                            <span class="inline-flex h-7 w-7 items-center justify-center rounded bg-gray-100 text-gray-400 shrink-0">—</span>
+                                            <span style="display:inline-flex; height:1.75rem; width:1.75rem; align-items:center; justify-content:center; border-radius:0.25rem; background:#f3f4f6; color:#9ca3af; flex-shrink:0;">—</span>
                                         @endif
                                         <a href="{{ \App\Filament\App\Resources\WooProductResource::getUrl('view', ['record' => $row->product_id]) }}"
-                                           class="font-medium text-gray-900 dark:text-gray-100 hover:text-primary-600 line-clamp-2 max-w-xs">
+                                           class="font-medium text-gray-900 dark:text-gray-100 hover:text-primary-600"
+                                           style="display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; max-width:20rem;">
                                             {{ html_entity_decode($row->name, ENT_QUOTES | ENT_HTML5, 'UTF-8') }}
                                         </a>
                                     </div>
@@ -49,11 +51,11 @@
                                 <td class="py-2 pr-4 text-right font-mono text-xs font-semibold">
                                     {{ number_format($row->stock, 0, ',', '.') }}
                                 </td>
-                                <td class="py-2 pr-4 text-right font-mono text-xs text-orange-600">
+                                <td class="py-2 pr-4 text-right font-mono text-xs text-warning-600">
                                     {{ number_format($row->velocity_day, 2, ',', '.') }}/zi
                                 </td>
                                 <td class="py-2 text-right">
-                                    <span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-bold {{ $daysColor }} {{ $daysBg }}">
+                                    <span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-bold {{ $daysColor }}">
                                         {{ number_format($days, 1, ',', '.') }} zile
                                     </span>
                                 </td>
@@ -66,6 +68,5 @@
                 <p class="text-xs text-gray-400 mt-3 text-right">Afișate 50 din {{ $total }}. Sortate după urgență.</p>
             @endif
         @endif
-        </div>
-    </div>
+    </x-filament::section>
 </x-filament-widgets::widget>

@@ -1,13 +1,15 @@
 <x-filament-widgets::widget>
-    <div class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900 overflow-hidden">
-        <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-white/5">
-            <x-heroicon-o-exclamation-triangle class="h-5 w-5 text-red-500" />
-            <span class="font-semibold text-gray-900 dark:text-white text-sm">Produse fără stoc</span>
-            @if($total > 0)
-                <x-filament::badge color="danger">{{ $total }}</x-filament::badge>
-            @endif
-        </div>
-        <div class="p-4">
+    <x-filament::section>
+        <x-slot name="heading">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+                <x-filament::icon icon="heroicon-o-exclamation-triangle" class="h-5 w-5 text-danger-500" />
+                <span>Produse fără stoc</span>
+                @if($total > 0)
+                    <x-filament::badge color="danger">{{ $total }}</x-filament::badge>
+                @endif
+            </div>
+        </x-slot>
+
         @if(empty($rows))
             <p class="text-sm text-gray-500 py-4 text-center">Nu există produse fără stoc cu rulaj activ.</p>
         @else
@@ -26,24 +28,25 @@
                         @foreach($rows as $row)
                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                                 <td class="py-2 pr-4">
-                                    <div class="flex items-center gap-2">
+                                    <div style="display:flex; align-items:center; gap:0.5rem;">
                                         @if($row->main_image_url)
-                                            <img src="{{ $row->main_image_url }}" class="h-7 w-7 rounded object-cover ring-1 ring-gray-200/70 shrink-0" loading="lazy" />
+                                            <img src="{{ $row->main_image_url }}" style="height:1.75rem; width:1.75rem; border-radius:0.25rem; object-fit:cover; flex-shrink:0;" loading="lazy" />
                                         @else
-                                            <span class="inline-flex h-7 w-7 items-center justify-center rounded bg-gray-100 text-gray-400 shrink-0">—</span>
+                                            <span style="display:inline-flex; height:1.75rem; width:1.75rem; align-items:center; justify-content:center; border-radius:0.25rem; background:#f3f4f6; color:#9ca3af; flex-shrink:0;">—</span>
                                         @endif
                                         <a href="{{ \App\Filament\App\Resources\WooProductResource::getUrl('view', ['record' => $row->product_id]) }}"
-                                           class="font-medium text-gray-900 dark:text-gray-100 hover:text-primary-600 line-clamp-2 max-w-xs">
+                                           class="font-medium text-gray-900 dark:text-gray-100 hover:text-primary-600"
+                                           style="display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; max-width:20rem;">
                                             {{ html_entity_decode($row->name, ENT_QUOTES | ENT_HTML5, 'UTF-8') }}
                                         </a>
                                     </div>
                                 </td>
                                 <td class="py-2 pr-4 font-mono text-xs text-gray-500">{{ $row->sku }}</td>
                                 <td class="py-2 pr-4 text-gray-600 dark:text-gray-400 text-xs">{{ $row->supplier_name }}</td>
-                                <td class="py-2 pr-4 text-right font-mono text-xs text-orange-600 font-semibold">
+                                <td class="py-2 pr-4 text-right font-mono text-xs text-warning-600 font-semibold">
                                     {{ number_format($row->velocity_day, 2, ',', '.') }}/zi
                                 </td>
-                                <td class="py-2 text-right font-mono text-xs text-red-600 font-semibold">
+                                <td class="py-2 text-right font-mono text-xs text-danger-600 font-semibold">
                                     {{ number_format($row->velocity_7d, 1, ',', '.') }}
                                 </td>
                             </tr>
@@ -55,6 +58,5 @@
                 <p class="text-xs text-gray-400 mt-3 text-right">Afișate 50 din {{ $total }}. Sortate după viteză descrescătoare.</p>
             @endif
         @endif
-        </div>
-    </div>
+    </x-filament::section>
 </x-filament-widgets::widget>
