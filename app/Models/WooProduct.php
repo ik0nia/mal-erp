@@ -83,6 +83,18 @@ class WooProduct extends Model
         'abc_classification',
         'xyz_classification',
         'replenishment_method',
+        'country_of_origin',
+        'customs_tariff_code',
+        'vat_rate',
+        'volume_m3',
+        'warranty_months',
+        'certification_codes',
+        'msds_link',
+        'storage_conditions',
+        'is_fragile',
+        'is_stackable',
+        'is_temperature_sensitive',
+        'shelf_life_days',
     ];
 
     public const PROCUREMENT_STOCK     = 'stock';
@@ -103,6 +115,11 @@ class WooProduct extends Model
             'safety_stock'    => 'decimal:2',
             'reorder_qty'     => 'decimal:2',
             'avg_daily_consumption' => 'decimal:4',
+            'vat_rate' => 'decimal:2',
+            'volume_m3' => 'decimal:6',
+            'is_fragile' => 'boolean',
+            'is_stackable' => 'boolean',
+            'is_temperature_sensitive' => 'boolean',
         ];
     }
 

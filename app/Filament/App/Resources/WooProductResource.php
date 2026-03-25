@@ -117,6 +117,14 @@ class WooProductResource extends Resource
                         ->dehydrated(false)
                         ->placeholder('(completat automat din import)')
                         ->columnSpanFull(),
+                    Forms\Components\Textarea::make('short_description')
+                        ->label('Descriere scurtă')
+                        ->rows(2)
+                        ->columnSpanFull(),
+                    Forms\Components\Textarea::make('description')
+                        ->label('Descriere completă')
+                        ->rows(4)
+                        ->columnSpanFull(),
                     Forms\Components\TextInput::make('sku')
                         ->label('SKU / EAN')
                         ->maxLength(50)
@@ -124,6 +132,11 @@ class WooProductResource extends Resource
                     Forms\Components\TextInput::make('brand')
                         ->label('Brand / Producător')
                         ->maxLength(255),
+                    Forms\Components\TextInput::make('main_image_url')
+                        ->label('URL imagine principală')
+                        ->url()
+                        ->maxLength(500)
+                        ->columnSpanFull(),
                     Forms\Components\Select::make('unit')
                         ->label('Unitate de măsură')
                         ->options([
@@ -153,6 +166,11 @@ class WooProductResource extends Resource
                     Forms\Components\TextInput::make('dim_height')
                         ->label('Înălțime (cm)')
                         ->maxLength(20),
+                    Forms\Components\TextInput::make('volume_m3')
+                        ->label('Volum (m³)')
+                        ->numeric()
+                        ->step(0.000001)
+                        ->helperText('Volum unitar pentru calcule transport'),
                     Forms\Components\Select::make('product_type')
                         ->label('Tip produs (BI)')
                         ->options(WooProduct::productTypeOptions())
@@ -321,6 +339,62 @@ class WooProductResource extends Resource
                     Forms\Components\TextInput::make('ean_carton')
                         ->label('EAN carton master')
                         ->maxLength(30),
+                ]),
+            \Filament\Schemas\Components\Section::make('Conformitate și logistică')
+                ->columns(3)
+                ->collapsible()
+                ->collapsed()
+                ->columnSpanFull()
+                ->schema([
+                    Forms\Components\TextInput::make('country_of_origin')
+                        ->label('Țara de origine')
+                        ->maxLength(2)
+                        ->placeholder('RO, CN, DE...')
+                        ->helperText('Cod ISO (2 litere)'),
+                    Forms\Components\TextInput::make('customs_tariff_code')
+                        ->label('Cod HS/NC')
+                        ->maxLength(20)
+                        ->placeholder('ex: 3214.10.10')
+                        ->helperText('Cod vamal'),
+                    Forms\Components\TextInput::make('vat_rate')
+                        ->label('Cotă TVA (%)')
+                        ->numeric()
+                        ->default(19)
+                        ->suffix('%'),
+                    Forms\Components\TextInput::make('warranty_months')
+                        ->label('Garanție (luni)')
+                        ->numeric()
+                        ->minValue(0)
+                        ->suffix('luni'),
+                    Forms\Components\TextInput::make('certification_codes')
+                        ->label('Certificări')
+                        ->maxLength(255)
+                        ->placeholder('CE, ROHS, REACH...')
+                        ->helperText('Separate prin virgulă'),
+                    Forms\Components\TextInput::make('msds_link')
+                        ->label('Fișă securitate (MSDS)')
+                        ->url()
+                        ->maxLength(500)
+                        ->columnSpan(2),
+                    Forms\Components\TextInput::make('storage_conditions')
+                        ->label('Condiții depozitare')
+                        ->maxLength(255)
+                        ->placeholder('ex: Loc uscat, 5-30°C')
+                        ->columnSpanFull(),
+                    Forms\Components\TextInput::make('shelf_life_days')
+                        ->label('Termen valabilitate')
+                        ->numeric()
+                        ->suffix('zile'),
+                    Forms\Components\Toggle::make('is_fragile')
+                        ->label('Fragil')
+                        ->inline(false),
+                    Forms\Components\Toggle::make('is_stackable')
+                        ->label('Stivuibil')
+                        ->default(true)
+                        ->inline(false),
+                    Forms\Components\Toggle::make('is_temperature_sensitive')
+                        ->label('Sensibil la temperatură')
+                        ->inline(false),
                 ]),
             \Filament\Schemas\Components\Section::make('Mod aprovizionare')
                 ->description('Controlează cum se aprovizionează produsul și dacă mai face parte din portofoliu.')
