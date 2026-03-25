@@ -112,9 +112,9 @@
                 <td style="font-family:monospace; font-size:0.75rem; color:#4b5563;">{{ $row['sku'] }}</td>
                 <td style="max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#1f2937;" title="{{ $row['product_name'] ?? $row['sku'] }}">{{ $row['product_name'] ?? '—' }}</td>
                 @if($this->velocityTab === 'fast')
-                  <td style="text-align:right; color:#4b5563;">{{ (float)$row['avg_out_qty_7d'] > 0 ? number_format($row['avg_out_qty_7d'], 3, ',', '.') : '—' }}</td>
-                  <td style="text-align:right; color:#2563eb; font-weight:600;">{{ (float)$row['avg_out_qty_30d'] > 0 ? number_format($row['avg_out_qty_30d'], 3, ',', '.') : '—' }}</td>
-                  <td style="text-align:right; color:#6b7280;">{{ (float)$row['avg_out_qty_90d'] > 0 ? number_format($row['avg_out_qty_90d'], 3, ',', '.') : '—' }}</td>
+                  <td style="text-align:right; color:#4b5563;">{{ (float)$row['avg_out_qty_7d'] > 0 ? number_format($row['avg_out_qty_7d'], 1, '.', '') : '—' }}</td>
+                  <td style="text-align:right; color:#2563eb; font-weight:600;">{{ (float)$row['avg_out_qty_30d'] > 0 ? number_format($row['avg_out_qty_30d'], 1, '.', '') : '—' }}</td>
+                  <td style="text-align:right; color:#6b7280;">{{ (float)$row['avg_out_qty_90d'] > 0 ? number_format($row['avg_out_qty_90d'], 1, '.', '') : '—' }}</td>
                   <td style="text-align:right; color:#374151;">{{ (float)$row['out_qty_30d'] > 0 ? number_format($row['out_qty_30d'], 0, ',', '.') : '0' }}</td>
                 @else
                   <td style="text-align:right; color:#6b7280;">{{ $row['last_movement_day'] ?? 'niciodată' }}</td>
