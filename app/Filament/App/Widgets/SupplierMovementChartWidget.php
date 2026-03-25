@@ -27,18 +27,21 @@ class SupplierMovementChartWidget extends ChartWidget
     public function syncDays(int $days): void
     {
         $this->days = $days;
+        $this->cachedData = null;
     }
 
     #[On('stockMovementsSetSupplier')]
     public function syncSupplier(?int $supplierId): void
     {
         $this->supplierId = $supplierId;
+        $this->cachedData = null;
     }
 
     #[On('stockMovementsSetCategory')]
     public function syncCategory(?int $categoryId): void
     {
         $this->categoryId = $categoryId;
+        $this->cachedData = null;
     }
 
     protected function getFilters(): ?array

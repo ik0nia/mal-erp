@@ -26,6 +26,7 @@ class PriceMovementChartWidget extends ChartWidget
     public function syncDays(int $days): void
     {
         $this->days = $days;
+        $this->cachedData = null;
     }
 
     protected function getFilters(): ?array

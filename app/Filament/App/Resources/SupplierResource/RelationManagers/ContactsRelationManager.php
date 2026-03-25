@@ -76,15 +76,16 @@ class ContactsRelationManager extends RelationManager
                     ->description(fn ($record) => $record->role)
                     ->searchable(),
 
-                Tables\Columns\BadgeColumn::make('department')
+                Tables\Columns\TextColumn::make('department')
                     ->label('Departament')
-                    ->colors([
-                        'primary' => 'comercial',
-                        'success' => 'comenzi',
-                        'danger'  => 'director',
-                        'warning' => 'contabilitate',
-                        'gray'    => fn ($state) => in_array($state, ['logistica', 'tehnic', 'marketing', 'altul']),
-                    ])
+                    ->badge()
+                    ->color(fn ($state) => match ($state) {
+                        'comercial'     => 'primary',
+                        'comenzi'       => 'success',
+                        'director'      => 'danger',
+                        'contabilitate' => 'warning',
+                        default         => 'gray',
+                    })
                     ->formatStateUsing(fn ($state) => match ($state) {
                         'comercial'     => 'Comercial',
                         'comenzi'       => 'Comenzi',
@@ -126,13 +127,15 @@ class ContactsRelationManager extends RelationManager
                     ->sortable()
                     ->placeholder('Necunoscut'),
 
-                Tables\Columns\BadgeColumn::make('source')
+                Tables\Columns\TextColumn::make('source')
                     ->label('Sursă')
-                    ->colors([
-                        'success' => 'manual',
-                        'info'    => 'email_discovery',
-                        'warning' => 'domain_match',
-                    ])
+                    ->badge()
+                    ->color(fn ($state) => match ($state) {
+                        'manual'          => 'success',
+                        'email_discovery' => 'info',
+                        'domain_match'    => 'warning',
+                        default           => 'gray',
+                    })
                     ->formatStateUsing(fn ($state) => match($state) {
                         'manual'          => 'Manual',
                         'email_discovery' => 'Din emailuri',

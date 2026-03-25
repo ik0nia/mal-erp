@@ -5,8 +5,8 @@
 
         <button
             wire:click="setTab('placeholder')"
-            class="fi-section rounded-xl border p-4 text-left transition hover:shadow-md focus:outline-none
-                {{ $this->activeTab === 'placeholder' ? 'border-warning-400 bg-warning-50 dark:bg-warning-950/20' : 'border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900' }}"
+            class="rounded-xl border p-4 text-left transition hover:shadow-md focus:outline-none
+                {{ $this->activeTab === 'placeholder' ? 'border-warning-400 bg-warning-50 dark:border-warning-500 dark:bg-warning-950/20' : 'border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900' }}"
         >
             <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Doar în WinMentor</div>
             <div class="mt-1 text-3xl font-bold text-warning-600 dark:text-warning-400">{{ number_format($this->statPlaceholder) }}</div>
@@ -15,8 +15,8 @@
 
         <button
             wire:click="setTab('no_sku')"
-            class="fi-section rounded-xl border p-4 text-left transition hover:shadow-md focus:outline-none
-                {{ $this->activeTab === 'no_sku' ? 'border-danger-400 bg-danger-50 dark:bg-danger-950/20' : 'border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900' }}"
+            class="rounded-xl border p-4 text-left transition hover:shadow-md focus:outline-none
+                {{ $this->activeTab === 'no_sku' ? 'border-danger-400 bg-danger-50 dark:border-danger-500 dark:bg-danger-950/20' : 'border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900' }}"
         >
             <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Pe site, fără SKU</div>
             <div class="mt-1 text-3xl font-bold text-danger-600 dark:text-danger-400">{{ number_format($this->statNoSku) }}</div>
@@ -25,8 +25,8 @@
 
         <button
             wire:click="setTab('no_mentor')"
-            class="fi-section rounded-xl border p-4 text-left transition hover:shadow-md focus:outline-none
-                {{ $this->activeTab === 'no_mentor' ? 'border-info-400 bg-info-50 dark:bg-info-950/20' : 'border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900' }}"
+            class="rounded-xl border p-4 text-left transition hover:shadow-md focus:outline-none
+                {{ $this->activeTab === 'no_mentor' ? 'border-info-400 bg-info-50 dark:border-info-500 dark:bg-info-950/20' : 'border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900' }}"
         >
             <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Pe site, fără WinMentor</div>
             <div class="mt-1 text-3xl font-bold text-info-600 dark:text-info-400">{{ number_format($this->statOnSiteNoMentor) }}</div>

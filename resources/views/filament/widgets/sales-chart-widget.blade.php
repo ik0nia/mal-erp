@@ -1,15 +1,17 @@
 @php
-    use Filament\Support\Facades\FilamentView;
+    use Filament\Widgets\View\Components\ChartWidgetComponent;
+    use Illuminate\View\ComponentAttributeBag;
 
     $color       = $this->getColor();
     $heading     = $this->getHeading();
     $description = $this->getDescription();
+    $type        = $this->getType();
 @endphp
 
 <x-filament-widgets::widget class="fi-wi-chart">
     <x-filament::section :description="$description" :heading="$heading">
 
-        <x-slot name="headerEnd">
+        <x-slot name="afterHeader">
             <div class="flex items-center gap-2 sm:-my-2">
 
                 {{-- Dropdown: Valoare / Cantitate --}}
@@ -32,64 +34,44 @@
             </div>
         </x-slot>
 
-        <div>
+        <div
+            @if ($pollingInterval = $this->getPollingInterval())
+                wire:poll.{{ $pollingInterval }}="updateChartData"
+            @endif
+        >
             <div
-                @if (FilamentView::hasSpaMode())
-                    x-load="visible"
-                @else
-                    x-load
-                @endif
+                x-load
                 x-load-src="{{ \Filament\Support\Facades\FilamentAsset::getAlpineComponentSrc('chart', 'filament/widgets') }}"
                 wire:ignore
+                data-chart-type="{{ $type }}"
                 x-data="chart({
                     cachedData: @js($this->getCachedData()),
+                    maxHeight: @js($maxHeight = $this->getMaxHeight()),
                     options: @js($this->getOptions()),
-                    type: @js($this->getType()),
+                    type: @js($type),
                 })"
-                @class([
-                    match ($color) {
-                        'gray' => null,
-                        default => 'fi-color-custom',
-                    },
-                    is_string($color) ? "fi-color-{$color}" : null,
-                ])
+                {{
+                    (new ComponentAttributeBag)
+                        ->color(ChartWidgetComponent::class, $color)
+                        ->class([
+                            'fi-wi-chart-canvas-ctn',
+                            'fi-wi-chart-canvas-ctn-no-aspect-ratio' => filled($maxHeight),
+                        ])
+                }}
             >
                 <canvas
                     x-ref="canvas"
-                    @if ($maxHeight = $this->getMaxHeight())
+                    @if ($maxHeight)
                         style="max-height: {{ $maxHeight }}"
                     @endif
                 ></canvas>
 
-                <span x-ref="backgroundColorElement"
-                    @class([
-                        match ($color) {
-                            'gray' => 'text-gray-100 dark:text-gray-800',
-                            default => 'text-custom-50 dark:text-custom-400/10',
-                        },
-                    ])
-                    @style([
-                        \Filament\Support\get_color_css_variables($color, shades: [50, 400], alias: 'widgets::chart-widget.background') => $color !== 'gray',
-                    ])
-                ></span>
-
-                <span x-ref="borderColorElement"
-                    @class([
-                        match ($color) {
-                            'gray' => 'text-gray-400',
-                            default => 'text-custom-500 dark:text-custom-400',
-                        },
-                    ])
-                    @style([
-                        \Filament\Support\get_color_css_variables($color, shades: [400, 500], alias: 'widgets::chart-widget.border') => $color !== 'gray',
-                    ])
-                ></span>
-
-                <span x-ref="gridColorElement" class="text-gray-200 dark:text-gray-800"></span>
-                <span x-ref="textColorElement" class="text-gray-500 dark:text-gray-400"></span>
+                <span x-ref="backgroundColorElement" class="fi-wi-chart-bg-color"></span>
+                <span x-ref="borderColorElement" class="fi-wi-chart-border-color"></span>
+                <span x-ref="gridColorElement" class="fi-wi-chart-grid-color"></span>
+                <span x-ref="textColorElement" class="fi-wi-chart-text-color"></span>
             </div>
         </div>
-
 
     </x-filament::section>
 </x-filament-widgets::widget>

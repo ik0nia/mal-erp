@@ -9,7 +9,7 @@ use App\Filament\App\Resources\WooOrderResource\Pages;
 use App\Models\ProductStock;
 use App\Models\WooOrder;
 use App\Models\WooProduct;
-use Filament\Actions\Action as InfolistAction;
+use Filament\Support\Enums\TextSize;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
@@ -323,7 +323,7 @@ class WooOrderResource extends Resource
                         TextEntry::make('total')
                             ->label('TOTAL')
                             ->weight(\Filament\Support\Enums\FontWeight::Bold)
-                            ->size(\Filament\Infolists\Components\TextEntry\TextEntrySize::Large)
+                            ->size(TextSize::Large)
                             ->formatStateUsing(fn (WooOrder $record): string => number_format((float) $record->total, 2).' '.$record->currency),
                     ]),
 

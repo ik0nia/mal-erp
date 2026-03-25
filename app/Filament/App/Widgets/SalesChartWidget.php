@@ -27,6 +27,7 @@ class SalesChartWidget extends ChartWidget
     public function mount(): void
     {
         $this->year = now()->year;
+        parent::mount();
     }
 
     #[On('onlineShopSetPeriod')]
@@ -34,16 +35,19 @@ class SalesChartWidget extends ChartWidget
     {
         $this->year  = $year;
         $this->month = $month;
+        $this->cachedData = null;
         $this->updateChartData();
     }
 
     public function updatedMode(): void
     {
+        $this->cachedData = null;
         $this->updateChartData();
     }
 
     public function updatedYear(): void
     {
+        $this->cachedData = null;
         $this->updateChartData();
     }
 

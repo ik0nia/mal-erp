@@ -8,7 +8,7 @@ use App\Models\ChatLog;
 use Filament\Actions\Action;
 use App\Services\TelegramService;
 use Filament\Forms\Components\ColorPicker;
-use Filament\Forms\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;

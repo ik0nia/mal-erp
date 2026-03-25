@@ -21,6 +21,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Schema;
 
 use Filament\Actions\Action as InfolistAction;
+use Filament\Schemas\Components\Actions;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\Section as InfolistSection;
@@ -176,7 +177,7 @@ class PurchaseRequestResource extends Resource
                 TableActions\DeleteAction::make()
                     ->visible(fn (PurchaseRequest $record): bool => static::canDelete($record))
                     ->requiresConfirmation(),
-                Actions\Action::make('submit')
+                TableActions\Action::make('submit')
                     ->label('Trimite')
                     ->icon('heroicon-o-paper-airplane')
                     ->color('success')

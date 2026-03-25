@@ -244,26 +244,26 @@
     @if($wooOrders->isNotEmpty())
         <div class="mt-8">
             <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3 flex items-center gap-2">
-                <x-heroicon-o-shopping-cart class="w-5 h-5 text-orange-500"/>
+                <x-heroicon-o-shopping-cart class="w-5 h-5 text-warning-500"/>
                 Comenzi online — produse la comandă
-                <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">
+                <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-bold bg-warning-100 text-warning-700 dark:bg-warning-900 dark:text-warning-300">
                     {{ $wooOrders->count() }}
                 </span>
             </h2>
-            <x-filament::section class="!p-0 border-orange-200 dark:border-orange-800 overflow-hidden">
+            <x-filament::section class="!p-0 border-warning-200 dark:border-warning-800 overflow-hidden">
                 <table class="w-full text-sm">
-                    <thead class="bg-orange-50 dark:bg-orange-900/30">
+                    <thead class="bg-warning-50 dark:bg-warning-900/30">
                         <tr>
-                            <th class="text-left px-4 py-2 text-orange-700 dark:text-orange-300 font-medium">Comandă WooCommerce</th>
-                            <th class="text-left px-4 py-2 text-orange-700 dark:text-orange-300 font-medium">Client</th>
-                            <th class="text-left px-4 py-2 text-orange-700 dark:text-orange-300 font-medium">Produse la comandă</th>
-                            <th class="text-left px-4 py-2 text-orange-700 dark:text-orange-300 font-medium">PNR</th>
-                            <th class="text-left px-4 py-2 text-orange-700 dark:text-orange-300 font-medium">Status PNR</th>
+                            <th class="text-left px-4 py-2 text-warning-700 dark:text-warning-300 font-medium">Comandă WooCommerce</th>
+                            <th class="text-left px-4 py-2 text-warning-700 dark:text-warning-300 font-medium">Client</th>
+                            <th class="text-left px-4 py-2 text-warning-700 dark:text-warning-300 font-medium">Produse la comandă</th>
+                            <th class="text-left px-4 py-2 text-warning-700 dark:text-warning-300 font-medium">PNR</th>
+                            <th class="text-left px-4 py-2 text-warning-700 dark:text-warning-300 font-medium">Status PNR</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-orange-100 dark:divide-orange-900">
+                    <tbody class="divide-y divide-warning-100 dark:divide-warning-900">
                         @foreach($wooOrders as $pnr)
-                            <tr class="hover:bg-orange-50 dark:hover:bg-orange-900/20">
+                            <tr class="hover:bg-warning-50 dark:hover:bg-warning-900/20">
                                 <td class="px-4 py-3">
                                     @if($pnr->wooOrder)
                                         <a href="{{ route('filament.app.resources.woo-orders.view', ['record' => $pnr->wooOrder->id]) }}"
@@ -284,7 +284,7 @@
                                     @foreach($pnr->items as $item)
                                         <div class="text-xs text-gray-700 dark:text-gray-300">
                                             {{ $item->product_name }}
-                                            <span class="text-orange-600 font-semibold">× {{ $item->quantity }}</span>
+                                            <span class="text-warning-600 font-semibold">× {{ $item->quantity }}</span>
                                         </div>
                                     @endforeach
                                 </td>
@@ -296,7 +296,7 @@
                                 </td>
                                 <td class="px-4 py-3">
                                     <span class="px-2 py-0.5 rounded-full text-xs font-medium
-                                        {{ $pnr->status === 'submitted' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' }}">
+                                        {{ $pnr->status === 'submitted' ? 'bg-warning-100 text-warning-700 dark:bg-warning-900 dark:text-warning-300' : 'bg-info-100 text-info-700 dark:bg-info-900 dark:text-info-300' }}">
                                         {{ \App\Models\PurchaseRequest::statusOptions()[$pnr->status] ?? $pnr->status }}
                                     </span>
                                 </td>

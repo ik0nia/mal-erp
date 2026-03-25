@@ -6,8 +6,8 @@ use App\Filament\App\Concerns\HasDynamicNavSort;
 
 use App\Filament\App\Resources\EanAssociationRequestResource\Pages;
 use App\Models\EanAssociationRequest;
+use Filament\Actions;
 use Filament\Forms;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -49,13 +49,15 @@ class EanAssociationRequestResource extends Resource
                 Tables\Columns\TextColumn::make('requestedBy.name')
                     ->label('Solicitat de'),
 
-                Tables\Columns\BadgeColumn::make('status')
+                Tables\Columns\TextColumn::make('status')
                     ->label('Status')
-                    ->colors([
-                        'warning' => 'pending',
-                        'success' => 'approved',
-                        'danger'  => 'rejected',
-                    ])
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'pending'  => 'warning',
+                        'approved' => 'success',
+                        'rejected' => 'danger',
+                        default    => 'gray',
+                    })
                     ->formatStateUsing(fn (string $state): string => match ($state) {
                         'pending'  => 'În așteptare',
                         'approved' => 'Aprobat',

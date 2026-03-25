@@ -24,6 +24,7 @@ class OrderStatusChartWidget extends ChartWidget
     public function mount(): void
     {
         $this->filter = (string) now()->year;
+        parent::mount();
     }
 
     #[On('onlineShopSetPeriod')]
@@ -31,6 +32,7 @@ class OrderStatusChartWidget extends ChartWidget
     {
         $this->filter = (string) $year;
         $this->month  = $month;
+        $this->cachedData = null;
     }
 
     protected function getFilters(): ?array

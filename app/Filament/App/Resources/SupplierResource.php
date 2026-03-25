@@ -14,6 +14,7 @@ use App\Models\WooProduct;
 use Filament\Forms;
 use Filament\Infolists;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\TextSize;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Actions;
@@ -490,7 +491,7 @@ class SupplierResource extends Resource
                     Infolists\Components\TextEntry::make('name')
                         ->label('Nume furnizor')
                         ->weight(\Filament\Support\Enums\FontWeight::Bold)
-                        ->size(Infolists\Components\TextEntry\TextEntrySize::Large),
+                        ->size(TextSize::Large),
 
                     Infolists\Components\IconEntry::make('is_active')
                         ->label('Status')

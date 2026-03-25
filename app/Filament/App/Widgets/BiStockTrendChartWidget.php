@@ -72,6 +72,8 @@ class BiStockTrendChartWidget extends ChartWidget
     {
         // Filament apelează asta când se schimbă filtrul — sincronizăm $period cu $filter
         $this->period = (int) ($this->filter ?? 30);
+        $this->cachedData = null;
+        parent::updateChartData();
     }
 
     protected function getOptions(): array

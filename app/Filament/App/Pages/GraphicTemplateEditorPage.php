@@ -4,17 +4,12 @@ namespace App\Filament\App\Pages;
 
 use App\Models\GraphicTemplate;
 use App\Services\SocialMedia\NodeImageRenderer;
-use Filament\Forms;
-use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Concerns\InteractsWithForms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Storage;
 
-class GraphicTemplateEditorPage extends Page implements HasForms
+class GraphicTemplateEditorPage extends Page
 {
-    use InteractsWithForms;
 
     protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-paint-brush';
     protected static ?string $navigationLabel = 'Editor Template';
