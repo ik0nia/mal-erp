@@ -17,6 +17,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Placeholder;
 use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Get;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
@@ -377,29 +378,67 @@ class ViewPurchaseOrder extends ViewRecord
                 ->form(function (): array {
                     $this->record->loadMissing('items');
 
-                    $defaultItems = $this->record->items->map(fn ($item) => [
-                        'id'          => $item->id,
-                        'name'        => $item->product_name . ($item->sku ? " [{$item->sku}]" : ''),
-                        'ordered_qty' => floor((float) $item->quantity) == (float) $item->quantity ? number_format((float) $item->quantity, 0, '.', '') : number_format((float) $item->quantity, 2, '.', ''),
-                        'qty'         => (float) $item->quantity,
-                        'price'       => (float) $item->unit_price,
-                    ])->values()->all();
+                    $defaultItems = $this->record->items->map(function ($item) {
+                        // Get last purchase price from history if available
+                        $lastPrice = (float) $item->unit_price;
+                        if ($item->woo_product_id) {
+                            $historyPrice = \App\Models\ProductPurchasePriceLog::where('woo_product_id', $item->woo_product_id)
+                                ->latest('recorded_at')
+                                ->value('purchase_price');
+                            if ($historyPrice) {
+                                $lastPrice = (float) $historyPrice;
+                            }
+                        }
+
+                        $qty = (float) $item->quantity;
+                        return [
+                            'id'          => $item->id,
+                            'name'        => $item->product_name . ($item->sku ? " [{$item->sku}]" : ''),
+                            'ordered_qty' => floor($qty) == $qty ? number_format($qty, 0, '.', '') : number_format($qty, 2, '.', ''),
+                            'qty'         => $qty,
+                            'price'       => round($lastPrice, 2),
+                        ];
+                    })->values()->all();
 
                     return [
                         Repeater::make('items')
                             ->label('')
                             ->schema([
                                 Hidden::make('id'),
-                                TextInput::make('name')->label('Produs')->disabled()->dehydrated(false),
+                                TextInput::make('name')->label('Produs')->disabled()->dehydrated(false)->columnSpan(2),
                                 TextInput::make('ordered_qty')->label('Comandat')->disabled()->dehydrated(false)->suffix('buc.'),
-                                TextInput::make('qty')->label('Recepționat')->numeric()->minValue(0)->suffix('buc.')->required(),
-                                TextInput::make('price')->label('Preț achiziție')->numeric()->minValue(0)->suffix('RON')->required(),
+                                TextInput::make('qty')->label('Recepționat')->numeric()->minValue(0)->suffix('buc.')->required()
+                                    ->live(onBlur: true),
+                                TextInput::make('price')->label('Preț achiziție (fără TVA)')->numeric()->minValue(0)->suffix('RON')->required()
+                                    ->live(onBlur: true),
                             ])
-                            ->columns(4)
+                            ->columns(5)
                             ->default($defaultItems)
                             ->addable(false)
                             ->deletable(false)
                             ->reorderable(false),
+
+                        Placeholder::make('total_reception')
+                            ->label('')
+                            ->content(function (Get $get): HtmlString {
+                                $items = $get('items') ?? [];
+                                $total = 0;
+                                $lines = [];
+                                foreach ($items as $item) {
+                                    $qty = (float) ($item['qty'] ?? 0);
+                                    $price = (float) ($item['price'] ?? 0);
+                                    $lineTotal = $qty * $price;
+                                    $total += $lineTotal;
+                                }
+                                $totalFormatted = number_format($total, 2, ',', '.');
+                                $totalWithVat = number_format($total * 1.19, 2, ',', '.');
+                                return new HtmlString("
+                                    <div style=\"display:flex;justify-content:flex-end;gap:24px;padding:12px 0;border-top:2px solid #e5e7eb;font-size:0.95rem;\">
+                                        <div><span style=\"color:#6b7280;\">Total fără TVA:</span> <strong>{$totalFormatted} RON</strong></div>
+                                        <div><span style=\"color:#6b7280;\">Total cu TVA (19%):</span> <strong>{$totalWithVat} RON</strong></div>
+                                    </div>
+                                ");
+                            }),
 
                         Textarea::make('received_notes')
                             ->label('Observații recepție')

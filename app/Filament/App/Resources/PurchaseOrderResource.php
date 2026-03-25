@@ -298,14 +298,6 @@ class PurchaseOrderResource extends Resource
                     TextEntry::make('received_notes')->label('Observații recepție')->placeholder('—')->columnSpanFull(),
                 ]),
 
-            InfolistSection::make('Comunicare furnizor')
-                ->collapsed()
-                ->schema([
-                    ViewEntry::make('supplier_emails_context')
-                        ->label('')
-                        ->view('filament.app.infolist.purchase-order-emails'),
-                ]),
-
             InfolistSection::make('Produse comandate')
                 ->schema([
                     RepeatableEntry::make('items')
