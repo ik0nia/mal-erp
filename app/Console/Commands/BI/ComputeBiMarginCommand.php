@@ -66,12 +66,14 @@ class ComputeBiMarginCommand extends Command
             ->get()
             ->keyBy('woo_product_id');
 
-        // Fallback suppliers: any with last_purchase_price (cel mai recent)
+        // Fallback suppliers: any with purchase_price OR last_purchase_price
         $fallbackSuppliers = DB::table('product_suppliers as ps')
             ->join('suppliers as s', 's.id', '=', 'ps.supplier_id')
             ->whereIn('ps.woo_product_id', $wooProductIds)
-            ->whereNotNull('ps.last_purchase_price')
-            ->where('ps.last_purchase_price', '>', 0)
+            ->where(function ($q) {
+                $q->where('ps.purchase_price', '>', 0)
+                  ->orWhere('ps.last_purchase_price', '>', 0);
+            })
             ->select([
                 'ps.woo_product_id',
                 'ps.purchase_price',
@@ -132,25 +134,35 @@ class ComputeBiMarginCommand extends Command
                 }
             }
 
-            // Priority 2: Preferred supplier → purchase_price
+            // Priority 2: Preferred supplier → purchase_price or last_purchase_price
             if ($purchasePrice === null && $wooId) {
                 $preferred = $preferredSuppliers->get($wooId);
-                if ($preferred && (float) ($preferred->purchase_price ?? 0) > 0) {
-                    $purchasePrice = (float) $preferred->purchase_price;
-                    $purchasePriceSource = 'product_supplier';
-                    $supplierId = (int) $preferred->supplier_id;
-                    $supplierName = $preferred->supplier_name;
+                if ($preferred) {
+                    $pp = (float) ($preferred->purchase_price ?? 0);
+                    $lpp = (float) ($preferred->last_purchase_price ?? 0);
+                    $bestPrice = $pp > 0 ? $pp : ($lpp > 0 ? $lpp : 0);
+                    if ($bestPrice > 0) {
+                        $purchasePrice = $bestPrice;
+                        $purchasePriceSource = 'product_supplier';
+                        $supplierId = (int) $preferred->supplier_id;
+                        $supplierName = $preferred->supplier_name;
+                    }
                 }
             }
 
-            // Priority 3: Any supplier → last_purchase_price
+            // Priority 3: Any supplier → purchase_price or last_purchase_price
             if ($purchasePrice === null && $wooId) {
                 $fallback = $fallbackSuppliers->get($wooId);
-                if ($fallback && (float) ($fallback->last_purchase_price ?? 0) > 0) {
-                    $purchasePrice = (float) $fallback->last_purchase_price;
-                    $purchasePriceSource = 'product_supplier';
-                    $supplierId = (int) $fallback->supplier_id;
-                    $supplierName = $fallback->supplier_name;
+                if ($fallback) {
+                    $pp = (float) ($fallback->purchase_price ?? 0);
+                    $lpp = (float) ($fallback->last_purchase_price ?? 0);
+                    $bestPrice = $pp > 0 ? $pp : ($lpp > 0 ? $lpp : 0);
+                    if ($bestPrice > 0) {
+                        $purchasePrice = $bestPrice;
+                        $purchasePriceSource = 'product_supplier';
+                        $supplierId = (int) $fallback->supplier_id;
+                        $supplierName = $fallback->supplier_name;
+                    }
                 }
             }
 
