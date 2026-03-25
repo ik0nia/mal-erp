@@ -17,6 +17,8 @@ class PendingPurchaseItemsWidget extends Widget
 
     protected int|string|array $columnSpan = 'full';
 
+    protected static ?int $sort = -10;
+
     protected static bool $isLazy = false;
 
     public ?int  $filterSupplierId   = null;
