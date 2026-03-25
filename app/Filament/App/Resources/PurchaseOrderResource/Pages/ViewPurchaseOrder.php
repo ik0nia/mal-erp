@@ -383,8 +383,8 @@ class ViewPurchaseOrder extends ViewRecord
                         $lastPrice = (float) $item->unit_price;
                         if ($item->woo_product_id) {
                             $historyPrice = \App\Models\ProductPurchasePriceLog::where('woo_product_id', $item->woo_product_id)
-                                ->latest('recorded_at')
-                                ->value('purchase_price');
+                                ->latest('acquired_at')
+                                ->value('unit_price');
                             if ($historyPrice) {
                                 $lastPrice = (float) $historyPrice;
                             }

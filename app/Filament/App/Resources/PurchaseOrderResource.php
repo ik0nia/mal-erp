@@ -274,6 +274,7 @@ class PurchaseOrderResource extends Resource
         return $schema->schema([
             InfolistSection::make('Informații comandă')
                 ->columns(3)
+                ->columnSpanFull()
                 ->schema([
                     TextEntry::make('number')->label('Număr PO'),
                     TextEntry::make('supplier.name')->label('Furnizor'),
@@ -299,6 +300,7 @@ class PurchaseOrderResource extends Resource
                 ]),
 
             InfolistSection::make('Produse comandate')
+                ->columnSpanFull()
                 ->schema([
                     RepeatableEntry::make('items')
                         ->label('')
