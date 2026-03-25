@@ -260,7 +260,7 @@
               <tr wire:key="alert-{{ $aIdx }}" @if($row['product_id'] ?? null) onclick="window.location='{{ \App\Filament\App\Resources\WooProductResource::getUrl('view', ['record' => $row['product_id']]) }}'" style="cursor:pointer;" @endif>
                 <td class="copy-sku" style="font-family:monospace; font-size:0.875rem;" onclick="copySku(this,'{{ $row['sku'] }}')">{{ $row['sku'] }}</td>
                 <td style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#1f2937;">{{ $row['name'] }}</td>
-                <td style="text-align:right;">@if($row['closing_qty'] <= 0)<span style="color:#dc2626; font-weight:600;">0</span>@else @php $cq = (float)$row['closing_qty']; @endphp{{ floor($cq) == $cq ? number_format($cq, 0, '.', '') : number_format($cq, 2, '.', '') }}@endif</td>
+                <td style="text-align:right;">@if($row['closing_qty'] <= 0)<span style="color:#dc2626; font-weight:600;">0</span>@else{{ floor((float)$row['closing_qty']) == (float)$row['closing_qty'] ? number_format((float)$row['closing_qty'], 0, '.', '') : number_format((float)$row['closing_qty'], 2, '.', '') }}@endif</td>
                 <td style="text-align:right; color:#4b5563;">{{ $row['closing_price'] !== null ? number_format($row['closing_price'], 2, ',', '.') . ' RON' : '—' }}</td>
                 <td style="text-align:right; font-weight:500; color:#111827;">{{ number_format($row['stock_value'], 0, ',', '.') }} RON</td>
                 @if($this->tab !== 'P2')
