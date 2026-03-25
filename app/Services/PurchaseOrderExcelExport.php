@@ -121,7 +121,8 @@ class PurchaseOrderExcelExport
             $sheet->setCellValue("B{$row}", $item->product_name);
             $sheet->setCellValueExplicit("C{$row}", $item->sku ?? '—', DataType::TYPE_STRING);
             $sheet->setCellValueExplicit("D{$row}", $item->supplier_sku ?? '—', DataType::TYPE_STRING);
-            $sheet->setCellValue("E{$row}", $item->quantity);
+            $qty = fmod((float) $item->quantity, 1) == 0 ? (int) $item->quantity : $item->quantity;
+            $sheet->setCellValue("E{$row}", $qty);
 
             $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $sheet->getStyle("E{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);

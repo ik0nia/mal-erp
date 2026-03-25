@@ -168,7 +168,7 @@ class ViewPurchaseOrder extends ViewRecord
                         $line  = "- {$item->product_name}";
                         $codes = [];
                         if ($item->sku) {
-                            $codes[] = "BARCODE: {$item->sku}";
+                            $codes[] = "Barcode: {$item->sku}";
                         }
                         if ($item->supplier_sku) {
                             $codes[] = "cod produs: {$item->supplier_sku}";
@@ -176,7 +176,8 @@ class ViewPurchaseOrder extends ViewRecord
                         if ($codes) {
                             $line .= ' (' . implode(' | ', $codes) . ')';
                         }
-                        $line    .= ": {$item->quantity} buc.";
+                        $qty      = fmod((float) $item->quantity, 1) == 0 ? (int) $item->quantity : $item->quantity;
+                        $line    .= ": {$qty} buc.";
                         $lines[] = $line;
                     }
 
@@ -272,7 +273,7 @@ class ViewPurchaseOrder extends ViewRecord
                         $line  = "• {$item->product_name}";
                         $codes = [];
                         if ($item->sku) {
-                            $codes[] = "BARCODE: {$item->sku}";
+                            $codes[] = "Barcode: {$item->sku}";
                         }
                         if ($item->supplier_sku) {
                             $codes[] = "cod produs: {$item->supplier_sku}";
@@ -280,7 +281,8 @@ class ViewPurchaseOrder extends ViewRecord
                         if ($codes) {
                             $line .= ' (' . implode(' | ', $codes) . ')';
                         }
-                        $line .= ": {$item->quantity} buc.";
+                        $qty   = fmod((float) $item->quantity, 1) == 0 ? (int) $item->quantity : $item->quantity;
+                        $line .= ": {$qty} buc.";
                         if ($item->unit_price > 0) {
                             $line .= " × " . number_format($item->unit_price, 2, ',', '.') . " lei";
                         }
