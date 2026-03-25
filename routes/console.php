@@ -108,6 +108,14 @@ Schedule::command('bi:generate-period-report --type=annual')
     ->withoutOverlapping()
     ->runInBackground();
 
+// Clasificare ABC/XYZ produse — zilnic la 01:00 (Europe/Bucharest).
+// Calculează consum mediu zilnic, clasificare ABC/XYZ și reorder_qty.
+Schedule::command('erp:compute-abc-classification')
+    ->dailyAt('01:00')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping()
+    ->runInBackground();
+
 // GDPR — anonimizare IP-uri chat_logs mai vechi de 90 de zile.
 Schedule::command('gdpr:cleanup-chat-logs')
     ->weekly()
