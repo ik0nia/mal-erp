@@ -102,7 +102,7 @@ class WooProductResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Forms\Components\Section::make('Informații produs')
+            \Filament\Schemas\Components\Section::make('Informații produs')
                 ->columns(2)
                 ->columnSpanFull()
                 ->schema([
@@ -161,7 +161,7 @@ class WooProductResource extends Resource
                         ->columnSpanFull(),
                 ]),
 
-            Forms\Components\Section::make('Categorii')
+            \Filament\Schemas\Components\Section::make('Categorii')
                 ->columnSpanFull()
                 ->schema([
                     Forms\Components\Select::make('categories')
@@ -173,7 +173,7 @@ class WooProductResource extends Resource
                         ->native(false),
                 ]),
 
-            Forms\Components\Section::make('Atribute tehnice')
+            \Filament\Schemas\Components\Section::make('Atribute tehnice')
                 ->description('Atribute vizibile pe fișa produsului în magazinul online.')
                 ->columnSpanFull()
                 ->schema([
@@ -198,7 +198,7 @@ class WooProductResource extends Resource
                         ]),
                 ]),
 
-            Forms\Components\Section::make('Furnizori')
+            \Filament\Schemas\Components\Section::make('Furnizori')
                 ->columnSpanFull()
                 ->schema([
                     Forms\Components\Repeater::make('suppliers_data')
@@ -252,7 +252,7 @@ class WooProductResource extends Resource
                                 ->columnSpanFull(),
                         ]),
                 ]),
-            Forms\Components\Section::make('Mod aprovizionare')
+            \Filament\Schemas\Components\Section::make('Mod aprovizionare')
                 ->description('Controlează cum se aprovizionează produsul și dacă mai face parte din portofoliu.')
                 ->collapsible()
                 ->columnSpanFull()
@@ -272,7 +272,7 @@ class WooProductResource extends Resource
                         ->placeholder('ex: Disponibil în 3-5 zile lucrătoare')
                         ->maxLength(100)
                         ->visible(fn (Forms\Get $get): bool => (bool) $get('is_on_demand')),
-                    Forms\Components\Grid::make(2)->schema([
+                    \Filament\Schemas\Components\Grid::make(2)->schema([
                         Forms\Components\TextInput::make('min_stock_qty')
                             ->label('Stoc minim (reorder point)')
                             ->helperText('Când stocul scade sub această valoare, produsul apare în alertele de reaprovizionare.')
@@ -503,7 +503,7 @@ class WooProductResource extends Resource
             ->searchPlaceholder('Caută după nume, SKU, slug sau categorie...')
             ->searchDebounce('800ms')
             ->defaultSort('name')
-            ->actionsPosition(\Filament\Tables\Enums\ActionsPosition::BeforeColumns)
+            ->actionsPosition(\Filament\Tables\Enums\RecordActionsPosition::BeforeColumns)
             ->recordActions([
                 InfolistAction::make('add_to_necesar')
                     ->label('Necesar')
@@ -539,7 +539,7 @@ class WooProductResource extends Resource
                             ->success()
                             ->title('Produs adăugat la necesar')
                             ->actions([
-                                \Filament\Notifications\Actions\Action::make('open_cart')
+                                \Filament\Actions\Action::make('open_cart')
                                     ->label('Deschide coșul →')
                                     ->url(PurchaseRequestResource::getUrl('edit', ['record' => $draft->id])),
                             ])

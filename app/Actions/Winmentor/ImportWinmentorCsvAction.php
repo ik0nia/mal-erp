@@ -941,7 +941,7 @@ class ImportWinmentorCsvAction
             ->icon('heroicon-o-sparkles')
             ->warning()
             ->actions([
-                \Filament\Notifications\Actions\Action::make('vezi')
+                \Filament\Actions\Action::make('vezi')
                     ->label('Vezi produsele')
                     ->url(\App\Filament\App\Pages\NewWinmentorProducts::getUrl())
                     ->button(),

@@ -6,7 +6,7 @@ use App\Filament\App\Resources\PurchaseRequestResource;
 use App\Models\EmailMessage;
 use App\Models\PurchaseRequest;
 use Filament\Actions;
-use Filament\Infolists\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Infolists\Components\ViewEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;

@@ -5,7 +5,7 @@ namespace App\Filament\App\Resources\PurchaseRequestResource\Pages;
 use App\Filament\App\Forms\Components\PurchaseItemsTable;
 use App\Filament\App\Resources\PurchaseRequestResource;
 use App\Models\User;
-use Filament\Forms\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Schema;
 use Filament\Resources\Pages\CreateRecord;

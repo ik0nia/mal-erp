@@ -36,7 +36,7 @@ class BrandResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Forms\Components\Section::make('Informații brand')
+            \Filament\Schemas\Components\Section::make('Informații brand')
                 ->columnSpanFull()
                 ->columns(2)
                 ->schema([
@@ -79,7 +79,7 @@ class BrandResource extends Resource
                         ->columnSpanFull(),
                 ]),
 
-            Forms\Components\Section::make('Furnizori')
+            \Filament\Schemas\Components\Section::make('Furnizori')
                 ->columnSpanFull()
                 ->description('Furnizorii de la care putem comanda produse ale acestui brand')
                 ->schema([

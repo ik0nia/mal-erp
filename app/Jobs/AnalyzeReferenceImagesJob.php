@@ -4,7 +4,7 @@ namespace App\Jobs;
 
 use App\Models\User;
 use App\Services\SocialMedia\TemplateGeneratorService;
-use Filament\Notifications\Actions\Action;
+use Filament\Actions\Action as NotificationAction;
 use Filament\Notifications\Notification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -49,7 +49,7 @@ class AnalyzeReferenceImagesJob implements ShouldQueue
                     ->body('Șabloanele AI sunt disponibile în Șabloane Grafice pentru editare și rafinare.')
                     ->success()
                     ->actions([
-                        Action::make('view')
+                        NotificationAction::make('view')
                             ->label('Deschide șabloane')
                             ->url(route('filament.app.resources.graphic-templates.index'))
                             ->button(),

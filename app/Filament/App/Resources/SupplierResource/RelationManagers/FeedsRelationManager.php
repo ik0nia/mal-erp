@@ -62,7 +62,7 @@ class FeedsRelationManager extends RelationManager
                 ->columnSpanFull(),
 
             // ── Toya API ──────────────────────────────────────────────────
-            Forms\Components\Section::make('Configurare Toya API')
+            \Filament\Schemas\Components\Section::make('Configurare Toya API')
                 ->schema([
                     Forms\Components\TextInput::make('settings.api_key')
                         ->label('API Key Toya (Pimcore)')
@@ -75,7 +75,7 @@ class FeedsRelationManager extends RelationManager
                 ->columns(1),
 
             // ── CSV URL ───────────────────────────────────────────────────
-            Forms\Components\Section::make('Configurare Feed CSV')
+            \Filament\Schemas\Components\Section::make('Configurare Feed CSV')
                 ->schema([
                     Forms\Components\TextInput::make('settings.url')
                         ->label('URL feed CSV')
@@ -99,7 +99,7 @@ class FeedsRelationManager extends RelationManager
                 ->columns(2),
 
             // ── Formula preț (toate tipurile de feed cu preț automat) ──────
-            Forms\Components\Section::make('Formula preț vânzare')
+            \Filament\Schemas\Components\Section::make('Formula preț vânzare')
                 ->description('preț_feed × (1 − discount%) × (1 + adaos%) × (1 + TVA%)')
                 ->schema([
                     Forms\Components\TextInput::make('settings.discount')

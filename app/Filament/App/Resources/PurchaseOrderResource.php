@@ -13,7 +13,7 @@ use App\Models\WooProduct;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Placeholder;
-use Filament\Forms\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
@@ -21,7 +21,7 @@ use Filament\Forms\Get;
 use Filament\Schemas\Schema;
 use Filament\Forms\Set;
 use Filament\Infolists\Components\RepeatableEntry;
-use Filament\Infolists\Components\Section as InfolistSection;
+use Filament\Schemas\Components\Section as InfolistSection;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
 use Filament\Resources\Resource;
@@ -87,7 +87,7 @@ class PurchaseOrderResource extends Resource
                         ->disabled()
                         ->placeholder('Se generează automat'),
 
-                    \Filament\Forms\Components\Group::make([
+                    \Filament\Schemas\Components\Group::make([
                         Select::make('supplier_id')
                             ->label('Furnizor')
                             ->options(function (): array {

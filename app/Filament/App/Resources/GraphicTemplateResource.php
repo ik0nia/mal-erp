@@ -28,7 +28,7 @@ class GraphicTemplateResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Forms\Components\Section::make('Informații generale')
+            \Filament\Schemas\Components\Section::make('Informații generale')
                 ->columnSpanFull()
                 ->columns(2)
                 ->schema([
@@ -55,7 +55,7 @@ class GraphicTemplateResource extends Resource
                         ->columnSpanFull(),
                 ]),
 
-            Forms\Components\Section::make('Culori & Identitate')
+            \Filament\Schemas\Components\Section::make('Culori & Identitate')
                 ->columnSpanFull()
                 ->columns(2)
                 ->schema([
@@ -65,7 +65,7 @@ class GraphicTemplateResource extends Resource
                         ->default('#a52a3f'),
                 ]),
 
-            Forms\Components\Section::make('Bara de jos')
+            \Filament\Schemas\Components\Section::make('Bara de jos')
                 ->columnSpanFull()
                 ->description('Textul afișat în bara colorată din partea de jos a imaginii')
                 ->columns(1)
@@ -78,7 +78,7 @@ class GraphicTemplateResource extends Resource
                         ->label('Text secundar (adresă / contact)')
                         ->maxLength(200)
                         ->default('Sântandrei, Nr. 311, vis-a-vis de Primărie  |  www.malinco.ro  |  0359 444 999'),
-                    Forms\Components\Grid::make(2)->schema([
+                    \Filament\Schemas\Components\Grid::make(2)->schema([
                         Forms\Components\Toggle::make('config.show_truck')
                             ->label('Afișează iconița camion')
                             ->default(true),
@@ -88,7 +88,7 @@ class GraphicTemplateResource extends Resource
                     ]),
                 ]),
 
-            Forms\Components\Section::make('Buton CTA')
+            \Filament\Schemas\Components\Section::make('Buton CTA')
                 ->columnSpanFull()
                 ->columns(2)
                 ->schema([
@@ -98,7 +98,7 @@ class GraphicTemplateResource extends Resource
                         ->default('malinco.ro  →'),
                 ]),
 
-            Forms\Components\Section::make('Proporții & Fonturi')
+            \Filament\Schemas\Components\Section::make('Proporții & Fonturi')
                 ->columnSpanFull()
                 ->description('Valorile sunt proporții relative față de lățimea imaginii (1080px = 1.0)')
                 ->columns(3)

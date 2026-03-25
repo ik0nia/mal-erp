@@ -6,7 +6,7 @@ use Anthropic\Client as AnthropicClient;
 use App\Models\AiUsageLog;
 use App\Models\BiAnalysis;
 use App\Models\User;
-use Filament\Notifications\Actions\Action;
+use Filament\Actions\Action as NotificationAction;
 use Filament\Notifications\Notification;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -994,7 +994,7 @@ PROMPT;
             ->body($analysis->title)
             ->success()
             ->actions([
-                Action::make('view')
+                NotificationAction::make('view')
                     ->label('Vezi raportul')
                     ->url('/bi-analysis-page')
                     ->button(),

@@ -12,7 +12,7 @@ use App\Models\SyncRun;
 use App\Models\User;
 use App\Services\Courier\SamedayConnectionTester;
 use App\Services\WooCommerce\WooClient;
-use Filament\Forms\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;

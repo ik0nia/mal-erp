@@ -9,6 +9,7 @@ use App\Filament\App\Resources\CustomerResource\Pages;
 use App\Models\Customer;
 use App\Services\CompanyData\OpenApiCompanyLookupService;
 use Filament\Forms;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
@@ -67,7 +68,7 @@ class CustomerResource extends Resource
     {
         return $schema
             ->schema([
-                Forms\Components\Section::make('Detalii client')
+                Section::make('Detalii client')
                     ->columnSpanFull()
                     ->columns(3)
                     ->schema([
@@ -186,7 +187,7 @@ class CustomerResource extends Resource
                             ->visible(fn (Get $get): bool => $get('type') === Customer::TYPE_COMPANY)
                             ->maxLength(255),
                     ]),
-                Forms\Components\Section::make('Adresă implicită')
+                Section::make('Adresă implicită')
                     ->columnSpanFull()
                     ->columns(3)
                     ->schema([
@@ -209,7 +210,7 @@ class CustomerResource extends Resource
                             ->rows(3)
                             ->columnSpanFull(),
                     ]),
-                Forms\Components\Section::make('Adrese de livrare alternative')
+                Section::make('Adrese de livrare alternative')
                     ->columnSpanFull()
                     ->description('Adrese suplimentare cu contact dedicat pentru livrare.')
                     ->schema([

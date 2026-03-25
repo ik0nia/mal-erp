@@ -8,6 +8,7 @@ use App\Jobs\GenerateBiAnalysisJob;
 use App\Models\BiAnalysis;
 use Filament\Actions\Action;
 use Filament\Forms;
+use Filament\Schemas\Components\Grid;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Carbon;
@@ -131,7 +132,7 @@ class BiAnalysisPage extends Page
                         ->native(false)
                         ->visible(fn (Forms\Get $get) => $get('period') === 'day'),
 
-                    Forms\Components\Grid::make(2)
+                    \Filament\Schemas\Components\Grid::make(2)
                         ->schema([
                             Forms\Components\DatePicker::make('date_from')
                                 ->label('De la')

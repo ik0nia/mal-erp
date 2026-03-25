@@ -11,7 +11,7 @@ use App\Models\WooOrder;
 use App\Models\WooProduct;
 use Filament\Support\Enums\TextSize;
 use Filament\Infolists\Components\RepeatableEntry;
-use Filament\Infolists\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;

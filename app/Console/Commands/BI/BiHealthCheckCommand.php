@@ -8,7 +8,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Filament\Notifications\Notification;
-use Filament\Notifications\Actions\Action;
+use Filament\Actions\Action as NotificationAction;
 
 /**
  * Watchdog BI — rulat zilnic la 09:00.
@@ -120,7 +120,7 @@ class BiHealthCheckCommand extends Command
                 ->body($body)
                 ->warning()
                 ->actions([
-                    Action::make('dashboard')
+                    NotificationAction::make('dashboard')
                         ->label('Deschide Dashboard BI')
                         ->url('/app')
                         ->button(),

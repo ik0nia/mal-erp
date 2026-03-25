@@ -42,7 +42,7 @@ class SupplierResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Forms\Components\Section::make('Informații generale')
+            \Filament\Schemas\Components\Section::make('Informații generale')
                 ->columnSpanFull()
                 ->columns(2)
                 ->schema([
@@ -70,7 +70,7 @@ class SupplierResource extends Resource
                         ->columnSpanFull(),
                 ]),
 
-            Forms\Components\Section::make('Date fiscale și bancare')
+            \Filament\Schemas\Components\Section::make('Date fiscale și bancare')
                 ->columnSpanFull()
                 ->columns(2)
                 ->schema([
@@ -88,7 +88,7 @@ class SupplierResource extends Resource
                         ->maxLength(255),
                 ]),
 
-            Forms\Components\Section::make('Configurare achiziții')
+            \Filament\Schemas\Components\Section::make('Configurare achiziții')
                 ->columnSpanFull()
                 ->columns(2)
                 ->schema([
@@ -108,7 +108,7 @@ class SupplierResource extends Resource
                         ->placeholder('Fără plafon (aprobat automat)'),
                 ]),
 
-            Forms\Components\Section::make('Notițe')
+            \Filament\Schemas\Components\Section::make('Notițe')
                 ->columnSpanFull()
                 ->schema([
                     Forms\Components\Textarea::make('notes')
@@ -116,19 +116,19 @@ class SupplierResource extends Resource
                         ->rows(3),
                 ]),
 
-            Forms\Components\Section::make('Condiții comerciale')
+            \Filament\Schemas\Components\Section::make('Condiții comerciale')
                 ->columnSpanFull()
                 ->icon('heroicon-o-document-text')
                 ->collapsible()
                 ->collapsed()
                 ->schema([
-                    Forms\Components\Tabs::make()
+                    \Filament\Schemas\Components\Tabs::make()
                         ->tabs([
                             // ── Tab 1: Livrare ──────────────────────────────
-                            Forms\Components\Tabs\Tab::make('Livrare')
+                            \Filament\Schemas\Components\Tabs\Tab::make('Livrare')
                                 ->icon('heroicon-o-truck')
                                 ->schema([
-                                    Forms\Components\Grid::make(3)->schema([
+                                    \Filament\Schemas\Components\Grid::make(3)->schema([
                                         Forms\Components\TextInput::make('conditions.delivery.lead_days_standard')
                                             ->label('Lead time standard (zile)')
                                             ->helperText('Câte zile lucrătoare trec de la plasarea comenzii până la livrare în condiții normale.')
@@ -168,7 +168,7 @@ class SupplierResource extends Resource
                                 ]),
 
                             // ── Tab 2: Comandă ───────────────────────────────
-                            Forms\Components\Tabs\Tab::make('Comandă')
+                            \Filament\Schemas\Components\Tabs\Tab::make('Comandă')
                                 ->icon('heroicon-o-shopping-bag')
                                 ->schema([
                                     Forms\Components\CheckboxList::make('conditions.ordering.methods')
@@ -184,7 +184,7 @@ class SupplierResource extends Resource
                                         ])
                                         ->columns(3)
                                         ->columnSpanFull(),
-                                    Forms\Components\Grid::make(2)->schema([
+                                    \Filament\Schemas\Components\Grid::make(2)->schema([
                                         Forms\Components\Select::make('conditions.ordering.preferred_method')
                                             ->label('Metodă preferată')
                                             ->helperText('Metoda pe care furnizorul o recomandă pentru a primi comenzile cel mai rapid.')
@@ -216,7 +216,7 @@ class SupplierResource extends Resource
                                             ->helperText('Contul/utilizatorul cu care vă autentificați pe portalul furnizorului.')
                                             ->nullable(),
                                     ]),
-                                    Forms\Components\Grid::make(3)->schema([
+                                    \Filament\Schemas\Components\Grid::make(3)->schema([
                                         Forms\Components\TextInput::make('conditions.ordering.min_order_value')
                                             ->label('Valoare minimă comandă (RON)')
                                             ->helperText('Sub această valoare furnizorul poate refuza comanda sau aplica o suprataxă.')
@@ -236,10 +236,10 @@ class SupplierResource extends Resource
                                 ]),
 
                             // ── Tab 3: Transport ─────────────────────────────
-                            Forms\Components\Tabs\Tab::make('Transport')
+                            \Filament\Schemas\Components\Tabs\Tab::make('Transport')
                                 ->icon('heroicon-o-map-pin')
                                 ->schema([
-                                    Forms\Components\Grid::make(2)->schema([
+                                    \Filament\Schemas\Components\Grid::make(2)->schema([
                                         Forms\Components\Select::make('conditions.transport.incoterm')
                                             ->label('Incoterm')
                                             ->helperText('Regula care stabilește până unde livrează furnizorul și cine suportă costul/riscul transportului.')
@@ -281,7 +281,7 @@ class SupplierResource extends Resource
                                 ]),
 
                             // ── Tab 4: Plată ─────────────────────────────────
-                            Forms\Components\Tabs\Tab::make('Plată')
+                            \Filament\Schemas\Components\Tabs\Tab::make('Plată')
                                 ->icon('heroicon-o-banknotes')
                                 ->schema([
                                     Forms\Components\CheckboxList::make('conditions.payment.methods')
@@ -299,7 +299,7 @@ class SupplierResource extends Resource
                                         ])
                                         ->columns(4)
                                         ->columnSpanFull(),
-                                    Forms\Components\Grid::make(3)->schema([
+                                    \Filament\Schemas\Components\Grid::make(3)->schema([
                                         Forms\Components\Select::make('conditions.payment.default_term')
                                             ->label('Termen de plată')
                                             ->helperText('"Net X zile" = plătești factura în maximum X zile de la data emiterii.')
@@ -353,10 +353,10 @@ class SupplierResource extends Resource
                                 ]),
 
                             // ── Tab 5: Discount comercial ─────────────────────
-                            Forms\Components\Tabs\Tab::make('Discount')
+                            \Filament\Schemas\Components\Tabs\Tab::make('Discount')
                                 ->icon('heroicon-o-tag')
                                 ->schema([
-                                    Forms\Components\Grid::make(3)->schema([
+                                    \Filament\Schemas\Components\Grid::make(3)->schema([
                                         Forms\Components\TextInput::make('conditions.commercial.discount_percent')
                                             ->label('Discount comercial general (%)')
                                             ->helperText('Reducerea fixă aplicată la toate comenzile, negociată cu furnizorul.')
@@ -411,10 +411,10 @@ class SupplierResource extends Resource
                                 ]),
 
                             // ── Tab 6: Retur & Garanție ───────────────────────
-                            Forms\Components\Tabs\Tab::make('Retur & Garanție')
+                            \Filament\Schemas\Components\Tabs\Tab::make('Retur & Garanție')
                                 ->icon('heroicon-o-arrow-uturn-left')
                                 ->schema([
-                                    Forms\Components\Grid::make(2)->schema([
+                                    \Filament\Schemas\Components\Grid::make(2)->schema([
                                         Forms\Components\Toggle::make('conditions.returns.return_allowed')
                                             ->label('Retururi acceptate')
                                             ->helperText('Furnizorul acceptă în principiu returnarea mărfii.')
@@ -447,7 +447,7 @@ class SupplierResource extends Resource
                                     Forms\Components\Textarea::make('conditions.returns.return_note')
                                         ->label('Procedura de retur')
                                         ->rows(3)->columnSpanFull(),
-                                    Forms\Components\Grid::make(2)->schema([
+                                    \Filament\Schemas\Components\Grid::make(2)->schema([
                                         Forms\Components\TextInput::make('conditions.returns.warranty_months')
                                             ->label('Garanție produse (luni)')
                                             ->numeric()->minValue(0)->nullable(),
@@ -485,7 +485,7 @@ class SupplierResource extends Resource
         };
 
         return $schema->schema([
-            Infolists\Components\Section::make('Informații generale')
+            \Filament\Schemas\Components\Section::make('Informații generale')
                 ->columns(2)
                 ->schema([
                     Infolists\Components\TextEntry::make('name')
@@ -516,7 +516,7 @@ class SupplierResource extends Resource
                         ->columnSpanFull(),
                 ]),
 
-            Infolists\Components\Section::make('Date fiscale și bancare')
+            \Filament\Schemas\Components\Section::make('Date fiscale și bancare')
                 ->columns(2)
                 ->schema([
                     Infolists\Components\TextEntry::make('vat_number')
@@ -543,7 +543,7 @@ class SupplierResource extends Resource
                         ->placeholder('Fără plafon (aprobat automat)'),
                 ]),
 
-            Infolists\Components\Section::make('Notițe')
+            \Filament\Schemas\Components\Section::make('Notițe')
                 ->collapsible()
                 ->schema([
                     Infolists\Components\TextEntry::make('notes')
@@ -552,15 +552,15 @@ class SupplierResource extends Resource
                         ->columnSpanFull(),
                 ]),
 
-            Infolists\Components\Section::make('Condiții comerciale')
+            \Filament\Schemas\Components\Section::make('Condiții comerciale')
                 ->icon('heroicon-o-document-text')
                 ->collapsible()
                 ->collapsed()
                 ->schema([
-                    Infolists\Components\Tabs::make()->tabs([
+                    \Filament\Schemas\Components\Tabs::make()->tabs([
 
-                        Infolists\Components\Tabs\Tab::make('Livrare')->icon('heroicon-o-truck')->schema([
-                            Infolists\Components\Grid::make(3)->schema([
+                        \Filament\Schemas\Components\Tabs\Tab::make('Livrare')->icon('heroicon-o-truck')->schema([
+                            \Filament\Schemas\Components\Grid::make(3)->schema([
                                 Infolists\Components\TextEntry::make('conditions.delivery.lead_days_standard')->label('Lead time standard')->suffix(' zile')->placeholder('—'),
                                 Infolists\Components\TextEntry::make('conditions.delivery.lead_days_urgent')->label('Lead time urgent')->suffix(' zile')->placeholder('—'),
                                 Infolists\Components\TextEntry::make('conditions.delivery.order_cutoff_time')->label('Oră limită comandă')->placeholder('—'),
@@ -584,7 +584,7 @@ class SupplierResource extends Resource
                             Infolists\Components\TextEntry::make('conditions.delivery.note')->label('Note livrare')->placeholder('—')->columnSpanFull(),
                         ]),
 
-                        Infolists\Components\Tabs\Tab::make('Comandă')->icon('heroicon-o-shopping-bag')->schema([
+                        \Filament\Schemas\Components\Tabs\Tab::make('Comandă')->icon('heroicon-o-shopping-bag')->schema([
                             Infolists\Components\TextEntry::make('conditions.ordering.methods')
                                 ->label('Metode comandă')
                                 ->formatStateUsing(fn ($state) => collect((array)$state)->map(fn($m) => match($m){
@@ -592,7 +592,7 @@ class SupplierResource extends Resource
                                     'whatsapp'=>'WhatsApp','in_person'=>'Față în față','edi'=>'EDI',default=>$m
                                 })->join(', '))
                                 ->badge()->placeholder('—'),
-                            Infolists\Components\Grid::make(3)->schema([
+                            \Filament\Schemas\Components\Grid::make(3)->schema([
                                 Infolists\Components\TextEntry::make('conditions.ordering.preferred_method')
                                     ->label('Metodă preferată')
                                     ->formatStateUsing(fn($state)=>match($state){'email'=>'Email','phone'=>'Telefon','portal'=>'Portal','whatsapp'=>'WhatsApp','in_person'=>'Față în față','edi'=>'EDI',default=>$state??'—'})
@@ -609,8 +609,8 @@ class SupplierResource extends Resource
                             Infolists\Components\TextEntry::make('conditions.ordering.note')->label('Note comenzi')->placeholder('—')->columnSpanFull(),
                         ]),
 
-                        Infolists\Components\Tabs\Tab::make('Transport')->icon('heroicon-o-map-pin')->schema([
-                            Infolists\Components\Grid::make(3)->schema([
+                        \Filament\Schemas\Components\Tabs\Tab::make('Transport')->icon('heroicon-o-map-pin')->schema([
+                            \Filament\Schemas\Components\Grid::make(3)->schema([
                                 Infolists\Components\TextEntry::make('conditions.transport.incoterm')->label('Incoterm')->badge()->color('primary')->placeholder('—'),
                                 Infolists\Components\TextEntry::make('conditions.transport.transport_paid_by')
                                     ->label('Transport plătit de')
@@ -624,7 +624,7 @@ class SupplierResource extends Resource
                             Infolists\Components\TextEntry::make('conditions.transport.note')->label('Note transport')->placeholder('—')->columnSpanFull(),
                         ]),
 
-                        Infolists\Components\Tabs\Tab::make('Plată')->icon('heroicon-o-banknotes')->schema([
+                        \Filament\Schemas\Components\Tabs\Tab::make('Plată')->icon('heroicon-o-banknotes')->schema([
                             Infolists\Components\TextEntry::make('conditions.payment.methods')
                                 ->label('Metode plată acceptate')
                                 ->formatStateUsing(fn ($state) => collect((array)$state)->map(fn($m) => match($m){
@@ -633,7 +633,7 @@ class SupplierResource extends Resource
                                     'compensare'=>'Compensare','factoring'=>'Factoring',default=>$m
                                 })->join(', '))
                                 ->placeholder('—'),
-                            Infolists\Components\Grid::make(3)->schema([
+                            \Filament\Schemas\Components\Grid::make(3)->schema([
                                 Infolists\Components\TextEntry::make('conditions.payment.default_term')
                                     ->label('Termen de plată')
                                     ->formatStateUsing(fn($state)=>match($state){
@@ -654,8 +654,8 @@ class SupplierResource extends Resource
                             Infolists\Components\TextEntry::make('conditions.payment.note')->label('Note plată')->placeholder('—')->columnSpanFull(),
                         ]),
 
-                        Infolists\Components\Tabs\Tab::make('Discount')->icon('heroicon-o-tag')->schema([
-                            Infolists\Components\Grid::make(3)->schema([
+                        \Filament\Schemas\Components\Tabs\Tab::make('Discount')->icon('heroicon-o-tag')->schema([
+                            \Filament\Schemas\Components\Grid::make(3)->schema([
                                 Infolists\Components\TextEntry::make('conditions.commercial.discount_percent')->label('Discount comercial general')->suffix('%')->placeholder('—'),
                                 Infolists\Components\TextEntry::make('conditions.commercial.discount_type')
                                     ->label('Aplicare discount')
@@ -678,8 +678,8 @@ class SupplierResource extends Resource
                             Infolists\Components\TextEntry::make('conditions.commercial.discount_note')->label('Note discount')->placeholder('—')->columnSpanFull(),
                         ]),
 
-                        Infolists\Components\Tabs\Tab::make('Retur & Garanție')->icon('heroicon-o-arrow-uturn-left')->schema([
-                            Infolists\Components\Grid::make(3)->schema([
+                        \Filament\Schemas\Components\Tabs\Tab::make('Retur & Garanție')->icon('heroicon-o-arrow-uturn-left')->schema([
+                            \Filament\Schemas\Components\Grid::make(3)->schema([
                                 Infolists\Components\IconEntry::make('conditions.returns.return_allowed')->label('Retururi acceptate')->boolean(),
                                 Infolists\Components\IconEntry::make('conditions.returns.return_authorization_req')->label('Necesită RMA')->boolean(),
                                 Infolists\Components\TextEntry::make('conditions.returns.return_window_days')->label('Ferestră retur')->suffix(' zile')->placeholder('—'),
@@ -691,7 +691,7 @@ class SupplierResource extends Resource
                                 Infolists\Components\TextEntry::make('conditions.returns.return_email')->label('Email retururi')->icon('heroicon-o-envelope')->placeholder('—'),
                             ]),
                             Infolists\Components\TextEntry::make('conditions.returns.return_note')->label('Procedura de retur')->placeholder('—')->columnSpanFull(),
-                            Infolists\Components\Grid::make(3)->schema([
+                            \Filament\Schemas\Components\Grid::make(3)->schema([
                                 Infolists\Components\TextEntry::make('conditions.returns.warranty_months')->label('Garanție produse')->suffix(' luni')->placeholder('—'),
                                 Infolists\Components\TextEntry::make('conditions.returns.warranty_type')
                                     ->label('Tip garanție')
@@ -704,7 +704,7 @@ class SupplierResource extends Resource
                     ])->columnSpanFull(),
                 ]),
 
-            Infolists\Components\Section::make('Persoane de contact')
+            \Filament\Schemas\Components\Section::make('Persoane de contact')
                 ->schema([
                     Infolists\Components\RepeatableEntry::make('contacts')
                         ->label('')

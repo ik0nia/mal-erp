@@ -34,7 +34,7 @@ class ViewWooProduct extends ViewRecord
                 ->title('Produs cu înlocuitor setat')
                 ->body('La achiziții viitoare comandați: ' . ($replacement?->name ?? 'produs necunoscut'))
                 ->actions([
-                    \Filament\Notifications\Actions\Action::make('go_to_replacement')
+                    \Filament\Actions\Action::make('go_to_replacement')
                         ->label('Mergi la înlocuitor →')
                         ->url(WooProductResource::getUrl('view', ['record' => $product->substituted_by_id]))
                         ->button(),
@@ -210,7 +210,7 @@ class ViewWooProduct extends ViewRecord
                         ->success()
                         ->title('Produs adăugat la necesar')
                         ->actions([
-                            \Filament\Notifications\Actions\Action::make('open_cart')
+                            \Filament\Actions\Action::make('open_cart')
                                 ->label('Deschide coșul →')
                                 ->url(PurchaseRequestResource::getUrl('edit', ['record' => $draft->id])),
                         ])
