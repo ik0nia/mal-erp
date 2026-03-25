@@ -21,8 +21,8 @@
 .ppi-supplier-icon { width:2.5rem; height:2.5rem; border-radius:0.375rem; background:#f3f4f6; display:flex; align-items:center; justify-content:center; }
 .ppi-supplier-name { font-weight:600; color:#111827; }
 .ppi-supplier-meta { font-size:0.875rem; color:#6b7280; }
-.ppi-btn-po { display:inline-flex; align-items:center; gap:0.5rem; padding:0.5rem 1rem; background:#4f46e5; color:#fff; font-size:0.875rem; font-weight:500; border-radius:0.5rem; border:none; cursor:pointer; }
-.ppi-btn-po:hover { background:#4338ca; }
+.ppi-btn-po { display:inline-flex; align-items:center; gap:0.5rem; padding:0.5rem 1rem; background:#dc2626; color:#fff; font-size:0.875rem; font-weight:500; border-radius:0.5rem; border:none; cursor:pointer; }
+.ppi-btn-po:hover { background:#b91c1c; }
 .ppi-table { width:100%; font-size:0.875rem; border-collapse:collapse; }
 .ppi-table th { padding:0.5rem 1rem; text-align:left; font-size:0.75rem; font-weight:500; color:#6b7280; text-transform:uppercase; border-bottom:1px solid #f3f4f6; }
 .ppi-table td { padding:0.75rem 1rem; border-bottom:1px solid #f9fafb; vertical-align:top; }
@@ -36,7 +36,7 @@
 .ppi-product-name { font-weight:500; color:#111827; }
 .ppi-sku { font-size:0.75rem; color:#9ca3af; font-family:monospace; }
 .ppi-discontinued { display:inline-flex; align-items:center; gap:0.25rem; font-size:0.75rem; font-weight:500; color:#dc2626; margin-top:0.25rem; }
-.ppi-link { font-size:0.75rem; color:#4f46e5; font-family:monospace; text-decoration:none; }
+.ppi-link { font-size:0.75rem; color:#dc2626; font-family:monospace; text-decoration:none; }
 .ppi-link:hover { text-decoration:underline; }
 .ppi-woo-section { margin-top:1.5rem; }
 .ppi-woo-header { font-size:1.125rem; font-weight:600; color:#1f2937; margin-bottom:0.75rem; display:flex; align-items:center; gap:0.5rem; }

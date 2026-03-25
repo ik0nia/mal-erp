@@ -13,11 +13,11 @@
 .ls-product-img { height:2rem; width:2rem; border-radius:0.25rem; object-fit:cover; flex-shrink:0; border:1px solid #e5e7eb; }
 .ls-product-placeholder { display:inline-flex; height:2rem; width:2rem; align-items:center; justify-content:center; border-radius:0.25rem; background:#f3f4f6; color:#9ca3af; flex-shrink:0; font-size:0.75rem; }
 .ls-product-link { font-weight:500; color:#111827; text-decoration:none; display:block; overflow:hidden; text-overflow:ellipsis; }
-.ls-product-link:hover { color:#4f46e5; text-decoration:underline; }
+.ls-product-link:hover { color:#dc2626; text-decoration:underline; }
 .ls-sku { font-family:monospace; font-size:0.75rem; color:#6b7280; cursor:pointer; }
-.ls-sku:hover { color:#4f46e5; text-decoration:underline; }
+.ls-sku:hover { color:#dc2626; text-decoration:underline; }
 .ls-supplier-link { color:#4b5563; text-decoration:none; font-size:0.8125rem; }
-.ls-supplier-link:hover { color:#4f46e5; text-decoration:underline; }
+.ls-supplier-link:hover { color:#dc2626; text-decoration:underline; }
 .ls-days-badge { display:inline-flex; align-items:center; padding:0.125rem 0.5rem; border-radius:0.25rem; font-size:0.75rem; font-weight:700; }
 .ls-days-critical { background:#fee2e2; color:#dc2626; }
 .ls-days-warning { background:#ffedd5; color:#c2410c; }

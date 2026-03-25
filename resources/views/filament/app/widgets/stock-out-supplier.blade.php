@@ -12,12 +12,12 @@
 .so-product-img { height:2rem; width:2rem; border-radius:0.25rem; object-fit:cover; flex-shrink:0; border:1px solid #e5e7eb; }
 .so-product-placeholder { display:inline-flex; height:2rem; width:2rem; align-items:center; justify-content:center; border-radius:0.25rem; background:#f3f4f6; color:#9ca3af; flex-shrink:0; font-size:0.75rem; }
 .so-product-link { font-weight:500; color:#111827; text-decoration:none; display:block; overflow:hidden; text-overflow:ellipsis; }
-.so-product-link:hover { color:#4f46e5; text-decoration:underline; }
+.so-product-link:hover { color:#dc2626; text-decoration:underline; }
 .so-sku { font-family:monospace; font-size:0.75rem; color:#6b7280; cursor:pointer; }
-.so-sku:hover { color:#4f46e5; text-decoration:underline; }
+.so-sku:hover { color:#dc2626; text-decoration:underline; }
 .so-supplier { font-size:0.8125rem; color:#4b5563; }
 .so-supplier-link { color:#4b5563; text-decoration:none; font-size:0.8125rem; }
-.so-supplier-link:hover { color:#4f46e5; text-decoration:underline; }
+.so-supplier-link:hover { color:#dc2626; text-decoration:underline; }
 .so-speed { font-family:monospace; font-size:0.8125rem; color:#d97706; font-weight:600; text-align:right; }
 .so-sales { font-family:monospace; font-size:0.8125rem; color:#dc2626; font-weight:600; text-align:right; }
 </style>
