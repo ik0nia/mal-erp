@@ -117,6 +117,10 @@ class WooProductResource extends Resource
                         ->dehydrated(false)
                         ->placeholder('(completat automat din import)')
                         ->columnSpanFull(),
+                    Forms\Components\TextInput::make('sku')
+                        ->label('SKU / EAN')
+                        ->maxLength(50)
+                        ->helperText('Codul de bare (EAN) al produsului individual'),
                     Forms\Components\TextInput::make('brand')
                         ->label('Brand / Producător')
                         ->maxLength(255),

@@ -374,14 +374,28 @@ class ImportToyaProductsCommand extends Command
         // ----------------------------------------------------------------
         // Asociere furnizor
         // ----------------------------------------------------------------
+        $pivotData = [
+            'supplier_sku' => $code,
+            'is_preferred' => true,
+            'updated_at'   => now(),
+        ];
+
+        // MC (Master Carton) = order multiple (se comandă doar în multipli de MC)
+        if ($qtyPerCarton && $qtyPerCarton > 1) {
+            $pivotData['order_multiple'] = $qtyPerCarton;
+            $pivotData['purchase_uom']   = 'carton';
+            $pivotData['conversion_factor'] = $qtyPerCarton;
+        }
+
+        // EAN carton ca supplier package EAN
+        $eanMC = $raw['EanMC'] ?? null;
+        if (filled($eanMC)) {
+            $pivotData['supplier_package_ean'] = $eanMC;
+        }
+
         DB::table('product_suppliers')->updateOrInsert(
             ['woo_product_id' => $product->id, 'supplier_id' => $supplierId],
-            [
-                'supplier_sku' => $code,
-                'is_preferred' => true,
-                'created_at'   => now(),
-                'updated_at'   => now(),
-            ]
+            array_merge($pivotData, ['created_at' => now()])
         );
 
         return $isNew;
