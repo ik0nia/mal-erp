@@ -570,7 +570,39 @@ class PurchaseOrderResource extends Resource
                     ->label('Cantitate')->numeric()->minValue(0.001)
                     ->formatStateUsing(fn ($state) => $state !== null ? (float) $state : null)
                     ->placeholder(fn (Get $get): ?string => $get('quantity_hint') ? '→ '.((string)(int)$get('quantity_hint')) : null)
+                    ->helperText(function (Get $get): ?string {
+                        $productId  = (int) ($get('woo_product_id') ?? 0);
+                        $supplierId = (int) ($get('../../supplier_id') ?? 0);
+                        if (! $productId || ! $supplierId) return null;
+                        $ps = ProductSupplier::where('woo_product_id', $productId)
+                            ->where('supplier_id', $supplierId)->first();
+                        if ($ps && $ps->order_multiple && (float) $ps->order_multiple > 0) {
+                            return 'Multiplu: ' . rtrim(rtrim(number_format((float) $ps->order_multiple, 3, ',', '.'), '0'), ',') . ' buc';
+                        }
+                        return null;
+                    })
                     ->live(onBlur: true)
+                    ->afterStateUpdated(function ($state, Set $set, Get $get): void {
+                        if (! $state || (float) $state <= 0) return;
+                        $productId  = (int) ($get('woo_product_id') ?? 0);
+                        $supplierId = (int) ($get('../../supplier_id') ?? 0);
+                        if (! $productId || ! $supplierId) return;
+                        $ps = ProductSupplier::where('woo_product_id', $productId)
+                            ->where('supplier_id', $supplierId)->first();
+                        if (! $ps) return;
+                        // Round to order multiple
+                        $qty = $ps->roundToOrderMultiple((float) $state);
+                        if ($qty != (float) $state) {
+                            $set('quantity', $qty);
+                        }
+                        // Look up best price break
+                        $priceBreak = $ps->getBestPriceForQty($qty);
+                        if ($priceBreak) {
+                            $set('unit_price', (float) $priceBreak->unit_price);
+                        } elseif ($ps->purchase_price) {
+                            $set('unit_price', (float) $ps->purchase_price);
+                        }
+                    })
                     ->columnSpan(1),
 
                 Placeholder::make('sources_info')
@@ -609,6 +641,7 @@ class PurchaseOrderResource extends Resource
 
                 // Hidden — stocaj date
                 Hidden::make('product_name'),
+                Hidden::make('unit_price'),
                 Hidden::make('sources_json'),
                 Hidden::make('recommendation_json'),
                 Hidden::make('quantity_hint'),
@@ -631,10 +664,42 @@ class PurchaseOrderResource extends Resource
                     ->label('Cantitate')->numeric()->minValue(0.001)->required()
                     ->default(1)
                     ->formatStateUsing(fn ($state) => $state !== null ? (float) $state : null)
+                    ->helperText(function (Get $get): ?string {
+                        $productId  = (int) ($get('woo_product_id') ?? 0);
+                        $supplierId = (int) ($get('../../supplier_id') ?? 0);
+                        if (! $productId || ! $supplierId) return null;
+                        $ps = ProductSupplier::where('woo_product_id', $productId)
+                            ->where('supplier_id', $supplierId)->first();
+                        if ($ps && $ps->order_multiple && (float) $ps->order_multiple > 0) {
+                            return 'Multiplu: ' . rtrim(rtrim(number_format((float) $ps->order_multiple, 3, ',', '.'), '0'), ',') . ' buc';
+                        }
+                        return null;
+                    })
                     ->live(onBlur: true)
-                    ->afterStateUpdated(fn ($state, Set $set, Get $get) =>
-                        $set('line_total_preview', static::computeLineTotal($get('unit_price'), $state))
-                    ),
+                    ->afterStateUpdated(function ($state, Set $set, Get $get): void {
+                        if ($state && (float) $state > 0) {
+                            $productId  = (int) ($get('woo_product_id') ?? 0);
+                            $supplierId = (int) ($get('../../supplier_id') ?? 0);
+                            if ($productId && $supplierId) {
+                                $ps = ProductSupplier::where('woo_product_id', $productId)
+                                    ->where('supplier_id', $supplierId)->first();
+                                if ($ps) {
+                                    $qty = $ps->roundToOrderMultiple((float) $state);
+                                    if ($qty != (float) $state) {
+                                        $set('quantity', $qty);
+                                        $state = $qty;
+                                    }
+                                    $priceBreak = $ps->getBestPriceForQty($qty);
+                                    if ($priceBreak) {
+                                        $set('unit_price', (float) $priceBreak->unit_price);
+                                    } elseif ($ps->purchase_price) {
+                                        $set('unit_price', (float) $ps->purchase_price);
+                                    }
+                                }
+                            }
+                        }
+                        $set('line_total_preview', static::computeLineTotal($get('unit_price'), $state));
+                    }),
                 TextInput::make('unit_price')
                     ->label('Preț unitar')->numeric()->minValue(0)->nullable()->suffix('RON')
                     ->live(onBlur: true)

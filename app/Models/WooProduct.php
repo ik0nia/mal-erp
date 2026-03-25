@@ -77,6 +77,12 @@ class WooProduct extends Model
         'min_stock_qty',
         'max_stock_qty',
         'substituted_by_id',
+        'safety_stock',
+        'reorder_qty',
+        'avg_daily_consumption',
+        'abc_classification',
+        'xyz_classification',
+        'replenishment_method',
     ];
 
     public const PROCUREMENT_STOCK     = 'stock';
@@ -94,6 +100,9 @@ class WooProduct extends Model
             'is_discontinued' => 'boolean',
             'min_stock_qty'   => 'decimal:2',
             'max_stock_qty'   => 'decimal:2',
+            'safety_stock'    => 'decimal:2',
+            'reorder_qty'     => 'decimal:2',
+            'avg_daily_consumption' => 'decimal:4',
         ];
     }
 
@@ -156,13 +165,27 @@ class WooProduct extends Model
             ->using(ProductSupplier::class)
             ->withPivot([
                 'supplier_sku',
+                'supplier_product_name',
+                'supplier_package_sku',
+                'supplier_package_ean',
                 'purchase_price',
                 'currency',
+                'purchase_uom',
+                'conversion_factor',
                 'lead_days',
+                'incoterms',
+                'price_includes_transport',
                 'min_order_qty',
+                'order_multiple',
                 'po_max_qty',
+                'date_start',
+                'date_end',
+                'over_delivery_tolerance',
+                'under_delivery_tolerance',
                 'is_preferred',
                 'notes',
+                'last_purchase_date',
+                'last_purchase_price',
             ])
             ->withTimestamps();
     }

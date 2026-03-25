@@ -353,6 +353,16 @@ class CreatePurchaseOrder extends CreateRecord
                 $recommended = max(0, (int) ceil($daily * 7 + $safety - $stock));
             }
 
+            // Round to order multiple if set
+            if ($recommended > 0) {
+                $psRec = ProductSupplier::where('woo_product_id', $row->id)
+                    ->where('supplier_id', $supplierId)
+                    ->first();
+                if ($psRec) {
+                    $recommended = (int) $psRec->roundToOrderMultiple((float) $recommended);
+                }
+            }
+
             $products[$row->id] = [
                 'woo_product_id' => $row->id,
                 'name'           => $row->name,
@@ -499,6 +509,12 @@ class CreatePurchaseOrder extends CreateRecord
 
             $totalRecommended = (int) ceil($totalRequested + $additionalStore);
 
+            // Round to order multiple if set on product-supplier pivot
+            $ps = $ps ?? null; // $ps from supplier_sku lookup above
+            if ($ps && $totalRecommended > 0) {
+                $totalRecommended = (int) $ps->roundToOrderMultiple((float) $totalRecommended);
+            }
+
             $recData = [
                 'from_requests'     => $totalRequested,
                 'reserved_qty'      => $reservedQty,
@@ -631,6 +647,15 @@ class CreatePurchaseOrder extends CreateRecord
                 continue;
             }
 
+            // Round hint to order multiple if set
+            $hint = $data['hint'];
+            $ps = ProductSupplier::where('woo_product_id', $productId)
+                ->where('supplier_id', $supplierId)
+                ->first();
+            if ($ps && $hint > 0) {
+                $hint = (int) $ps->roundToOrderMultiple((float) $hint);
+            }
+
             $recData = [
                 'from_requests'     => 0,
                 'reserved_qty'      => 0,
@@ -641,8 +666,8 @@ class CreatePurchaseOrder extends CreateRecord
                 'sales_30d'         => $data['sales_30d'],
                 'min_stock_qty'     => $data['min_stock_qty'],
                 'max_stock_qty'     => $data['max_stock_qty'],
-                'additional_store'  => $data['hint'],
-                'total_recommended' => $data['hint'],
+                'additional_store'  => $hint,
+                'total_recommended' => $hint,
                 'calc_method'       => $data['max_stock_qty'] !== null ? 'max_stock' : 'velocity',
             ];
 
@@ -656,7 +681,7 @@ class CreatePurchaseOrder extends CreateRecord
                 'notes'               => null,
                 'sources_json'        => null,
                 'recommendation_json' => json_encode($recData, JSON_UNESCAPED_UNICODE),
-                'quantity_hint'       => $data['hint'] > 0 ? $data['hint'] : null,
+                'quantity_hint'       => $hint > 0 ? $hint : null,
                 'info_stock'          => $data['stock'],
                 'info_sales_7d'       => $data['sales_7d'],
                 'info_days_stockout'  => $data['days_to_stockout'],

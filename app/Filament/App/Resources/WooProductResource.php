@@ -217,6 +217,18 @@ class WooProductResource extends Resource
                             Forms\Components\TextInput::make('supplier_sku')
                                 ->label('SKU furnizor')
                                 ->maxLength(100),
+                            Forms\Components\TextInput::make('supplier_product_name')
+                                ->label('Denumire la furnizor')
+                                ->maxLength(255)
+                                ->columnSpan(2),
+                            Forms\Components\TextInput::make('supplier_package_sku')
+                                ->label('Cod ambalaj furnizor')
+                                ->helperText('Codul cutiei/baxului la furnizor')
+                                ->maxLength(100),
+                            Forms\Components\TextInput::make('supplier_package_ean')
+                                ->label('EAN ambalaj')
+                                ->helperText('Codul de bare al cutiei/baxului')
+                                ->maxLength(30),
                             Forms\Components\TextInput::make('purchase_price')
                                 ->label('Preț achiziție (fără TVA)')
                                 ->numeric()
@@ -231,18 +243,51 @@ class WooProductResource extends Resource
                                 ->options(['RON' => 'RON', 'EUR' => 'EUR', 'USD' => 'USD'])
                                 ->default('RON')
                                 ->native(false),
+                            Forms\Components\TextInput::make('purchase_uom')
+                                ->label('UM cumpărare')
+                                ->placeholder('ex: palet, bax, cutie')
+                                ->maxLength(50),
+                            Forms\Components\TextInput::make('conversion_factor')
+                                ->label('Factor conversie')
+                                ->helperText('Câte buc = 1 UM cumpărare')
+                                ->numeric()
+                                ->minValue(0)
+                                ->default(1),
                             Forms\Components\TextInput::make('lead_days')
                                 ->label('Zile livrare')
                                 ->numeric()
                                 ->minValue(0),
+                            Forms\Components\TextInput::make('incoterms')
+                                ->label('Incoterms')
+                                ->placeholder('EXW, DAP, DDP...')
+                                ->maxLength(10),
+                            Forms\Components\Toggle::make('price_includes_transport')
+                                ->label('Preț include transport'),
                             Forms\Components\TextInput::make('min_order_qty')
                                 ->label('Cant. minimă')
+                                ->numeric()
+                                ->minValue(0),
+                            Forms\Components\TextInput::make('order_multiple')
+                                ->label('Multiplu comandă')
+                                ->helperText('Se comandă doar multipli de această cantitate (ex: 48 = bax)')
                                 ->numeric()
                                 ->minValue(0),
                             Forms\Components\TextInput::make('po_max_qty')
                                 ->label('Cant. max PO (fără aprobare)')
                                 ->numeric()
                                 ->minValue(0),
+                            Forms\Components\DatePicker::make('date_start')
+                                ->label('Preț valid de la'),
+                            Forms\Components\DatePicker::make('date_end')
+                                ->label('Preț valid până la'),
+                            Forms\Components\TextInput::make('over_delivery_tolerance')
+                                ->label('Toleranță supra-livrare (%)')
+                                ->numeric()
+                                ->suffix('%'),
+                            Forms\Components\TextInput::make('under_delivery_tolerance')
+                                ->label('Toleranță sub-livrare (%)')
+                                ->numeric()
+                                ->suffix('%'),
                             Forms\Components\Toggle::make('is_preferred')
                                 ->label('Furnizor preferat')
                                 ->default(false),
@@ -251,6 +296,27 @@ class WooProductResource extends Resource
                                 ->rows(2)
                                 ->columnSpanFull(),
                         ]),
+                ]),
+            \Filament\Schemas\Components\Section::make('Ambalare')
+                ->columnSpanFull()
+                ->collapsible()
+                ->columns(4)
+                ->schema([
+                    Forms\Components\TextInput::make('qty_per_inner_box')
+                        ->label('Buc/cutie interioară')
+                        ->numeric()
+                        ->minValue(0),
+                    Forms\Components\TextInput::make('qty_per_carton')
+                        ->label('Buc/carton master')
+                        ->numeric()
+                        ->minValue(0),
+                    Forms\Components\TextInput::make('cartons_per_pallet')
+                        ->label('Cartoane/palet')
+                        ->numeric()
+                        ->minValue(0),
+                    Forms\Components\TextInput::make('ean_carton')
+                        ->label('EAN carton master')
+                        ->maxLength(30),
                 ]),
             \Filament\Schemas\Components\Section::make('Mod aprovizionare')
                 ->description('Controlează cum se aprovizionează produsul și dacă mai face parte din portofoliu.')
@@ -281,6 +347,50 @@ class WooProductResource extends Resource
                             ->label('Stoc maxim (target)')
                             ->helperText('Cât vrem să avem în stoc după aprovizionare. Dacă e gol, se calculează din velocitate × 14 zile.')
                             ->numeric()->minValue(0)->nullable(),
+                    ]),
+                    \Filament\Schemas\Components\Grid::make(2)->schema([
+                        Forms\Components\TextInput::make('safety_stock')
+                            ->label('Stoc de siguranță')
+                            ->numeric()
+                            ->suffix('buc'),
+                        Forms\Components\TextInput::make('reorder_qty')
+                            ->label('Cantitate reorder')
+                            ->helperText('Cantitate recomandată de comandat la atingerea stocului minim')
+                            ->numeric()
+                            ->suffix('buc'),
+                    ]),
+                    Forms\Components\Select::make('replenishment_method')
+                        ->label('Metodă reaprovizionare')
+                        ->options([
+                            'manual' => 'Manual',
+                            'reorder_point' => 'Punct de reorder',
+                            'min_max' => 'Min/Max',
+                        ])
+                        ->native(false),
+                    \Filament\Schemas\Components\Grid::make(3)->schema([
+                        Forms\Components\TextInput::make('avg_daily_consumption')
+                            ->label('Consum mediu zilnic')
+                            ->numeric()
+                            ->disabled()
+                            ->suffix('buc/zi'),
+                        Forms\Components\Select::make('abc_classification')
+                            ->label('Clasificare ABC')
+                            ->options([
+                                'A' => 'A - Valoare mare',
+                                'B' => 'B - Valoare medie',
+                                'C' => 'C - Valoare mică',
+                            ])
+                            ->disabled()
+                            ->native(false),
+                        Forms\Components\Select::make('xyz_classification')
+                            ->label('Clasificare XYZ')
+                            ->options([
+                                'X' => 'X - Cerere constantă',
+                                'Y' => 'Y - Cerere variabilă',
+                                'Z' => 'Z - Cerere imprevizibilă',
+                            ])
+                            ->disabled()
+                            ->native(false),
                     ]),
                     Forms\Components\Toggle::make('is_discontinued')
                         ->label('Fără reaprovizionare')

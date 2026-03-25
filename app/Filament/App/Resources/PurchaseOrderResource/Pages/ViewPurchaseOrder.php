@@ -453,6 +453,18 @@ class ViewPurchaseOrder extends ViewRecord
                         'received_notes' => $data['received_notes'] ?? null,
                     ]);
 
+                    // Update last purchase info on product-supplier pivot
+                    foreach ($this->record->items as $item) {
+                        if ($item->woo_product_id && $this->record->supplier_id) {
+                            \App\Models\ProductSupplier::where('woo_product_id', $item->woo_product_id)
+                                ->where('supplier_id', $this->record->supplier_id)
+                                ->update([
+                                    'last_purchase_date'  => now()->toDateString(),
+                                    'last_purchase_price' => $item->unit_price,
+                                ]);
+                        }
+                    }
+
                     $msg = $hasShortfall
                         ? 'Recepție înregistrată. Lipsurile au fost returnate în coada de cumpărare.'
                         : 'Recepție completă înregistrată.';
