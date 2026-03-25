@@ -236,6 +236,97 @@ class ViewPurchaseOrder extends ViewRecord
                     $this->fillForm();
                 }),
 
+            // Trimite pe WhatsApp
+            Actions\Action::make('send_whatsapp')
+                ->label('WhatsApp')
+                ->icon('heroicon-o-chat-bubble-left-ellipsis')
+                ->color('success')
+                ->visible(fn (): bool => in_array($this->record->status, [
+                    PurchaseOrder::STATUS_APPROVED,
+                    PurchaseOrder::STATUS_SENT,
+                    PurchaseOrder::STATUS_RECEIVED,
+                ]))
+                ->modalHeading('Trimite comandă pe WhatsApp')
+                ->modalSubmitActionLabel('Deschide WhatsApp')
+                ->modalWidth('2xl')
+                ->form(function (): array {
+                    $this->record->loadMissing(['supplier.contacts', 'items']);
+                    $supplier = $this->record->supplier;
+
+                    // Preia telefonul contactului primar, fallback pe telefonul furnizorului
+                    $primaryContact = $supplier?->contacts
+                        ->sortByDesc('is_primary')
+                        ->first(fn ($c) => filled($c->phone));
+                    $defaultPhone = $primaryContact?->phone ?? $supplier?->phone ?? '';
+
+                    // Construiește mesajul
+                    $lines = [];
+                    foreach ($this->record->items as $item) {
+                        $line = "• {$item->product_name}";
+                        if ($item->supplier_sku) {
+                            $line .= " (ref. {$item->supplier_sku})";
+                        }
+                        $line    .= ": {$item->quantity} buc.";
+                        if ($item->unit_price > 0) {
+                            $line .= " × " . number_format($item->unit_price, 2, ',', '.') . " lei";
+                        }
+                        $lines[] = $line;
+                    }
+
+                    $message  = "Bună ziua,\n\n";
+                    $message .= "Comanda nr. {$this->record->number} din " . now()->format('d.m.Y') . ":\n\n";
+                    $message .= implode("\n", $lines);
+                    if ($this->record->total_value > 0) {
+                        $message .= "\n\n*Total: " . number_format($this->record->total_value, 2, ',', '.') . " lei*";
+                    }
+                    if ($this->record->notes_supplier) {
+                        $message .= "\n\nObservații: {$this->record->notes_supplier}";
+                    }
+                    $message .= "\n\nVă rugăm confirmați disponibilitatea.\nMulțumim!";
+
+                    return [
+                        \Filament\Forms\Components\TextInput::make('phone')
+                            ->label('Număr telefon')
+                            ->tel()
+                            ->default($defaultPhone)
+                            ->required()
+                            ->helperText('Format: 07xxxxxxxx sau +407xxxxxxxx'),
+                        \Filament\Forms\Components\Textarea::make('message')
+                            ->label('Mesaj')
+                            ->default($message)
+                            ->rows(12)
+                            ->required(),
+                    ];
+                })
+                ->action(function (array $data): void {
+                    $phone = preg_replace('/[^0-9+]/', '', $data['phone']);
+                    // Convertește format românesc la internațional
+                    if (str_starts_with($phone, '0')) {
+                        $phone = '4' . $phone;
+                    }
+                    if (! str_starts_with($phone, '+')) {
+                        $phone = '+' . $phone;
+                    }
+
+                    $message = urlencode($data['message']);
+                    $url     = "https://wa.me/{$phone}?text={$message}";
+
+                    // Marchează ca trimis dacă e approved
+                    if ($this->record->status === PurchaseOrder::STATUS_APPROVED) {
+                        $this->record->update([
+                            'status'  => PurchaseOrder::STATUS_SENT,
+                            'sent_at' => now(),
+                        ]);
+                        $this->markRequestItemsAsOrdered();
+                    }
+
+                    $this->record->refresh();
+                    $this->fillForm();
+
+                    // Redirect la WhatsApp
+                    $this->js("window.open('{$url}', '_blank')");
+                }),
+
             // Marchează trimis (fără email)
             Actions\Action::make('mark_sent')
                 ->label('Marchează trimis')
