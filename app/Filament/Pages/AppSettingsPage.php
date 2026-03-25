@@ -44,8 +44,15 @@ class AppSettingsPage extends Page implements HasForms
             'imap_encryption'   => AppSetting::get(AppSetting::KEY_IMAP_ENCRYPTION, 'ssl'),
             'imap_username'     => AppSetting::get(AppSetting::KEY_IMAP_USERNAME),
             'imap_password'     => null,
-            'anthropic_api_key'    => null, // nu preîncărcăm cheia în formular
+            'anthropic_api_key'    => null,
             'woo_plugin_api_key'   => null,
+            'smtp_host'            => AppSetting::get(AppSetting::KEY_SMTP_HOST),
+            'smtp_port'            => AppSetting::get(AppSetting::KEY_SMTP_PORT, '465'),
+            'smtp_encryption'      => AppSetting::get(AppSetting::KEY_SMTP_ENCRYPTION, 'ssl'),
+            'smtp_username'        => AppSetting::get(AppSetting::KEY_SMTP_USERNAME),
+            'smtp_password'        => null,
+            'smtp_from_address'    => AppSetting::get(AppSetting::KEY_SMTP_FROM_ADDRESS),
+            'smtp_from_name'       => AppSetting::get(AppSetting::KEY_SMTP_FROM_NAME),
         ]);
     }
 
@@ -116,6 +123,47 @@ class AppSettingsPage extends Page implements HasForms
                             ->columnSpanFull(),
                     ]),
 
+                Section::make('Email SMTP (trimitere)')
+                    ->description('Setări pentru trimiterea emailurilor (comenzi, notificări, etc.)')
+                    ->schema([
+                        TextInput::make('smtp_host')
+                            ->label('Server SMTP')
+                            ->placeholder('mail.malinco.ro')
+                            ->maxLength(255),
+                        TextInput::make('smtp_port')
+                            ->label('Port')
+                            ->placeholder('465')
+                            ->maxLength(10),
+                        Select::make('smtp_encryption')
+                            ->label('Criptare')
+                            ->options([
+                                'ssl'  => 'SSL (port 465)',
+                                'tls'  => 'TLS (port 587)',
+                                ''     => 'Fără criptare (port 25)',
+                            ])
+                            ->native(false),
+                        TextInput::make('smtp_username')
+                            ->label('Utilizator SMTP')
+                            ->placeholder('erp@malinco.ro')
+                            ->maxLength(255),
+                        TextInput::make('smtp_password')
+                            ->label('Parolă SMTP')
+                            ->password()
+                            ->revealable()
+                            ->placeholder('Lasă gol pentru a păstra parola existentă')
+                            ->maxLength(255),
+                        TextInput::make('smtp_from_address')
+                            ->label('Adresă expeditor (From)')
+                            ->placeholder('erp@malinco.ro')
+                            ->email()
+                            ->maxLength(255),
+                        TextInput::make('smtp_from_name')
+                            ->label('Nume expeditor')
+                            ->placeholder('Malinco Achiziții')
+                            ->maxLength(255),
+                    ])
+                    ->columns(2),
+
                 Section::make('Inteligență Artificială (Claude)')
                     ->description('Cheia API Anthropic pentru procesarea automată a emailurilor.')
                     ->schema([
@@ -151,6 +199,17 @@ class AppSettingsPage extends Page implements HasForms
         AppSetting::set(AppSetting::KEY_IMAP_USERNAME,   $state['imap_username'] ?? null);
         if (filled($state['imap_password'] ?? null)) {
             AppSetting::setEncrypted(AppSetting::KEY_IMAP_PASSWORD, $state['imap_password']);
+        }
+
+        // SMTP
+        AppSetting::set(AppSetting::KEY_SMTP_HOST,         $state['smtp_host'] ?? null);
+        AppSetting::set(AppSetting::KEY_SMTP_PORT,         $state['smtp_port'] ?? null);
+        AppSetting::set(AppSetting::KEY_SMTP_ENCRYPTION,   $state['smtp_encryption'] ?? null);
+        AppSetting::set(AppSetting::KEY_SMTP_USERNAME,     $state['smtp_username'] ?? null);
+        AppSetting::set(AppSetting::KEY_SMTP_FROM_ADDRESS, $state['smtp_from_address'] ?? null);
+        AppSetting::set(AppSetting::KEY_SMTP_FROM_NAME,    $state['smtp_from_name'] ?? null);
+        if (filled($state['smtp_password'] ?? null)) {
+            AppSetting::setEncrypted(AppSetting::KEY_SMTP_PASSWORD, $state['smtp_password']);
         }
 
         // AI

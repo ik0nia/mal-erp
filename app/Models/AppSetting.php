@@ -57,6 +57,19 @@ class AppSetting extends Model
     // Toya Pimcore API (cheia globală — fallback dacă nu e setată pe SupplierFeed)
     const KEY_TOYA_API_KEY = 'toya_api_key'; // stocat criptat
 
+    // SMTP — trimitere emailuri
+    const KEY_SMTP_HOST          = 'smtp_host';
+    const KEY_SMTP_PORT          = 'smtp_port';
+    const KEY_SMTP_USERNAME      = 'smtp_username';
+    const KEY_SMTP_PASSWORD      = 'smtp_password';       // stocat criptat
+    const KEY_SMTP_ENCRYPTION    = 'smtp_encryption';      // tls, ssl, sau gol
+    const KEY_SMTP_FROM_ADDRESS  = 'smtp_from_address';
+    const KEY_SMTP_FROM_NAME     = 'smtp_from_name';
+
+    // Serie comenzi furnizori (PO)
+    const KEY_PO_SERIES          = 'po_series';
+    const KEY_PO_START_NUMBER    = 'po_start_number';
+
     // Social Media
     const KEY_GEMINI_API_KEY      = 'gemini_api_key';      // stocat criptat
     const KEY_META_APP_ID         = 'meta_app_id';

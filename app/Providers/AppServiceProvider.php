@@ -24,6 +24,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Override SMTP config from DB (fallback pe .env)
+        $this->overrideMailConfig();
 
         RateLimiter::for('search', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
@@ -45,5 +47,27 @@ class AppServiceProvider extends ServiceProvider
                 </style>
             HTML),
         );
+    }
+
+    private function overrideMailConfig(): void
+    {
+        try {
+            $host = \App\Models\AppSetting::get(\App\Models\AppSetting::KEY_SMTP_HOST);
+            if (blank($host)) {
+                return; // no DB settings, use .env defaults
+            }
+
+            config([
+                'mail.mailers.smtp.host'       => $host,
+                'mail.mailers.smtp.port'       => (int) \App\Models\AppSetting::get(\App\Models\AppSetting::KEY_SMTP_PORT, '465'),
+                'mail.mailers.smtp.username'   => \App\Models\AppSetting::get(\App\Models\AppSetting::KEY_SMTP_USERNAME),
+                'mail.mailers.smtp.password'   => \App\Models\AppSetting::getEncrypted(\App\Models\AppSetting::KEY_SMTP_PASSWORD) ?? config('mail.mailers.smtp.password'),
+                'mail.mailers.smtp.encryption' => \App\Models\AppSetting::get(\App\Models\AppSetting::KEY_SMTP_ENCRYPTION, 'ssl'),
+                'mail.from.address'            => \App\Models\AppSetting::get(\App\Models\AppSetting::KEY_SMTP_FROM_ADDRESS) ?? config('mail.from.address'),
+                'mail.from.name'               => \App\Models\AppSetting::get(\App\Models\AppSetting::KEY_SMTP_FROM_NAME) ?? config('mail.from.name'),
+            ]);
+        } catch (\Throwable) {
+            // DB not available yet (migrations, etc.) — use .env
+        }
     }
 }

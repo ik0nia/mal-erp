@@ -30,6 +30,8 @@ class DocumentSeriesSettingsPage extends Page implements HasForms
             'offer_start_number' => AppSetting::get(AppSetting::KEY_OFFER_START_NUMBER, '1'),
             'pnr_series'         => AppSetting::get(AppSetting::KEY_PNR_SERIES, 'PNR'),
             'pnr_start_number'   => AppSetting::get(AppSetting::KEY_PNR_START_NUMBER, '1'),
+            'po_series'          => AppSetting::get(AppSetting::KEY_PO_SERIES, 'PO'),
+            'po_start_number'    => AppSetting::get(AppSetting::KEY_PO_START_NUMBER, '1'),
         ]);
     }
 
@@ -70,6 +72,22 @@ class DocumentSeriesSettingsPage extends Page implements HasForms
                             ->placeholder('1')
                             ->helperText('Următorul necesar va primi cel puțin acest număr.'),
                     ]),
+                Section::make('Comenzi furnizori (PO)')
+                    ->columns(2)
+                    ->schema([
+                        TextInput::make('po_series')
+                            ->label('Serie')
+                            ->placeholder('PO')
+                            ->maxLength(20)
+                            ->helperText('Ex: PO, CMD — apare în prefixul numărului.'),
+
+                        TextInput::make('po_start_number')
+                            ->label('Număr de start')
+                            ->numeric()
+                            ->minValue(1)
+                            ->placeholder('1')
+                            ->helperText('Următoarea comandă furnizor va primi cel puțin acest număr.'),
+                    ]),
             ])
             ->statePath('data');
     }
@@ -83,6 +101,9 @@ class DocumentSeriesSettingsPage extends Page implements HasForms
 
         AppSetting::set(AppSetting::KEY_PNR_SERIES, filled($state['pnr_series'] ?? null) ? strtoupper(trim($state['pnr_series'])) : 'PNR');
         AppSetting::set(AppSetting::KEY_PNR_START_NUMBER, (string) max(1, (int) ($state['pnr_start_number'] ?? 1)));
+
+        AppSetting::set(AppSetting::KEY_PO_SERIES, filled($state['po_series'] ?? null) ? strtoupper(trim($state['po_series'])) : 'PO');
+        AppSetting::set(AppSetting::KEY_PO_START_NUMBER, (string) max(1, (int) ($state['po_start_number'] ?? 1)));
 
         Notification::make()
             ->title('Serii documente salvate')
