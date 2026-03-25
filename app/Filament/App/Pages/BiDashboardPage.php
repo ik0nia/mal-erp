@@ -139,27 +139,27 @@ class BiDashboardPage extends Page
 
     private function loadMarginRows(): void
     {
-        $query = DB::table('bi_product_margin_current')
+        $query = DB::table('bi_product_margin_current as bpm')
+            ->leftJoin('woo_products as wp', 'wp.sku', '=', 'bpm.reference_product_id')
             ->select(
-                'sku',
-                'product_name',
-                'sale_price',
-                'purchase_price',
-                'margin_pct',
-                'stock_qty',
-                'stock_margin_total',
-                'supplier_name',
-                'product_id',
-                'calculated_for_day',
+                'bpm.reference_product_id as sku',
+                'wp.name as product_name',
+                'wp.id as product_id',
+                'bpm.selling_price as sale_price',
+                'bpm.purchase_price',
+                'bpm.margin_pct',
+                'bpm.stock_qty',
+                'bpm.stock_margin_total',
+                'bpm.supplier_name',
+                'bpm.calculated_for_day',
             );
 
         if ($this->marginTab === 'top_margin') {
-            $query->orderByDesc('margin_pct')->orderByDesc('stock_margin_total');
+            $query->orderByDesc('bpm.margin_pct')->orderByDesc('bpm.stock_margin_total');
         } else {
-            // negative_margin: marjă < 10%
-            $query->where('margin_pct', '<', 10)
-                  ->orderBy('margin_pct')
-                  ->orderByDesc('stock_margin_total');
+            $query->where('bpm.margin_pct', '<', 10)
+                  ->orderBy('bpm.margin_pct')
+                  ->orderByDesc('bpm.stock_margin_total');
         }
 
         $this->marginRows = $query
@@ -169,10 +169,10 @@ class BiDashboardPage extends Page
                 'sku'                => $r->sku,
                 'product_name'       => $r->product_name ?? '—',
                 'sale_price'         => (float) $r->sale_price,
-                'purchase_price'     => (float) $r->purchase_price,
+                'purchase_price'     => (float) ($r->purchase_price ?? 0),
                 'margin_pct'         => (float) $r->margin_pct,
                 'stock_qty'          => (float) $r->stock_qty,
-                'stock_margin_total' => (float) $r->stock_margin_total,
+                'stock_margin_total' => (float) ($r->stock_margin_total ?? 0),
                 'supplier_name'      => $r->supplier_name,
                 'product_id'         => $r->product_id,
                 'calculated_for_day' => $r->calculated_for_day,
