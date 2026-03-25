@@ -223,7 +223,7 @@ class WooProductResource extends Resource
                                 ->step(0.0001),
                             Forms\Components\Placeholder::make('purchase_price_vat')
                                 ->label('Preț achiziție (cu TVA)')
-                                ->content(fn (Forms\Get $get): string => $get('purchase_price')
+                                ->content(fn (\Filament\Schemas\Components\Utilities\Get $get): string => $get('purchase_price')
                                     ? number_format((float) $get('purchase_price') * 1.21, 2, ',', '.') . ' RON'
                                     : '—'),
                             Forms\Components\Select::make('currency')
@@ -261,7 +261,7 @@ class WooProductResource extends Resource
                         ->label('La comandă (fără stoc fizic)')
                         ->helperText('Backorders permise în WooCommerce, stoc 0, PNR auto-creat la comenzi.')
                         ->default(false)
-                        ->reactive()
+                        ->live()
                         ->afterStateHydrated(function (Forms\Components\Toggle $component, $record): void {
                             if ($record) {
                                 $component->state($record->procurement_type === WooProduct::PROCUREMENT_ON_DEMAND);
@@ -271,7 +271,7 @@ class WooProductResource extends Resource
                         ->label('Mesaj disponibilitate (afișat pe site)')
                         ->placeholder('ex: Disponibil în 3-5 zile lucrătoare')
                         ->maxLength(100)
-                        ->visible(fn (Forms\Get $get): bool => (bool) $get('is_on_demand')),
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('is_on_demand')),
                     \Filament\Schemas\Components\Grid::make(2)->schema([
                         Forms\Components\TextInput::make('min_stock_qty')
                             ->label('Stoc minim (reorder point)')
@@ -285,12 +285,12 @@ class WooProductResource extends Resource
                     Forms\Components\Toggle::make('is_discontinued')
                         ->label('Fără reaprovizionare')
                         ->helperText('Vindem stocul existent, dar nu mai achiziționăm. Exclus din sugestii de reaprovizionare.')
-                        ->reactive(),
+                        ->live(),
                     Forms\Components\Textarea::make('discontinued_reason')
                         ->label('Motiv')
                         ->placeholder('ex: Înlocuit de modelul X, furnizor oprit livrările...')
                         ->rows(2)
-                        ->visible(fn (Forms\Get $get): bool => (bool) $get('is_discontinued')),
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('is_discontinued')),
                     Forms\Components\Select::make('substituted_by_id')
                         ->label('Înlocuit de produsul')
                         ->helperText('La achiziții viitoare se va comanda produsul selectat în loc de acesta.')

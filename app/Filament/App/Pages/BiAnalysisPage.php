@@ -130,7 +130,7 @@ class BiAnalysisPage extends Page
                         ->default(today()->subDay())
                         ->displayFormat('d.m.Y')
                         ->native(false)
-                        ->visible(fn (Forms\Get $get) => $get('period') === 'day'),
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('period') === 'day'),
 
                     \Filament\Schemas\Components\Grid::make(2)
                         ->schema([
@@ -148,7 +148,7 @@ class BiAnalysisPage extends Page
                                 ->displayFormat('d.m.Y')
                                 ->native(false),
                         ])
-                        ->visible(fn (Forms\Get $get) => $get('period') === 'custom'),
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('period') === 'custom'),
                 ])
                 ->action(fn (array $data) => $this->dispatchGeneration($data)),
         ];
