@@ -106,9 +106,9 @@
             @endif
           </tr></thead>
           <tbody>
-            @foreach($this->velocityRows as $row)
+            @foreach($this->velocityRows as $vIdx => $row)
               @php $daysNoMove = $row['days_since_last_movement']; @endphp
-              <tr>
+              <tr wire:key="vel-{{ $vIdx }}">
                 <td style="font-family:monospace; font-size:0.75rem; color:#4b5563;">{{ $row['sku'] }}</td>
                 <td style="max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#1f2937;" title="{{ $row['product_name'] ?? $row['sku'] }}">{{ $row['product_name'] ?? '—' }}</td>
                 @if($this->velocityTab === 'fast')
@@ -162,9 +162,9 @@
             <th>Motive</th>
           </tr></thead>
           <tbody>
-            @foreach($this->alertRows as $row)
+            @foreach($this->alertRows as $aIdx => $row)
               @php $daysLeft = $row['days_left']; @endphp
-              <tr>
+              <tr wire:key="alert-{{ $aIdx }}">
                 <td style="font-family:monospace; font-size:0.75rem; color:#4b5563;">{{ $row['sku'] }}</td>
                 <td style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#1f2937;" title="{{ $row['name'] }}">{{ $row['name'] }}</td>
                 <td style="text-align:right;">@if($row['closing_qty'] <= 0)<span style="color:#dc2626; font-weight:600;">0</span>@else{{ number_format($row['closing_qty'], 0, ',', '.') }}@endif</td>

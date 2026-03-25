@@ -145,6 +145,7 @@ class BiDashboardPage extends Page
                 'v.out_qty_90d',
                 'v.last_movement_day',
                 'v.days_since_last_movement',
+                'v.calculated_for_day',
             );
 
         if ($this->velocityTab === 'fast') {
