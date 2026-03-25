@@ -22,59 +22,27 @@ class ComputeAbcClassificationCommand extends Command
         $this->info("Calculez clasificarea ABC/XYZ pe ultimele {$months} luni (din {$since->format('Y-m-d')})...");
 
         // ──────────────────────────────────────────────
-        // 1. Revenue per product from woo_order_items + offer_items
+        // 1. Revenue per product from DailyStockMetric (WinMentor data)
         // ──────────────────────────────────────────────
-        $this->info('Pas 1: Calculez venituri per produs...');
+        $this->info('Pas 1: Calculez venituri per produs (din WinMentor/DailyStockMetric)...');
 
-        // Revenue from WooCommerce orders (woo_order_items.woo_product_id = woo_products.woo_id)
-        $wooRevenue = DB::table('woo_order_items')
-            ->join('woo_orders', 'woo_orders.id', '=', 'woo_order_items.order_id')
-            ->join('woo_products', 'woo_products.woo_id', '=', 'woo_order_items.woo_product_id')
-            ->where('woo_orders.order_date', '>=', $since)
-            ->whereIn('woo_orders.status', ['processing', 'completed', 'on-hold'])
-            ->groupBy('woo_products.id')
-            ->select('woo_products.id as product_id', DB::raw('SUM(woo_order_items.total) as revenue'))
-            ->pluck('revenue', 'product_id');
-
-        // Revenue from accepted offers (offer_items.woo_product_id = woo_products.id)
-        $offerRevenue = DB::table('offer_items')
-            ->join('offers', 'offers.id', '=', 'offer_items.offer_id')
-            ->whereNotNull('offer_items.woo_product_id')
-            ->where('offers.created_at', '>=', $since)
-            ->where('offers.status', 'accepted')
-            ->groupBy('offer_items.woo_product_id')
-            ->select('offer_items.woo_product_id as product_id', DB::raw('SUM(offer_items.line_total) as revenue'))
-            ->pluck('revenue', 'product_id');
-
-        // Merge revenue from both sources
-        $revenueMap = [];
-        foreach ($wooRevenue as $productId => $rev) {
-            $revenueMap[$productId] = (float) $rev;
-        }
-        foreach ($offerRevenue as $productId => $rev) {
-            $revenueMap[$productId] = ($revenueMap[$productId] ?? 0) + (float) $rev;
-        }
+        // Ieșiri de stoc (daily_total_variation < 0) × preț de vânzare = venit estimat
+        $revenueMap = DB::table('daily_stock_metrics')
+            ->where('day', '>=', $since)
+            ->where('daily_total_variation', '<', 0)
+            ->whereNotNull('woo_product_id')
+            ->groupBy('woo_product_id')
+            ->select(
+                'woo_product_id as product_id',
+                DB::raw('SUM(ABS(daily_total_variation) * COALESCE(closing_sell_price, 0)) as revenue')
+            )
+            ->pluck('revenue', 'product_id')
+            ->map(fn ($v) => (float) $v)
+            ->filter(fn ($v) => $v > 0)
+            ->toArray();
 
         if (empty($revenueMap)) {
-            $this->warn('Nu s-au găsit vânzări. Se încearcă proxy din DailyStockMetric...');
-
-            // Fallback: use negative daily_total_variation * closing_sell_price as revenue proxy
-            $revenueMap = DB::table('daily_stock_metrics')
-                ->where('day', '>=', $since)
-                ->where('daily_total_variation', '<', 0)
-                ->whereNotNull('woo_product_id')
-                ->groupBy('woo_product_id')
-                ->select(
-                    'woo_product_id as product_id',
-                    DB::raw('SUM(ABS(daily_total_variation) * closing_sell_price) as revenue')
-                )
-                ->pluck('revenue', 'product_id')
-                ->map(fn ($v) => (float) $v)
-                ->toArray();
-        }
-
-        if (empty($revenueMap)) {
-            $this->error('Nu s-au găsit date de vânzări.');
+            $this->error('Nu s-au găsit date de mișcări stoc în DailyStockMetric.');
             return self::FAILURE;
         }
 
