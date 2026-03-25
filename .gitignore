@@ -26,3 +26,6 @@ Homestead.yaml
 Thumbs.db
 /storage/db_website/
 /storage/backups/
+
+# Claude Code
+.claude/
