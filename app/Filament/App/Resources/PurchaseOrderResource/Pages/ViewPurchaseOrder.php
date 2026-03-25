@@ -374,7 +374,7 @@ class ViewPurchaseOrder extends ViewRecord
                 ->visible(fn (): bool => $this->record->status === PurchaseOrder::STATUS_SENT)
                 ->modalHeading('Recepție marfă — ' . $this->record->number)
                 ->modalDescription('Introduceți cantitățile efectiv recepționate. Lipsurile vor fi returnate automat în coada de cumpărare.')
-                ->modalWidth('2xl')
+                ->modalWidth('7xl')
                 ->form(function (): array {
                     $this->record->loadMissing('items');
 
@@ -405,14 +405,14 @@ class ViewPurchaseOrder extends ViewRecord
                             ->label('')
                             ->schema([
                                 Hidden::make('id'),
-                                TextInput::make('name')->label('Produs')->disabled()->dehydrated(false)->columnSpan(2),
+                                TextInput::make('name')->label('Produs')->disabled()->dehydrated(false)->columnSpan(3),
                                 TextInput::make('ordered_qty')->label('Comandat')->disabled()->dehydrated(false)->suffix('buc.'),
                                 TextInput::make('qty')->label('Recepționat')->numeric()->minValue(0)->suffix('buc.')->required()
                                     ->live(onBlur: true),
                                 TextInput::make('price')->label('Preț achiziție (fără TVA)')->numeric()->minValue(0)->suffix('RON')->required()
                                     ->live(onBlur: true),
                             ])
-                            ->columns(5)
+                            ->columns(6)
                             ->default($defaultItems)
                             ->addable(false)
                             ->deletable(false)
