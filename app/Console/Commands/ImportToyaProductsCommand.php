@@ -380,10 +380,10 @@ class ImportToyaProductsCommand extends Command
             'updated_at'   => now(),
         ];
 
-        // MC (Master Carton) = order multiple (se comandă doar în multipli de MC)
+        // MC (Master Carton) — informativ, NU setăm order_multiple automat
+        // order_multiple se setează manual doar dacă furnizorul obligă la comandă per carton
         if ($qtyPerCarton && $qtyPerCarton > 1) {
-            $pivotData['order_multiple'] = $qtyPerCarton;
-            $pivotData['purchase_uom']   = 'carton';
+            $pivotData['purchase_uom']      = 'carton';
             $pivotData['conversion_factor'] = $qtyPerCarton;
         }
 
