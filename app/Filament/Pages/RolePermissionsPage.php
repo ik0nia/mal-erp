@@ -91,7 +91,6 @@ class RolePermissionsPage extends Page implements HasForms
             'App\\Filament\\App\\Widgets\\RecentPriceChangesWidget'        => ['label' => 'Modificări prețuri recente',    'group' => 'Dashboard'],
             'App\\Filament\\App\\Widgets\\NewWinmentorProductsWidget'      => ['label' => 'Card produse noi WinMentor',    'group' => 'Dashboard'],
             'App\\Filament\\App\\Widgets\\BiStockTrendChartWidget'         => ['label' => 'Grafic evoluție valoare stoc',  'group' => 'Dashboard'],
-            'App\\Filament\\App\\Widgets\\ChatLeadsWidget'                 => ['label' => 'Widget leads chat',             'group' => 'Dashboard'],
             'App\\Filament\\App\\Widgets\\PendingPurchaseItemsWidget'      => ['label' => 'Widget iteme pendinte',         'group' => 'Dashboard'],
             'App\\Filament\\App\\Widgets\\StockOutSupplierWidget'          => ['label' => 'Widget produse fără stoc',      'group' => 'Dashboard'],
             'App\\Filament\\App\\Widgets\\LowStockSupplierWidget'          => ['label' => 'Widget produse epuizare',       'group' => 'Dashboard'],

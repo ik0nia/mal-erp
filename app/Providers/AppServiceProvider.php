@@ -24,18 +24,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Rate limiters pentru endpoint-uri publice
-        RateLimiter::for('chat-message', function (Request $request) {
-            return Limit::perMinute(20)->by($request->ip());
-        });
-
-        RateLimiter::for('chat-contact', function (Request $request) {
-            return Limit::perMinute(10)->by($request->ip());
-        });
-
-        RateLimiter::for('chat-config', function (Request $request) {
-            return Limit::perMinute(60)->by($request->ip());
-        });
 
         RateLimiter::for('search', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
