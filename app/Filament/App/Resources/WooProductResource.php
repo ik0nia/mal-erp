@@ -1158,6 +1158,18 @@ class WooProductResource extends Resource
                     ])
                     ->visible(fn (): bool => \App\Models\RolePermission::check('woo_product_section_rezumat_variatii')),
 
+                // ── Istoric prețuri achiziție ─────────────────────────────────
+                Section::make('Istoric prețuri achiziție')
+                    ->collapsible()
+                    ->collapsed(false)
+                    ->schema([
+                        TextEntry::make('purchase_price_history')
+                            ->label('')
+                            ->state(fn (WooProduct $record): HtmlString => static::renderPurchasePriceHistory($record))
+                            ->html(),
+                    ])
+                    ->hidden(fn (WooProduct $record): bool => $record->purchasePriceLogs()->doesntExist()),
+
                 Section::make('Payload brut (Woo)')
                     ->collapsible()
                     ->collapsed()
@@ -1171,6 +1183,64 @@ class WooProductResource extends Resource
                     ])
                     ->visible(fn (): bool => \App\Models\RolePermission::check('woo_product_section_payload_brut')),
             ]);
+    }
+
+    public static function renderPurchasePriceHistory(WooProduct $record): HtmlString
+    {
+        $logs = $record->purchasePriceLogs()->with('supplier')->get();
+
+        if ($logs->isEmpty()) {
+            return new HtmlString('<p class="text-sm text-gray-400">Nu există istoric.</p>');
+        }
+
+        $rows = '';
+        foreach ($logs as $log) {
+            $date = $log->acquired_at ? $log->acquired_at->format('d.m.Y') : '—';
+            $price = number_format((float) $log->unit_price, 2, '.', ' ') . ' ' . $log->currency;
+            $priceWithVat = number_format((float) $log->unit_price * 1.21, 2, '.', ' ') . ' ' . $log->currency;
+            $uom = e($log->uom ?? '—');
+            $source = match ($log->source) {
+                'winmentor_import' => '<span class="text-xs text-gray-400">WinMentor</span>',
+                'crm'              => '<span class="text-xs text-blue-500">CRM</span>',
+                default            => '<span class="text-xs text-gray-400">Manual</span>',
+            };
+
+            if ($log->supplier) {
+                $supplierUrl = \App\Filament\App\Resources\SupplierResource::getUrl('view', ['record' => $log->supplier_id]);
+                $supplierHtml = '<a href="' . e($supplierUrl) . '" class="text-primary-600 hover:underline text-sm">' . e($log->supplier->name) . '</a>';
+            } elseif ($log->supplier_name_raw) {
+                $supplierHtml = '<span class="text-sm text-gray-500 italic">' . e($log->supplier_name_raw) . '</span>';
+            } else {
+                $supplierHtml = '<span class="text-sm text-gray-400">—</span>';
+            }
+
+            $rows .= "<tr class=\"border-b border-gray-100 dark:border-gray-700\">
+                <td class=\"py-1.5 px-3 text-sm\">{$date}</td>
+                <td class=\"py-1.5 px-3 text-sm font-mono font-semibold\">{$price}</td>
+                <td class=\"py-1.5 px-3 text-xs text-gray-500\">{$priceWithVat} <span class=\"text-gray-400\">(+TVA)</span></td>
+                <td class=\"py-1.5 px-3 text-sm\">{$uom}</td>
+                <td class=\"py-1.5 px-3\">{$supplierHtml}</td>
+                <td class=\"py-1.5 px-3\">{$source}</td>
+            </tr>";
+        }
+
+        return new HtmlString("
+            <div class=\"overflow-x-auto\">
+                <table class=\"w-full text-left\">
+                    <thead>
+                        <tr class=\"border-b border-gray-200 dark:border-gray-600 text-xs text-gray-500 uppercase\">
+                            <th class=\"py-2 px-3\">Data</th>
+                            <th class=\"py-2 px-3\">Preț achiziție</th>
+                            <th class=\"py-2 px-3\">cu TVA 21%</th>
+                            <th class=\"py-2 px-3\">U.M.</th>
+                            <th class=\"py-2 px-3\">Furnizor</th>
+                            <th class=\"py-2 px-3\">Sursă</th>
+                        </tr>
+                    </thead>
+                    <tbody>{$rows}</tbody>
+                </table>
+            </div>
+        ");
     }
 
     /**

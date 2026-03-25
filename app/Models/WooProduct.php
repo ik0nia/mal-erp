@@ -165,6 +165,11 @@ class WooProduct extends Model
         return $this->hasMany(ProductPriceLog::class, 'woo_product_id');
     }
 
+    public function purchasePriceLogs(): HasMany
+    {
+        return $this->hasMany(ProductPurchasePriceLog::class, 'woo_product_id')->orderByDesc('acquired_at');
+    }
+
     public function dailyStockMetrics(): HasMany
     {
         return $this->hasMany(DailyStockMetric::class, 'reference_product_id', 'sku');

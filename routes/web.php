@@ -23,6 +23,82 @@ Route::get('/woo-products/{any}', fn (Request $request, string $any) =>
 
 Route::middleware(['web', 'auth'])->group(function () {
 
+    // Raport PDF — discrepanțe preț de vânzare vs WinMentor
+    Route::get('/rapoarte/discrepante-pret-vanzare', function () {
+        $file = storage_path('app/LISTA PRODUSE PRET ACHIZITIE.xlsx');
+
+        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file);
+        $sheet = $spreadsheet->getActiveSheet();
+        $highestRow = $sheet->getHighestRow();
+
+        // Build map EAN → {H (sale), G (purchase), last date}
+        $excelMap = [];
+        for ($row = 3; $row <= $highestRow; $row++) {
+            $nrCrt = trim((string) $sheet->getCell('A' . $row)->getValue());
+            if ($nrCrt === 'crt.' || str_starts_with($nrCrt, 'Total')) continue;
+            $ean  = trim((string) $sheet->getCell('C' . $row)->getValue());
+            $pretG = (float) str_replace(',', '.', (string) $sheet->getCell('G' . $row)->getValue());
+            $pretH = (float) str_replace(',', '.', (string) $sheet->getCell('H' . $row)->getValue());
+            $dateRaw = $sheet->getCell('J' . $row)->getFormattedValue();
+            if ($ean === '' || $pretG <= 0) continue;
+            try {
+                $date = \Carbon\Carbon::createFromFormat('d.m.Y', $dateRaw);
+            } catch (\Exception) {
+                $date = null;
+            }
+            if (!isset($excelMap[$ean]) || ($date && (!$excelMap[$ean]['date'] || $date->gt($excelMap[$ean]['date'])))) {
+                $excelMap[$ean] = ['h' => $pretH, 'g' => $pretG, 'date' => $date];
+            }
+        }
+
+        $products = \App\Models\WooProduct::whereIn('sku', array_keys($excelMap))
+            ->whereNotNull('sku')
+            ->get(['id', 'sku', 'name', 'price', 'regular_price'])
+            ->keyBy('sku');
+
+        $totalCompared = 0;
+        $totalOk = 0;
+        $discrepancies = collect();
+
+        foreach ($excelMap as $ean => $ex) {
+            $product = $products[$ean] ?? null;
+            if (!$product) continue;
+            $dbPrice = (float) ($product->price ?: $product->regular_price);
+            if ($dbPrice <= 0 && $ex['h'] <= 0) continue;
+            $totalCompared++;
+            $diff = $dbPrice - $ex['h'];
+            $diffPct = $ex['h'] > 0 ? ($diff / $ex['h']) * 100 : 0;
+            $breakeven = $ex['g'] * 1.21;
+            if (abs($diff) < 0.05 || abs($diffPct) < 2) {
+                $totalOk++;
+                continue;
+            }
+            $discrepancies->push([
+                'ean'       => $ean,
+                'name'      => $product->name,
+                'excel_h'   => $ex['h'],
+                'excel_g'   => $ex['g'],
+                'db_price'  => $dbPrice,
+                'diff'      => $diff,
+                'diff_pct'  => $diffPct,
+                'breakeven' => $breakeven,
+                'is_loss'   => $dbPrice < $breakeven,
+            ]);
+        }
+
+        $discrepancies = $discrepancies->sortByDesc(fn ($r) => abs($r['diff']))->values();
+        $lossCount = $discrepancies->where('is_loss', true)->count();
+        $totalOk += $totalCompared - $discrepancies->count() - $totalOk;
+
+        ini_set('memory_limit', '512M');
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.price-discrepancies', compact(
+            'discrepancies', 'totalCompared', 'totalOk', 'lossCount'
+        ))->setPaper('a4', 'landscape');
+
+        return $pdf->stream('discrepante-pret-' . now()->format('Ymd') . '.pdf');
+    })->name('reports.price-discrepancies');
+
     // Raport PDF — furnizori fără persoane de contact
     Route::get('/rapoarte/furnizori-fara-contact', function () {
         $suppliers = \App\Models\Supplier::withCount([
