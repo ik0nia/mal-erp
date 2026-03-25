@@ -324,9 +324,9 @@ class PurchaseOrderResource extends Resource
                                     $qty = (float) $state;
                                     $ordered = (float) $record->quantity;
                                     if ($qty < $ordered) {
-                                        return number_format($qty, 0, ',', '.') . ' / ' . number_format($ordered, 0, ',', '.') . ' ⚠';
+                                        return number_format($qty, 0, '.', '') . ' / ' . number_format($ordered, 0, '.', '') . ' ⚠';
                                     }
-                                    return number_format($qty, 0, ',', '.');
+                                    return number_format($qty, 0, '.', '');
                                 })
                                 ->color(fn ($state, \App\Models\PurchaseOrderItem $record): string =>
                                     $state === null ? 'gray' :
@@ -577,7 +577,7 @@ class PurchaseOrderResource extends Resource
                         $ps = ProductSupplier::where('woo_product_id', $productId)
                             ->where('supplier_id', $supplierId)->first();
                         if ($ps && $ps->order_multiple && (float) $ps->order_multiple > 0) {
-                            return 'Multiplu: ' . rtrim(rtrim(number_format((float) $ps->order_multiple, 3, ',', '.'), '0'), ',') . ' buc';
+                            return 'Multiplu: ' . rtrim(rtrim(number_format((float) $ps->order_multiple, 3, '.', ''), '0'), '.') . ' buc';
                         }
                         return null;
                     })
@@ -618,7 +618,7 @@ class PurchaseOrderResource extends Resource
                     ->label('Stoc')
                     ->content(fn (Get $get): HtmlString => new HtmlString(
                         $get('info_stock') !== null && $get('info_stock') !== ''
-                            ? '<span class="text-sm font-mono font-medium">'.number_format((float)$get('info_stock'), 0, ',', '.').'</span>'
+                            ? '<span class="text-sm font-mono font-medium">'.number_format((float)$get('info_stock'), 0, '.', '').'</span>'
                             : '<span class="text-gray-300 text-sm">—</span>'
                     ))
                     ->columnSpan(1),
@@ -627,7 +627,7 @@ class PurchaseOrderResource extends Resource
                     ->label('Vânz. 7z')
                     ->content(fn (Get $get): HtmlString => new HtmlString(
                         $get('info_sales_7d') !== null && $get('info_sales_7d') !== ''
-                            ? '<span class="text-sm font-mono text-blue-600">'.number_format((float)$get('info_sales_7d'), 1, ',', '.').'</span>'
+                            ? '<span class="text-sm font-mono text-blue-600">'.number_format((float)$get('info_sales_7d'), 1, '.', '').'</span>'
                             : '<span class="text-gray-300 text-sm">—</span>'
                     ))
                     ->columnSpan(1),
@@ -671,7 +671,7 @@ class PurchaseOrderResource extends Resource
                         $ps = ProductSupplier::where('woo_product_id', $productId)
                             ->where('supplier_id', $supplierId)->first();
                         if ($ps && $ps->order_multiple && (float) $ps->order_multiple > 0) {
-                            return 'Multiplu: ' . rtrim(rtrim(number_format((float) $ps->order_multiple, 3, ',', '.'), '0'), ',') . ' buc';
+                            return 'Multiplu: ' . rtrim(rtrim(number_format((float) $ps->order_multiple, 3, '.', ''), '0'), '.') . ' buc';
                         }
                         return null;
                     })
@@ -815,7 +815,7 @@ class PurchaseOrderResource extends Resource
         // ---- Section 1: request sources ----
         $rows = '';
         foreach ($requestSources as $src) {
-            $qty         = number_format((float) ($src['quantity'] ?? 0), 0, ',', '.');
+            $qty         = number_format((float) ($src['quantity'] ?? 0), 0, '.', '');
             $number      = e($src['request_number'] ?? '—');
             $consultant  = e($src['consultant'] ?? '—');
             $location    = e($src['location'] ?? '');
@@ -878,28 +878,28 @@ class PurchaseOrderResource extends Resource
             $recSection .= '<div class="divide-y divide-gray-100">';
 
             if ($fromReq > 0) {
-                $recSection .= $row('Din necesare', number_format($fromReq, 0, ',', '.').' buc.');
+                $recSection .= $row('Din necesare', number_format($fromReq, 0, '.', '').' buc.');
                 if ($reserved > 0) {
-                    $recSection .= $row('— din care rezervate client', '<span class="text-orange-700 font-semibold">'.number_format($reserved, 0, ',', '.').' buc.</span>', '');
+                    $recSection .= $row('— din care rezervate client', '<span class="text-orange-700 font-semibold">'.number_format($reserved, 0, '.', '').' buc.</span>', '');
                 }
                 if ($general > 0) {
-                    $recSection .= $row('— din care pt. stoc general', number_format($general, 0, ',', '.').' buc.');
+                    $recSection .= $row('— din care pt. stoc general', number_format($general, 0, '.', '').' buc.');
                 }
             }
 
-            $recSection .= $row('Stoc curent', number_format($stock, 0, ',', '.').' buc.');
+            $recSection .= $row('Stoc curent', number_format($stock, 0, '.', '').' buc.');
 
             if ($sales7d > 0 || $sales30d > 0) {
-                $recSection .= $row('Mișcări ultimele 7 zile', number_format($sales7d, 1, ',', '.').' buc.');
-                $recSection .= $row('Mișcări ultimele 30 zile', number_format($sales30d, 1, ',', '.').' buc.');
-                $recSection .= $row('Velocitate ajustată', number_format($velDay, 2, ',', '.').' buc./zi');
+                $recSection .= $row('Mișcări ultimele 7 zile', number_format($sales7d, 1, '.', '').' buc.');
+                $recSection .= $row('Mișcări ultimele 30 zile', number_format($sales30d, 1, '.', '').' buc.');
+                $recSection .= $row('Velocitate ajustată', number_format($velDay, 2, '.', '').' buc./zi');
             }
 
             if ($minStk !== null) {
-                $recSection .= $row('Stoc minim (reorder point)', number_format($minStk, 0, ',', '.').' buc.');
+                $recSection .= $row('Stoc minim (reorder point)', number_format($minStk, 0, '.', '').' buc.');
             }
             if ($maxStk !== null) {
-                $recSection .= $row('Stoc maxim (target)', number_format($maxStk, 0, ',', '.').' buc.');
+                $recSection .= $row('Stoc maxim (target)', number_format($maxStk, 0, '.', '').' buc.');
             }
 
             if ($addStore > 0) {
@@ -908,14 +908,14 @@ class PurchaseOrderResource extends Resource
                     'velocity'  => 'Suplimentar pt. stoc magazin',
                     default     => 'Suplimentar magazin',
                 };
-                $recSection .= $row($methodLabel, '<span class="text-blue-700 font-bold">+'.number_format($addStore, 0, ',', '.').' buc.</span>', '');
+                $recSection .= $row($methodLabel, '<span class="text-blue-700 font-bold">+'.number_format($addStore, 0, '.', '').' buc.</span>', '');
             }
 
             $recSection .= '</div>';
             // Total footer
             $recSection .= '<div class="flex items-center justify-between bg-blue-600 px-3 py-3">';
             $recSection .= '<span class="text-sm font-bold text-white">Total recomandat</span>';
-            $recSection .= '<span class="text-lg font-black text-white">'.number_format($totalRec, 0, ',', '.').' buc.</span>';
+            $recSection .= '<span class="text-lg font-black text-white">'.number_format($totalRec, 0, '.', '').' buc.</span>';
             $recSection .= '</div>';
             $recSection .= '</div>';
         }

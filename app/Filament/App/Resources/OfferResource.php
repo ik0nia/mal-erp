@@ -569,7 +569,7 @@ class OfferResource extends Resource
                                     ->weight('medium'),
                                 TextEntry::make('quantity')
                                     ->label('Cant.')
-                                    ->formatStateUsing(fn ($state): string => number_format((float) $state, 3, '.', '')),
+                                    ->formatStateUsing(fn ($state) => $state !== null ? (floor($state) == $state ? number_format($state, 0, '.', '') : number_format($state, 2, '.', '')) : '—'),
                                 TextEntry::make('unit_price')
                                     ->label('Preț unitar')
                                     ->formatStateUsing(fn ($state): string => static::formatCurrency((float) $state)),

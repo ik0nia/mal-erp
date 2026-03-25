@@ -80,7 +80,7 @@ class GenerateWeeklyBiReportCommand extends Command
             $prompt = $this->buildPrompt($metrics, $pastReports, $fromStr, $toStr);
 
             // ── Apel Claude ───────────────────────────────────────────────────
-            $this->line('  → Trimit datele la Claude (' . number_format(mb_strlen($prompt)) . ' caractere)...');
+            $this->line('  → Trimit datele la Claude (' . number_format(mb_strlen($prompt), 0, '.', '') . ' caractere)...');
             $claude  = new AnthropicClient(apiKey: $apiKey);
             $message = $claude->messages->create(
                 maxTokens: 10000,
@@ -462,9 +462,9 @@ MATURITY;
 
         // Top P0 — cu două valori days_left în bootstrap
         $p0Lines = $m['topP0']->map(function ($r, $i) use ($isBootstrap, $daysOfHistory) {
-            $daysLeftCal = $r->days_left_estimate !== null ? number_format((float) $r->days_left_estimate, 1) : '∞';
+            $daysLeftCal = $r->days_left_estimate !== null ? number_format((float) $r->days_left_estimate, 1, '.', '') : '∞';
             if ($isBootstrap && $r->days_left_estimate !== null) {
-                $daysLeftObs = number_format((float) $r->days_left_estimate * $daysOfHistory / 30, 1);
+                $daysLeftObs = number_format((float) $r->days_left_estimate * $daysOfHistory / 30, 1, '.', '');
                 $daysLeftStr = "{$daysLeftCal}d (cal) / {$daysLeftObs}d (obs)";
             } else {
                 $daysLeftStr = $daysLeftCal;
@@ -485,9 +485,9 @@ MATURITY;
 
         // Top P1 — cu două valori days_left în bootstrap
         $p1Lines = $m['topP1']->map(function ($r, $i) use ($isBootstrap, $daysOfHistory) {
-            $daysLeftCal = $r->days_left_estimate !== null ? number_format((float) $r->days_left_estimate, 1) : '—';
+            $daysLeftCal = $r->days_left_estimate !== null ? number_format((float) $r->days_left_estimate, 1, '.', '') : '—';
             if ($isBootstrap && $r->days_left_estimate !== null) {
-                $daysLeftObs = number_format((float) $r->days_left_estimate * $daysOfHistory / 30, 1);
+                $daysLeftObs = number_format((float) $r->days_left_estimate * $daysOfHistory / 30, 1, '.', '');
                 $daysLeftStr = "{$daysLeftCal}d (cal) / {$daysLeftObs}d (obs)";
             } else {
                 $daysLeftStr = $daysLeftCal;

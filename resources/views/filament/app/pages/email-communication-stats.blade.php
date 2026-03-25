@@ -6,12 +6,12 @@
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         @php
             $cards = [
-                ['label' => 'Total emailuri', 'value' => number_format($this->getTotalEmails()), 'color' => 'primary', 'icon' => 'heroicon-o-envelope'],
-                ['label' => 'Procesate AI', 'value' => number_format($this->getProcessedEmails()), 'color' => 'success', 'icon' => 'heroicon-o-cpu-chip'],
-                ['label' => 'Neprocessate', 'value' => number_format($this->getUnprocessedEmails()), 'color' => 'warning', 'icon' => 'heroicon-o-clock'],
-                ['label' => 'Contacte totale', 'value' => number_format($this->getTotalContacts()), 'color' => 'info', 'icon' => 'heroicon-o-users'],
-                ['label' => 'Descoperite auto', 'value' => number_format($this->getDiscoveredContacts()), 'color' => 'info', 'icon' => 'heroicon-o-magnifying-glass'],
-                ['label' => 'Expeditori necunoscuți', 'value' => number_format($this->getUnknownSenders()), 'color' => 'danger', 'icon' => 'heroicon-o-question-mark-circle'],
+                ['label' => 'Total emailuri', 'value' => number_format($this->getTotalEmails(), 0, '.', ''), 'color' => 'primary', 'icon' => 'heroicon-o-envelope'],
+                ['label' => 'Procesate AI', 'value' => number_format($this->getProcessedEmails(), 0, '.', ''), 'color' => 'success', 'icon' => 'heroicon-o-cpu-chip'],
+                ['label' => 'Neprocessate', 'value' => number_format($this->getUnprocessedEmails(), 0, '.', ''), 'color' => 'warning', 'icon' => 'heroicon-o-clock'],
+                ['label' => 'Contacte totale', 'value' => number_format($this->getTotalContacts(), 0, '.', ''), 'color' => 'info', 'icon' => 'heroicon-o-users'],
+                ['label' => 'Descoperite auto', 'value' => number_format($this->getDiscoveredContacts(), 0, '.', ''), 'color' => 'info', 'icon' => 'heroicon-o-magnifying-glass'],
+                ['label' => 'Expeditori necunoscuți', 'value' => number_format($this->getUnknownSenders(), 0, '.', ''), 'color' => 'danger', 'icon' => 'heroicon-o-question-mark-circle'],
             ];
         @endphp
         @foreach($cards as $card)

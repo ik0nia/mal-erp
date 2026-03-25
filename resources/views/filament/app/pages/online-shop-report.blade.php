@@ -76,7 +76,7 @@
         </div>
         <div class="osr-stat">
             <div class="osr-stat-label">Comenzi active</div>
-            <div class="osr-stat-value">{{ number_format($this->statOrders) }}</div>
+            <div class="osr-stat-value">{{ number_format($this->statOrders, 0, '.', '') }}</div>
             <div class="osr-stat-sub">fără anulate/eșuate</div>
         </div>
         <div class="osr-stat">
@@ -86,12 +86,12 @@
         </div>
         <div class="osr-stat">
             <div class="osr-stat-label">Finalizate</div>
-            <div class="osr-stat-value" style="color:#16a34a;">{{ number_format($this->statCompleted) }}</div>
+            <div class="osr-stat-value" style="color:#16a34a;">{{ number_format($this->statCompleted, 0, '.', '') }}</div>
             <div class="osr-stat-sub">{{ $this->statOrders > 0 ? round($this->statCompleted / $this->statOrders * 100) . '% din total' : '—' }}</div>
         </div>
         <div class="osr-stat">
             <div class="osr-stat-label">În procesare</div>
-            <div class="osr-stat-value" style="color:#d97706;">{{ number_format($this->statProcessing) }}</div>
+            <div class="osr-stat-value" style="color:#d97706;">{{ number_format($this->statProcessing, 0, '.', '') }}</div>
             <div class="osr-stat-sub">{{ $this->statOrders > 0 ? round($this->statProcessing / $this->statOrders * 100) . '% din total' : '—' }}</div>
         </div>
     </div>
@@ -113,7 +113,7 @@
                 <div class="osr-cat-name" title="{{ $cat['name'] }}">{{ $cat['name'] }}</div>
                 <div class="osr-cat-rev">{{ number_format($cat['revenue'], 0, ',', '.') }} <span>lei</span></div>
                 <div class="osr-bar-track"><div class="osr-bar-fill osr-bar-fill--primary" style="width:{{ round($cat['revenue'] / $maxCatRevenue * 100) }}%"></div></div>
-                <div class="osr-cat-orders">{{ number_format($cat['orders']) }} comenzi</div>
+                <div class="osr-cat-orders">{{ number_format($cat['orders'], 0, '.', '') }} comenzi</div>
             </div>
             @endforeach
         </div>
@@ -133,7 +133,7 @@
                     <span class="osr-list-rev">{{ number_format($s['revenue'], 2, ',', '.') }} lei</span>
                 </div>
                 <div class="osr-bar-track"><div class="osr-bar-fill osr-bar-fill--indigo" style="width:{{ round($s['revenue'] / $maxSupRevenue * 100) }}%"></div></div>
-                <div class="osr-list-orders">{{ number_format($s['orders']) }} comenzi</div>
+                <div class="osr-list-orders">{{ number_format($s['orders'], 0, '.', '') }} comenzi</div>
             </div>
             @endforeach
         </div>
@@ -150,7 +150,7 @@
                     <span class="osr-list-rev">{{ number_format($b['revenue'], 2, ',', '.') }} lei</span>
                 </div>
                 <div class="osr-bar-track"><div class="osr-bar-fill osr-bar-fill--emerald" style="width:{{ round($b['revenue'] / $maxBrandRevenue * 100) }}%"></div></div>
-                <div class="osr-list-orders">{{ number_format($b['orders']) }} comenzi</div>
+                <div class="osr-list-orders">{{ number_format($b['orders'], 0, '.', '') }} comenzi</div>
             </div>
             @endforeach
         </div>
@@ -178,7 +178,7 @@
                     @foreach($this->statusData as $s)
                     <tr>
                         <td><span class="osr-status-badge" style="{{ $statusColors[$s['status']] ?? 'background:#f3f4f6;color:#374151;' }}">{{ $statusLabels[$s['status']] ?? $s['status'] }}</span></td>
-                        <td style="text-align:right; color:#4b5563;">{{ number_format($s['cnt']) }}</td>
+                        <td style="text-align:right; color:#4b5563;">{{ number_format($s['cnt'], 0, '.', '') }}</td>
                         <td style="text-align:right; font-weight:600; color:#111827;">{{ number_format($s['revenue'], 2, ',', '.') }}</td>
                     </tr>
                     @endforeach
@@ -186,7 +186,7 @@
                 <tfoot>
                     <tr>
                         <td style="font-weight:600; color:#374151;">Total</td>
-                        <td style="text-align:right; font-weight:600; color:#374151;">{{ number_format(array_sum(array_column($this->statusData, 'cnt'))) }}</td>
+                        <td style="text-align:right; font-weight:600; color:#374151;">{{ number_format(array_sum(array_column($this->statusData, 'cnt')), 0, '.', '') }}</td>
                         <td style="text-align:right; font-weight:700; color:#dc2626;">{{ number_format(array_sum(array_column($this->statusData, 'revenue')), 2, ',', '.') }}</td>
                     </tr>
                 </tfoot>

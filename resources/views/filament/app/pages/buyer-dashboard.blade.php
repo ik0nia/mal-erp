@@ -168,11 +168,11 @@
                                         </td>
                                         <td class="px-4 py-3 text-right">
                                             <span class="font-medium text-gray-900 dark:text-white">
-                                                {{ number_format($item['quantity'], 0) }}
+                                                {{ number_format($item['quantity'], 0, '.', '') }}
                                             </span>
                                             @if(($item['ordered_quantity'] ?? 0) > 0)
                                                 <div class="text-xs text-warning-600 dark:text-warning-400 mt-0.5">
-                                                    +{{ number_format($item['ordered_quantity'], 0) }} cmd.
+                                                    +{{ number_format($item['ordered_quantity'], 0, '.', '') }} cmd.
                                                 </div>
                                             @endif
                                         </td>

@@ -6,12 +6,12 @@
     <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 mb-6">
 
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-center">
-            <div class="text-3xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total']) }}</div>
+            <div class="text-3xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total'], 0, '.', '') }}</div>
             <div class="text-sm text-gray-500 mt-1">Total importate</div>
         </div>
 
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-center">
-            <div class="text-3xl font-bold text-blue-600">{{ number_format($stats['withImage']) }}</div>
+            <div class="text-3xl font-bold text-blue-600">{{ number_format($stats['withImage'], 0, '.', '') }}</div>
             <div class="text-sm text-gray-500 mt-1">Cu poză</div>
             @if($stats['total'] > 0)
                 <div class="text-xs text-gray-400 mt-0.5">{{ round($stats['withImage'] / $stats['total'] * 100) }}%</div>
@@ -19,7 +19,7 @@
         </div>
 
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-center">
-            <div class="text-3xl font-bold text-purple-600">{{ number_format($stats['withDesc']) }}</div>
+            <div class="text-3xl font-bold text-purple-600">{{ number_format($stats['withDesc'], 0, '.', '') }}</div>
             <div class="text-sm text-gray-500 mt-1">Cu descriere</div>
             @if($stats['total'] > 0)
                 <div class="text-xs text-gray-400 mt-0.5">{{ round($stats['withDesc'] / $stats['total'] * 100) }}%</div>
@@ -27,7 +27,7 @@
         </div>
 
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-center">
-            <div class="text-3xl font-bold text-orange-500">{{ number_format($stats['withCat']) }}</div>
+            <div class="text-3xl font-bold text-orange-500">{{ number_format($stats['withCat'], 0, '.', '') }}</div>
             <div class="text-sm text-gray-500 mt-1">Cu categorie</div>
             @if($stats['total'] > 0)
                 <div class="text-xs text-gray-400 mt-0.5">{{ round($stats['withCat'] / $stats['total'] * 100) }}%</div>
@@ -35,7 +35,7 @@
         </div>
 
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-center">
-            <div class="text-3xl font-bold text-green-600">{{ number_format($stats['readyToPub']) }}</div>
+            <div class="text-3xl font-bold text-green-600">{{ number_format($stats['readyToPub'], 0, '.', '') }}</div>
             <div class="text-sm text-gray-500 mt-1">Gata de publicat</div>
             @if($stats['total'] > 0)
                 <div class="text-xs text-gray-400 mt-0.5">{{ round($stats['readyToPub'] / $stats['total'] * 100) }}%</div>

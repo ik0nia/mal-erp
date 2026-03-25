@@ -19,14 +19,14 @@
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.5rem;">
         @php
         $cards = [
-            ['label'=>'Total produse ERP',   'value'=> number_format($img['total']),                           'color'=>'#6b7280'],
-            ['label'=>'Cu imagine',           'value'=> number_format($img['with_image']),                      'color'=>'#16a34a'],
-            ['label'=>'Cu atribute',          'value'=> number_format($attrs['with_attrs']),                    'color'=>'#7c3aed'],
-            ['label'=>'Categorizate',         'value'=> number_format($cat['categorized']),                     'color'=>'#d97706'],
-            ['label'=>'Cu descriere',         'value'=> number_format($desc['with_desc']),                      'color'=>'#0891b2'],
-            ['label'=>'Titluri reformatate',  'value'=> number_format($attrs['reformatted']),                   'color'=>'#059669'],
-            ['label'=>'Îmbogățite web',       'value'=> number_format($web['enriched']),                        'color'=>'#ea580c'],
-            ['label'=>'Woo evaluate',         'value'=> number_format($woo['done']),                            'color'=>'#7c3aed'],
+            ['label'=>'Total produse ERP',   'value'=> number_format($img['total'], 0, '.', ''),               'color'=>'#6b7280'],
+            ['label'=>'Cu imagine',           'value'=> number_format($img['with_image'], 0, '.', ''),          'color'=>'#16a34a'],
+            ['label'=>'Cu atribute',          'value'=> number_format($attrs['with_attrs'], 0, '.', ''),        'color'=>'#7c3aed'],
+            ['label'=>'Categorizate',         'value'=> number_format($cat['categorized'], 0, '.', ''),         'color'=>'#d97706'],
+            ['label'=>'Cu descriere',         'value'=> number_format($desc['with_desc'], 0, '.', ''),          'color'=>'#0891b2'],
+            ['label'=>'Titluri reformatate',  'value'=> number_format($attrs['reformatted'], 0, '.', ''),       'color'=>'#059669'],
+            ['label'=>'Îmbogățite web',       'value'=> number_format($web['enriched'], 0, '.', ''),            'color'=>'#ea580c'],
+            ['label'=>'Woo evaluate',         'value'=> number_format($woo['done'], 0, '.', ''),                'color'=>'#7c3aed'],
         ];
         @endphp
         @foreach($cards as $card)
@@ -62,7 +62,7 @@
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.4rem;margin-bottom:0.9rem;">
                 @foreach([['Pending','#f59e0b',$img['pending']],['Aprobate','#16a34a',$img['approved']],['Respinse','#dc2626',$img['rejected']]] as [$lbl,$clr,$val])
                 <div style="background:#f9fafb;border-radius:0.5rem;padding:0.5rem;text-align:center;">
-                    <div style="font-size:1rem;font-weight:700;color:{{ $clr }};">{{ number_format($val) }}</div>
+                    <div style="font-size:1rem;font-weight:700;color:{{ $clr }};">{{ number_format($val, 0, '.', '') }}</div>
                     <div style="font-size:0.68rem;color:#6b7280;">{{ $lbl }}</div>
                 </div>
                 @endforeach
@@ -97,7 +97,7 @@
 
             <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.4rem;margin-bottom:0.9rem;">
                 <div style="background:#f9fafb;border-radius:0.5rem;padding:0.5rem;text-align:center;">
-                    <div style="font-size:1rem;font-weight:700;color:#7c3aed;">{{ number_format($attrs['total_attrs']) }}</div>
+                    <div style="font-size:1rem;font-weight:700;color:#7c3aed;">{{ number_format($attrs['total_attrs'], 0, '.', '') }}</div>
                     <div style="font-size:0.68rem;color:#6b7280;">Total atribute</div>
                 </div>
                 <div style="background:#f9fafb;border-radius:0.5rem;padding:0.5rem;text-align:center;">
@@ -303,7 +303,7 @@
                 <div style="margin-bottom:0.75rem;">
                     <div style="display:flex;justify-content:space-between;font-size:0.76rem;color:#374151;margin-bottom:0.25rem;">
                         <span>{{ $lbl }}</span>
-                        <span style="color:{{ $clr }};font-weight:600;">{{ number_format($val) }} <span style="color:#9ca3af;font-weight:400;">({{ $pct }}%)</span></span>
+                        <span style="color:{{ $clr }};font-weight:600;">{{ number_format($val, 0, '.', '') }} <span style="color:#9ca3af;font-weight:400;">({{ $pct }}%)</span></span>
                     </div>
                     <div style="background:#e5e7eb;border-radius:999px;height:6px;">
                         <div style="background:{{ $clr }};height:100%;width:{{ $pct }}%;border-radius:999px;transition:width .3s;"></div>
@@ -313,11 +313,11 @@
 
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;margin-top:0.75rem;">
                     <div style="background:#fef2f2;border-radius:0.5rem;padding:0.45rem 0.6rem;text-align:center;">
-                        <div style="font-size:1rem;font-weight:700;color:#dc2626;">{{ number_format($woo['needs_attention']) }}</div>
+                        <div style="font-size:1rem;font-weight:700;color:#dc2626;">{{ number_format($woo['needs_attention'], 0, '.', '') }}</div>
                         <div style="font-size:0.65rem;color:#6b7280;">Necesită atenție</div>
                     </div>
                     <div style="background:#f0fdf4;border-radius:0.5rem;padding:0.45rem 0.6rem;text-align:center;">
-                        <div style="font-size:1rem;font-weight:700;color:#16a34a;">{{ number_format($woo['done']) }}</div>
+                        <div style="font-size:1rem;font-weight:700;color:#16a34a;">{{ number_format($woo['done'], 0, '.', '') }}</div>
                         <div style="font-size:0.65rem;color:#6b7280;">Evaluate OK</div>
                     </div>
                 </div>
@@ -334,7 +334,7 @@
                 <div style="margin-bottom:0.75rem;">
                     <div style="display:flex;justify-content:space-between;font-size:0.76rem;color:#374151;margin-bottom:0.25rem;">
                         <span>{{ $lbl }}</span>
-                        <span style="color:{{ $clr }};font-weight:600;">{{ number_format($val) }} <span style="color:#9ca3af;font-weight:400;">({{ $pct }}%)</span></span>
+                        <span style="color:{{ $clr }};font-weight:600;">{{ number_format($val, 0, '.', '') }} <span style="color:#9ca3af;font-weight:400;">({{ $pct }}%)</span></span>
                     </div>
                     <div style="background:#e5e7eb;border-radius:999px;height:6px;">
                         <div style="background:{{ $clr }};height:100%;width:{{ $pct }}%;border-radius:999px;transition:width .3s;"></div>
@@ -344,11 +344,11 @@
 
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;margin-top:0.75rem;">
                     <div style="background:#fffbeb;border-radius:0.5rem;padding:0.45rem 0.6rem;text-align:center;">
-                        <div style="font-size:1rem;font-weight:700;color:#2563eb;">{{ number_format($woo['total_attr_woo']) }}</div>
+                        <div style="font-size:1rem;font-weight:700;color:#2563eb;">{{ number_format($woo['total_attr_woo'], 0, '.', '') }}</div>
                         <div style="font-size:0.65rem;color:#6b7280;">Atribute Woo</div>
                     </div>
                     <div style="background:#f5f3ff;border-radius:0.5rem;padding:0.45rem 0.6rem;text-align:center;">
-                        <div style="font-size:1rem;font-weight:700;color:#7c3aed;">{{ number_format($woo['total_attr_gen']) }}</div>
+                        <div style="font-size:1rem;font-weight:700;color:#7c3aed;">{{ number_format($woo['total_attr_gen'], 0, '.', '') }}</div>
                         <div style="font-size:0.65rem;color:#6b7280;">Atribute generate</div>
                     </div>
                 </div>

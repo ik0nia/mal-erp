@@ -260,7 +260,9 @@ class WooOrderResource extends Resource
                             ->schema([
                                 TextEntry::make('name')->label('Produs'),
                                 TextEntry::make('sku')->label('SKU')->placeholder('-'),
-                                TextEntry::make('quantity')->label('Cant.')->numeric(),
+                                TextEntry::make('quantity')
+                                    ->label('Cant.')
+                                    ->formatStateUsing(fn ($state) => $state !== null ? (floor($state) == $state ? number_format($state, 0, '.', '') : number_format($state, 2, '.', '')) : '—'),
                                 TextEntry::make('erp_stock')
                                     ->label('Stoc ERP')
                                     ->getStateUsing(function (\App\Models\WooOrderItem $record): string {
@@ -276,7 +278,9 @@ class WooOrderResource extends Resource
                                             ->when($locationId > 0, fn ($q) => $q->where('location_id', $locationId))
                                             ->value('quantity');
 
-                                        return $qty !== null ? number_format((float) $qty, 0) : '–';
+                                        if ($qty === null) return '–';
+                                        $qtyVal = (float) $qty;
+                                        return floor($qtyVal) == $qtyVal ? number_format($qtyVal, 0, '.', '') : number_format($qtyVal, 2, '.', '');
                                     })
                                     ->badge()
                                     ->color(function (\App\Models\WooOrderItem $record): string {

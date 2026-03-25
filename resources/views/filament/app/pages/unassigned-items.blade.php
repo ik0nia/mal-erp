@@ -86,7 +86,7 @@
                                     </div>
                                 </td>
                                 <td style="text-align:right; font-weight:500; color:#111827;">
-                                    {{ number_format($item['quantity'], 0) }}
+                                    {{ number_format($item['quantity'], 0, '.', '') }}
                                 </td>
                                 <td style="color:#4b5563;">
                                     @if($item['needed_by'])

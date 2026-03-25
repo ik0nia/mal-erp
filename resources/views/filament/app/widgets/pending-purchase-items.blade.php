@@ -145,9 +145,9 @@
                                         @endif
                                     </td>
                                     <td class="text-right">
-                                        <span style="font-weight:500; color:#111827;">{{ number_format($item['quantity'], 0) }}</span>
+                                        <span style="font-weight:500; color:#111827;">{{ number_format($item['quantity'], 0, '.', '') }}</span>
                                         @if(($item['ordered_quantity'] ?? 0) > 0)
-                                            <div style="font-size:0.75rem; color:#d97706; margin-top:0.125rem;">+{{ number_format($item['ordered_quantity'], 0) }} cmd.</div>
+                                            <div style="font-size:0.75rem; color:#d97706; margin-top:0.125rem;">+{{ number_format($item['ordered_quantity'], 0, '.', '') }} cmd.</div>
                                         @endif
                                     </td>
                                     <td style="color:#4b5563;">

@@ -4,29 +4,29 @@
     {{-- Stats cards --}}
     <div class="grid grid-cols-7 gap-3 mb-6">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 text-center">
-            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total']) }}</div>
+            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total'], 0, '.', '') }}</div>
             <div class="text-xs text-gray-500 mt-1">Total propuneri</div>
         </div>
         <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl shadow p-4 text-center">
-            <div class="text-2xl font-bold text-amber-600">{{ number_format($stats['pending']) }}</div>
+            <div class="text-2xl font-bold text-amber-600">{{ number_format($stats['pending'], 0, '.', '') }}</div>
             <div class="text-xs text-gray-500 mt-1">În așteptare</div>
         </div>
         <div class="bg-green-50 dark:bg-green-900/20 rounded-xl shadow p-4 text-center">
-            <div class="text-2xl font-bold text-green-600">{{ number_format($stats['approved']) }}</div>
+            <div class="text-2xl font-bold text-green-600">{{ number_format($stats['approved'], 0, '.', '') }}</div>
             <div class="text-xs text-gray-500 mt-1">Aprobate</div>
         </div>
         <div class="bg-red-50 dark:bg-red-900/20 rounded-xl shadow p-4 text-center">
-            <div class="text-2xl font-bold text-red-600">{{ number_format($stats['rejected']) }}</div>
+            <div class="text-2xl font-bold text-red-600">{{ number_format($stats['rejected'], 0, '.', '') }}</div>
             <div class="text-xs text-gray-500 mt-1">Respinse</div>
         </div>
         <div class="bg-gray-50 dark:bg-gray-700 rounded-xl shadow p-4 text-center">
-            <div class="text-2xl font-bold text-gray-500">{{ number_format($stats['no_match']) }}</div>
+            <div class="text-2xl font-bold text-gray-500">{{ number_format($stats['no_match'], 0, '.', '') }}</div>
             <div class="text-xs text-gray-500 mt-1">Fără potrivire</div>
         </div>
         <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl shadow p-4 text-center">
             <div class="text-2xl font-bold text-blue-600">
-                {{ number_format($stats['products_with_cat']) }}
-                <span class="text-sm font-normal text-gray-500">/ {{ number_format($stats['products_total']) }}</span>
+                {{ number_format($stats['products_with_cat'], 0, '.', '') }}
+                <span class="text-sm font-normal text-gray-500">/ {{ number_format($stats['products_total'], 0, '.', '') }}</span>
             </div>
             <div class="text-xs text-gray-500 mt-1">Produse cu categorie</div>
         </div>

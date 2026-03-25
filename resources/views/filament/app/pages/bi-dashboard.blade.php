@@ -59,22 +59,22 @@
     </div>
     <div class="bi-kpi-card">
       <div class="bi-kpi-label">Produse în stoc</div>
-      <div class="bi-kpi-value">{{ number_format($this->inStock) }}</div>
-      <div class="bi-kpi-sub">{{ number_format($this->outOfStock) }} fără stoc</div>
+      <div class="bi-kpi-value">{{ number_format($this->inStock, 0, '.', '') }}</div>
+      <div class="bi-kpi-sub">{{ number_format($this->outOfStock, 0, '.', '') }} fără stoc</div>
     </div>
     <div class="bi-kpi-card" style="border-color:#fecaca; background:#fef2f2;">
       <div class="bi-kpi-label" style="color:#ef4444;">Critice (P0)</div>
-      <div class="bi-kpi-value" style="color:#b91c1c;">{{ number_format($this->countP0) }}</div>
+      <div class="bi-kpi-value" style="color:#b91c1c;">{{ number_format($this->countP0, 0, '.', '') }}</div>
       <div class="bi-kpi-sub" style="color:#ef4444;">stoc 0 sau &lt; 7 zile</div>
     </div>
     <div class="bi-kpi-card" style="border-color:#fed7aa; background:#fff7ed;">
       <div class="bi-kpi-label" style="color:#f97316;">Moderate (P1)</div>
-      <div class="bi-kpi-value" style="color:#c2410c;">{{ number_format($this->countP1) }}</div>
+      <div class="bi-kpi-value" style="color:#c2410c;">{{ number_format($this->countP1, 0, '.', '') }}</div>
       <div class="bi-kpi-sub" style="color:#f97316;">7–14 zile rămase</div>
     </div>
     <div class="bi-kpi-card" style="border-color:#fde68a; background:#fefce8;">
       <div class="bi-kpi-label" style="color:#ca8a04;">Capital Blocat — Dead Stock (P2)</div>
-      <div class="bi-kpi-value" style="color:#a16207;">{{ number_format($this->countP2) }}</div>
+      <div class="bi-kpi-value" style="color:#a16207;">{{ number_format($this->countP2, 0, '.', '') }}</div>
       <div class="bi-kpi-sub" style="color:#ca8a04;">capital blocat ≥ 300 RON</div>
     </div>
   </div>
@@ -117,12 +117,12 @@
                   <td style="text-align:right; color:#4b5563;">{{ (float)$row['avg_out_qty_7d'] > 0 ? number_format($row['avg_out_qty_7d'], 1, '.', '') : '—' }}</td>
                   <td style="text-align:right; color:#2563eb; font-weight:600;">{{ (float)$row['avg_out_qty_30d'] > 0 ? number_format($row['avg_out_qty_30d'], 1, '.', '') : '—' }}</td>
                   <td style="text-align:right; color:#6b7280;">{{ (float)$row['avg_out_qty_90d'] > 0 ? number_format($row['avg_out_qty_90d'], 1, '.', '') : '—' }}</td>
-                  <td style="text-align:right; color:#374151;">{{ (float)$row['out_qty_30d'] > 0 ? number_format($row['out_qty_30d'], 0, ',', '.') : '0' }}</td>
+                  <td style="text-align:right; color:#374151;">{{ (float)$row['out_qty_30d'] > 0 ? number_format($row['out_qty_30d'], 0, '.', '') : '0' }}</td>
                 @else
                   <td style="text-align:right; color:#6b7280;">{{ $row['last_movement_day'] ?? 'niciodată' }}</td>
-                  <td style="text-align:right; {{ $daysNoMove !== null && $daysNoMove >= 90 ? 'color:#dc2626;font-weight:700;' : ($daysNoMove !== null && $daysNoMove >= 60 ? 'color:#ea580c;font-weight:600;' : 'color:#374151;') }}">{{ $daysNoMove !== null ? number_format($daysNoMove).' zile' : '—' }}</td>
-                  <td style="text-align:right; color:#4b5563;">{{ (float)$row['out_qty_30d'] > 0 ? number_format($row['out_qty_30d'], 0, ',', '.') : '0' }}</td>
-                  <td style="text-align:right; color:#6b7280;">{{ (float)$row['out_qty_90d'] > 0 ? number_format($row['out_qty_90d'], 0, ',', '.') : '0' }}</td>
+                  <td style="text-align:right; {{ $daysNoMove !== null && $daysNoMove >= 90 ? 'color:#dc2626;font-weight:700;' : ($daysNoMove !== null && $daysNoMove >= 60 ? 'color:#ea580c;font-weight:600;' : 'color:#374151;') }}">{{ $daysNoMove !== null ? number_format($daysNoMove, 0, '.', '').' zile' : '—' }}</td>
+                  <td style="text-align:right; color:#4b5563;">{{ (float)$row['out_qty_30d'] > 0 ? number_format($row['out_qty_30d'], 0, '.', '') : '0' }}</td>
+                  <td style="text-align:right; color:#6b7280;">{{ (float)$row['out_qty_90d'] > 0 ? number_format($row['out_qty_90d'], 0, '.', '') : '0' }}</td>
                 @endif
               </tr>
             @endforeach
@@ -169,12 +169,12 @@
               <tr wire:key="alert-{{ $aIdx }}" @if($row['product_id'] ?? null) onclick="window.location='{{ \App\Filament\App\Resources\WooProductResource::getUrl('view', ['record' => $row['product_id']]) }}'" style="cursor:pointer;" @endif>
                 <td class="copy-sku" style="font-family:monospace; font-size:0.875rem;" onclick="copySku(this,'{{ $row['sku'] }}')">{{ $row['sku'] }}</td>
                 <td style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#1f2937;">{{ $row['name'] }}</td>
-                <td style="text-align:right;">@if($row['closing_qty'] <= 0)<span style="color:#dc2626; font-weight:600;">0</span>@else{{ number_format($row['closing_qty'], 0, ',', '.') }}@endif</td>
+                <td style="text-align:right;">@if($row['closing_qty'] <= 0)<span style="color:#dc2626; font-weight:600;">0</span>@else{{ number_format($row['closing_qty'], 0, '.', '') }}@endif</td>
                 <td style="text-align:right; color:#4b5563;">{{ $row['closing_price'] !== null ? number_format($row['closing_price'], 2, ',', '.') . ' RON' : '—' }}</td>
                 <td style="text-align:right; font-weight:500; color:#111827;">{{ number_format($row['stock_value'], 0, ',', '.') }} RON</td>
                 @if($this->tab !== 'P2')
-                  <td style="text-align:right; color:#6b7280;">{{ $row['avg_out_30d'] > 0 ? number_format($row['avg_out_30d'], 2, ',', '.') : '—' }}</td>
-                  <td style="text-align:right; {{ $daysLeft !== null && $daysLeft <= 7 ? 'color:#dc2626;font-weight:700;' : ($daysLeft !== null && $daysLeft <= 14 ? 'color:#ea580c;font-weight:600;' : 'color:#374151;') }}">{{ $daysLeft !== null ? number_format($daysLeft, 0, ',', '.') : '∞' }}</td>
+                  <td style="text-align:right; color:#6b7280;">{{ $row['avg_out_30d'] > 0 ? number_format($row['avg_out_30d'], 2, '.', '') : '—' }}</td>
+                  <td style="text-align:right; {{ $daysLeft !== null && $daysLeft <= 7 ? 'color:#dc2626;font-weight:700;' : ($daysLeft !== null && $daysLeft <= 14 ? 'color:#ea580c;font-weight:600;' : 'color:#374151;') }}">{{ $daysLeft !== null ? number_format($daysLeft, 0, '.', '') : '∞' }}</td>
                 @else
                   <td style="text-align:right; font-weight:600; color:#a16207;">{{ number_format($row['stock_value'], 0, ',', '.') }} RON</td>
                 @endif

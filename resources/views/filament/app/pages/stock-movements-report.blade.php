@@ -79,22 +79,22 @@
     <div class="smr-stats">
         <div class="smr-stat">
             <div class="smr-stat-label">Intrări stoc</div>
-            <div class="smr-stat-value" style="color:#16a34a;">{{ number_format($this->statTotalInQty) }}</div>
+            <div class="smr-stat-value" style="color:#16a34a;">{{ number_format($this->statTotalInQty, 0, '.', '') }}</div>
             <div class="smr-stat-sub">{{ number_format($this->statTotalInValue, 2, ',', '.') }} lei</div>
         </div>
         <div class="smr-stat">
             <div class="smr-stat-label">Ieșiri stoc</div>
-            <div class="smr-stat-value" style="color:#dc2626;">{{ number_format($this->statTotalOutQty) }}</div>
+            <div class="smr-stat-value" style="color:#dc2626;">{{ number_format($this->statTotalOutQty, 0, '.', '') }}</div>
             <div class="smr-stat-sub">{{ number_format($this->statTotalOutValue, 2, ',', '.') }} lei</div>
         </div>
         <div class="smr-stat">
             <div class="smr-stat-label">Produse cu mișcări</div>
-            <div class="smr-stat-value" style="color:#dc2626;">{{ number_format($this->statProductsWithMovement) }}</div>
+            <div class="smr-stat-value" style="color:#dc2626;">{{ number_format($this->statProductsWithMovement, 0, '.', '') }}</div>
             <div class="smr-stat-sub">în ultimele {{ $this->days }} zile</div>
         </div>
         <div class="smr-stat">
             <div class="smr-stat-label">Prețuri modificate</div>
-            <div class="smr-stat-value" style="color:#d97706;">{{ number_format($this->statProductsWithPriceChange) }}</div>
+            <div class="smr-stat-value" style="color:#d97706;">{{ number_format($this->statProductsWithPriceChange, 0, '.', '') }}</div>
             <div class="smr-stat-sub">în ultimele {{ $this->days }} zile</div>
         </div>
     </div>
@@ -134,9 +134,9 @@
                                 <span style="margin-left:0.25rem; font-size:0.75rem; color:#dc2626;">● filtrat</span>
                             @endif
                         </td>
-                        <td style="text-align:right; color:#4b5563;">{{ number_format($s['products']) }}</td>
-                        <td style="text-align:right; color:#16a34a;">+{{ number_format($s['in_qty'], 0) }}</td>
-                        <td style="text-align:right; color:#dc2626;">-{{ number_format($s['out_qty'], 0) }}</td>
+                        <td style="text-align:right; color:#4b5563;">{{ number_format($s['products'], 0, '.', '') }}</td>
+                        <td style="text-align:right; color:#16a34a;">+{{ number_format($s['in_qty'], 0, '.', '') }}</td>
+                        <td style="text-align:right; color:#dc2626;">-{{ number_format($s['out_qty'], 0, '.', '') }}</td>
                         <td style="text-align:right; font-weight:600; color:#111827;">{{ number_format($s['value'], 2, ',', '.') }}</td>
                     </tr>
                     @endforeach
@@ -154,7 +154,7 @@
             class="smr-cat-btn {{ $this->categoryId === $cat['id'] ? 'smr-cat-btn--active' : '' }}">
             <div class="smr-cat-name">{{ $cat['name'] }}</div>
             <div class="smr-cat-value">{{ number_format($cat['value'], 0, ',', '.') }} <span>lei</span></div>
-            <div class="smr-cat-sub">{{ number_format($cat['products']) }} produse</div>
+            <div class="smr-cat-sub">{{ number_format($cat['products'], 0, '.', '') }} produse</div>
         </button>
         @endforeach
     </div>

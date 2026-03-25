@@ -253,14 +253,16 @@ class PurchaseRequestResource extends Resource
                         ->schema([
                             TextEntry::make('product_name')->label('Produs'),
                             TextEntry::make('supplier.name')->label('Furnizor')->placeholder('—'),
-                            TextEntry::make('quantity')->label('Cant. cerută'),
+                            TextEntry::make('quantity')
+                                ->label('Cant. cerută')
+                                ->formatStateUsing(fn ($state) => $state !== null ? (floor($state) == $state ? number_format($state, 0, '.', '') : number_format($state, 2, '.', '')) : '—'),
                             TextEntry::make('ordered_quantity')
                                 ->label('Cant. comandată')
-                                ->formatStateUsing(fn ($state, PurchaseRequestItem $record): string =>
-                                    (float) $state > 0
-                                        ? number_format((float) $state, 0, ',', '.') . ' / ' . number_format((float) $record->quantity, 0, ',', '.')
-                                        : '—'
-                                )
+                                ->formatStateUsing(function ($state, PurchaseRequestItem $record): string {
+                                    if ((float) $state <= 0) return '—';
+                                    $fmtQty = fn (float $v): string => floor($v) == $v ? number_format($v, 0, '.', '') : number_format($v, 2, '.', '');
+                                    return $fmtQty((float) $state) . ' / ' . $fmtQty((float) $record->quantity);
+                                })
                                 ->color(fn (PurchaseRequestItem $record): string =>
                                     (float) $record->ordered_quantity <= 0 ? 'gray' :
                                     ($record->isFullyOrdered() ? 'success' : 'warning')

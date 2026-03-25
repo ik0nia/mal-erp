@@ -380,7 +380,7 @@ class ViewPurchaseOrder extends ViewRecord
                     $defaultItems = $this->record->items->map(fn ($item) => [
                         'id'          => $item->id,
                         'name'        => $item->product_name . ($item->sku ? " [{$item->sku}]" : ''),
-                        'ordered_qty' => number_format((float) $item->quantity, 0, '.', ''),
+                        'ordered_qty' => floor((float) $item->quantity) == (float) $item->quantity ? number_format((float) $item->quantity, 0, '.', '') : number_format((float) $item->quantity, 2, '.', ''),
                         'qty'         => (float) $item->quantity,
                         'price'       => (float) $item->unit_price,
                     ])->values()->all();

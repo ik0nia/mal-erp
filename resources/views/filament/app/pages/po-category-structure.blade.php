@@ -30,7 +30,7 @@
             <span class="font-bold text-gray-900 dark:text-gray-100 text-base">{{ $totalProducts }}</span> produse cu rulaj
         </div>
         <div class="text-sm text-gray-500 ml-auto">
-            Total recomandat: <span class="font-bold text-primary-600 text-base">{{ number_format($grandTotal) }}</span> buc
+            Total recomandat: <span class="font-bold text-primary-600 text-base">{{ number_format($grandTotal, 0, '.', '') }}</span> buc
         </div>
     </div>
 
@@ -45,7 +45,7 @@
                     <span class="text-xs text-indigo-500 font-normal">({{ count($products) }} produse)</span>
                 </div>
                 <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 px-2 py-0.5 rounded-full">
-                    {{ number_format($catTotal) }} buc recomandat
+                    {{ number_format($catTotal, 0, '.', '') }} buc recomandat
                 </span>
             </summary>
 
@@ -71,19 +71,19 @@
                             <td class="px-3 py-2 text-gray-500">{{ $p['supplier_sku'] ?: '—' }}</td>
                             <td class="px-3 py-2 text-right">
                                 <span class="{{ $p['stock'] <= 0 ? 'text-red-600 font-semibold' : 'text-gray-700 dark:text-gray-300' }}">
-                                    {{ number_format($p['stock'], 1) }}
+                                    {{ number_format($p['stock'], 1, '.', '') }}
                                 </span>
                             </td>
                             <td class="px-3 py-2 text-right text-gray-600 dark:text-gray-400">
-                                {{ number_format($p['sales_7d'], 1) }}
+                                {{ number_format($p['sales_7d'], 1, '.', '') }}
                             </td>
                             <td class="px-3 py-2 text-right text-gray-600 dark:text-gray-400">
-                                {{ number_format($p['sales_30d'], 1) }}
+                                {{ number_format($p['sales_30d'], 1, '.', '') }}
                             </td>
                             <td class="px-3 py-2 text-right">
                                 @if($p['recommended'] > 0)
                                     <span class="font-bold text-primary-600 bg-primary-50 dark:bg-primary-900/20 px-2 py-0.5 rounded">
-                                        {{ number_format($p['recommended']) }}
+                                        {{ number_format($p['recommended'], 0, '.', '') }}
                                     </span>
                                 @else
                                     <span class="text-gray-400">—</span>

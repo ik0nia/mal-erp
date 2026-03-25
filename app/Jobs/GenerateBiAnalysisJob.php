@@ -390,7 +390,7 @@ class GenerateBiAnalysisJob implements ShouldQueue
         $stockSection = '';
         if ($m['includeStock']) {
             $stockDayLines = $m['stockDaily']->map(fn ($d) =>
-                "  {$d->day}: valoare stoc " . number_format($d->stock_value, 0, ',', '.') . ' RON, cantitate totală ' . number_format($d->total_qty, 0, ',', '.')
+                "  {$d->day}: valoare stoc " . number_format($d->stock_value, 0, ',', '.') . ' RON, cantitate totală ' . number_format($d->total_qty, 0, '.', '')
             )->implode("\n");
 
             $dropLines = $m['stockDroppers']->map(fn ($d) =>
@@ -424,7 +424,7 @@ class GenerateBiAnalysisJob implements ShouldQueue
             $stockTrendBlock = '';
             if ($m['stockTrend']->isNotEmpty()) {
                 $trendLines = $m['stockTrend']->map(fn ($d) =>
-                    "  {$d->period}: valoare stoc " . number_format($d->stock_value, 0, ',', '.') . ' RON, cantitate ' . number_format($d->total_qty, 0, ',', '.')
+                    "  {$d->period}: valoare stoc " . number_format($d->stock_value, 0, ',', '.') . ' RON, cantitate ' . number_format($d->total_qty, 0, '.', '')
                 )->implode("\n");
                 $stockTrendBlock = <<<TREND
 
@@ -438,7 +438,7 @@ TREND;
             $contextBlock = '';
             if ($m['isSingleDay'] && $m['stockContext']->isNotEmpty()) {
                 $ctxLines = $m['stockContext']->map(fn ($d) =>
-                    "  {$d->period}: valoare stoc " . number_format($d->stock_value, 0, ',', '.') . ' RON, cantitate ' . number_format($d->total_qty, 0, ',', '.')
+                    "  {$d->period}: valoare stoc " . number_format($d->stock_value, 0, ',', '.') . ' RON, cantitate ' . number_format($d->total_qty, 0, '.', '')
                 )->implode("\n");
                 $ctxFrom = $m['stockContext']->first()->period;
                 $ctxTo   = $m['stockContext']->last()->period;

@@ -6,18 +6,18 @@
     <div class="grid grid-cols-3 gap-4">
         <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
             <p class="text-xs text-gray-500">Prețuri extrase total</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total']) }}</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total'], 0, '.', '') }}</p>
         </div>
         <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
             <p class="text-xs text-gray-500">Potrivite cu catalog</p>
-            <p class="text-2xl font-bold text-blue-600">{{ number_format($stats['matched']) }}</p>
+            <p class="text-2xl font-bold text-blue-600">{{ number_format($stats['matched'], 0, '.', '') }}</p>
             @if($stats['total'] > 0)
             <p class="text-xs text-gray-400">{{ round($stats['matched']/$stats['total']*100) }}% din total</p>
             @endif
         </div>
         <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
             <p class="text-xs text-gray-500">Mai ieftin cu >5% față de catalog</p>
-            <p class="text-2xl font-bold text-green-600">{{ number_format($stats['cheaper']) }}</p>
+            <p class="text-2xl font-bold text-green-600">{{ number_format($stats['cheaper'], 0, '.', '') }}</p>
             <p class="text-xs text-gray-400">Potențial de negociere</p>
         </div>
     </div>

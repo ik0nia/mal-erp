@@ -26,28 +26,28 @@
         <button wire:click="setTab('placeholder')"
             class="sku-stat {{ $this->activeTab === 'placeholder' ? 'sku-stat--active-warning' : '' }}">
             <div class="sku-stat-label">Doar în WinMentor</div>
-            <div class="sku-stat-value sku-stat-value--warning">{{ number_format($this->statPlaceholder) }}</div>
-            <div class="sku-stat-sub">din care cu stoc: {{ number_format($this->statPlaceholderWithStock) }}</div>
+            <div class="sku-stat-value sku-stat-value--warning">{{ number_format($this->statPlaceholder, 0, '.', '') }}</div>
+            <div class="sku-stat-sub">din care cu stoc: {{ number_format($this->statPlaceholderWithStock, 0, '.', '') }}</div>
         </button>
 
         <button wire:click="setTab('no_sku')"
             class="sku-stat {{ $this->activeTab === 'no_sku' ? 'sku-stat--active-danger' : '' }}">
             <div class="sku-stat-label">Pe site, fără SKU</div>
-            <div class="sku-stat-value sku-stat-value--danger">{{ number_format($this->statNoSku) }}</div>
+            <div class="sku-stat-value sku-stat-value--danger">{{ number_format($this->statNoSku, 0, '.', '') }}</div>
             <div class="sku-stat-sub">nu pot fi legate de WinMentor</div>
         </button>
 
         <button wire:click="setTab('no_mentor')"
             class="sku-stat {{ $this->activeTab === 'no_mentor' ? 'sku-stat--active-info' : '' }}">
             <div class="sku-stat-label">Pe site, fără WinMentor</div>
-            <div class="sku-stat-value sku-stat-value--info">{{ number_format($this->statOnSiteNoMentor) }}</div>
+            <div class="sku-stat-value sku-stat-value--info">{{ number_format($this->statOnSiteNoMentor, 0, '.', '') }}</div>
             <div class="sku-stat-sub">SKU prezent, fără stoc din contabilitate</div>
         </button>
 
         <div class="sku-stat sku-stat--static">
             <div class="sku-stat-label">Total discrepanțe</div>
             <div class="sku-stat-value sku-stat-value--gray">
-                {{ number_format($this->statPlaceholder + $this->statNoSku + $this->statOnSiteNoMentor) }}
+                {{ number_format($this->statPlaceholder + $this->statNoSku + $this->statOnSiteNoMentor, 0, '.', '') }}
             </div>
             <div class="sku-stat-sub">produse cu date incomplete</div>
         </div>

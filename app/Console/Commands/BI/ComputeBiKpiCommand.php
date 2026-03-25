@@ -84,7 +84,7 @@ class ComputeBiKpiCommand extends Command
 
         $this->info(sprintf(
             '  ✓ %s produse | stoc %.0f RON | variație %.0f RON',
-            number_format((int) $row->products_total),
+            number_format((int) $row->products_total, 0, '.', ''),
             (float) $row->inventory_value_closing_total,
             (float) $row->inventory_value_variation_total,
         ));

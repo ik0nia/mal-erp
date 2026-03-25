@@ -69,8 +69,8 @@
                                         {{ $row->supplier_name }}
                                     </a>
                                 </td>
-                                <td class="so-speed">{{ number_format($row->velocity_day, 2, ',', '.') }}/zi</td>
-                                <td class="so-sales">{{ number_format($row->velocity_7d, 1, ',', '.') }}</td>
+                                <td class="so-speed">{{ number_format($row->velocity_day, 2, '.', '') }}/zi</td>
+                                <td class="so-sales">{{ number_format($row->velocity_7d, 1, '.', '') }}</td>
                             </tr>
                         @endforeach
                     </tbody>

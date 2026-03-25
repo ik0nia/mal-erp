@@ -77,14 +77,14 @@
                                     </a>
                                 </td>
                                 <td style="text-align:right; font-family:monospace; font-size:0.8125rem; font-weight:600;">
-                                    {{ number_format($row->stock, 0, ',', '.') }}
+                                    {{ number_format($row->stock, 0, '.', '') }}
                                 </td>
                                 <td style="text-align:right; font-family:monospace; font-size:0.8125rem; color:#d97706;">
-                                    {{ number_format($row->velocity_day, 2, ',', '.') }}/zi
+                                    {{ number_format($row->velocity_day, 2, '.', '') }}/zi
                                 </td>
                                 <td style="text-align:right;">
                                     <span class="ls-days-badge {{ $daysCls }}">
-                                        {{ number_format($days, 1, ',', '.') }} zile
+                                        {{ number_format($days, 1, '.', '') }} zile
                                     </span>
                                 </td>
                             </tr>

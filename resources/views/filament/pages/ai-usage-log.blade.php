@@ -35,15 +35,15 @@
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 border border-gray-200 dark:border-gray-700">
             <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Apeluri API</p>
-            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ number_format($stats['call_count']) }}</p>
+            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ number_format($stats['call_count'], 0, '.', '') }}</p>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 border border-gray-200 dark:border-gray-700">
             <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Tokeni input</p>
-            <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ number_format($stats['total_input']) }}</p>
+            <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ number_format($stats['total_input'], 0, '.', '') }}</p>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 border border-gray-200 dark:border-gray-700">
             <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Tokeni output</p>
-            <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">{{ number_format($stats['total_output']) }}</p>
+            <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">{{ number_format($stats['total_output'], 0, '.', '') }}</p>
         </div>
     </div>
 
@@ -74,7 +74,7 @@
                                         {{ str_contains($row->model, 'sonnet') ? 'Sonnet' : 'Haiku' }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-2 text-right text-gray-600 dark:text-gray-400">{{ number_format($row->calls) }}</td>
+                                <td class="px-4 py-2 text-right text-gray-600 dark:text-gray-400">{{ number_format($row->calls, 0, '.', '') }}</td>
                                 <td class="px-4 py-2 text-right font-semibold {{ $row->cost_usd > 1 ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200' }}">
                                     ${{ number_format($row->cost_usd, 4) }}
                                 </td>
@@ -117,9 +117,9 @@
                         @forelse($byDay as $row)
                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-750">
                                 <td class="px-4 py-2 font-medium text-gray-800 dark:text-gray-200">{{ $row->day }}</td>
-                                <td class="px-4 py-2 text-right text-gray-600 dark:text-gray-400">{{ number_format($row->calls) }}</td>
-                                <td class="px-4 py-2 text-right text-blue-600 dark:text-blue-400">{{ number_format($row->input_tokens) }}</td>
-                                <td class="px-4 py-2 text-right text-purple-600 dark:text-purple-400">{{ number_format($row->output_tokens) }}</td>
+                                <td class="px-4 py-2 text-right text-gray-600 dark:text-gray-400">{{ number_format($row->calls, 0, '.', '') }}</td>
+                                <td class="px-4 py-2 text-right text-blue-600 dark:text-blue-400">{{ number_format($row->input_tokens, 0, '.', '') }}</td>
+                                <td class="px-4 py-2 text-right text-purple-600 dark:text-purple-400">{{ number_format($row->output_tokens, 0, '.', '') }}</td>
                                 <td class="px-4 py-2 text-right font-semibold {{ $row->cost_usd > 1 ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200' }}">
                                     ${{ number_format($row->cost_usd, 4) }}
                                 </td>
@@ -166,8 +166,8 @@
                                     {{ str_contains($log->model, 'sonnet') ? 'Sonnet' : 'Haiku' }}
                                 </span>
                             </td>
-                            <td class="px-4 py-2 text-right text-blue-600 dark:text-blue-400">{{ number_format($log->input_tokens) }}</td>
-                            <td class="px-4 py-2 text-right text-purple-600 dark:text-purple-400">{{ number_format($log->output_tokens) }}</td>
+                            <td class="px-4 py-2 text-right text-blue-600 dark:text-blue-400">{{ number_format($log->input_tokens, 0, '.', '') }}</td>
+                            <td class="px-4 py-2 text-right text-purple-600 dark:text-purple-400">{{ number_format($log->output_tokens, 0, '.', '') }}</td>
                             <td class="px-4 py-2 text-right font-mono text-xs {{ $log->cost_usd > 0.1 ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-gray-700 dark:text-gray-300' }}">
                                 ${{ number_format($log->cost_usd, 5) }}
                             </td>

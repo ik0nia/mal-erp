@@ -175,9 +175,9 @@ class ComputeAbcClassificationCommand extends Command
                         $id,
                         $abcMap[$id] ?? '-',
                         $xyzMap[$id] ?? '-',
-                        number_format($avgDaily, 4),
+                        number_format($avgDaily, 4, '.', ''),
                         $leadDays,
-                        number_format($reorderQty, 2),
+                        number_format($reorderQty, 2, '.', ''),
                     ];
                 })->toArray()
             );

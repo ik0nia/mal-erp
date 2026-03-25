@@ -72,7 +72,7 @@
       <div class="stat-lbl">Valoare stoc rămas (RON)</div>
     </div>
     <div class="stat-box">
-      <div class="stat-val">{{ number_format($products->sum('stoc'), 0, ',', '.') }}</div>
+      <div class="stat-val">{{ number_format($products->sum('stoc'), 0, '.', '') }}</div>
       <div class="stat-lbl">Cantitate totală (buc)</div>
     </div>
   </div>
@@ -101,7 +101,7 @@
         <td style="font-family: monospace">{{ $p->sku }}</td>
         <td>{{ $p->name }}</td>
         <td>{{ $p->brand ?: '—' }}</td>
-        <td class="text-right">{{ number_format($p->stoc, 0, ',', '.') }}</td>
+        <td class="text-right">{{ number_format($p->stoc, 0, '.', '') }}</td>
         <td class="text-right">{{ number_format($p->price, 2, ',', '.') }}</td>
         <td class="text-right">{{ number_format($p->valoare, 2, ',', '.') }}</td>
         <td style="text-align:center">

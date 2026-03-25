@@ -219,7 +219,7 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                                 </td>
                                 <td class="px-4 py-3 text-right tabular-nums">
                                     @if($product->recommended_qty > 0)
-                                        <span class="font-bold text-gray-900 dark:text-white">{{ number_format($product->recommended_qty, 0) }}</span>
+                                        <span class="font-bold text-gray-900 dark:text-white">{{ number_format($product->recommended_qty, 0, '.', '') }}</span>
                                         <span class="ml-1 text-sm text-gray-400 dark:text-gray-500">{{ $product->unit ?? 'buc' }}</span>
                                     @else
                                         <span class="text-gray-400">—</span>
@@ -236,18 +236,18 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                                 </td>
                                 <td class="px-4 py-3 text-right tabular-nums">
                                     @if((float)$product->stock <= 0)
-                                        <span class="inline-flex items-center rounded-full bg-danger-100 px-2 py-0.5 text-sm font-semibold text-danger-700 dark:bg-danger-900/40 dark:text-danger-300">{{ number_format((float)$product->stock, 0) }}</span>
+                                        <span class="inline-flex items-center rounded-full bg-danger-100 px-2 py-0.5 text-sm font-semibold text-danger-700 dark:bg-danger-900/40 dark:text-danger-300">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
                                     @else
-                                        <span class="inline-flex items-center rounded-full bg-warning-100 px-2 py-0.5 text-sm font-semibold text-warning-700 dark:bg-warning-900/40 dark:text-warning-300">{{ number_format((float)$product->stock, 0) }}</span>
+                                        <span class="inline-flex items-center rounded-full bg-warning-100 px-2 py-0.5 text-sm font-semibold text-warning-700 dark:bg-warning-900/40 dark:text-warning-300">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-right text-gray-600 dark:text-gray-400 tabular-nums">
-                                    {{ $product->consumed_7d > 0 ? number_format($product->consumed_7d, $product->consumed_7d < 10 ? 1 : 0) : '—' }}
+                                    {{ $product->consumed_7d > 0 ? number_format($product->consumed_7d, $product->consumed_7d < 10 ? 1 : 0, '.', '') : '—' }}
                                 </td>
                                 <td class="px-4 py-3 text-right tabular-nums font-medium">
                                     @if($adj > 0)
                                         <span class="{{ ($product->trend_direction ?? 0) > 0 ? 'text-danger-600 dark:text-danger-400' : (($product->trend_direction ?? 0) < 0 ? 'text-success-600 dark:text-success-400' : 'text-primary-600 dark:text-primary-400') }}">
-                                            {{ number_format($adj, $adj < 10 ? 2 : 1) }}
+                                            {{ number_format($adj, $adj < 10 ? 2 : 1, '.', '') }}
                                             @if(($product->trend_direction ?? 0) > 0) ↑@elseif(($product->trend_direction ?? 0) < 0) ↓@endif
                                         </span>
                                     @else
@@ -337,7 +337,7 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                                 </td>
                                 <td class="px-4 py-3 text-right tabular-nums">
                                     @if($product->recommended_qty > 0)
-                                        <span class="font-bold text-gray-900 dark:text-white">{{ number_format($product->recommended_qty, 0) }}</span>
+                                        <span class="font-bold text-gray-900 dark:text-white">{{ number_format($product->recommended_qty, 0, '.', '') }}</span>
                                         <span class="ml-1 text-sm text-gray-400 dark:text-gray-500">{{ $product->unit ?? 'buc' }}</span>
                                     @else
                                         <span class="text-gray-400">—</span>
@@ -352,18 +352,18 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                                 </td>
                                 <td class="px-4 py-3 text-right tabular-nums">
                                     @if((float)$product->stock <= 0)
-                                        <span class="inline-flex items-center rounded-full bg-danger-100 px-2 py-0.5 text-sm font-semibold text-danger-700 dark:bg-danger-900/40 dark:text-danger-300">{{ number_format((float)$product->stock, 0) }}</span>
+                                        <span class="inline-flex items-center rounded-full bg-danger-100 px-2 py-0.5 text-sm font-semibold text-danger-700 dark:bg-danger-900/40 dark:text-danger-300">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
                                     @else
-                                        <span class="inline-flex items-center rounded-full bg-warning-100 px-2 py-0.5 text-sm font-semibold text-warning-700 dark:bg-warning-900/40 dark:text-warning-300">{{ number_format((float)$product->stock, 0) }}</span>
+                                        <span class="inline-flex items-center rounded-full bg-warning-100 px-2 py-0.5 text-sm font-semibold text-warning-700 dark:bg-warning-900/40 dark:text-warning-300">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-right text-gray-600 dark:text-gray-400 tabular-nums">
-                                    {{ $product->consumed_7d > 0 ? number_format($product->consumed_7d, $product->consumed_7d < 10 ? 1 : 0) : '—' }}
+                                    {{ $product->consumed_7d > 0 ? number_format($product->consumed_7d, $product->consumed_7d < 10 ? 1 : 0, '.', '') : '—' }}
                                 </td>
                                 <td class="px-4 py-3 text-right tabular-nums font-medium">
                                     @if($adj > 0)
                                         <span class="{{ ($product->trend_direction ?? 0) > 0 ? 'text-danger-600 dark:text-danger-400' : (($product->trend_direction ?? 0) < 0 ? 'text-success-600 dark:text-success-400' : 'text-primary-600 dark:text-primary-400') }}">
-                                            {{ number_format($adj, $adj < 10 ? 2 : 1) }}
+                                            {{ number_format($adj, $adj < 10 ? 2 : 1, '.', '') }}
                                             @if(($product->trend_direction ?? 0) > 0) ↑@elseif(($product->trend_direction ?? 0) < 0) ↓@endif
                                         </span>
                                     @else
@@ -546,7 +546,7 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                                     </td>
                                     <td class="px-4 py-3 text-right tabular-nums">
                                         @if($product->recommended_qty > 0)
-                                            <span class="font-bold text-gray-900 dark:text-white">{{ number_format($product->recommended_qty, 0) }}</span>
+                                            <span class="font-bold text-gray-900 dark:text-white">{{ number_format($product->recommended_qty, 0, '.', '') }}</span>
                                             <span class="ml-1 text-sm text-gray-400 dark:text-gray-500">{{ $product->unit ?? 'buc' }}</span>
                                         @else
                                             <span class="text-gray-300 dark:text-gray-600">—</span>
@@ -569,18 +569,18 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                                     </td>
                                     <td class="px-4 py-3 text-right tabular-nums">
                                         @if((float)$product->stock <= 0)
-                                            <span class="inline-flex items-center rounded-full bg-danger-100 px-2 py-0.5 text-sm font-semibold text-danger-700 dark:bg-danger-900/40 dark:text-danger-300">{{ number_format((float)$product->stock, 0) }}</span>
+                                            <span class="inline-flex items-center rounded-full bg-danger-100 px-2 py-0.5 text-sm font-semibold text-danger-700 dark:bg-danger-900/40 dark:text-danger-300">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
                                         @else
-                                            <span class="inline-flex items-center rounded-full bg-warning-100 px-2 py-0.5 text-sm font-semibold text-warning-700 dark:bg-warning-900/40 dark:text-warning-300">{{ number_format((float)$product->stock, 0) }}</span>
+                                            <span class="inline-flex items-center rounded-full bg-warning-100 px-2 py-0.5 text-sm font-semibold text-warning-700 dark:bg-warning-900/40 dark:text-warning-300">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
                                         @endif
                                     </td>
                                     <td class="px-4 py-3 text-right text-gray-600 dark:text-gray-400 tabular-nums">
-                                        {{ $product->consumed_7d > 0 ? number_format($product->consumed_7d, $product->consumed_7d < 10 ? 1 : 0) : '—' }}
+                                        {{ $product->consumed_7d > 0 ? number_format($product->consumed_7d, $product->consumed_7d < 10 ? 1 : 0, '.', '') : '—' }}
                                     </td>
                                     <td class="px-4 py-3 text-right tabular-nums font-medium">
                                         @if($adj > 0)
                                             <span class="{{ ($product->trend_direction ?? 0) > 0 ? 'text-danger-600 dark:text-danger-400' : (($product->trend_direction ?? 0) < 0 ? 'text-success-600 dark:text-success-400' : 'text-primary-600 dark:text-primary-400') }}">
-                                                {{ number_format($adj, $adj < 10 ? 2 : 1) }}
+                                                {{ number_format($adj, $adj < 10 ? 2 : 1, '.', '') }}
                                                 @if(($product->trend_direction ?? 0) > 0) ↑@elseif(($product->trend_direction ?? 0) < 0) ↓@endif
                                             </span>
                                         @else
@@ -638,9 +638,9 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                                     <td class="px-4 py-2.5 text-right text-gray-300 dark:text-gray-600">—</td>
                                     <td class="px-4 py-2.5 text-right tabular-nums">
                                         @if((float)$product->stock <= 0)
-                                            <span class="inline-flex items-center rounded-full bg-danger-100 px-2 py-0.5 text-sm font-semibold text-danger-700 dark:bg-danger-900/40 dark:text-danger-300">{{ number_format((float)$product->stock, 0) }}</span>
+                                            <span class="inline-flex items-center rounded-full bg-danger-100 px-2 py-0.5 text-sm font-semibold text-danger-700 dark:bg-danger-900/40 dark:text-danger-300">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
                                         @else
-                                            <span class="inline-flex items-center rounded-full bg-warning-100 px-2 py-0.5 text-sm font-semibold text-warning-700 dark:bg-warning-900/40 dark:text-warning-300">{{ number_format((float)$product->stock, 0) }}</span>
+                                            <span class="inline-flex items-center rounded-full bg-warning-100 px-2 py-0.5 text-sm font-semibold text-warning-700 dark:bg-warning-900/40 dark:text-warning-300">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
                                         @endif
                                     </td>
                                     <td class="px-4 py-2.5 text-right text-gray-300 dark:text-gray-600">—</td>

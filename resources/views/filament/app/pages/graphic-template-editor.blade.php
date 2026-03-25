@@ -113,19 +113,19 @@
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Logo scale</label>
                             <input type="range" wire:model="logo_scale" min="0.15" max="0.60" step="0.01"
                                 class="w-full accent-primary-600">
-                            <span class="text-xs text-gray-400">{{ number_format($logo_scale * 100, 0) }}%</span>
+                            <span class="text-xs text-gray-400">{{ number_format($logo_scale * 100, 0, '.', '') }}%</span>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Font titlu</label>
                             <input type="range" wire:model="title_size_pct" min="0.04" max="0.12" step="0.001"
                                 class="w-full accent-primary-600">
-                            <span class="text-xs text-gray-400">{{ number_format($title_size_pct * 1080, 0) }}px</span>
+                            <span class="text-xs text-gray-400">{{ number_format($title_size_pct * 1080, 0, '.', '') }}px</span>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Font subtitlu</label>
                             <input type="range" wire:model="subtitle_size_pct" min="0.015" max="0.06" step="0.001"
                                 class="w-full accent-primary-600">
-                            <span class="text-xs text-gray-400">{{ number_format($subtitle_size_pct * 1080, 0) }}px</span>
+                            <span class="text-xs text-gray-400">{{ number_format($subtitle_size_pct * 1080, 0, '.', '') }}px</span>
                         </div>
                     </div>
                 </div>

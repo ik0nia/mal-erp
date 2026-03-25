@@ -37,27 +37,27 @@
 
     <div class="grid">
         <div class="card">
-            <div class="num gray">{{ number_format($total) }}</div>
+            <div class="num gray">{{ number_format($total, 0, '.', '') }}</div>
             <div class="label">Total importate</div>
             <div class="pct">din ~15.625 cu preț RO</div>
         </div>
         <div class="card">
-            <div class="num blue">{{ number_format($instock) }}</div>
+            <div class="num blue">{{ number_format($instock, 0, '.', '') }}</div>
             <div class="label">În stoc la Toya</div>
             <div class="pct">{{ $pct($instock) }}%</div>
         </div>
         <div class="card">
-            <div class="num purple">{{ number_format($withImage) }}</div>
+            <div class="num purple">{{ number_format($withImage, 0, '.', '') }}</div>
             <div class="label">Cu imagine</div>
             <div class="pct">{{ $pct($withImage) }}%</div>
         </div>
         <div class="card">
-            <div class="num orange">{{ number_format($withCat) }}</div>
+            <div class="num orange">{{ number_format($withCat, 0, '.', '') }}</div>
             <div class="label">Cu categorie</div>
             <div class="pct">{{ $pct($withCat) }}%</div>
         </div>
         <div class="card">
-            <div class="num green">{{ number_format($readyToPub) }}</div>
+            <div class="num green">{{ number_format($readyToPub, 0, '.', '') }}</div>
             <div class="label">Gata de publicat</div>
             <div class="pct">{{ $pct($readyToPub) }}%</div>
         </div>
@@ -69,7 +69,7 @@
         <div class="bar-row">
             <div class="bar-label">
                 <span class="blue">Imagini</span>
-                <span>{{ number_format($withImage) }} / {{ number_format($total) }} &nbsp; {{ $pct($withImage) }}%</span>
+                <span>{{ number_format($withImage, 0, '.', '') }} / {{ number_format($total, 0, '.', '') }} &nbsp; {{ $pct($withImage) }}%</span>
             </div>
             <div class="bar-bg"><div class="bar-fill blue" style="width: {{ $pct($withImage) }}%"></div></div>
         </div>
@@ -77,7 +77,7 @@
         <div class="bar-row">
             <div class="bar-label">
                 <span class="purple">Descrieri</span>
-                <span>{{ number_format($withDesc) }} / {{ number_format($total) }} &nbsp; {{ $pct($withDesc) }}%</span>
+                <span>{{ number_format($withDesc, 0, '.', '') }} / {{ number_format($total, 0, '.', '') }} &nbsp; {{ $pct($withDesc) }}%</span>
             </div>
             <div class="bar-bg"><div class="bar-fill purple" style="width: {{ $pct($withDesc) }}%"></div></div>
         </div>
@@ -85,7 +85,7 @@
         <div class="bar-row">
             <div class="bar-label">
                 <span class="orange">Categorii</span>
-                <span>{{ number_format($withCat) }} / {{ number_format($total) }} &nbsp; {{ $pct($withCat) }}%</span>
+                <span>{{ number_format($withCat, 0, '.', '') }} / {{ number_format($total, 0, '.', '') }} &nbsp; {{ $pct($withCat) }}%</span>
             </div>
             <div class="bar-bg"><div class="bar-fill orange" style="width: {{ $pct($withCat) }}%"></div></div>
         </div>
@@ -93,7 +93,7 @@
         <div class="bar-row">
             <div class="bar-label">
                 <span class="green">Gata de publicat</span>
-                <span>{{ number_format($readyToPub) }} / {{ number_format($total) }} &nbsp; {{ $pct($readyToPub) }}%</span>
+                <span>{{ number_format($readyToPub, 0, '.', '') }} / {{ number_format($total, 0, '.', '') }} &nbsp; {{ $pct($readyToPub) }}%</span>
             </div>
             <div class="bar-bg"><div class="bar-fill green" style="width: {{ $pct($readyToPub) }}%"></div></div>
         </div>
