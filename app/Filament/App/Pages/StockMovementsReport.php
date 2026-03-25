@@ -200,6 +200,7 @@ class StockMovementsReport extends Page implements HasTable
                     ->with('product')
                     ->select([
                         'woo_product_id',
+                        DB::raw('MAX(daily_stock_metrics.id) as id'),
                         DB::raw('SUM(ABS(daily_total_variation)) as total_movement'),
                         DB::raw('SUM(daily_total_variation) as net_change'),
                         DB::raw('MAX(closing_total_qty) as last_qty'),
