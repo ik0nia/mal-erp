@@ -34,6 +34,7 @@
             @endif
         >
             <div
+                id="sales-chart-container"
                 @if (FilamentView::hasSpaMode())
                     x-load="visible"
                 @else
@@ -46,41 +47,6 @@
                     options: @js($this->getOptions()),
                     type: @js($type),
                 })"
-                x-effect="
-                    if (chart) {
-                        const labelsPlugin = {
-                            id: 'salesBarLabels',
-                            afterDatasetsDraw(ch) {
-                                if (ch.config.type !== 'bar') return;
-                                const ds = ch.data.datasets;
-                                if (!ds || !ds.length) return;
-                                const ctx = ch.ctx;
-                                ctx.save();
-                                ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
-                                ctx.fillStyle = '#374151';
-                                ctx.textAlign = 'center';
-                                ctx.textBaseline = 'bottom';
-                                ds.forEach(function(dataset, i) {
-                                    const meta = ch.getDatasetMeta(i);
-                                    meta.data.forEach(function(bar, idx) {
-                                        const val = dataset.data[idx];
-                                        if (val > 0) {
-                                            const text = val >= 1000
-                                                ? Math.round(val).toLocaleString('ro-RO')
-                                                : String(Math.round(val));
-                                            ctx.fillText(text, bar.x, bar.y - 4);
-                                        }
-                                    });
-                                });
-                                ctx.restore();
-                            }
-                        };
-                        if (!chart.config.plugins.find(p => p.id === 'salesBarLabels')) {
-                            chart.config.plugins.push(labelsPlugin);
-                            chart.update();
-                        }
-                    }
-                "
                 @class([
                     match ($color) {
                         'gray' => null,
@@ -91,6 +57,7 @@
             >
                 <canvas
                     x-ref="canvas"
+                    id="sales-chart-canvas"
                     @if ($maxHeight = $this->getMaxHeight())
                         style="max-height: {{ $maxHeight }}"
                     @endif
@@ -143,3 +110,67 @@
         </div>
     </x-filament::section>
 </x-filament-widgets::widget>
+
+<script>
+(function() {
+    function addDataLabels() {
+        var canvas = document.getElementById('sales-chart-canvas');
+        if (!canvas) return false;
+
+        // Chart.js stores instance on canvas element
+        var chartInstance = Chart.getChart(canvas);
+        if (!chartInstance) return false;
+
+        // Check if plugin already added
+        if (chartInstance.__salesLabelsAdded) return true;
+        chartInstance.__salesLabelsAdded = true;
+
+        var origDraw = chartInstance.draw.bind(chartInstance);
+        var origDrawFn = chartInstance.draw;
+
+        // Override draw to add labels after each render
+        chartInstance.draw = function() {
+            origDrawFn.call(this);
+
+            var ctx = this.ctx;
+            var ds = this.data.datasets;
+            if (!ds || !ds.length) return;
+
+            ctx.save();
+            ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
+            ctx.fillStyle = '#374151';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+
+            for (var i = 0; i < ds.length; i++) {
+                var meta = this.getDatasetMeta(i);
+                for (var idx = 0; idx < meta.data.length; idx++) {
+                    var val = ds[i].data[idx];
+                    if (val > 0) {
+                        var bar = meta.data[idx];
+                        var text = val >= 1000
+                            ? Math.round(val).toLocaleString('ro-RO')
+                            : String(Math.round(val));
+                        ctx.fillText(text, bar.x, bar.y - 4);
+                    }
+                }
+            }
+            ctx.restore();
+        };
+
+        chartInstance.update();
+        return true;
+    }
+
+    // Try repeatedly until Chart.js instance is ready
+    var attempts = 0;
+    var interval = setInterval(function() {
+        try {
+            if (typeof Chart !== 'undefined' && addDataLabels()) {
+                clearInterval(interval);
+            }
+        } catch(e) {}
+        if (++attempts > 100) clearInterval(interval);
+    }, 300);
+})();
+</script>
