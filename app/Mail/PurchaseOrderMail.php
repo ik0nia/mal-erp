@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\PurchaseOrder;
+use App\Services\PurchaseOrderExcelExport;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -32,12 +33,18 @@ class PurchaseOrderMail extends Mailable
 
     public function attachments(): array
     {
-        $pdf      = Pdf::loadView('pdf.purchase-order', ['order' => $this->order]);
-        $filename = str_replace('/', '-', $this->order->number) . '.pdf';
+        $pdf         = Pdf::loadView('pdf.purchase-order', ['order' => $this->order]);
+        $pdfFilename = str_replace('/', '-', $this->order->number) . '.pdf';
+
+        $excelPath     = PurchaseOrderExcelExport::generate($this->order);
+        $excelFilename = str_replace('/', '-', $this->order->number) . '.xlsx';
 
         return [
-            Attachment::fromData($pdf->output(), $filename)
+            Attachment::fromData($pdf->output(), $pdfFilename)
                 ->withMime('application/pdf'),
+            Attachment::fromPath($excelPath)
+                ->as($excelFilename)
+                ->withMime('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
         ];
     }
 }
