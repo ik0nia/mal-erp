@@ -170,6 +170,7 @@ class WooOrderResource extends Resource
         return $schema
             ->schema([
                 Section::make()
+                    ->columnSpanFull()
                     ->columns(6)
                     ->schema([
                         TextEntry::make('number')
@@ -202,6 +203,7 @@ class WooOrderResource extends Resource
                     ]),
 
                 Section::make('Client')
+                    ->columnSpanFull()
                     ->columns(4)
                     ->schema([
                         TextEntry::make('customer_name')
@@ -251,6 +253,7 @@ class WooOrderResource extends Resource
                     ]),
 
                 Section::make('Produse')
+                    ->columnSpanFull()
                     ->schema([
                         RepeatableEntry::make('items')
                             ->label('')
@@ -306,6 +309,7 @@ class WooOrderResource extends Resource
                     ]),
 
                 Section::make('Totale')
+                    ->columnSpanFull()
                     ->columns(5)
                     ->schema([
                         TextEntry::make('subtotal')
@@ -328,6 +332,7 @@ class WooOrderResource extends Resource
                     ]),
 
                 Section::make('AWB-uri Sameday')
+                    ->columnSpanFull()
                     ->hidden(fn (WooOrder $record): bool => $record->samedayAwbs->isEmpty())
                     ->schema([
                         RepeatableEntry::make('samedayAwbs')
