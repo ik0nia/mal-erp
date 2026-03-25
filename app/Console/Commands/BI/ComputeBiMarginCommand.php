@@ -110,10 +110,13 @@ class ComputeBiMarginCommand extends Command
             $stockQty = (float) $product->stock_qty;
 
             // Selling price: prefer woo_price, fallback to closing_sell_price
-            $sellingPrice = (float) ($product->woo_price ?? $product->sell_price ?? 0);
-            if ($sellingPrice <= 0) {
-                $sellingPrice = (float) ($product->sell_price ?? 0);
+            // IMPORTANT: WooCommerce prices include TVA 21%, purchase prices are fără TVA
+            // Normalize to fără TVA for correct margin calculation
+            $sellingPriceWithVat = (float) ($product->woo_price ?? $product->sell_price ?? 0);
+            if ($sellingPriceWithVat <= 0) {
+                $sellingPriceWithVat = (float) ($product->sell_price ?? 0);
             }
+            $sellingPrice = round($sellingPriceWithVat / 1.21, 4); // Convert to fără TVA
 
             // Purchase price resolution
             $purchasePrice = null;
