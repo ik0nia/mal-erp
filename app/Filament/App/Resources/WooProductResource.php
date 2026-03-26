@@ -836,7 +836,7 @@ class WooProductResource extends Resource
                         ->modalHeading('Date contact furnizori')
                         ->modalContent(fn (WooProduct $record): HtmlString => static::renderSupplierContactModal($record))
                         ->modalSubmitAction(false)
-                        ->modalCancelAction(fn (\Filament\Actions\StaticAction $action) => $action->label('Închide')),
+                        ->modalCancelActionLabel('Închide'),
 
                     InfolistAction::make('toggle_site_status')
                         ->label(fn (WooProduct $record): string => $record->status === 'publish' ? 'Trece în draft' : 'Publică pe site')
@@ -1493,6 +1493,33 @@ class WooProductResource extends Resource
                 ? number_format((float) $supplier->pivot->purchase_price * 1.21, 2, ',', '.') . ' RON'
                 : null;
 
+            // Metoda preferata de comanda
+            $orderMethod = $supplier->preferred_order_method ?? null;
+
+            // Ultimele preturi de achizitie din log
+            $priceLogs = \App\Models\ProductPurchasePriceLog::where('woo_product_id', $record->id)
+                ->where('supplier_id', $supplier->id)
+                ->orderByDesc('acquired_at')
+                ->limit(3)
+                ->get();
+
+            $priceLogsHtml = '';
+            if ($priceLogs->isNotEmpty()) {
+                $priceLogsHtml = '<div style="margin-top:10px;font-size:0.78rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Istoric achiziții</div>';
+                $priceLogsHtml .= '<div style="margin-top:6px;">';
+                foreach ($priceLogs as $log) {
+                    $logDate = $log->acquired_at ? \Carbon\Carbon::parse($log->acquired_at)->format('d.m.Y') : '—';
+                    $logPrice = number_format((float) $log->unit_price, 2, ',', '.') . ' RON';
+                    $logPriceVat = number_format((float) $log->unit_price * 1.21, 2, ',', '.') . ' RON';
+                    $priceLogsHtml .= '<div style="display:flex;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:0.82rem;">'
+                        . '<span style="color:#6b7280;min-width:80px;">' . $logDate . '</span>'
+                        . '<span style="font-weight:600;color:#111827;">' . $logPrice . '</span>'
+                        . '<span style="color:#9ca3af;font-size:0.75rem;">(TVA inclus: ' . $logPriceVat . ')</span>'
+                        . '</div>';
+                }
+                $priceLogsHtml .= '</div>';
+            }
+
             // Persoane de contact
             $contactsHtml = '';
             foreach ($supplier->contacts as $contact) {
@@ -1519,8 +1546,10 @@ class WooProductResource extends Resource
                 . $field('currency', 'Preț achiziție (fără TVA)', $priceNet)
                 . $field('currency', 'Preț achiziție (cu TVA)', $priceVat)
                 . $field('document', 'CUI', $supplier->vat_number)
+                . $field('truck', 'Metodă comandă', $orderMethod)
                 . $field('note', 'Notițe', $supplier->notes)
                 . ($contactsHtml ? '<div style="margin-top:10px;font-size:0.78rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Persoane de contact</div>' . $contactsHtml : '')
+                . $priceLogsHtml
                 . '</div>';
         }
 
