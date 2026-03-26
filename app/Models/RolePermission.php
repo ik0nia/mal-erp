@@ -7,6 +7,12 @@ use Illuminate\Support\Facades\Cache;
 
 class RolePermission extends Model
 {
+    protected static function booted(): void
+    {
+        static::saved(fn (self $model) => static::clearCache($model->role));
+        static::deleted(fn (self $model) => static::clearCache($model->role));
+    }
+
     protected $fillable = [
         'role',
         'resource',
