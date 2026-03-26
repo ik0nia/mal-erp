@@ -541,10 +541,12 @@ class CreatePurchaseOrder extends CreateRecord
                 'sources_json'        => json_encode($sources, JSON_UNESCAPED_UNICODE),
                 'recommendation_json' => json_encode($recData, JSON_UNESCAPED_UNICODE),
                 'quantity_hint'       => $totalRecommended > 0 ? $totalRecommended : ($vi['hint'] ?? null),
-                'info_stock'          => $vi['stock'] ?? null,
-                'info_sales_7d'       => $vi['sales_7d'] ?? null,
-                'info_sales_30d'      => $vi['sales_30d'] ?? null,
-                'info_days_stockout'  => $vi['days_to_stockout'] ?? null,
+                'info_stock'             => $vi['stock'] ?? null,
+                'info_sales_7d'          => $vi['sales_7d'] ?? null,
+                'info_sales_30d'         => $vi['sales_30d'] ?? null,
+                'info_days_stockout'     => $vi['days_to_stockout'] ?? null,
+                'info_purchase_uom'      => ($ps ?? null)?->purchase_uom,
+                'info_conversion_factor' => ($ps ?? null)?->conversion_factor ? (float) ($ps ?? null)->conversion_factor : null,
             ];
         })->values()->all();
 
@@ -683,10 +685,12 @@ class CreatePurchaseOrder extends CreateRecord
                 'sources_json'        => null,
                 'recommendation_json' => json_encode($recData, JSON_UNESCAPED_UNICODE),
                 'quantity_hint'       => $hint > 0 ? $hint : null,
-                'info_stock'          => $data['stock'],
-                'info_sales_7d'       => $data['sales_7d'],
-                'info_sales_30d'      => $data['sales_30d'],
-                'info_days_stockout'  => $data['days_to_stockout'],
+                'info_stock'             => $data['stock'],
+                'info_sales_7d'          => $data['sales_7d'],
+                'info_sales_30d'         => $data['sales_30d'],
+                'info_days_stockout'     => $data['days_to_stockout'],
+                'info_purchase_uom'      => $ps?->purchase_uom,
+                'info_conversion_factor' => $ps?->conversion_factor ? (float) $ps->conversion_factor : null,
             ];
         }
 

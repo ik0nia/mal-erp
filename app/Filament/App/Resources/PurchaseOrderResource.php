@@ -496,6 +496,10 @@ class PurchaseOrderResource extends Resource
                         if (! $isCreate && $ps->purchase_price) {
                             $set('unit_price', (float) $ps->purchase_price);
                         }
+                        if ($isCreate) {
+                            $set('info_purchase_uom', $ps->purchase_uom);
+                            $set('info_conversion_factor', $ps->conversion_factor ? (float) $ps->conversion_factor : null);
+                        }
                     }
                 }
 
@@ -634,6 +638,8 @@ class PurchaseOrderResource extends Resource
                             $get('info_sales_30d'),
                             $get('info_days_stockout'),
                             $get('sources_json'),
+                            $get('info_purchase_uom'),
+                            $get('info_conversion_factor'),
                         );
                         $btn = static::renderSourcesInfo($get('sources_json'), $get('recommendation_json'), $get('product_name'), (int) $get('woo_product_id'));
 
@@ -646,23 +652,46 @@ class PurchaseOrderResource extends Resource
 
                 Placeholder::make('col_recommended')
                     ->label('Rec.')
-                    ->content(fn (Get $get): HtmlString => static::renderRecommended($get('quantity_hint')))
+                    ->content(fn (Get $get): HtmlString => static::renderRecommended(
+                        $get('quantity_hint'),
+                        $get('info_purchase_uom'),
+                        $get('info_conversion_factor'),
+                    ))
                     ->columnSpan(1),
 
                 TextInput::make('quantity')
                     ->label('Cantitate')->numeric()->minValue(0.001)
                     ->formatStateUsing(fn ($state) => $state !== null ? (float) $state : null)
                     ->placeholder(fn (Get $get): ?string => $get('quantity_hint') ? '→ '.((string)(int)$get('quantity_hint')) : null)
-                    ->helperText(function (Get $get): ?string {
+                    ->helperText(function (Get $get): ?HtmlString {
                         $productId  = (int) ($get('woo_product_id') ?? 0);
                         $supplierId = (int) ($get('../../supplier_id') ?? 0);
                         if (! $productId || ! $supplierId) return null;
                         $ps = ProductSupplier::where('woo_product_id', $productId)
                             ->where('supplier_id', $supplierId)->first();
-                        if ($ps && $ps->order_multiple && (float) $ps->order_multiple > 0) {
-                            return 'Multiplu: ' . rtrim(rtrim(number_format((float) $ps->order_multiple, 3, '.', ''), '0'), '.') . ' buc';
+                        if (! $ps) return null;
+
+                        $parts = [];
+                        $qty = (float) ($get('quantity') ?? 0);
+
+                        // UOM conversion
+                        if ($ps->purchase_uom && $ps->conversion_factor && (float) $ps->conversion_factor > 0 && $qty > 0) {
+                            $cf = (float) $ps->conversion_factor;
+                            $unitsInUom = ceil($qty / $cf);
+                            $parts[] = '<span style="color:#8B1A1A;font-weight:600">= ' . $unitsInUom . ' ' . e($ps->purchase_uom) . '</span>';
                         }
-                        return null;
+
+                        // Order multiple
+                        if ($ps->order_multiple && (float) $ps->order_multiple > 0) {
+                            $multipleStr = rtrim(rtrim(number_format((float) $ps->order_multiple, 3, '.', ''), '0'), '.');
+                            $multipleLabel = 'Multiplu: ' . $multipleStr . ' buc';
+                            if ($ps->purchase_uom && $ps->conversion_factor && (float) $ps->conversion_factor > 0) {
+                                $multipleLabel .= ' (1 ' . e($ps->purchase_uom) . ')';
+                            }
+                            $parts[] = $multipleLabel;
+                        }
+
+                        return $parts ? new HtmlString(implode(' · ', $parts)) : null;
                     })
                     ->live(onBlur: true)
                     ->afterStateUpdated(function ($state, Set $set, Get $get): void {
@@ -699,6 +728,8 @@ class PurchaseOrderResource extends Resource
                 Hidden::make('info_sales_7d'),
                 Hidden::make('info_sales_30d'),
                 Hidden::make('info_days_stockout'),
+                Hidden::make('info_purchase_uom'),
+                Hidden::make('info_conversion_factor'),
             ];
         } else {
             // EDIT: toate câmpurile vizibile, cu prețuri
@@ -834,7 +865,7 @@ class PurchaseOrderResource extends Resource
     /**
      * Compact stacked info: stock, sales 7d/30d, days to stockout, urgency.
      */
-    private static function renderCompactInfo(mixed $stock, mixed $sales7d, mixed $sales30d, mixed $daysStockout, ?string $sourcesJson): HtmlString
+    private static function renderCompactInfo(mixed $stock, mixed $sales7d, mixed $sales30d, mixed $daysStockout, ?string $sourcesJson, ?string $purchaseUom = null, mixed $conversionFactor = null): HtmlString
     {
         $hasUrgent = false;
         if ($sourcesJson) {
@@ -884,6 +915,12 @@ class PurchaseOrderResource extends Resource
             }
         }
 
+        // UOM info
+        if ($purchaseUom && $conversionFactor && (float) $conversionFactor > 0) {
+            $cfVal = rtrim(rtrim(number_format((float) $conversionFactor, 0, '.', ''), '0'), '.');
+            $cells[] = '<span '.$lbl.'>Cmd:</span> <span style="font-weight:500;color:#8B1A1A">'.e($purchaseUom).' ('.$cfVal.' buc)</span>';
+        }
+
         if (empty($cells)) {
             return new HtmlString('<span style="font-size:11px;color:#d1d5db">—</span>');
         }
@@ -898,15 +935,27 @@ class PurchaseOrderResource extends Resource
     /**
      * Clickable recommended quantity that fills the quantity input.
      */
-    private static function renderRecommended(mixed $hint): HtmlString
+    private static function renderRecommended(mixed $hint, ?string $purchaseUom = null, mixed $conversionFactor = null): HtmlString
     {
         if (! $hint || (int) $hint <= 0) {
             return new HtmlString('<span style="font-size:12px;color:#d1d5db">—</span>');
         }
 
         $qty = (int) $hint;
+        $cf = $conversionFactor ? (float) $conversionFactor : 0;
+        $hasUom = $purchaseUom && $cf > 0;
 
-        // Inline onclick using single quotes only — find input by type=number in parent LI
+        // UOM display: "3 paleți (720 buc)"
+        $uomHtml = '';
+        if ($hasUom) {
+            $unitsInUom = ceil($qty / $cf);
+            $uomLabel = e($purchaseUom);
+            $uomHtml = '<div style="font-size:11px;color:#6b7280;margin-top:1px">'
+                . $unitsInUom . ' ' . $uomLabel
+                . '</div>';
+        }
+
+        // Inline onclick — find input by type=number in parent LI
         $onclick = "var p=this;while(p&amp;&amp;p.tagName!=='LI'){p=p.parentElement}"
             . "if(!p)return;"
             . "var inp=p.querySelector('input[type=number]');"
@@ -919,17 +968,20 @@ class PurchaseOrderResource extends Resource
             . "setTimeout(function(){inp.dispatchEvent(new Event('blur',{bubbles:true}))},100);";
 
         return new HtmlString(
-            '<span style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;padding:3px 8px;border-radius:6px;background:#fdf2f2;border:1px solid #e8c4c4;transition:background .15s"'
+            '<div style="cursor:pointer;padding:3px 8px;border-radius:6px;background:#fdf2f2;border:1px solid #e8c4c4;transition:background .15s;display:inline-block"'
             .' onclick="'.$onclick.'"'
             .' onmouseover="this.style.background=\'#f5e0e0\'"'
             .' onmouseout="this.style.background=\'#fdf2f2\'"'
             .' title="Click pentru a aplica cantitatea recomandată">'
+            .'<div style="display:flex;align-items:center;gap:4px">'
             .'<span style="font-size:15px;font-weight:700;color:#8B1A1A;font-variant-numeric:tabular-nums">'.$qty.'</span>'
             .'<span style="font-size:10px;color:#6b7280">buc</span>'
             .'<svg style="width:12px;height:12px;color:#8B1A1A;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">'
             .'<path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>'
             .'</svg>'
-            .'</span>'
+            .'</div>'
+            .$uomHtml
+            .'</div>'
         );
     }
 
