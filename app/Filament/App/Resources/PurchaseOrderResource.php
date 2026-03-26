@@ -78,14 +78,16 @@ class PurchaseOrderResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
+            // ── Header: minimal on create, full on edit ──
             Section::make('Informații comandă')
                 ->columns(3)
                 ->columnSpanFull()
-                ->schema([
-                    TextInput::make('number')
+                ->schema(fn (string $operation): array => array_filter([
+                    // PO number — only on edit (auto-generated on create)
+                    $operation !== 'create' ? TextInput::make('number')
                         ->label('Număr PO')
                         ->disabled()
-                        ->placeholder('Se generează automat'),
+                        ->placeholder('Se generează automat') : null,
 
                     \Filament\Schemas\Components\Group::make([
                         Select::make('supplier_id')
@@ -119,23 +121,26 @@ class PurchaseOrderResource extends Resource
                             ->visible(fn () => filled(request()->query('supplier_id'))),
                     ]),
 
-                    Select::make('status')
+                    // Status — only on edit
+                    $operation !== 'create' ? Select::make('status')
                         ->label('Status')
                         ->options(PurchaseOrder::statusOptions())
                         ->disabled()
-                        ->default(PurchaseOrder::STATUS_DRAFT),
+                        ->default(PurchaseOrder::STATUS_DRAFT) : null,
 
-                    Textarea::make('notes_internal')
+                    // On edit, notes stay in the header
+                    $operation !== 'create' ? Textarea::make('notes_internal')
                         ->label('Notițe interne')
                         ->rows(2)
-                        ->columnSpanFull(),
+                        ->columnSpanFull() : null,
 
-                    Textarea::make('notes_supplier')
+                    $operation !== 'create' ? Textarea::make('notes_supplier')
                         ->label('Notițe pentru furnizor')
                         ->rows(2)
-                        ->columnSpanFull(),
-                ]),
+                        ->columnSpanFull() : null,
+                ])),
 
+            // ── Items section ──
             Section::make('Produse comandate')
                 ->columnSpanFull()
                 ->schema(fn (string $operation): array => [
@@ -154,6 +159,22 @@ class PurchaseOrderResource extends Resource
                                 2, ',', '.'
                             ).' RON</span>'
                         )),
+                ]),
+
+            // ── Notes: collapsible section on create ──
+            Section::make('Notițe (opțional)')
+                ->collapsed()
+                ->columns(2)
+                ->columnSpanFull()
+                ->visibleOn('create')
+                ->schema([
+                    Textarea::make('notes_internal')
+                        ->label('Notițe interne')
+                        ->rows(2),
+
+                    Textarea::make('notes_supplier')
+                        ->label('Notițe pentru furnizor')
+                        ->rows(2),
                 ]),
         ]);
     }
@@ -559,16 +580,39 @@ class PurchaseOrderResource extends Resource
             ->nullable();
 
         if ($isCreate) {
-            // CREATE: layout 6 coloane — Row1: thumbnail|produs(×2)|cantitate|context(×2)
-            //                            Row2: sku|sku-furnizor|stoc|7z|epuizare|note
+            // CREATE: compact single-row layout — 12 columns
+            // thumbnail(1) | produs(3) | stoc+info(2) | recomandat(2) | cantitate(2) | context(2)
             $schema = [
-                // Row 1 ────────────────────────────────────── 6 cols
                 Placeholder::make('thumbnail')
                     ->label('')->hiddenLabel()
                     ->content(fn (Get $get): HtmlString => static::productThumbnail($get('woo_product_id')))
                     ->columnSpan(1),
 
-                $productSelectField->columnSpan(2),
+                $productSelectField
+                    ->helperText(function (Get $get): ?string {
+                        $sku = $get('sku');
+                        $supplierSku = $get('supplier_sku');
+                        $parts = [];
+                        if ($sku) $parts[] = $sku;
+                        if ($supplierSku) $parts[] = 'F: '.$supplierSku;
+                        return $parts ? implode(' · ', $parts) : null;
+                    })
+                    ->columnSpan(3),
+
+                Placeholder::make('col_info')
+                    ->label('Stoc / Vânzări')
+                    ->content(fn (Get $get): HtmlString => static::renderCompactInfo(
+                        $get('info_stock'),
+                        $get('info_sales_7d'),
+                        $get('info_days_stockout'),
+                        $get('sources_json'),
+                    ))
+                    ->columnSpan(2),
+
+                Placeholder::make('col_recommended')
+                    ->label('Recomandat')
+                    ->content(fn (Get $get): HtmlString => static::renderRecommended($get('quantity_hint')))
+                    ->columnSpan(2),
 
                 TextInput::make('quantity')
                     ->label('Cantitate')->numeric()->minValue(0.001)
@@ -594,12 +638,10 @@ class PurchaseOrderResource extends Resource
                         $ps = ProductSupplier::where('woo_product_id', $productId)
                             ->where('supplier_id', $supplierId)->first();
                         if (! $ps) return;
-                        // Round to order multiple
                         $qty = $ps->roundToOrderMultiple((float) $state);
                         if ($qty != (float) $state) {
                             $set('quantity', $qty);
                         }
-                        // Look up best price break
                         $priceBreak = $ps->getBestPriceForQty($qty);
                         if ($priceBreak) {
                             $set('unit_price', (float) $priceBreak->unit_price);
@@ -607,45 +649,19 @@ class PurchaseOrderResource extends Resource
                             $set('unit_price', (float) $ps->purchase_price);
                         }
                     })
-                    ->columnSpan(1),
+                    ->columnSpan(2),
 
                 Placeholder::make('sources_info')
-                    ->label('Context')->hiddenLabel()
+                    ->label('')->hiddenLabel()
                     ->content(fn (Get $get): HtmlString => static::renderSourcesInfo($get('sources_json'), $get('recommendation_json'), $get('product_name'), (int) $get('woo_product_id')))
                     ->columnSpan(2),
 
-                // Row 2 ────────────────────────────────────── 6 cols
-                TextInput::make('sku')->label('SKU intern')->readOnly()->nullable()->columnSpan(1),
-                TextInput::make('supplier_sku')->label('SKU furnizor')->nullable()->columnSpan(1),
-
-                Placeholder::make('col_stock')
-                    ->label('Stoc')
-                    ->content(fn (Get $get): HtmlString => new HtmlString(
-                        $get('info_stock') !== null && $get('info_stock') !== ''
-                            ? '<span class="text-sm font-mono font-medium">'.number_format((float)$get('info_stock'), 0, '.', '').'</span>'
-                            : '<span class="text-gray-300 text-sm">—</span>'
-                    ))
-                    ->columnSpan(1),
-
-                Placeholder::make('col_sales_7d')
-                    ->label('Vânz. 7z')
-                    ->content(fn (Get $get): HtmlString => new HtmlString(
-                        $get('info_sales_7d') !== null && $get('info_sales_7d') !== ''
-                            ? '<span class="text-sm font-mono text-blue-600">'.number_format((float)$get('info_sales_7d'), 1, '.', '').'</span>'
-                            : '<span class="text-gray-300 text-sm">—</span>'
-                    ))
-                    ->columnSpan(1),
-
-                Placeholder::make('col_days_stockout')
-                    ->label('Epuizare')
-                    ->content(fn (Get $get): HtmlString => new HtmlString(static::renderDaysToStockout($get('info_days_stockout'))))
-                    ->columnSpan(1),
-
-                TextInput::make('notes')->label('Notițe')->nullable()->columnSpan(1),
-
-                // Hidden — stocaj date
+                // Hidden — data storage (all still present, unchanged)
                 Hidden::make('product_name'),
                 Hidden::make('unit_price'),
+                Hidden::make('sku'),
+                Hidden::make('supplier_sku'),
+                Hidden::make('notes'),
                 Hidden::make('sources_json'),
                 Hidden::make('recommendation_json'),
                 Hidden::make('quantity_hint'),
@@ -731,7 +747,7 @@ class PurchaseOrderResource extends Resource
             ->label('')
             ->relationship('items')
             ->schema($schema)
-            ->columns($isCreate ? 6 : 10)
+            ->columns($isCreate ? 12 : 10)
             ->defaultItems($isCreate ? 0 : 1)
             ->addActionLabel('Adaugă produs');
     }
@@ -780,6 +796,94 @@ class PurchaseOrderResource extends Resource
         }
 
         return '<span class="text-xs text-gray-500">'.round($d, 1).' zile</span>';
+    }
+
+    /**
+     * Compact stacked info for create: stock, sales 7d, days to stockout + urgency badge.
+     */
+    private static function renderCompactInfo(mixed $stock, mixed $sales7d, mixed $daysStockout, ?string $sourcesJson): HtmlString
+    {
+        $hasUrgent = false;
+        if ($sourcesJson) {
+            $sources = json_decode($sourcesJson, true);
+            if (is_array($sources)) {
+                $hasUrgent = collect($sources)->contains(fn ($s) => ! empty($s['is_urgent']));
+            }
+        }
+
+        $lines = [];
+
+        // Urgent badge
+        if ($hasUrgent) {
+            $lines[] = '<span style="display:inline-flex;align-items:center;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;background:#fee2e2;color:#b91c1c;letter-spacing:0.05em">URGENT</span>';
+        }
+
+        // Stock
+        if ($stock !== null && $stock !== '') {
+            $stockVal = (float) $stock;
+            $stockColor = '#111827';
+            if ($stockVal <= 0) $stockColor = '#dc2626';
+            elseif ($daysStockout !== null && (float) $daysStockout < 7) $stockColor = '#dc2626';
+            elseif ($daysStockout !== null && (float) $daysStockout < 14) $stockColor = '#ea580c';
+
+            $lines[] = '<span style="font-size:12px;color:#6b7280">Stoc:</span> <span style="font-size:13px;font-weight:600;color:'.$stockColor.';font-variant-numeric:tabular-nums">'.number_format($stockVal, 0, '.', '').'</span>';
+        }
+
+        // Sales 7d
+        if ($sales7d !== null && $sales7d !== '' && (float) $sales7d > 0) {
+            $lines[] = '<span style="font-size:12px;color:#6b7280">7z:</span> <span style="font-size:12px;font-weight:500;color:#2563eb;font-variant-numeric:tabular-nums">'.number_format((float)$sales7d, 1, '.', '').'</span>';
+        }
+
+        // Days to stockout
+        if ($daysStockout !== null && $daysStockout !== '') {
+            $lines[] = static::renderDaysToStockout($daysStockout);
+        }
+
+        if (empty($lines)) {
+            return new HtmlString('<span style="font-size:12px;color:#d1d5db">—</span>');
+        }
+
+        return new HtmlString(
+            '<div style="display:flex;flex-direction:column;gap:2px;line-height:1.4">'
+            . implode('', array_map(fn ($l) => '<div>'.$l.'</div>', $lines))
+            . '</div>'
+        );
+    }
+
+    /**
+     * Clickable recommended quantity that fills the quantity input.
+     */
+    private static function renderRecommended(mixed $hint): HtmlString
+    {
+        if (! $hint || (int) $hint <= 0) {
+            return new HtmlString('<span style="font-size:12px;color:#d1d5db">—</span>');
+        }
+
+        $qty = (int) $hint;
+
+        return new HtmlString(
+            '<span style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;padding:4px 10px;border-radius:6px;background:#eff6ff;border:1px solid #bfdbfe;transition:background .15s"'
+            .' onclick="(function(el){'
+            .'var item=el.closest(\'[wire\\\\:sortable\\\\.item]\') || el.closest(\'[data-id]\');'
+            .'if(!item) return;'
+            .'var inp=item.querySelector(\'input[type=number],input[inputmode=decimal]\');'
+            .'if(!inp) return;'
+            .'var nativeInputValueSetter=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,\'value\').set;'
+            .'nativeInputValueSetter.call(inp,'.$qty.');'
+            .'inp.dispatchEvent(new Event(\'input\',{bubbles:true}));'
+            .'inp.dispatchEvent(new Event(\'change\',{bubbles:true}));'
+            .'inp.focus();'
+            .'})(this)"'
+            .' onmouseover="this.style.background=\'#dbeafe\'"'
+            .' onmouseout="this.style.background=\'#eff6ff\'"'
+            .' title="Click pentru a aplica cantitatea recomandată">'
+            .'<span style="font-size:16px;font-weight:700;color:#1d4ed8;font-variant-numeric:tabular-nums">'.$qty.'</span>'
+            .'<span style="font-size:11px;color:#6b7280">buc</span>'
+            .'<svg style="width:14px;height:14px;color:#3b82f6;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">'
+            .'<path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>'
+            .'</svg>'
+            .'</span>'
+        );
     }
 
     private static function computeLineTotal($price, $qty): string
