@@ -1,6 +1,6 @@
 {{-- Buton scanare cod de bare (doar pe mobil) --}}
 <div
-    class="md:hidden"
+    class="barcode-scanner-mobile"
     x-data="{
         isOpen: false,
         found: false,
@@ -16,7 +16,7 @@
         torchSupported: false,
         torchOn: false,
 
-        // stări EAN negăsit
+        // stari EAN negasit
         notFound: false,
         scannedEan: '',
 
@@ -57,7 +57,7 @@
 
         async startScanner() {
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                this.errorMessage = 'Camera nu este disponibilă pe acest browser.';
+                this.errorMessage = 'Camera nu este disponibila pe acest browser.';
                 return;
             }
             try {
@@ -69,7 +69,7 @@
                     }
                 });
             } catch (err) {
-                this.errorMessage = 'Camera indisponibilă: ' + err.message;
+                this.errorMessage = 'Camera indisponibila: ' + err.message;
                 return;
             }
 
@@ -83,11 +83,11 @@
             video.srcObject = this.stream;
             await video.play();
 
-            this.statusMessage = 'Se focusează camera...';
+            this.statusMessage = 'Se focalizeaza camera...';
             await new Promise(r => setTimeout(r, 1000));
             if (!this.isOpen) return;
 
-            this.statusMessage = 'Îndreaptă camera spre codul de bare...';
+            this.statusMessage = 'Indreapta camera spre codul de bare...';
 
             if (typeof BarcodeDetector !== 'undefined') {
                 this.engine = 'native';
@@ -103,7 +103,7 @@
                 this.scanLoopZxing();
 
             } else {
-                this.errorMessage = 'Librăria nu s-a încărcat. Reîncarcă pagina.';
+                this.errorMessage = 'Libraria nu s-a incarcat. Reincarca pagina.';
             }
         },
 
@@ -172,7 +172,7 @@
         async onScanSuccess(code) {
             this.stopScanner();
             this.scannedEan = code.trim();
-            this.statusMessage = 'Se verifică codul...';
+            this.statusMessage = 'Se verifica codul...';
 
             try {
                 const resp = await fetch('/sku-check/' + encodeURIComponent(code.trim()), {
@@ -188,7 +188,7 @@
                     this.notFound = true;
                 }
             } catch (e) {
-                // fallback dacă AJAX pică
+                // fallback daca AJAX pica
                 this.detectedCode = code.trim();
                 this.detected = true;
                 setTimeout(() => {
@@ -236,10 +236,10 @@
                 if (resp.ok) {
                     this.submitted = true;
                 } else {
-                    alert('Eroare la trimiterea cererii. Încearcă din nou.');
+                    alert('Eroare la trimiterea cererii. Incearca din nou.');
                 }
             } catch (_) {
-                alert('Eroare de rețea. Încearcă din nou.');
+                alert('Eroare de retea. Incearca din nou.');
             }
             this.submitting = false;
         },
@@ -268,14 +268,14 @@
     }"
     @keydown.escape.window="if (isOpen) close()"
 >
-    {{-- Buton cameră --}}
+    {{-- Buton camera --}}
     <button
         type="button"
         @click.prevent="open()"
-        class="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-        title="Scanează cod de bare"
+        style="display:flex; align-items:center; justify-content:center; width:2.25rem; height:2.25rem; border-radius:0.5rem; color:#6b7280; background:transparent; border:none; cursor:pointer; transition:background 0.15s;"
+        title="Scaneaza cod de bare"
     >
-        <x-filament::icon icon="heroicon-o-camera" class="w-5 h-5" />
+        <x-filament::icon icon="heroicon-o-camera" style="width:1.25rem; height:1.25rem;" />
     </button>
 
     <template x-teleport="body">
@@ -287,120 +287,115 @@
             x-transition:leave="transition ease-in duration-100"
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
-            style="display:none;"
-            x-bind:style="(detected || notFound || associating || submitted) ? 'background:#fff;' : 'background:#000;'"
-            class="fixed inset-0 z-[9999] flex flex-col"
+            style="display:none; position:fixed; inset:0; z-index:9999; flex-direction:column;"
+            x-bind:style="(detected || notFound || associating || submitted) ? 'display:flex; position:fixed; inset:0; z-index:9999; flex-direction:column; background:#fff;' : 'display:flex; position:fixed; inset:0; z-index:9999; flex-direction:column; background:#000;'"
         >
             {{-- Header --}}
-            <div class="flex items-center justify-between px-4 py-3 flex-shrink-0"
-                x-bind:style="(detected || notFound || associating || submitted) ? 'background:#fff; border-bottom:1px solid #e5e7eb;' : 'background:#111827;'">
-                <div class="flex items-center gap-2">
-                    <x-filament::icon icon="heroicon-o-camera" class="w-5 h-5"
-                        x-bind:class="detected ? 'text-green-600' : (notFound || submitted) ? 'text-gray-400' : 'text-red-400'" />
-                    <span class="font-semibold text-sm"
-                        x-bind:style="(detected || notFound || associating || submitted) ? 'color:#111827;' : 'color:#fff;'"
-                        x-text="associating ? 'Asociază EAN la produs' : (submitted ? 'Cerere trimisă' : 'Scanează cod de bare')">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1rem; flex-shrink:0;"
+                x-bind:style="(detected || notFound || associating || submitted) ? 'display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1rem; flex-shrink:0; background:#fff; border-bottom:1px solid #e5e7eb;' : 'display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1rem; flex-shrink:0; background:#111827;'">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <x-filament::icon icon="heroicon-o-camera" style="width:1.25rem; height:1.25rem;"
+                        x-bind:style="detected ? 'width:1.25rem; height:1.25rem; color:#16a34a;' : (notFound || submitted) ? 'width:1.25rem; height:1.25rem; color:#9ca3af;' : 'width:1.25rem; height:1.25rem; color:#f87171;'" />
+                    <span style="font-weight:600; font-size:0.875rem;"
+                        x-bind:style="(detected || notFound || associating || submitted) ? 'font-weight:600; font-size:0.875rem; color:#111827;' : 'font-weight:600; font-size:0.875rem; color:#fff;'"
+                        x-text="associating ? 'Asociaza EAN la produs' : (submitted ? 'Cerere trimisa' : 'Scaneaza cod de bare')">
                     </span>
                 </div>
-                <div class="flex items-center gap-1">
+                <div style="display:flex; align-items:center; gap:0.25rem;">
                     <button x-show="torchSupported && !detected && !notFound" type="button" @click.prevent="toggleTorch()"
-                        class="flex items-center justify-center w-8 h-8 rounded-lg transition-colors"
-                        x-bind:class="torchOn ? 'text-yellow-400' : 'text-gray-400 hover:text-white'"
-                        title="Lanternă">
+                        style="display:flex; align-items:center; justify-content:center; width:2rem; height:2rem; border-radius:0.5rem; border:none; background:transparent; cursor:pointer; transition:color 0.15s;"
+                        x-bind:style="torchOn ? 'display:flex; align-items:center; justify-content:center; width:2rem; height:2rem; border-radius:0.5rem; border:none; background:transparent; cursor:pointer; color:#facc15;' : 'display:flex; align-items:center; justify-content:center; width:2rem; height:2rem; border-radius:0.5rem; border:none; background:transparent; cursor:pointer; color:#9ca3af;'"
+                        title="Lanterna">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px;">
                             <path d="M17 4H7l-2 7h5v9l7-11h-5l3-5z"/>
                         </svg>
                     </button>
                     <button type="button" @click.prevent="close()"
-                        class="flex items-center justify-center w-8 h-8 rounded-lg"
-                        x-bind:class="(detected || notFound || associating || submitted) ? 'text-gray-400 hover:text-gray-700' : 'text-gray-400 hover:text-white'">
-                        <x-filament::icon icon="heroicon-o-x-mark" class="w-5 h-5" />
+                        style="display:flex; align-items:center; justify-content:center; width:2rem; height:2rem; border-radius:0.5rem; border:none; background:transparent; cursor:pointer;"
+                        x-bind:style="(detected || notFound || associating || submitted) ? 'display:flex; align-items:center; justify-content:center; width:2rem; height:2rem; border-radius:0.5rem; border:none; background:transparent; cursor:pointer; color:#9ca3af;' : 'display:flex; align-items:center; justify-content:center; width:2rem; height:2rem; border-radius:0.5rem; border:none; background:transparent; cursor:pointer; color:#9ca3af;'">
+                        <x-filament::icon icon="heroicon-o-x-mark" style="width:1.25rem; height:1.25rem;" />
                     </button>
                 </div>
             </div>
 
-            {{-- ① Ecran confirmare produs găsit (verde) --}}
-            <div x-show="detected" class="flex-1 flex flex-col items-center justify-center gap-4" style="background:#fff;">
+            {{-- 1 Ecran confirmare produs gasit (verde) --}}
+            <div x-show="detected" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem; background:#fff;">
                 <div style="width:72px;height:72px;border-radius:50%;background:#dcfce7;display:flex;align-items:center;justify-content:center;">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:40px;height:40px;">
                         <polyline points="20 6 9 17 4 12"/>
                     </svg>
                 </div>
-                <div class="text-center px-6">
+                <div style="text-align:center; padding:0 1.5rem;">
                     <p style="color:#16a34a;font-weight:700;font-size:1.1rem;margin:0 0 4px;">Cod detectat</p>
                     <p x-text="detectedCode" style="color:#374151;font-family:monospace;font-size:0.95rem;margin:0 0 8px;"></p>
-                    <p style="color:#9ca3af;font-size:0.8rem;margin:0;">Se încarcă produsul...</p>
+                    <p style="color:#9ca3af;font-size:0.8rem;margin:0;">Se incarca produsul...</p>
                 </div>
             </div>
 
-            {{-- ② Ecran EAN negăsit --}}
-            <div x-show="notFound && !associating && !submitted" class="flex-1 flex flex-col items-center justify-center gap-5 px-6" style="background:#fff;">
+            {{-- 2 Ecran EAN negasit --}}
+            <div x-show="notFound && !associating && !submitted" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.25rem; padding:0 1.5rem; background:#fff;">
                 <div style="width:72px;height:72px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:38px;height:38px;">
                         <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                     </svg>
                 </div>
-                <div class="text-center">
-                    <p style="color:#111827;font-weight:700;font-size:1.05rem;margin:0 0 6px;">EAN negăsit în baza de date</p>
+                <div style="text-align:center;">
+                    <p style="color:#111827;font-weight:700;font-size:1.05rem;margin:0 0 6px;">EAN negasit in baza de date</p>
                     <p x-text="scannedEan" style="color:#6b7280;font-family:monospace;font-size:0.9rem;margin:0 0 4px;"></p>
-                    <p style="color:#9ca3af;font-size:0.82rem;margin:0;">Vrei să asociezi acest EAN unui produs existent?</p>
+                    <p style="color:#9ca3af;font-size:0.82rem;margin:0;">Vrei sa asociezi acest EAN unui produs existent?</p>
                 </div>
-                <div class="flex flex-col gap-3 w-full" style="max-width:280px;">
+                <div style="display:flex; flex-direction:column; gap:0.75rem; width:100%; max-width:280px;">
                     <button type="button" @click.prevent="startAssociation()"
-                        class="w-full rounded-xl py-3 text-sm font-semibold text-white"
-                        style="background:#2563eb;">
-                        Da, asociează la un produs
+                        style="width:100%; border-radius:0.75rem; padding:0.75rem; font-size:0.875rem; font-weight:600; color:#fff; background:#2563eb; border:none; cursor:pointer;">
+                        Da, asociaza la un produs
                     </button>
                     <button type="button" @click.prevent="rescan()"
-                        class="w-full rounded-xl py-3 text-sm font-semibold"
-                        style="background:#f3f4f6;color:#374151;">
-                        Scanează din nou
+                        style="width:100%; border-radius:0.75rem; padding:0.75rem; font-size:0.875rem; font-weight:600; background:#f3f4f6; color:#374151; border:none; cursor:pointer;">
+                        Scaneaza din nou
                     </button>
                 </div>
             </div>
 
-            {{-- ③ Ecran căutare produs pentru asociere --}}
-            <div x-show="associating && !submitted" class="flex-1 flex flex-col" style="background:#fff; overflow:hidden;">
-                <div class="px-4 pt-4 pb-3 flex-shrink-0">
+            {{-- 3 Ecran cautare produs pentru asociere --}}
+            <div x-show="associating && !submitted" style="flex:1; display:flex; flex-direction:column; background:#fff; overflow:hidden;">
+                <div style="padding:1rem 1rem 0.75rem; flex-shrink:0;">
                     <p style="font-size:0.82rem;color:#6b7280;margin:0 0 10px;">
                         EAN: <span x-text="scannedEan" style="font-family:monospace;color:#111827;font-weight:600;"></span>
                     </p>
-                    <div class="flex gap-2">
+                    <div style="display:flex; gap:0.5rem;">
                         <input
                             type="text"
                             x-model="searchQuery"
                             @keydown.enter.prevent="searchProducts()"
-                            placeholder="Caută după nume sau SKU..."
-                            class="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
-                            style="min-width:0;"
+                            placeholder="Cauta dupa nume sau SKU..."
+                            style="flex:1; border-radius:0.5rem; border:1px solid #d1d5db; padding:0.5rem 0.75rem; font-size:0.875rem; min-width:0; outline:none;"
                         />
                         <button type="button" @click.prevent="searchProducts()"
-                            class="rounded-lg px-4 py-2 text-sm font-semibold text-white flex-shrink-0"
-                            style="background:#2563eb;"
+                            style="border-radius:0.5rem; padding:0.5rem 1rem; font-size:0.875rem; font-weight:600; color:#fff; background:#2563eb; border:none; cursor:pointer; flex-shrink:0;"
                             x-bind:disabled="searchLoading">
-                            <span x-show="!searchLoading">Caută</span>
+                            <span x-show="!searchLoading">Cauta</span>
                             <span x-show="searchLoading">...</span>
                         </button>
                     </div>
                 </div>
 
-                {{-- Rezultate căutare --}}
-                <div class="flex-1 overflow-y-auto px-4 pb-4">
+                {{-- Rezultate cautare --}}
+                <div style="flex:1; overflow-y:auto; padding:0 1rem 1rem;">
                     <template x-if="searchLoading">
-                        <p style="color:#9ca3af;font-size:0.85rem;text-align:center;padding:20px 0;">Se caută...</p>
+                        <p style="color:#9ca3af;font-size:0.85rem;text-align:center;padding:20px 0;">Se cauta...</p>
                     </template>
                     <template x-if="!searchLoading && searchResults.length === 0 && searchQuery.length >= 2">
-                        <p style="color:#9ca3af;font-size:0.85rem;text-align:center;padding:20px 0;">Niciun produs găsit.</p>
+                        <p style="color:#9ca3af;font-size:0.85rem;text-align:center;padding:20px 0;">Niciun produs gasit.</p>
                     </template>
                     <template x-for="product in searchResults" :key="product.id">
                         <div
                             @click.prevent="selectedProduct = product"
-                            class="rounded-xl border mb-2 px-3 py-3 cursor-pointer transition-colors"
+                            style="border-radius:0.75rem; border:1px solid #e5e7eb; margin-bottom:0.5rem; padding:0.75rem; cursor:pointer; transition:border-color 0.15s, background 0.15s;"
                             x-bind:style="selectedProduct && selectedProduct.id === product.id
-                                ? 'border-color:#2563eb;background:#eff6ff;'
-                                : 'border-color:#e5e7eb;background:#fff;'"
+                                ? 'border-radius:0.75rem; border:1px solid #2563eb; margin-bottom:0.5rem; padding:0.75rem; cursor:pointer; background:#eff6ff;'
+                                : 'border-radius:0.75rem; border:1px solid #e5e7eb; margin-bottom:0.5rem; padding:0.75rem; cursor:pointer; background:#fff;'"
                         >
-                            <div class="flex items-start justify-between gap-2">
+                            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:0.5rem;">
                                 <p x-text="product.name" style="font-size:0.85rem;font-weight:600;color:#111827;margin:0;line-height:1.35;"></p>
                                 <template x-if="selectedProduct && selectedProduct.id === product.id">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#2563eb" style="width:18px;height:18px;flex-shrink:0;">
@@ -414,17 +409,16 @@
                 </div>
 
                 {{-- Footer cu butoane confirmare --}}
-                <div x-show="selectedProduct" class="flex-shrink-0 px-4 pb-4 pt-2 border-t border-gray-100">
-                    <div class="rounded-xl p-3 mb-3" style="background:#eff6ff;">
+                <div x-show="selectedProduct" style="flex-shrink:0; padding:0.5rem 1rem 1rem; border-top:1px solid #f3f4f6;">
+                    <div style="border-radius:0.75rem; padding:0.75rem; margin-bottom:0.75rem; background:#eff6ff;">
                         <p style="font-size:0.78rem;color:#1d4ed8;margin:0;">
                             EAN <span x-text="scannedEan" style="font-family:monospace;font-weight:700;"></span>
                             va fi asociat produsului <strong x-text="selectedProduct ? selectedProduct.name : ''"></strong>.
-                            Un admin va trebui să aprobe această schimbare.
+                            Un admin va trebui sa aprobe aceasta schimbare.
                         </p>
                     </div>
                     <button type="button" @click.prevent="submitAssociation()"
-                        class="w-full rounded-xl py-3 text-sm font-semibold text-white"
-                        style="background:#2563eb;"
+                        style="width:100%; border-radius:0.75rem; padding:0.75rem; font-size:0.875rem; font-weight:600; color:#fff; background:#2563eb; border:none; cursor:pointer;"
                         x-bind:disabled="submitting">
                         <span x-show="!submitting">Trimite cererea</span>
                         <span x-show="submitting">Se trimite...</span>
@@ -432,42 +426,40 @@
                 </div>
             </div>
 
-            {{-- ④ Ecran cerere trimisă cu succes --}}
-            <div x-show="submitted" class="flex-1 flex flex-col items-center justify-center gap-5 px-6" style="background:#fff;">
+            {{-- 4 Ecran cerere trimisa cu succes --}}
+            <div x-show="submitted" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.25rem; padding:0 1.5rem; background:#fff;">
                 <div style="width:72px;height:72px;border-radius:50%;background:#dbeafe;display:flex;align-items:center;justify-content:center;">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:38px;height:38px;">
                         <path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/>
                     </svg>
                 </div>
-                <div class="text-center">
-                    <p style="color:#111827;font-weight:700;font-size:1.05rem;margin:0 0 6px;">Cerere trimisă!</p>
+                <div style="text-align:center;">
+                    <p style="color:#111827;font-weight:700;font-size:1.05rem;margin:0 0 6px;">Cerere trimisa!</p>
                     <p style="color:#6b7280;font-size:0.85rem;margin:0 0 4px;">
-                        Un administrator va verifica și va procesa asocierea EAN-ului.
+                        Un administrator va verifica si va procesa asocierea EAN-ului.
                     </p>
                 </div>
-                <div class="flex flex-col gap-3 w-full" style="max-width:280px;">
+                <div style="display:flex; flex-direction:column; gap:0.75rem; width:100%; max-width:280px;">
                     <button type="button" @click.prevent="rescan()"
-                        class="w-full rounded-xl py-3 text-sm font-semibold text-white"
-                        style="background:#2563eb;">
-                        Scanează din nou
+                        style="width:100%; border-radius:0.75rem; padding:0.75rem; font-size:0.875rem; font-weight:600; color:#fff; background:#2563eb; border:none; cursor:pointer;">
+                        Scaneaza din nou
                     </button>
                     <button type="button" @click.prevent="close()"
-                        class="w-full rounded-xl py-3 text-sm font-semibold"
-                        style="background:#f3f4f6;color:#374151;">
-                        Închide
+                        style="width:100%; border-radius:0.75rem; padding:0.75rem; font-size:0.875rem; font-weight:600; background:#f3f4f6; color:#374151; border:none; cursor:pointer;">
+                        Inchide
                     </button>
                 </div>
             </div>
 
-            {{-- ⑤ Camera (scanner activ) --}}
-            <div x-show="!detected && !notFound && !associating && !submitted" class="flex-1 relative" style="min-height:0; overflow:hidden;">
-                <video x-ref="video" playsinline muted class="absolute inset-0 w-full h-full" style="object-fit:cover; display:block;"></video>
+            {{-- 5 Camera (scanner activ) --}}
+            <div x-show="!detected && !notFound && !associating && !submitted" style="flex:1; position:relative; min-height:0; overflow:hidden;">
+                <video x-ref="video" playsinline muted style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block;"></video>
 
-                <div class="absolute inset-0 pointer-events-none" style="z-index:2;">
-                    <div class="absolute inset-x-0 top-0" style="bottom:calc(50% + 70px); background:rgba(0,0,0,0.45);"></div>
-                    <div class="absolute inset-x-0 bottom-0" style="top:calc(50% + 70px); background:rgba(0,0,0,0.45);"></div>
-                    <div class="absolute" style="top:calc(50% - 70px); bottom:calc(50% - 70px); left:0; right:calc(50% + 140px); background:rgba(0,0,0,0.45);"></div>
-                    <div class="absolute" style="top:calc(50% - 70px); bottom:calc(50% - 70px); right:0; left:calc(50% + 140px); background:rgba(0,0,0,0.45);"></div>
+                <div style="position:absolute; inset:0; pointer-events:none; z-index:2;">
+                    <div style="position:absolute; inset:0; bottom:calc(50% + 70px); background:rgba(0,0,0,0.45);"></div>
+                    <div style="position:absolute; inset:0; top:calc(50% + 70px); background:rgba(0,0,0,0.45);"></div>
+                    <div style="position:absolute; top:calc(50% - 70px); bottom:calc(50% - 70px); left:0; right:calc(50% + 140px); background:rgba(0,0,0,0.45);"></div>
+                    <div style="position:absolute; top:calc(50% - 70px); bottom:calc(50% - 70px); right:0; left:calc(50% + 140px); background:rgba(0,0,0,0.45);"></div>
 
                     <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:280px; height:140px;">
                         <div style="position:absolute;top:0;left:0;width:28px;height:28px;border-top:3px solid #ef4444;border-left:3px solid #ef4444;"></div>
@@ -479,15 +471,14 @@
                 </div>
             </div>
 
-            {{-- Status bar (doar când camera e activă) --}}
+            {{-- Status bar (doar cand camera e activa) --}}
             <div x-show="!detected && !notFound && !associating && !submitted"
-                class="flex-shrink-0 text-center flex flex-col items-center justify-center gap-2 py-4 px-4"
-                style="background:#111827; min-height:76px;">
-                <p x-show="statusMessage && !errorMessage" x-text="statusMessage" class="text-sm text-gray-300 m-0"></p>
-                <p x-show="errorMessage" x-text="errorMessage" class="text-sm text-red-400 font-medium m-0"></p>
+                style="flex-shrink:0; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0.5rem; padding:1rem; background:#111827; min-height:76px;">
+                <p x-show="statusMessage && !errorMessage" x-text="statusMessage" style="font-size:0.875rem; color:#d1d5db; margin:0;"></p>
+                <p x-show="errorMessage" x-text="errorMessage" style="font-size:0.875rem; color:#f87171; font-weight:500; margin:0;"></p>
                 <button x-show="errorMessage" type="button" @click.prevent="retry()"
-                    class="text-xs text-white rounded-lg px-3 py-1" style="background:#dc2626; border:none; cursor:pointer; margin-top:4px;">
-                    Încearcă din nou
+                    style="font-size:0.75rem; color:#fff; border-radius:0.5rem; padding:0.25rem 0.75rem; background:#dc2626; border:none; cursor:pointer; margin-top:4px;">
+                    Incearca din nou
                 </button>
             </div>
         </div>
@@ -501,4 +492,8 @@
     100% { top: 8px; }
 }
 .barcode-scan-line { animation: barcode-scan 2.2s ease-in-out infinite; }
+.barcode-scanner-mobile { display: block; }
+@media (min-width: 768px) {
+    .barcode-scanner-mobile { display: none !important; }
+}
 </style>

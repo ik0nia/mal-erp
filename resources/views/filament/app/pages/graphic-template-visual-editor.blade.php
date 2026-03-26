@@ -36,46 +36,46 @@
     x-data="veEditor()"
     x-init="init()"
     @template-loaded.window="onTemplateLoaded($event.detail)"
-    class="flex flex-col gap-4"
+    style="display:flex; flex-direction:column; gap:1rem;"
 >
     {{-- Header --}}
-    <div class="flex flex-wrap gap-2 items-center justify-between">
-        <div class="flex flex-wrap gap-2 items-center">
-            <span class="text-sm font-medium text-gray-500">Template:</span>
+    <div style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; justify-content:space-between;">
+        <div style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+            <span style="font-size:0.875rem; font-weight:500; color:#6b7280;">Template:</span>
             @foreach(\App\Models\GraphicTemplate::orderBy('layout')->orderBy('name')->get() as $tpl)
             <button
                 wire:click="switchTemplate({{ $tpl->id }})"
-                class="px-3 py-1.5 rounded-lg text-sm font-medium transition
+                style="padding:0.375rem 0.75rem; border-radius:0.5rem; font-size:0.875rem; font-weight:500; border:none; cursor:pointer; transition:background 0.15s;
                     {{ $templateId === $tpl->id
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700' }}">
+                        ? 'background:#8B1A1A; color:#fff;'
+                        : 'background:#f3f4f6; color:#374151;' }}">
                 {{ $tpl->name }}
-                <span class="opacity-50 text-xs">({{ $tpl->layout }})</span>
+                <span style="opacity:0.5; font-size:0.75rem;">({{ $tpl->layout }})</span>
             </button>
             @endforeach
         </div>
-        <div class="flex gap-2">
+        <div style="display:flex; gap:0.5rem;">
             <button @click="resetPositions()"
-                class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm hover:bg-gray-200 transition">
+                style="padding:0.375rem 0.75rem; border-radius:0.5rem; background:#f3f4f6; color:#374151; font-size:0.875rem; border:none; cursor:pointer; transition:background 0.15s;">
                 Reset layout
             </button>
             <button @click="saveAndPreview()" :disabled="saving"
-                class="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition disabled:opacity-60">
-                <span x-show="!saving">Salvează & Preview</span>
-                <span x-show="saving">Se renderează...</span>
+                style="padding:0.5rem 1rem; border-radius:0.5rem; background:#8B1A1A; color:#fff; font-size:0.875rem; font-weight:600; border:none; cursor:pointer; transition:background 0.15s;">
+                <span x-show="!saving">Salveaza & Preview</span>
+                <span x-show="saving">Se randeaza...</span>
             </button>
         </div>
     </div>
 
     <div class="ve-wrap">
 
-        {{-- Canvas — wire:ignore previne Livewire să distrugă Fabric.js --}}
+        {{-- Canvas — wire:ignore previne Livewire sa distruga Fabric.js --}}
         <div class="ve-canvas-col" wire:ignore>
             <div id="ve-canvas-wrap">
                 <canvas id="ve-canvas"></canvas>
             </div>
-            <p class="text-xs text-gray-400 text-center mt-2">
-                Drag = mută &nbsp;·&nbsp; Colțuri = resize &nbsp;·&nbsp; Click dreapta = aduce în față
+            <p style="font-size:0.75rem; color:#9ca3af; text-align:center; margin-top:0.5rem;">
+                Drag = muta &nbsp;&middot;&nbsp; Colturi = resize &nbsp;&middot;&nbsp; Click dreapta = aduce in fata
             </p>
         </div>
 
@@ -83,8 +83,8 @@
         <div class="ve-side-col">
 
             {{-- Elemente --}}
-            <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Elemente</h3>
+            <div style="background:#fff; border-radius:0.75rem; border:1px solid #e5e7eb; padding:1rem;">
+                <h3 style="font-size:0.75rem; font-weight:600; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em; margin:0 0 0.75rem;">Elemente</h3>
                 <template x-for="el in elements" :key="el.id">
                     <div class="elem-pill" :class="{active: selectedId === el.id}"
                          @click="selectEl(el.id)">
@@ -95,9 +95,9 @@
             </div>
 
             {{-- Coordonate --}}
-            <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4"
+            <div style="background:#fff; border-radius:0.75rem; border:1px solid #e5e7eb; padding:1rem;"
                  x-show="selectedId">
-                <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Poziție</h3>
+                <h3 style="font-size:0.75rem; font-weight:600; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em; margin:0 0 0.75rem;">Pozitie</h3>
                 <div class="coord-grid">
                     <div><label>X</label>
                         <input type="number" :value="selPos.x" @change="setCoord('x', +$event.target.value)">
@@ -112,25 +112,25 @@
                         <input type="number" :value="selPos.h" @change="setCoord('h', +$event.target.value)">
                     </div>
                 </div>
-                <p class="text-xs text-gray-400 mt-2">Coordonate la 1080px</p>
+                <p style="font-size:0.75rem; color:#9ca3af; margin-top:0.5rem;">Coordonate la 1080px</p>
             </div>
 
             {{-- Preview --}}
-            <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                <div class="flex items-center justify-between mb-3">
-                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Preview</h3>
+            <div style="background:#fff; border-radius:0.75rem; border:1px solid #e5e7eb; padding:1rem;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem;">
+                    <h3 style="font-size:0.75rem; font-weight:600; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em; margin:0;">Preview</h3>
                     <a x-show="previewUrl" :href="previewUrl" target="_blank"
-                       class="text-xs text-primary-600 hover:underline">Deschide →</a>
+                       style="font-size:0.75rem; color:#8B1A1A; text-decoration:none;">Deschide →</a>
                 </div>
-                <div x-show="saving" class="text-xs text-center text-gray-400 animate-pulse py-8">
-                    Se renderează imaginea...
+                <div x-show="saving" style="font-size:0.75rem; text-align:center; color:#9ca3af; padding:2rem 0;">
+                    Se randeaza imaginea...
                 </div>
                 <template x-if="previewUrl && !saving">
-                    <img :src="previewUrl" class="w-full rounded-lg shadow" alt="preview">
+                    <img :src="previewUrl" style="width:100%; border-radius:0.5rem; box-shadow:0 1px 3px rgba(0,0,0,0.1);" alt="preview">
                 </template>
                 <template x-if="!previewUrl && !saving">
-                    <div class="aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
-                        <p class="text-sm text-gray-400">Apasă "Salvează & Preview"</p>
+                    <div style="aspect-ratio:1/1; background:#f3f4f6; border-radius:0.5rem; display:flex; align-items:center; justify-content:center;">
+                        <p style="font-size:0.875rem; color:#9ca3af; margin:0;">Apasa "Salveaza & Preview"</p>
                     </div>
                 </template>
             </div>
@@ -201,7 +201,7 @@ function veEditor() {
                 selection: false,
             });
 
-            // Pozițiile inițiale din PHP
+            // Pozitiile initiale din PHP
             const initJson = @json($positionsJson);
             try {
                 const p = JSON.parse(initJson);
@@ -212,7 +212,7 @@ function veEditor() {
 
             this.redraw();
 
-            // Urmărește previewUrl din Livewire — mai fiabil decât events
+            // Urmareste previewUrl din Livewire — mai fiabil decat events
             this.$watch('$wire.previewUrl', url => {
                 if (!url) return;
                 if (url === '__error__') { this.saving = false; return; }
@@ -333,12 +333,12 @@ function veEditor() {
             this.saving = true;
             $wire.savePositionsAndPreview(JSON.stringify(this.positions))
                 .catch(() => { this.saving = false; });
-            // Fallback: dacă după 30s nu a venit răspuns, resetăm
+            // Fallback: daca dupa 30s nu a venit raspuns, resetam
             setTimeout(() => { this.saving = false; }, 30000);
         },
 
-        // Livewire events — NU re-randează canvas
-        // switchTemplate — primim pozițiile prin event (canvas nu e re-randat de Livewire)
+        // Livewire events — NU re-randeaza canvas
+        // switchTemplate — primim pozitiile prin event (canvas nu e re-randat de Livewire)
         onTemplateLoaded(detail) {
             try {
                 const p = JSON.parse(detail.positionsJson || '{}');

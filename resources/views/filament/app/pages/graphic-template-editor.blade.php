@@ -1,47 +1,48 @@
 <x-filament-panels::page>
-    <div class="flex flex-col gap-4">
+    <div style="display:flex; flex-direction:column; gap:1rem;">
 
         {{-- Selector template --}}
-        <div class="flex flex-wrap gap-2 items-center">
-            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Template:</span>
+        <div style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+            <span style="font-size:0.875rem; font-weight:500; color:#6b7280;">Template:</span>
             @foreach($this->getTemplates() as $tpl)
                 <button
                     wire:click="switchTemplate({{ $tpl->id }})"
-                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition
+                    style="padding:0.375rem 0.75rem; border-radius:0.5rem; font-size:0.875rem; font-weight:500; border:none; cursor:pointer; transition:background 0.15s;
                         {{ $templateId === $tpl->id
-                            ? 'bg-primary-600 text-white'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700' }}"
+                            ? 'background:#8B1A1A; color:#fff;'
+                            : 'background:#f3f4f6; color:#374151;' }}"
                 >
                     {{ $tpl->name }}
-                    <span class="ml-1 opacity-60 text-xs">({{ $tpl->layout }})</span>
+                    <span style="margin-left:0.25rem; opacity:0.6; font-size:0.75rem;">({{ $tpl->layout }})</span>
                 </button>
             @endforeach
 
             <a href="{{ \App\Filament\App\Resources\GraphicTemplateResource::getUrl('create') }}"
-               class="px-3 py-1.5 rounded-lg text-sm font-medium bg-success-100 text-success-700 hover:bg-success-200 transition">
+               style="padding:0.375rem 0.75rem; border-radius:0.5rem; font-size:0.875rem; font-weight:500; background:#dcfce7; color:#15803d; text-decoration:none; transition:background 0.15s;">
                 + Nou
             </a>
         </div>
 
-        {{-- Split view: Formular stânga | Preview dreapta --}}
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {{-- Split view: Formular stanga | Preview dreapta --}}
+        <div style="display:grid; grid-template-columns:1fr; gap:1.5rem;"
+             class="lg-grid-2-cols">
 
             {{-- ── Coloana FORMULAR ──────────────────────────────────────────── --}}
-            <div class="flex flex-col gap-4">
+            <div style="display:flex; flex-direction:column; gap:1rem;">
 
-                {{-- Informații generale --}}
-                <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-                    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Informații</h3>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nume template</label>
+                {{-- Informatii generale --}}
+                <div style="background:#fff; border-radius:0.75rem; border:1px solid #e5e7eb; padding:1.25rem;">
+                    <h3 style="font-size:0.875rem; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; margin:0 0 1rem;">Informatii</h3>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                        <div style="grid-column:span 2;">
+                            <label style="display:block; font-size:0.875rem; font-weight:500; color:#374151; margin-bottom:0.25rem;">Nume template</label>
                             <input type="text" wire:model="name"
-                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm shadow-sm">
+                                style="width:100%; border-radius:0.5rem; border:1px solid #d1d5db; padding:0.5rem 0.75rem; font-size:0.875rem; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Layout</label>
+                            <label style="display:block; font-size:0.875rem; font-weight:500; color:#374151; margin-bottom:0.25rem;">Layout</label>
                             <select wire:model="templateLayout"
-                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm shadow-sm">
+                                style="width:100%; border-radius:0.5rem; border:1px solid #d1d5db; padding:0.5rem 0.75rem; font-size:0.875rem; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                                 <option value="product">Product (imagine produs dreapta)</option>
                                 <option value="brand">Brand (logo brand mare dreapta)</option>
                             </select>
@@ -50,45 +51,45 @@
                 </div>
 
                 {{-- Culori --}}
-                <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-                    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Culori</h3>
-                    <div class="flex items-center gap-4">
+                <div style="background:#fff; border-radius:0.75rem; border:1px solid #e5e7eb; padding:1.25rem;">
+                    <h3 style="font-size:0.875rem; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; margin:0 0 1rem;">Culori</h3>
+                    <div style="display:flex; align-items:center; gap:1rem;">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Culoare principală</label>
-                            <div class="flex items-center gap-2">
+                            <label style="display:block; font-size:0.875rem; font-weight:500; color:#374151; margin-bottom:0.25rem;">Culoare principala</label>
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
                                 <input type="color" wire:model="primary_color"
-                                    class="h-10 w-16 rounded cursor-pointer border border-gray-300">
+                                    style="height:2.5rem; width:4rem; border-radius:0.25rem; cursor:pointer; border:1px solid #d1d5db;">
                                 <input type="text" wire:model="primary_color"
-                                    class="w-28 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm shadow-sm font-mono">
+                                    style="width:7rem; border-radius:0.5rem; border:1px solid #d1d5db; padding:0.5rem 0.75rem; font-size:0.875rem; font-family:monospace; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                             </div>
                         </div>
-                        <div class="flex-1">
-                            <p class="text-xs text-gray-400 mt-5">Afectează bara de jos, bara verticală accent, butonul CTA și bara accentului din text.</p>
+                        <div style="flex:1;">
+                            <p style="font-size:0.75rem; color:#9ca3af; margin-top:1.25rem;">Afecteaza bara de jos, bara verticala accent, butonul CTA si bara accentului din text.</p>
                         </div>
                     </div>
                 </div>
 
                 {{-- Bara de jos --}}
-                <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-                    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Bara de jos</h3>
-                    <div class="flex flex-col gap-3">
+                <div style="background:#fff; border-radius:0.75rem; border:1px solid #e5e7eb; padding:1.25rem;">
+                    <h3 style="font-size:0.875rem; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; margin:0 0 1rem;">Bara de jos</h3>
+                    <div style="display:flex; flex-direction:column; gap:0.75rem;">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Text principal</label>
+                            <label style="display:block; font-size:0.875rem; font-weight:500; color:#374151; margin-bottom:0.25rem;">Text principal</label>
                             <input type="text" wire:model="bottom_text"
-                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm shadow-sm">
+                                style="width:100%; border-radius:0.5rem; border:1px solid #d1d5db; padding:0.5rem 0.75rem; font-size:0.875rem; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Text secundar (adresă / contact)</label>
+                            <label style="display:block; font-size:0.875rem; font-weight:500; color:#374151; margin-bottom:0.25rem;">Text secundar (adresa / contact)</label>
                             <input type="text" wire:model="bottom_subtext"
-                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm shadow-sm">
+                                style="width:100%; border-radius:0.5rem; border:1px solid #d1d5db; padding:0.5rem 0.75rem; font-size:0.875rem; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                         </div>
-                        <div class="flex gap-6 pt-1">
-                            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-                                <input type="checkbox" wire:model="show_truck" class="rounded">
-                                Iconița camion
+                        <div style="display:flex; gap:1.5rem; padding-top:0.25rem;">
+                            <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.875rem; color:#374151; cursor:pointer;">
+                                <input type="checkbox" wire:model="show_truck" style="border-radius:0.25rem;">
+                                Iconita camion
                             </label>
-                            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-                                <input type="checkbox" wire:model="show_rainbow_bar" class="rounded">
+                            <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.875rem; color:#374151; cursor:pointer;">
+                                <input type="checkbox" wire:model="show_rainbow_bar" style="border-radius:0.25rem;">
                                 Bara curcubeu
                             </label>
                         </div>
@@ -96,85 +97,85 @@
                 </div>
 
                 {{-- CTA --}}
-                <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-                    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Buton CTA</h3>
+                <div style="background:#fff; border-radius:0.75rem; border:1px solid #e5e7eb; padding:1.25rem;">
+                    <h3 style="font-size:0.875rem; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; margin:0 0 1rem;">Buton CTA</h3>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Text buton</label>
+                        <label style="display:block; font-size:0.875rem; font-weight:500; color:#374151; margin-bottom:0.25rem;">Text buton</label>
                         <input type="text" wire:model="cta_text"
-                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm shadow-sm">
+                            style="width:100%; border-radius:0.5rem; border:1px solid #d1d5db; padding:0.5rem 0.75rem; font-size:0.875rem; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                     </div>
                 </div>
 
-                {{-- Proporții fonturi --}}
-                <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-                    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Proporții & Fonturi</h3>
-                    <div class="grid grid-cols-3 gap-4">
+                {{-- Proportii fonturi --}}
+                <div style="background:#fff; border-radius:0.75rem; border:1px solid #e5e7eb; padding:1.25rem;">
+                    <h3 style="font-size:0.875rem; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; margin:0 0 1rem;">Proportii & Fonturi</h3>
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem;">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Logo scale</label>
+                            <label style="display:block; font-size:0.875rem; font-weight:500; color:#374151; margin-bottom:0.25rem;">Logo scale</label>
                             <input type="range" wire:model="logo_scale" min="0.15" max="0.60" step="0.01"
-                                class="w-full accent-primary-600">
-                            <span class="text-xs text-gray-400">{{ number_format($logo_scale * 100, 0, '.', '') }}%</span>
+                                style="width:100%; accent-color:#8B1A1A;">
+                            <span style="font-size:0.75rem; color:#9ca3af;">{{ number_format($logo_scale * 100, 0, '.', '') }}%</span>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Font titlu</label>
+                            <label style="display:block; font-size:0.875rem; font-weight:500; color:#374151; margin-bottom:0.25rem;">Font titlu</label>
                             <input type="range" wire:model="title_size_pct" min="0.04" max="0.12" step="0.001"
-                                class="w-full accent-primary-600">
-                            <span class="text-xs text-gray-400">{{ number_format($title_size_pct * 1080, 0, '.', '') }}px</span>
+                                style="width:100%; accent-color:#8B1A1A;">
+                            <span style="font-size:0.75rem; color:#9ca3af;">{{ number_format($title_size_pct * 1080, 0, '.', '') }}px</span>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Font subtitlu</label>
+                            <label style="display:block; font-size:0.875rem; font-weight:500; color:#374151; margin-bottom:0.25rem;">Font subtitlu</label>
                             <input type="range" wire:model="subtitle_size_pct" min="0.015" max="0.06" step="0.001"
-                                class="w-full accent-primary-600">
-                            <span class="text-xs text-gray-400">{{ number_format($subtitle_size_pct * 1080, 0, '.', '') }}px</span>
+                                style="width:100%; accent-color:#8B1A1A;">
+                            <span style="font-size:0.75rem; color:#9ca3af;">{{ number_format($subtitle_size_pct * 1080, 0, '.', '') }}px</span>
                         </div>
                     </div>
                 </div>
 
                 {{-- Preview text demo --}}
-                <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-                    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Text demo pentru preview</h3>
-                    <div class="flex flex-col gap-3">
+                <div style="background:#fff; border-radius:0.75rem; border:1px solid #e5e7eb; padding:1.25rem;">
+                    <h3 style="font-size:0.875rem; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; margin:0 0 1rem;">Text demo pentru preview</h3>
+                    <div style="display:flex; flex-direction:column; gap:0.75rem;">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Titlu</label>
+                            <label style="display:block; font-size:0.875rem; font-weight:500; color:#374151; margin-bottom:0.25rem;">Titlu</label>
                             <input type="text" wire:model="previewTitle"
-                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm shadow-sm">
+                                style="width:100%; border-radius:0.5rem; border:1px solid #d1d5db; padding:0.5rem 0.75rem; font-size:0.875rem; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subtitlu</label>
+                            <label style="display:block; font-size:0.875rem; font-weight:500; color:#374151; margin-bottom:0.25rem;">Subtitlu</label>
                             <input type="text" wire:model="previewSub"
-                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm shadow-sm">
+                                style="width:100%; border-radius:0.5rem; border:1px solid #d1d5db; padding:0.5rem 0.75rem; font-size:0.875rem; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Label (eyebrow)</label>
+                            <label style="display:block; font-size:0.875rem; font-weight:500; color:#374151; margin-bottom:0.25rem;">Label (eyebrow)</label>
                             <input type="text" wire:model="previewLabel"
-                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm shadow-sm">
+                                style="width:100%; border-radius:0.5rem; border:1px solid #d1d5db; padding:0.5rem 0.75rem; font-size:0.875rem; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                         </div>
                     </div>
                 </div>
 
-                {{-- Butoane acțiuni --}}
-                <div class="flex gap-3">
+                {{-- Butoane actiuni --}}
+                <div style="display:flex; gap:0.75rem;">
                     <button wire:click="save"
-                        class="flex-1 px-4 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 transition">
-                        <span wire:loading.remove wire:target="save">Salvează</span>
-                        <span wire:loading wire:target="save">Salvează...</span>
+                        style="flex:1; padding:0.625rem 1rem; border-radius:0.5rem; background:#f3f4f6; color:#374151; font-size:0.875rem; font-weight:500; border:none; cursor:pointer; transition:background 0.15s;">
+                        <span wire:loading.remove wire:target="save">Salveaza</span>
+                        <span wire:loading wire:target="save">Salveaza...</span>
                     </button>
                     <button wire:click="generatePreview"
-                        class="flex-1 px-4 py-2.5 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition">
-                        <span wire:loading.remove wire:target="generatePreview">Generează Preview</span>
-                        <span wire:loading wire:target="generatePreview">Se renderează...</span>
+                        style="flex:1; padding:0.625rem 1rem; border-radius:0.5rem; background:#8B1A1A; color:#fff; font-size:0.875rem; font-weight:600; border:none; cursor:pointer; transition:background 0.15s;">
+                        <span wire:loading.remove wire:target="generatePreview">Genereaza Preview</span>
+                        <span wire:loading wire:target="generatePreview">Se randeaza...</span>
                     </button>
                 </div>
             </div>
 
             {{-- ── Coloana PREVIEW ───────────────────────────────────────────── --}}
-            <div class="flex flex-col gap-3 lg:sticky lg:top-4 lg:self-start">
-                <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                    <div class="flex items-center justify-between mb-3">
-                        <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Preview</h3>
+            <div style="display:flex; flex-direction:column; gap:0.75rem; position:sticky; top:1rem; align-self:start;">
+                <div style="background:#fff; border-radius:0.75rem; border:1px solid #e5e7eb; padding:1rem;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem;">
+                        <h3 style="font-size:0.875rem; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; margin:0;">Preview</h3>
                         @if($previewUrl)
                             <a href="{{ $previewUrl }}" target="_blank"
-                               class="text-xs text-primary-600 hover:underline">
+                               style="font-size:0.75rem; color:#8B1A1A; text-decoration:none;">
                                 Deschide complet →
                             </a>
                         @endif
@@ -183,29 +184,35 @@
                     @if($previewUrl)
                         <img src="{{ $previewUrl }}"
                              alt="Template preview"
-                             class="w-full rounded-lg shadow-md"
+                             style="width:100%; border-radius:0.5rem; box-shadow:0 4px 6px rgba(0,0,0,0.1);"
                              wire:loading.class="opacity-40"
                              wire:target="generatePreview">
                     @else
-                        <div class="aspect-square rounded-lg bg-gray-100 dark:bg-gray-800 flex flex-col items-center justify-center gap-3 text-gray-400">
-                            <x-filament::icon icon="heroicon-o-photo" class="w-16 h-16 opacity-30" />
-                            <p class="text-sm">Apasă "Generează Preview"</p>
+                        <div style="aspect-ratio:1/1; border-radius:0.5rem; background:#f3f4f6; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0.75rem; color:#9ca3af;">
+                            <x-filament::icon icon="heroicon-o-photo" style="width:4rem; height:4rem; opacity:0.3;" />
+                            <p style="font-size:0.875rem; margin:0;">Apasa "Genereaza Preview"</p>
                         </div>
                     @endif
 
                     <div wire:loading wire:target="generatePreview"
-                         class="mt-2 text-xs text-center text-gray-400 animate-pulse">
-                        Se renderează imaginea...
+                         style="margin-top:0.5rem; font-size:0.75rem; text-align:center; color:#9ca3af;">
+                        Se randeaza imaginea...
                     </div>
                 </div>
 
                 @if($previewUrl)
-                    <p class="text-xs text-gray-400 text-center">
-                        1080×1080px • JPEG • Template: <strong>{{ $templateLayout }}</strong>
+                    <p style="font-size:0.75rem; color:#9ca3af; text-align:center; margin:0;">
+                        1080x1080px • JPEG • Template: <strong>{{ $templateLayout }}</strong>
                     </p>
                 @endif
             </div>
 
         </div>
     </div>
+
+<style>
+@media (min-width: 1024px) {
+    .lg-grid-2-cols { grid-template-columns: 1fr 1fr !important; }
+}
+</style>
 </x-filament-panels::page>

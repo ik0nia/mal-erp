@@ -1,15 +1,15 @@
 <x-filament-panels::page>
 
-    {{-- Selector perioadă --}}
-    <div class="flex items-center gap-3 mb-6">
-        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Perioadă:</span>
+    {{-- Selector perioada --}}
+    <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1.5rem;">
+        <span style="font-size:0.875rem; font-weight:500; color:#374151;">Perioada:</span>
         @foreach($this->getPeriodOptions() as $val => $label)
             <button
                 wire:click="$set('period', '{{ $val }}')"
-                class="px-3 py-1 rounded-full text-sm font-medium transition
+                style="padding:0.25rem 0.75rem; border-radius:9999px; font-size:0.875rem; font-weight:500; border:none; cursor:pointer; transition:background 0.15s;
                     {{ $period == $val
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600' }}"
+                        ? 'background:#8B1A1A; color:#fff;'
+                        : 'background:#f3f4f6; color:#374151;' }}"
             >
                 {{ $label }}
             </button>
@@ -24,70 +24,70 @@
     @endphp
 
     {{-- Stat cards --}}
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 border border-gray-200 dark:border-gray-700">
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Cost total</p>
-            <p class="text-2xl font-bold text-red-600 dark:text-red-400">${{ number_format($stats['total_cost'], 4) }}</p>
+    <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:1rem; margin-bottom:1.5rem;" class="ai-stats-grid">
+        <div style="background:#fff; border-radius:0.75rem; box-shadow:0 1px 3px rgba(0,0,0,0.1); padding:1rem; border:1px solid #e5e7eb;">
+            <p style="font-size:0.75rem; color:#6b7280; margin:0 0 0.25rem;">Cost total</p>
+            <p style="font-size:1.5rem; font-weight:700; color:#dc2626; margin:0;">${{ number_format($stats['total_cost'], 4) }}</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 border border-gray-200 dark:border-gray-700">
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Medie / zi</p>
-            <p class="text-2xl font-bold text-orange-600 dark:text-orange-400">${{ number_format($stats['avg_per_day'], 4) }}</p>
+        <div style="background:#fff; border-radius:0.75rem; box-shadow:0 1px 3px rgba(0,0,0,0.1); padding:1rem; border:1px solid #e5e7eb;">
+            <p style="font-size:0.75rem; color:#6b7280; margin:0 0 0.25rem;">Medie / zi</p>
+            <p style="font-size:1.5rem; font-weight:700; color:#ea580c; margin:0;">${{ number_format($stats['avg_per_day'], 4) }}</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 border border-gray-200 dark:border-gray-700">
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Apeluri API</p>
-            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ number_format($stats['call_count'], 0, '.', '') }}</p>
+        <div style="background:#fff; border-radius:0.75rem; box-shadow:0 1px 3px rgba(0,0,0,0.1); padding:1rem; border:1px solid #e5e7eb;">
+            <p style="font-size:0.75rem; color:#6b7280; margin:0 0 0.25rem;">Apeluri API</p>
+            <p style="font-size:1.5rem; font-weight:700; color:#1f2937; margin:0;">{{ number_format($stats['call_count'], 0, '.', '') }}</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 border border-gray-200 dark:border-gray-700">
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Tokeni input</p>
-            <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ number_format($stats['total_input'], 0, '.', '') }}</p>
+        <div style="background:#fff; border-radius:0.75rem; box-shadow:0 1px 3px rgba(0,0,0,0.1); padding:1rem; border:1px solid #e5e7eb;">
+            <p style="font-size:0.75rem; color:#6b7280; margin:0 0 0.25rem;">Tokeni input</p>
+            <p style="font-size:1.5rem; font-weight:700; color:#2563eb; margin:0;">{{ number_format($stats['total_input'], 0, '.', '') }}</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 border border-gray-200 dark:border-gray-700">
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Tokeni output</p>
-            <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">{{ number_format($stats['total_output'], 0, '.', '') }}</p>
+        <div style="background:#fff; border-radius:0.75rem; box-shadow:0 1px 3px rgba(0,0,0,0.1); padding:1rem; border:1px solid #e5e7eb;">
+            <p style="font-size:0.75rem; color:#6b7280; margin:0 0 0.25rem;">Tokeni output</p>
+            <p style="font-size:1.5rem; font-weight:700; color:#9333ea; margin:0;">{{ number_format($stats['total_output'], 0, '.', '') }}</p>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div style="display:grid; grid-template-columns:1fr; gap:1.5rem; margin-bottom:1.5rem;" class="ai-two-col-grid">
 
-        {{-- Cost pe sursă --}}
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Cost pe sursă</h3>
+        {{-- Cost pe sursa --}}
+        <div style="background:#fff; border-radius:0.75rem; box-shadow:0 1px 3px rgba(0,0,0,0.1); border:1px solid #e5e7eb; overflow:hidden;">
+            <div style="padding:0.75rem 1rem; border-bottom:1px solid #e5e7eb;">
+                <h3 style="font-weight:600; color:#1f2937; margin:0;">Cost pe sursa</h3>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50 dark:bg-gray-900">
+            <div style="overflow-x:auto;">
+                <table style="width:100%; font-size:0.875rem; border-collapse:collapse;">
+                    <thead style="background:#f9fafb;">
                         <tr>
-                            <th class="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">Sursă</th>
-                            <th class="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">Model</th>
-                            <th class="text-right px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">Apeluri</th>
-                            <th class="text-right px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">Cost USD</th>
+                            <th style="text-align:left; padding:0.5rem 1rem; color:#4b5563; font-weight:500;">Sursa</th>
+                            <th style="text-align:left; padding:0.5rem 1rem; color:#4b5563; font-weight:500;">Model</th>
+                            <th style="text-align:right; padding:0.5rem 1rem; color:#4b5563; font-weight:500;">Apeluri</th>
+                            <th style="text-align:right; padding:0.5rem 1rem; color:#4b5563; font-weight:500;">Cost USD</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    <tbody>
                         @forelse($bySource as $row)
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-750">
-                                <td class="px-4 py-2 text-gray-800 dark:text-gray-200">{{ $row->source_label }}</td>
-                                <td class="px-4 py-2">
-                                    <span class="text-xs px-2 py-0.5 rounded-full
-                                        {{ str_contains($row->model, 'sonnet') ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' }}">
+                            <tr style="border-top:1px solid #f3f4f6;">
+                                <td style="padding:0.5rem 1rem; color:#1f2937;">{{ $row->source_label }}</td>
+                                <td style="padding:0.5rem 1rem;">
+                                    <span style="font-size:0.75rem; padding:0.125rem 0.5rem; border-radius:9999px;
+                                        {{ str_contains($row->model, 'sonnet') ? 'background:#f3e8ff; color:#7e22ce;' : 'background:#dbeafe; color:#1d4ed8;' }}">
                                         {{ str_contains($row->model, 'sonnet') ? 'Sonnet' : 'Haiku' }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-2 text-right text-gray-600 dark:text-gray-400">{{ number_format($row->calls, 0, '.', '') }}</td>
-                                <td class="px-4 py-2 text-right font-semibold {{ $row->cost_usd > 1 ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200' }}">
+                                <td style="padding:0.5rem 1rem; text-align:right; color:#4b5563;">{{ number_format($row->calls, 0, '.', '') }}</td>
+                                <td style="padding:0.5rem 1rem; text-align:right; font-weight:600; {{ $row->cost_usd > 1 ? 'color:#dc2626;' : 'color:#1f2937;' }}">
                                     ${{ number_format($row->cost_usd, 4) }}
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="4" class="px-4 py-6 text-center text-gray-400">Nicio înregistrare</td></tr>
+                            <tr><td colspan="4" style="padding:1.5rem 1rem; text-align:center; color:#9ca3af;">Nicio inregistrare</td></tr>
                         @endforelse
                     </tbody>
                     @if($bySource->isNotEmpty())
-                    <tfoot class="bg-gray-50 dark:bg-gray-900 border-t-2 border-gray-200 dark:border-gray-600">
+                    <tfoot style="background:#f9fafb; border-top:2px solid #e5e7eb;">
                         <tr>
-                            <td colspan="3" class="px-4 py-2 font-semibold text-gray-700 dark:text-gray-300">TOTAL</td>
-                            <td class="px-4 py-2 text-right font-bold text-red-600 dark:text-red-400">
+                            <td colspan="3" style="padding:0.5rem 1rem; font-weight:600; color:#374151;">TOTAL</td>
+                            <td style="padding:0.5rem 1rem; text-align:right; font-weight:700; color:#dc2626;">
                                 ${{ number_format($bySource->sum('cost_usd'), 4) }}
                             </td>
                         </tr>
@@ -98,34 +98,34 @@
         </div>
 
         {{-- Cost pe zi --}}
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Cost pe zi</h3>
+        <div style="background:#fff; border-radius:0.75rem; box-shadow:0 1px 3px rgba(0,0,0,0.1); border:1px solid #e5e7eb; overflow:hidden;">
+            <div style="padding:0.75rem 1rem; border-bottom:1px solid #e5e7eb;">
+                <h3 style="font-weight:600; color:#1f2937; margin:0;">Cost pe zi</h3>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50 dark:bg-gray-900">
+            <div style="overflow-x:auto;">
+                <table style="width:100%; font-size:0.875rem; border-collapse:collapse;">
+                    <thead style="background:#f9fafb;">
                         <tr>
-                            <th class="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">Data</th>
-                            <th class="text-right px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">Apeluri</th>
-                            <th class="text-right px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">Input tok.</th>
-                            <th class="text-right px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">Output tok.</th>
-                            <th class="text-right px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">Cost USD</th>
+                            <th style="text-align:left; padding:0.5rem 1rem; color:#4b5563; font-weight:500;">Data</th>
+                            <th style="text-align:right; padding:0.5rem 1rem; color:#4b5563; font-weight:500;">Apeluri</th>
+                            <th style="text-align:right; padding:0.5rem 1rem; color:#4b5563; font-weight:500;">Input tok.</th>
+                            <th style="text-align:right; padding:0.5rem 1rem; color:#4b5563; font-weight:500;">Output tok.</th>
+                            <th style="text-align:right; padding:0.5rem 1rem; color:#4b5563; font-weight:500;">Cost USD</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    <tbody>
                         @forelse($byDay as $row)
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-750">
-                                <td class="px-4 py-2 font-medium text-gray-800 dark:text-gray-200">{{ $row->day }}</td>
-                                <td class="px-4 py-2 text-right text-gray-600 dark:text-gray-400">{{ number_format($row->calls, 0, '.', '') }}</td>
-                                <td class="px-4 py-2 text-right text-blue-600 dark:text-blue-400">{{ number_format($row->input_tokens, 0, '.', '') }}</td>
-                                <td class="px-4 py-2 text-right text-purple-600 dark:text-purple-400">{{ number_format($row->output_tokens, 0, '.', '') }}</td>
-                                <td class="px-4 py-2 text-right font-semibold {{ $row->cost_usd > 1 ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200' }}">
+                            <tr style="border-top:1px solid #f3f4f6;">
+                                <td style="padding:0.5rem 1rem; font-weight:500; color:#1f2937;">{{ $row->day }}</td>
+                                <td style="padding:0.5rem 1rem; text-align:right; color:#4b5563;">{{ number_format($row->calls, 0, '.', '') }}</td>
+                                <td style="padding:0.5rem 1rem; text-align:right; color:#2563eb;">{{ number_format($row->input_tokens, 0, '.', '') }}</td>
+                                <td style="padding:0.5rem 1rem; text-align:right; color:#9333ea;">{{ number_format($row->output_tokens, 0, '.', '') }}</td>
+                                <td style="padding:0.5rem 1rem; text-align:right; font-weight:600; {{ $row->cost_usd > 1 ? 'color:#dc2626;' : 'color:#1f2937;' }}">
                                     ${{ number_format($row->cost_usd, 4) }}
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="px-4 py-6 text-center text-gray-400">Nicio înregistrare</td></tr>
+                            <tr><td colspan="5" style="padding:1.5rem 1rem; text-align:center; color:#9ca3af;">Nicio inregistrare</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -135,56 +135,65 @@
     </div>
 
     {{-- Log detaliat --}}
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <h3 class="font-semibold text-gray-800 dark:text-gray-100">Log detaliat (ultimele 200 apeluri)</h3>
-            <span class="text-xs text-gray-500">{{ $logs->count() }} înregistrări</span>
+    <div style="background:#fff; border-radius:0.75rem; box-shadow:0 1px 3px rgba(0,0,0,0.1); border:1px solid #e5e7eb; overflow:hidden;">
+        <div style="padding:0.75rem 1rem; border-bottom:1px solid #e5e7eb; display:flex; align-items:center; justify-content:space-between;">
+            <h3 style="font-weight:600; color:#1f2937; margin:0;">Log detaliat (ultimele 200 apeluri)</h3>
+            <span style="font-size:0.75rem; color:#6b7280;">{{ $logs->count() }} inregistrari</span>
         </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead class="bg-gray-50 dark:bg-gray-900">
+        <div style="overflow-x:auto;">
+            <table style="width:100%; font-size:0.875rem; border-collapse:collapse;">
+                <thead style="background:#f9fafb;">
                     <tr>
-                        <th class="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">Data / Ora</th>
-                        <th class="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">Sursă</th>
-                        <th class="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">Model</th>
-                        <th class="text-right px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">Input</th>
-                        <th class="text-right px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">Output</th>
-                        <th class="text-right px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">Cost</th>
-                        <th class="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">Context</th>
+                        <th style="text-align:left; padding:0.5rem 1rem; color:#4b5563; font-weight:500;">Data / Ora</th>
+                        <th style="text-align:left; padding:0.5rem 1rem; color:#4b5563; font-weight:500;">Sursa</th>
+                        <th style="text-align:left; padding:0.5rem 1rem; color:#4b5563; font-weight:500;">Model</th>
+                        <th style="text-align:right; padding:0.5rem 1rem; color:#4b5563; font-weight:500;">Input</th>
+                        <th style="text-align:right; padding:0.5rem 1rem; color:#4b5563; font-weight:500;">Output</th>
+                        <th style="text-align:right; padding:0.5rem 1rem; color:#4b5563; font-weight:500;">Cost</th>
+                        <th style="text-align:left; padding:0.5rem 1rem; color:#4b5563; font-weight:500;">Context</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                <tbody>
                     @forelse($logs as $log)
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-750">
-                            <td class="px-4 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs">
+                        <tr style="border-top:1px solid #f3f4f6;">
+                            <td style="padding:0.5rem 1rem; color:#6b7280; white-space:nowrap; font-size:0.75rem;">
                                 {{ $log->created_at->format('d.m.Y H:i:s') }}
                             </td>
-                            <td class="px-4 py-2 text-gray-800 dark:text-gray-200 text-xs">{{ $log->source_label }}</td>
-                            <td class="px-4 py-2">
-                                <span class="text-xs px-1.5 py-0.5 rounded
-                                    {{ str_contains($log->model, 'sonnet') ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' }}">
+                            <td style="padding:0.5rem 1rem; color:#1f2937; font-size:0.75rem;">{{ $log->source_label }}</td>
+                            <td style="padding:0.5rem 1rem;">
+                                <span style="font-size:0.75rem; padding:0.125rem 0.375rem; border-radius:0.25rem;
+                                    {{ str_contains($log->model, 'sonnet') ? 'background:#f3e8ff; color:#7e22ce;' : 'background:#dbeafe; color:#1d4ed8;' }}">
                                     {{ str_contains($log->model, 'sonnet') ? 'Sonnet' : 'Haiku' }}
                                 </span>
                             </td>
-                            <td class="px-4 py-2 text-right text-blue-600 dark:text-blue-400">{{ number_format($log->input_tokens, 0, '.', '') }}</td>
-                            <td class="px-4 py-2 text-right text-purple-600 dark:text-purple-400">{{ number_format($log->output_tokens, 0, '.', '') }}</td>
-                            <td class="px-4 py-2 text-right font-mono text-xs {{ $log->cost_usd > 0.1 ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-gray-700 dark:text-gray-300' }}">
+                            <td style="padding:0.5rem 1rem; text-align:right; color:#2563eb;">{{ number_format($log->input_tokens, 0, '.', '') }}</td>
+                            <td style="padding:0.5rem 1rem; text-align:right; color:#9333ea;">{{ number_format($log->output_tokens, 0, '.', '') }}</td>
+                            <td style="padding:0.5rem 1rem; text-align:right; font-family:monospace; font-size:0.75rem; {{ $log->cost_usd > 0.1 ? 'color:#dc2626; font-weight:600;' : 'color:#374151;' }}">
                                 ${{ number_format($log->cost_usd, 5) }}
                             </td>
-                            <td class="px-4 py-2 text-gray-500 dark:text-gray-400 text-xs">
+                            <td style="padding:0.5rem 1rem; color:#6b7280; font-size:0.75rem;">
                                 @if($log->metadata)
                                     @foreach($log->metadata as $k => $v)
-                                        <span class="inline-block bg-gray-100 dark:bg-gray-700 rounded px-1 mr-1">{{ $k }}: {{ $v }}</span>
+                                        <span style="display:inline-block; background:#f3f4f6; border-radius:0.25rem; padding:0 0.25rem; margin-right:0.25rem;">{{ $k }}: {{ $v }}</span>
                                     @endforeach
                                 @endif
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Nicio înregistrare în această perioadă</td></tr>
+                        <tr><td colspan="7" style="padding:2rem 1rem; text-align:center; color:#9ca3af;">Nicio inregistrare in aceasta perioada</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
     </div>
+
+<style>
+@media (min-width: 768px) {
+    .ai-stats-grid { grid-template-columns: repeat(5, 1fr) !important; }
+}
+@media (min-width: 1024px) {
+    .ai-two-col-grid { grid-template-columns: 1fr 1fr !important; }
+}
+</style>
 
 </x-filament-panels::page>

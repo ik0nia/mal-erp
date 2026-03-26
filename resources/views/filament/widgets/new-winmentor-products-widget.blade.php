@@ -11,8 +11,9 @@
         <div class="wm-stats">
             @foreach($data['stats'] as $stat)
             <a href="{{ $data['pageUrl'] }}"
-               class="wm-stat rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 px-4 py-3 shadow-sm hover:shadow-md transition-shadow">
-                <div class="flex items-center gap-2 mb-1">
+               class="wm-stat"
+               style="border-radius:0.75rem; border:1px solid #e5e7eb; background:#fff; padding:1rem 1rem 0.75rem; box-shadow:0 1px 2px rgba(0,0,0,0.05); text-decoration:none; display:block; transition:box-shadow 0.15s;">
+                <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem;">
                     <x-filament::icon
                         :icon="$stat['icon']"
                         @class([
@@ -22,16 +23,11 @@
                             'text-danger-500'  => $stat['color'] === 'danger',
                         ])
                     />
-                    <span class="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">
+                    <span style="font-size:0.75rem; font-weight:500; color:#6b7280; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                         {{ $stat['label'] }}
                     </span>
                 </div>
-                <div @class([
-                    'text-2xl font-bold',
-                    'text-warning-600 dark:text-warning-400' => $stat['color'] === 'warning',
-                    'text-success-600 dark:text-success-400' => $stat['color'] === 'success',
-                    'text-danger-600 dark:text-danger-400'   => $stat['color'] === 'danger',
-                ])>
+                <div style="font-size:1.5rem; font-weight:700; {{ $stat['color'] === 'warning' ? 'color:#d97706;' : ($stat['color'] === 'success' ? 'color:#16a34a;' : 'color:#dc2626;') }}">
                     {{ $stat['value'] }}
                 </div>
             </a>
