@@ -1,47 +1,44 @@
 <x-filament-panels::page>
-<div class="space-y-5">
+<div style="display: flex; flex-direction: column; gap: 1.25rem;">
 
     {{-- Stat cards --}}
     @php $stats = $this->getStats(); @endphp
-    <div class="grid grid-cols-3 gap-4">
-        <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-            <p class="text-xs text-gray-500">Prețuri extrase total</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total'], 0, '.', '') }}</p>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+        <div style="background: #fff; border-radius: 0.75rem; border: 1px solid #e5e7eb; padding: 1rem;">
+            <p style="font-size: 0.75rem; color: #6b7280;">Prețuri extrase total</p>
+            <p style="font-size: 1.5rem; font-weight: 700; color: #111827;">{{ number_format($stats['total'], 0, '.', '') }}</p>
         </div>
-        <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-            <p class="text-xs text-gray-500">Potrivite cu catalog</p>
-            <p class="text-2xl font-bold text-blue-600">{{ number_format($stats['matched'], 0, '.', '') }}</p>
+        <div style="background: #fff; border-radius: 0.75rem; border: 1px solid #e5e7eb; padding: 1rem;">
+            <p style="font-size: 0.75rem; color: #6b7280;">Potrivite cu catalog</p>
+            <p style="font-size: 1.5rem; font-weight: 700; color: #2563eb;">{{ number_format($stats['matched'], 0, '.', '') }}</p>
             @if($stats['total'] > 0)
-            <p class="text-xs text-gray-400">{{ round($stats['matched']/$stats['total']*100) }}% din total</p>
+            <p style="font-size: 0.75rem; color: #9ca3af;">{{ round($stats['matched']/$stats['total']*100) }}% din total</p>
             @endif
         </div>
-        <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-            <p class="text-xs text-gray-500">Mai ieftin cu >5% față de catalog</p>
-            <p class="text-2xl font-bold text-green-600">{{ number_format($stats['cheaper'], 0, '.', '') }}</p>
-            <p class="text-xs text-gray-400">Potențial de negociere</p>
+        <div style="background: #fff; border-radius: 0.75rem; border: 1px solid #e5e7eb; padding: 1rem;">
+            <p style="font-size: 0.75rem; color: #6b7280;">Mai ieftin cu >5% față de catalog</p>
+            <p style="font-size: 1.5rem; font-weight: 700; color: #16a34a;">{{ number_format($stats['cheaper'], 0, '.', '') }}</p>
+            <p style="font-size: 0.75rem; color: #9ca3af;">Potențial de negociere</p>
         </div>
     </div>
 
     {{-- Filtre --}}
-    <div class="flex flex-wrap gap-3 items-center">
+    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
         <input wire:model.live.debounce.300ms="search" type="text" placeholder="Caută produs..."
-            class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm dark:bg-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500 w-56"/>
+            style="padding: 0.375rem 0.75rem; border-radius: 0.5rem; border: 1px solid #d1d5db; font-size: 0.875rem; width: 14rem; outline: none;"/>
 
         <select wire:model.live="filterSupplier"
-            class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm dark:bg-gray-800 dark:text-gray-200 focus:outline-none">
+            style="padding: 0.375rem 0.75rem; border-radius: 0.5rem; border: 1px solid #d1d5db; font-size: 0.875rem; outline: none;">
             <option value="">Toți furnizorii</option>
             @foreach($this->getSupplierOptions() as $id => $name)
             <option value="{{ $id }}">{{ $name }}</option>
             @endforeach
         </select>
 
-        <div class="flex gap-1">
+        <div style="display: flex; gap: 0.25rem;">
             @foreach(['' => 'Toate', 'matched' => 'Potrivite catalog', 'unmatched' => 'Nepotrivite'] as $val => $label)
             <button wire:click="$set('filterMatched', '{{ $val }}')"
-                class="text-xs px-3 py-1.5 rounded-full border transition
-                    {{ $filterMatched === $val
-                        ? 'bg-primary-600 border-primary-600 text-white'
-                        : 'border-gray-300 text-gray-600 hover:border-primary-400 dark:border-gray-600 dark:text-gray-400' }}">
+                style="font-size: 0.75rem; padding: 0.375rem 0.75rem; border-radius: 9999px; border: 1px solid {{ $filterMatched === $val ? '#8B1A1A' : '#d1d5db' }}; background: {{ $filterMatched === $val ? '#8B1A1A' : 'transparent' }}; color: {{ $filterMatched === $val ? '#fff' : '#4b5563' }}; cursor: pointer; transition: all 0.15s;">
                 {{ $label }}
             </button>
             @endforeach
@@ -50,88 +47,88 @@
 
     {{-- Tabel --}}
     @php $quotes = $this->getQuotes(); @endphp
-    <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div style="background: #fff; border-radius: 0.75rem; border: 1px solid #e5e7eb; overflow: hidden;">
         @if($quotes->isEmpty())
-            <div class="p-12 text-center text-gray-400">
-                <x-filament::icon icon="heroicon-o-currency-dollar" class="w-12 h-12 mx-auto mb-3 opacity-30"/>
-                <p class="text-sm">Nu există prețuri extrase încă.</p>
-                <p class="text-xs mt-1 text-gray-300">Procesarea AI a emailurilor va extrage prețurile automat.</p>
+            <div style="padding: 3rem; text-align: center; color: #9ca3af;">
+                <x-filament::icon icon="heroicon-o-currency-dollar" style="width: 3rem; height: 3rem; margin: 0 auto 0.75rem; opacity: 0.3;"/>
+                <p style="font-size: 0.875rem;">Nu există prețuri extrase încă.</p>
+                <p style="font-size: 0.75rem; margin-top: 0.25rem; color: #d1d5db;">Procesarea AI a emailurilor va extrage prețurile automat.</p>
             </div>
         @else
-        <table class="w-full text-sm">
-            <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                <tr class="text-left text-xs text-gray-500 dark:text-gray-400">
-                    <th class="px-4 py-2.5 font-medium">Furnizor</th>
-                    <th class="px-4 py-2.5 font-medium">Produs (din email)</th>
-                    <th class="px-4 py-2.5 font-medium">Produs catalog</th>
-                    <th class="px-4 py-2.5 font-medium text-right">Preț oferit</th>
-                    <th class="px-4 py-2.5 font-medium text-right">Preț catalog</th>
-                    <th class="px-4 py-2.5 font-medium text-right">Delta</th>
-                    <th class="px-4 py-2.5 font-medium">Data ofertei</th>
+        <table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">
+            <thead style="background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                <tr style="text-align: left; font-size: 0.75rem; color: #6b7280;">
+                    <th style="padding: 0.625rem 1rem; font-weight: 500;">Furnizor</th>
+                    <th style="padding: 0.625rem 1rem; font-weight: 500;">Produs (din email)</th>
+                    <th style="padding: 0.625rem 1rem; font-weight: 500;">Produs catalog</th>
+                    <th style="padding: 0.625rem 1rem; font-weight: 500; text-align: right;">Preț oferit</th>
+                    <th style="padding: 0.625rem 1rem; font-weight: 500; text-align: right;">Preț catalog</th>
+                    <th style="padding: 0.625rem 1rem; font-weight: 500; text-align: right;">Delta</th>
+                    <th style="padding: 0.625rem 1rem; font-weight: 500;">Data ofertei</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            <tbody>
                 @foreach($quotes as $row)
                 @php $q = $row['quote']; @endphp
-                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
-                    <td class="px-4 py-2.5">
-                        <span class="text-sm font-medium text-gray-800 dark:text-gray-200">
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                    <td style="padding: 0.625rem 1rem;">
+                        <span style="font-size: 0.875rem; font-weight: 500; color: #1f2937;">
                             {{ $q->supplier?->name ?? '—' }}
                         </span>
                     </td>
-                    <td class="px-4 py-2.5">
-                        <span class="text-gray-700 dark:text-gray-300">{{ $q->product_name_raw }}</span>
+                    <td style="padding: 0.625rem 1rem;">
+                        <span style="color: #374151;">{{ $q->product_name_raw }}</span>
                         @if($q->min_qty)
-                            <span class="text-xs text-gray-400 ml-1">min {{ $q->min_qty }}</span>
+                            <span style="font-size: 0.75rem; color: #9ca3af; margin-left: 0.25rem;">min {{ $q->min_qty }}</span>
                         @endif
                     </td>
-                    <td class="px-4 py-2.5">
+                    <td style="padding: 0.625rem 1rem;">
                         @if($q->product)
-                            <span class="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded px-1.5 py-0.5">
+                            <span style="font-size: 0.75rem; background: #dbeafe; color: #1d4ed8; border-radius: 0.25rem; padding: 0.125rem 0.375rem;">
                                 {{ Str::limit($q->product->name, 40) }}
                             </span>
                         @else
-                            <span class="text-xs text-gray-400 italic">nepotrivit</span>
+                            <span style="font-size: 0.75rem; color: #9ca3af; font-style: italic;">nepotrivit</span>
                         @endif
                     </td>
-                    <td class="px-4 py-2.5 text-right font-semibold text-gray-900 dark:text-white">
-                        {{ number_format($q->unit_price, 2) }} <span class="text-xs font-normal text-gray-400">{{ $q->currency }}</span>
+                    <td style="padding: 0.625rem 1rem; text-align: right; font-weight: 600; color: #111827;">
+                        {{ number_format($q->unit_price, 2) }} <span style="font-size: 0.75rem; font-weight: 400; color: #9ca3af;">{{ $q->currency }}</span>
                     </td>
-                    <td class="px-4 py-2.5 text-right">
+                    <td style="padding: 0.625rem 1rem; text-align: right;">
                         @if($row['currentPrice'])
-                            <span class="text-gray-700 dark:text-gray-300">{{ number_format($row['currentPrice'], 2) }}</span>
-                            <span class="text-xs text-gray-400 ml-0.5">RON</span>
+                            <span style="color: #374151;">{{ number_format($row['currentPrice'], 2) }}</span>
+                            <span style="font-size: 0.75rem; color: #9ca3af; margin-left: 0.125rem;">RON</span>
                         @else
-                            <span class="text-gray-300">—</span>
+                            <span style="color: #d1d5db;">—</span>
                         @endif
                     </td>
-                    <td class="px-4 py-2.5 text-right">
+                    <td style="padding: 0.625rem 1rem; text-align: right;">
                         @if($row['delta'] !== null)
                             @php
-                                $deltaClasses = match($row['deltaColor']) {
-                                    'green' => 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
-                                    'red'   => 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
-                                    default => 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+                                $deltaStyle = match($row['deltaColor']) {
+                                    'green' => 'background: #dcfce7; color: #15803d;',
+                                    'red'   => 'background: #fee2e2; color: #b91c1c;',
+                                    default => 'background: #f3f4f6; color: #4b5563;',
                                 };
                             @endphp
-                            <span class="text-xs px-2 py-0.5 rounded-full font-medium {{ $deltaClasses }}">
+                            <span style="font-size: 0.75rem; padding: 0.125rem 0.5rem; border-radius: 9999px; font-weight: 500; {{ $deltaStyle }}">
                                 {{ $row['delta'] > 0 ? '+' : '' }}{{ $row['delta'] }}%
                             </span>
                         @else
-                            <span class="text-gray-300 text-xs">—</span>
+                            <span style="color: #d1d5db; font-size: 0.75rem;">—</span>
                         @endif
                     </td>
-                    <td class="px-4 py-2.5 text-xs text-gray-500">
+                    <td style="padding: 0.625rem 1rem; font-size: 0.75rem; color: #6b7280;">
                         {{ $q->quoted_at ? \Carbon\Carbon::parse($q->quoted_at)->format('d.m.Y') : '—' }}
                         @if($q->email)
-                            <span class="ml-1 text-gray-300 text-xs" title="{{ $q->email->subject }}">↗</span>
+                            <span style="margin-left: 0.25rem; color: #d1d5db; font-size: 0.75rem;" title="{{ $q->email->subject }}">↗</span>
                         @endif
                     </td>
                 </tr>
                 @endforeach
             </tbody>
         </table>
-        <div class="px-4 py-2 text-xs text-gray-400 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800">
+        <div style="padding: 0.5rem 1rem; font-size: 0.75rem; color: #9ca3af; background: #f9fafb; border-top: 1px solid #f3f4f6;">
             {{ $quotes->count() }} prețuri afișate (max 200) · procesarea AI continuă în background
         </div>
         @endif

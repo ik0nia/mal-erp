@@ -3,42 +3,42 @@
     @php $stats = $this->getStats(); @endphp
 
     {{-- Stat cards --}}
-    <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 mb-6">
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-center">
-            <div class="text-3xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total'], 0, '.', '') }}</div>
-            <div class="text-sm text-gray-500 mt-1">Total importate</div>
+        <div style="background: #fff; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; padding: 1rem; text-align: center;">
+            <div style="font-size: 1.875rem; font-weight: 700; color: #111827;">{{ number_format($stats['total'], 0, '.', '') }}</div>
+            <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">Total importate</div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-center">
-            <div class="text-3xl font-bold text-blue-600">{{ number_format($stats['withImage'], 0, '.', '') }}</div>
-            <div class="text-sm text-gray-500 mt-1">Cu poză</div>
+        <div style="background: #fff; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; padding: 1rem; text-align: center;">
+            <div style="font-size: 1.875rem; font-weight: 700; color: #2563eb;">{{ number_format($stats['withImage'], 0, '.', '') }}</div>
+            <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">Cu poză</div>
             @if($stats['total'] > 0)
-                <div class="text-xs text-gray-400 mt-0.5">{{ round($stats['withImage'] / $stats['total'] * 100) }}%</div>
+                <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.125rem;">{{ round($stats['withImage'] / $stats['total'] * 100) }}%</div>
             @endif
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-center">
-            <div class="text-3xl font-bold text-purple-600">{{ number_format($stats['withDesc'], 0, '.', '') }}</div>
-            <div class="text-sm text-gray-500 mt-1">Cu descriere</div>
+        <div style="background: #fff; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; padding: 1rem; text-align: center;">
+            <div style="font-size: 1.875rem; font-weight: 700; color: #9333ea;">{{ number_format($stats['withDesc'], 0, '.', '') }}</div>
+            <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">Cu descriere</div>
             @if($stats['total'] > 0)
-                <div class="text-xs text-gray-400 mt-0.5">{{ round($stats['withDesc'] / $stats['total'] * 100) }}%</div>
+                <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.125rem;">{{ round($stats['withDesc'] / $stats['total'] * 100) }}%</div>
             @endif
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-center">
-            <div class="text-3xl font-bold text-orange-500">{{ number_format($stats['withCat'], 0, '.', '') }}</div>
-            <div class="text-sm text-gray-500 mt-1">Cu categorie</div>
+        <div style="background: #fff; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; padding: 1rem; text-align: center;">
+            <div style="font-size: 1.875rem; font-weight: 700; color: #f97316;">{{ number_format($stats['withCat'], 0, '.', '') }}</div>
+            <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">Cu categorie</div>
             @if($stats['total'] > 0)
-                <div class="text-xs text-gray-400 mt-0.5">{{ round($stats['withCat'] / $stats['total'] * 100) }}%</div>
+                <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.125rem;">{{ round($stats['withCat'] / $stats['total'] * 100) }}%</div>
             @endif
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-center">
-            <div class="text-3xl font-bold text-green-600">{{ number_format($stats['readyToPub'], 0, '.', '') }}</div>
-            <div class="text-sm text-gray-500 mt-1">Gata de publicat</div>
+        <div style="background: #fff; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; padding: 1rem; text-align: center;">
+            <div style="font-size: 1.875rem; font-weight: 700; color: #16a34a;">{{ number_format($stats['readyToPub'], 0, '.', '') }}</div>
+            <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">Gata de publicat</div>
             @if($stats['total'] > 0)
-                <div class="text-xs text-gray-400 mt-0.5">{{ round($stats['readyToPub'] / $stats['total'] * 100) }}%</div>
+                <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.125rem;">{{ round($stats['readyToPub'] / $stats['total'] * 100) }}%</div>
             @endif
         </div>
 
@@ -46,22 +46,22 @@
 
     {{-- Comandă de import --}}
     @if($stats['total'] === 0)
-    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6 text-sm text-blue-700 dark:text-blue-300">
+    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 0.75rem; padding: 1rem; margin-bottom: 1.5rem; font-size: 0.875rem; color: #1d4ed8;">
         <strong>Niciun produs importat încă.</strong>
         Rulează comanda artisan pentru a importa produsele Toya:<br>
-        <code class="font-mono bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded mt-1 inline-block">
+        <code style="font-family: monospace; background: #dbeafe; padding: 0.125rem 0.5rem; border-radius: 0.25rem; margin-top: 0.25rem; display: inline-block;">
             php artisan toya:import-products
         </code>
     </div>
     @else
-    <div class="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-6 text-sm text-gray-600 dark:text-gray-400">
+    <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1rem; margin-bottom: 1.5rem; font-size: 0.875rem; color: #4b5563;">
         <strong>Actualizare produse noi:</strong>
-        <code class="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded ml-1">
+        <code style="font-family: monospace; background: #f3f4f6; padding: 0.125rem 0.5rem; border-radius: 0.25rem; margin-left: 0.25rem;">
             php artisan toya:import-products
         </code>
         &nbsp;·&nbsp;
         <strong>Re-import complet:</strong>
-        <code class="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded ml-1">
+        <code style="font-family: monospace; background: #f3f4f6; padding: 0.125rem 0.5rem; border-radius: 0.25rem; margin-left: 0.25rem;">
             php artisan toya:import-products --force
         </code>
     </div>

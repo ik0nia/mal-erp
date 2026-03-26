@@ -1,13 +1,13 @@
 <x-filament-panels::page>
 
     {{-- Filtre --}}
-    <div class="mb-6 rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
-        <div class="flex flex-wrap gap-4 mb-3">
+    <div style="margin-bottom: 1.5rem; border-radius: 0.75rem; border: 1px solid #e5e7eb; background: #fff; padding: 1rem;">
+        <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 0.75rem;">
             {{-- Furnizor --}}
-            <div class="flex-1 min-w-40">
-                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Furnizor</label>
+            <div style="flex: 1 1 0%; min-width: 10rem;">
+                <label style="display: block; font-size: 0.75rem; font-weight: 500; color: #6b7280; margin-bottom: 0.25rem;">Furnizor</label>
                 <select wire:model.live="filterSupplierId"
-                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                        style="width: 100%; border-radius: 0.5rem; border: 1px solid #d1d5db; font-size: 0.875rem; padding: 0.375rem 0.5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                     <option value="">Toți furnizorii</option>
                     @foreach($supplierOptions as $id => $name)
                         <option value="{{ $id }}">{{ $name }}</option>
@@ -16,10 +16,10 @@
             </div>
 
             {{-- Locație --}}
-            <div class="flex-1 min-w-40">
-                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Locație</label>
+            <div style="flex: 1 1 0%; min-width: 10rem;">
+                <label style="display: block; font-size: 0.75rem; font-weight: 500; color: #6b7280; margin-bottom: 0.25rem;">Locație</label>
                 <select wire:model.live="filterLocationId"
-                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                        style="width: 100%; border-radius: 0.5rem; border: 1px solid #d1d5db; font-size: 0.875rem; padding: 0.375rem 0.5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                     <option value="">Toate locațiile</option>
                     @foreach($locationOptions as $id => $name)
                         <option value="{{ $id }}">{{ $name }}</option>
@@ -29,10 +29,10 @@
 
             {{-- Consultant --}}
             @if(!empty($consultantOptions))
-            <div class="flex-1 min-w-40">
-                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Consultant</label>
+            <div style="flex: 1 1 0%; min-width: 10rem;">
+                <label style="display: block; font-size: 0.75rem; font-weight: 500; color: #6b7280; margin-bottom: 0.25rem;">Consultant</label>
                 <select wire:model.live="filterConsultantId"
-                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                        style="width: 100%; border-radius: 0.5rem; border: 1px solid #d1d5db; font-size: 0.875rem; padding: 0.375rem 0.5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                     <option value="">Toți consultanții</option>
                     @foreach($consultantOptions as $id => $name)
                         <option value="{{ $id }}">{{ $name }}</option>
@@ -42,36 +42,36 @@
             @endif
 
             {{-- Data de la --}}
-            <div class="flex-1 min-w-36">
-                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Necesar de la</label>
+            <div style="flex: 1 1 0%; min-width: 9rem;">
+                <label style="display: block; font-size: 0.75rem; font-weight: 500; color: #6b7280; margin-bottom: 0.25rem;">Necesar de la</label>
                 <input type="date" wire:model.live="filterNeededByFrom"
-                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                       style="width: 100%; border-radius: 0.5rem; border: 1px solid #d1d5db; font-size: 0.875rem; padding: 0.375rem 0.5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
             </div>
 
             {{-- Data până la --}}
-            <div class="flex-1 min-w-36">
-                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Necesar până la</label>
+            <div style="flex: 1 1 0%; min-width: 9rem;">
+                <label style="display: block; font-size: 0.75rem; font-weight: 500; color: #6b7280; margin-bottom: 0.25rem;">Necesar până la</label>
                 <input type="date" wire:model.live="filterNeededByTo"
-                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                       style="width: 100%; border-radius: 0.5rem; border: 1px solid #d1d5db; font-size: 0.875rem; padding: 0.375rem 0.5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
             </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-4">
-            <label class="flex items-center gap-2 cursor-pointer">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 1rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                 <input type="checkbox" wire:model.live="showUrgentOnly"
-                       class="rounded border-gray-300 text-danger-600 focus:ring-danger-500">
-                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Doar urgente</span>
+                       style="border-radius: 0.25rem; border: 1px solid #d1d5db;">
+                <span style="font-size: 0.875rem; font-weight: 500; color: #374151;">Doar urgente</span>
             </label>
 
-            <label class="flex items-center gap-2 cursor-pointer">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                 <input type="checkbox" wire:model.live="showReservedOnly"
-                       class="rounded border-gray-300 text-warning-600 focus:ring-warning-500">
-                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Doar rezervate</span>
+                       style="border-radius: 0.25rem; border: 1px solid #d1d5db;">
+                <span style="font-size: 0.875rem; font-weight: 500; color: #374151;">Doar rezervate</span>
             </label>
 
             @if($filterSupplierId || $filterLocationId || $filterConsultantId || $filterNeededByFrom || $filterNeededByTo || $showUrgentOnly || $showReservedOnly)
                 <button wire:click="resetFilters"
-                        class="ml-auto text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline">
+                        style="margin-left: auto; font-size: 0.75rem; color: #6b7280; text-decoration: underline; background: none; border: none; cursor: pointer;">
                     Resetează filtre
                 </button>
             @endif
@@ -79,48 +79,48 @@
     </div>
 
     {{-- Stat cards --}}
-    <div class="grid grid-cols-2 gap-4 sm:grid-cols-4 mb-6">
-        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
-            <p class="text-sm text-gray-500 dark:text-gray-400">Total în așteptare</p>
-            <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ $totalPending }}</p>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+        <div style="border-radius: 0.75rem; border: 1px solid #e5e7eb; background: #fff; padding: 1rem;">
+            <p style="font-size: 0.875rem; color: #6b7280;">Total în așteptare</p>
+            <p style="font-size: 1.875rem; font-weight: 700; color: #111827; margin-top: 0.25rem;">{{ $totalPending }}</p>
         </div>
-        <div class="rounded-xl border border-danger-200 bg-white p-4 dark:border-danger-800 dark:bg-gray-900">
-            <p class="text-sm text-danger-600 dark:text-danger-400">Urgente</p>
-            <p class="text-3xl font-bold text-danger-600 dark:text-danger-400 mt-1">{{ $totalUrgent }}</p>
+        <div style="border-radius: 0.75rem; border: 1px solid #fecaca; background: #fff; padding: 1rem;">
+            <p style="font-size: 0.875rem; color: #dc2626;">Urgente</p>
+            <p style="font-size: 1.875rem; font-weight: 700; color: #dc2626; margin-top: 0.25rem;">{{ $totalUrgent }}</p>
         </div>
-        <div class="rounded-xl border border-warning-200 bg-white p-4 dark:border-warning-700 dark:bg-gray-900">
-            <p class="text-sm text-warning-600 dark:text-warning-400">Rezervate</p>
-            <p class="text-3xl font-bold text-warning-600 dark:text-warning-400 mt-1">{{ $totalReserved }}</p>
+        <div style="border-radius: 0.75rem; border: 1px solid #fde68a; background: #fff; padding: 1rem;">
+            <p style="font-size: 0.875rem; color: #d97706;">Rezervate</p>
+            <p style="font-size: 1.875rem; font-weight: 700; color: #d97706; margin-top: 0.25rem;">{{ $totalReserved }}</p>
         </div>
-        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
-            <p class="text-sm text-gray-500 dark:text-gray-400">Furnizori afectați</p>
-            <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ $totalSuppliers }}</p>
+        <div style="border-radius: 0.75rem; border: 1px solid #e5e7eb; background: #fff; padding: 1rem;">
+            <p style="font-size: 0.875rem; color: #6b7280;">Furnizori afectați</p>
+            <p style="font-size: 1.875rem; font-weight: 700; color: #111827; margin-top: 0.25rem;">{{ $totalSuppliers }}</p>
         </div>
     </div>
 
     @if(empty($supplierGroups))
-        <div class="text-center py-16 text-gray-400 dark:text-gray-500">
-            <x-filament::icon icon="heroicon-o-check-circle" class="w-12 h-12 mx-auto mb-3 text-success-400"/>
-            <p class="text-lg font-medium">Niciun necesar în așteptare</p>
-            <p class="text-sm mt-1">Toate necesarele trimise au fost procesate.</p>
+        <div style="text-align: center; padding: 4rem 0; color: #9ca3af;">
+            <x-filament::icon icon="heroicon-o-check-circle" style="width: 3rem; height: 3rem; margin: 0 auto 0.75rem; color: #4ade80;"/>
+            <p style="font-size: 1.125rem; font-weight: 500;">Niciun necesar în așteptare</p>
+            <p style="font-size: 0.875rem; margin-top: 0.25rem;">Toate necesarele trimise au fost procesate.</p>
         </div>
     @else
-        <div class="space-y-6">
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
             @foreach($supplierGroups as $group)
-                <div class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900 overflow-hidden {{ $group['urgent_count'] > 0 ? 'border-l-4 border-l-danger-500' : '' }}">
+                <div style="border-radius: 0.75rem; border: 1px solid #e5e7eb; background: #fff; overflow: hidden; {{ $group['urgent_count'] > 0 ? 'border-left: 4px solid #ef4444;' : '' }}">
 
                     {{-- Header furnizor --}}
-                    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-white/5">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                                <x-filament::icon icon="heroicon-o-truck" class="w-5 h-5 text-gray-400"/>
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-bottom: 1px solid #f3f4f6; background: #f9fafb;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <div style="width: 2.5rem; height: 2.5rem; border-radius: 0.375rem; background: #f3f4f6; display: flex; align-items: center; justify-content: center;">
+                                <x-filament::icon icon="heroicon-o-truck" style="width: 1.25rem; height: 1.25rem; color: #9ca3af;"/>
                             </div>
                             <div>
-                                <h3 class="font-semibold text-gray-900 dark:text-white">{{ $group['supplier_name'] }}</h3>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">
+                                <h3 style="font-weight: 600; color: #111827;">{{ $group['supplier_name'] }}</h3>
+                                <p style="font-size: 0.875rem; color: #6b7280;">
                                     {{ $group['items_count'] }} {{ Str::plural('produs', $group['items_count']) }}
                                     @if($group['urgent_count'] > 0)
-                                        &bull; <span class="text-danger-600 font-medium">{{ $group['urgent_count'] }} urgent{{ $group['urgent_count'] > 1 ? 'e' : '' }}</span>
+                                        &bull; <span style="color: #dc2626; font-weight: 500;">{{ $group['urgent_count'] }} urgent{{ $group['urgent_count'] > 1 ? 'e' : '' }}</span>
                                     @endif
                                 </p>
                             </div>
@@ -128,97 +128,95 @@
 
                         <div>
                             <a href="{{ $group['create_po_url'] }}"
-                               class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors"
-                               style="text-decoration:none;">
-                                <x-filament::icon icon="heroicon-o-shopping-bag" class="w-4 h-4"/>
+                               style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: #8B1A1A; color: #fff; font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; text-decoration: none;">
+                                <x-filament::icon icon="heroicon-o-shopping-bag" style="width: 1rem; height: 1rem;"/>
                                 Crează PO
                             </a>
                         </div>
                     </div>
 
                     {{-- Tabel items --}}
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">
                             <thead>
-                                <tr class="text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
-                                    <th class="px-4 py-2 text-left font-medium">Produs / SKU</th>
-                                    <th class="px-4 py-2 text-right font-medium">Cant.</th>
-                                    <th class="px-4 py-2 text-left font-medium">Necesar până la</th>
-                                    <th class="px-4 py-2 text-center font-medium">Flags</th>
-                                    <th class="px-4 py-2 text-left font-medium">Consultant / Locație</th>
-                                    <th class="px-4 py-2 text-left font-medium">Justificație</th>
-                                    <th class="px-4 py-2 text-left font-medium">Necesar</th>
+                                <tr style="font-size: 0.75rem; color: #6b7280; border-bottom: 1px solid #f3f4f6;">
+                                    <th style="padding: 0.5rem 1rem; text-align: left; font-weight: 500;">Produs / SKU</th>
+                                    <th style="padding: 0.5rem 1rem; text-align: right; font-weight: 500;">Cant.</th>
+                                    <th style="padding: 0.5rem 1rem; text-align: left; font-weight: 500;">Necesar până la</th>
+                                    <th style="padding: 0.5rem 1rem; text-align: center; font-weight: 500;">Flags</th>
+                                    <th style="padding: 0.5rem 1rem; text-align: left; font-weight: 500;">Consultant / Locație</th>
+                                    <th style="padding: 0.5rem 1rem; text-align: left; font-weight: 500;">Justificație</th>
+                                    <th style="padding: 0.5rem 1rem; text-align: left; font-weight: 500;">Necesar</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50">
+                            <tbody>
                                 @foreach($group['items'] as $item)
-                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30
-                                               {{ $item['is_urgent'] ? 'bg-danger-50 dark:bg-danger-900/10' : '' }}">
-                                        <td class="px-4 py-3">
-                                            <p class="font-medium text-gray-900 dark:text-white">{{ $item['product_name'] }}</p>
+                                    <tr style="border-bottom: 1px solid #f9fafb; {{ $item['is_urgent'] ? 'background: #fef2f2;' : '' }}">
+                                        <td style="padding: 0.75rem 1rem;">
+                                            <p style="font-weight: 500; color: #111827;">{{ $item['product_name'] }}</p>
                                             @if($item['sku'])
-                                                <p class="text-xs text-gray-400 font-mono">{{ $item['sku'] }}</p>
+                                                <p style="font-size: 0.75rem; color: #9ca3af; font-family: monospace;">{{ $item['sku'] }}</p>
                                             @endif
                                             @if($item['is_discontinued'] ?? false)
-                                                <span class="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400 mt-1">
-                                                    <x-filament::icon icon="heroicon-o-archive-box-x-mark" class="w-3 h-3"/>
+                                                <span style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; font-weight: 500; color: #dc2626; margin-top: 0.25rem;">
+                                                    <x-filament::icon icon="heroicon-o-archive-box-x-mark" style="width: 0.75rem; height: 0.75rem;"/>
                                                     Fără reaprovizionare — nu mai comanda
                                                 </span>
                                             @endif
                                         </td>
-                                        <td class="px-4 py-3 text-right">
-                                            <span class="font-medium text-gray-900 dark:text-white">
+                                        <td style="padding: 0.75rem 1rem; text-align: right;">
+                                            <span style="font-weight: 500; color: #111827;">
                                                 {{ number_format($item['quantity'], 0, '.', '') }}
                                             </span>
                                             @if(($item['ordered_quantity'] ?? 0) > 0)
-                                                <div class="text-xs text-warning-600 dark:text-warning-400 mt-0.5">
+                                                <div style="font-size: 0.75rem; color: #d97706; margin-top: 0.125rem;">
                                                     +{{ number_format($item['ordered_quantity'], 0, '.', '') }} cmd.
                                                 </div>
                                             @endif
                                         </td>
-                                        <td class="px-4 py-3 text-gray-600 dark:text-gray-300">
+                                        <td style="padding: 0.75rem 1rem; color: #4b5563;">
                                             @if($item['needed_by'])
-                                                <span class="{{ \Carbon\Carbon::createFromFormat('d.m.Y', $item['needed_by'])->isPast() ? 'text-danger-600 font-medium' : '' }}">
+                                                <span style="{{ \Carbon\Carbon::createFromFormat('d.m.Y', $item['needed_by'])->isPast() ? 'color: #dc2626; font-weight: 500;' : '' }}">
                                                     {{ $item['needed_by'] }}
                                                 </span>
                                             @else
                                                 —
                                             @endif
                                         </td>
-                                        <td class="px-4 py-3">
-                                            <div class="flex items-center justify-center gap-1">
+                                        <td style="padding: 0.75rem 1rem;">
+                                            <div style="display: flex; align-items: center; justify-content: center; gap: 0.25rem;">
                                                 @if($item['is_urgent'])
-                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-danger-100 text-danger-700 dark:bg-danger-900/30 dark:text-danger-400">
+                                                    <span style="display: inline-flex; align-items: center; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 500; background: #fee2e2; color: #b91c1c;">
                                                         Urgent
                                                     </span>
                                                 @endif
                                                 @if($item['is_reserved'])
-                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-warning-100 text-warning-700 dark:bg-warning-900/30 dark:text-warning-400">
+                                                    <span style="display: inline-flex; align-items: center; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 500; background: #fef3c7; color: #b45309;">
                                                         Rezervat
                                                     </span>
                                                 @endif
                                             </div>
                                         </td>
-                                        <td class="px-4 py-3 text-gray-600 dark:text-gray-300">
+                                        <td style="padding: 0.75rem 1rem; color: #4b5563;">
                                             <div>{{ $item['consultant'] ?? '—' }}</div>
                                             @if($item['location'])
-                                                <div class="text-xs text-gray-400">{{ $item['location'] }}</div>
+                                                <div style="font-size: 0.75rem; color: #9ca3af;">{{ $item['location'] }}</div>
                                             @endif
                                         </td>
-                                        <td class="px-4 py-3 text-gray-600 dark:text-gray-300">
+                                        <td style="padding: 0.75rem 1rem; color: #4b5563;">
                                             @if($item['is_reserved'] && $item['client_reference'])
-                                                <span class="text-xs font-mono bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+                                                <span style="font-size: 0.75rem; font-family: monospace; background: #f3f4f6; padding: 0.125rem 0.375rem; border-radius: 0.25rem;">
                                                     {{ $item['client_reference'] }}
                                                 </span>
                                             @elseif($item['notes'])
-                                                <span class="text-xs text-gray-500">{{ Str::limit($item['notes'], 50) }}</span>
+                                                <span style="font-size: 0.75rem; color: #6b7280;">{{ Str::limit($item['notes'], 50) }}</span>
                                             @else
-                                                <span class="text-gray-300">—</span>
+                                                <span style="color: #d1d5db;">—</span>
                                             @endif
                                         </td>
-                                        <td class="px-4 py-3">
+                                        <td style="padding: 0.75rem 1rem;">
                                             <a href="{{ route('filament.app.resources.purchase-requests.view', ['record' => $item['request_id']]) }}"
-                                               class="text-xs text-primary-600 hover:text-primary-700 font-mono">
+                                               style="font-size: 0.75rem; color: #8B1A1A; font-family: monospace;">
                                                 {{ $item['request_number'] }}
                                             </a>
                                         </td>
@@ -235,61 +233,61 @@
     {{-- Comenzi WooCommerce cu produse "La comandă" --}}
     @php $wooOrders = $this->getWooOrdersPendingProcurement(); @endphp
     @if($wooOrders->isNotEmpty())
-        <div class="mt-8">
-            <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3 flex items-center gap-2">
-                <x-filament::icon icon="heroicon-o-shopping-cart" class="w-5 h-5 text-warning-500"/>
+        <div style="margin-top: 2rem;">
+            <h2 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                <x-filament::icon icon="heroicon-o-shopping-cart" style="width: 1.25rem; height: 1.25rem; color: #d97706;"/>
                 Comenzi online — produse la comandă
-                <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-bold bg-warning-100 text-warning-700 dark:bg-warning-900 dark:text-warning-300">
+                <span style="margin-left: 0.5rem; padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; background: #fef3c7; color: #b45309;">
                     {{ $wooOrders->count() }}
                 </span>
             </h2>
-            <div class="rounded-xl border border-warning-200 bg-white dark:border-warning-800 dark:bg-gray-900 overflow-hidden">
-                <table class="w-full text-sm">
-                    <thead class="bg-warning-50 dark:bg-warning-900/30">
+            <div style="border-radius: 0.75rem; border: 1px solid #fde68a; background: #fff; overflow: hidden;">
+                <table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">
+                    <thead style="background: #fffbeb;">
                         <tr>
-                            <th class="text-left px-4 py-2 text-warning-700 dark:text-warning-300 font-medium">Comandă WooCommerce</th>
-                            <th class="text-left px-4 py-2 text-warning-700 dark:text-warning-300 font-medium">Client</th>
-                            <th class="text-left px-4 py-2 text-warning-700 dark:text-warning-300 font-medium">Produse la comandă</th>
-                            <th class="text-left px-4 py-2 text-warning-700 dark:text-warning-300 font-medium">PNR</th>
-                            <th class="text-left px-4 py-2 text-warning-700 dark:text-warning-300 font-medium">Status PNR</th>
+                            <th style="text-align: left; padding: 0.5rem 1rem; color: #b45309; font-weight: 500;">Comandă WooCommerce</th>
+                            <th style="text-align: left; padding: 0.5rem 1rem; color: #b45309; font-weight: 500;">Client</th>
+                            <th style="text-align: left; padding: 0.5rem 1rem; color: #b45309; font-weight: 500;">Produse la comandă</th>
+                            <th style="text-align: left; padding: 0.5rem 1rem; color: #b45309; font-weight: 500;">PNR</th>
+                            <th style="text-align: left; padding: 0.5rem 1rem; color: #b45309; font-weight: 500;">Status PNR</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-warning-100 dark:divide-warning-900">
+                    <tbody>
                         @foreach($wooOrders as $pnr)
-                            <tr class="hover:bg-warning-50 dark:hover:bg-warning-900/20">
-                                <td class="px-4 py-3">
+                            <tr style="border-bottom: 1px solid #fef3c7;">
+                                <td style="padding: 0.75rem 1rem;">
                                     @if($pnr->wooOrder)
                                         <a href="{{ route('filament.app.resources.woo-orders.view', ['record' => $pnr->wooOrder->id]) }}"
-                                           class="font-mono text-primary-600 hover:underline">
+                                           style="font-family: monospace; color: #8B1A1A; text-decoration: none;">
                                             #{{ $pnr->wooOrder->number }}
                                         </a>
-                                        <div class="text-xs text-gray-400">{{ $pnr->wooOrder->order_date?->format('d.m.Y') }}</div>
+                                        <div style="font-size: 0.75rem; color: #9ca3af;">{{ $pnr->wooOrder->order_date?->format('d.m.Y') }}</div>
                                     @else
-                                        <span class="text-gray-400">—</span>
+                                        <span style="color: #9ca3af;">—</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
+                                <td style="padding: 0.75rem 1rem; color: #374151;">
                                     @if($pnr->wooOrder)
                                         {{ ($pnr->wooOrder->billing['first_name'] ?? '') . ' ' . ($pnr->wooOrder->billing['last_name'] ?? '') }}
                                     @endif
                                 </td>
-                                <td class="px-4 py-3">
+                                <td style="padding: 0.75rem 1rem;">
                                     @foreach($pnr->items as $item)
-                                        <div class="text-xs text-gray-700 dark:text-gray-300">
+                                        <div style="font-size: 0.75rem; color: #374151;">
                                             {{ $item->product_name }}
-                                            <span class="text-warning-600 font-semibold">× {{ $item->quantity }}</span>
+                                            <span style="color: #d97706; font-weight: 600;">× {{ $item->quantity }}</span>
                                         </div>
                                     @endforeach
                                 </td>
-                                <td class="px-4 py-3">
+                                <td style="padding: 0.75rem 1rem;">
                                     <a href="{{ route('filament.app.resources.purchase-requests.view', ['record' => $pnr->id]) }}"
-                                       class="font-mono text-xs text-primary-600 hover:underline">
+                                       style="font-family: monospace; font-size: 0.75rem; color: #8B1A1A; text-decoration: none;">
                                         {{ $pnr->number }}
                                     </a>
                                 </td>
-                                <td class="px-4 py-3">
-                                    <span class="px-2 py-0.5 rounded-full text-xs font-medium
-                                        {{ $pnr->status === 'submitted' ? 'bg-warning-100 text-warning-700 dark:bg-warning-900 dark:text-warning-300' : 'bg-info-100 text-info-700 dark:bg-info-900 dark:text-info-300' }}">
+                                <td style="padding: 0.75rem 1rem;">
+                                    <span style="padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500;
+                                        {{ $pnr->status === 'submitted' ? 'background: #fef3c7; color: #b45309;' : 'background: #dbeafe; color: #1d4ed8;' }}">
                                         {{ \App\Models\PurchaseRequest::statusOptions()[$pnr->status] ?? $pnr->status }}
                                     </span>
                                 </td>
