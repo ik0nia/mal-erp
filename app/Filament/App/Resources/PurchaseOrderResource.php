@@ -591,9 +591,10 @@ class PurchaseOrderResource extends Resource
             // CREATE: ultra-compact table-like layout — 1 dense row per product
             // Columns: produs(5) | stoc+info(2) | recomandat(1) | cantitate(2) | context(2) = 12
             $schema = [
-                // Product: thumbnail inline + name as compact display
+                // Product: thumbnail inline + name as compact display (only for pre-populated items)
                 Placeholder::make('product_display')
                     ->label('Produs')
+                    ->hidden(fn (Get $get): bool => blank($get('woo_product_id')))
                     ->content(function (Get $get): HtmlString {
                         $productId = (int) ($get('woo_product_id') ?? 0);
                         $name = $get('product_name') ?? '';
@@ -618,19 +619,30 @@ class PurchaseOrderResource extends Resource
                     })
                     ->columnSpan(5),
 
-                // Hidden product select — still needed for afterStateUpdated logic and for adding new items
-                $productSelectField->hidden()->columnSpan(1),
+                // Product select — hidden when product already set (pre-populated), visible for new items
+                $productSelectField
+                    ->hidden(fn (Get $get): bool => filled($get('woo_product_id')))
+                    ->columnSpan(5),
 
+                // Info + context button combined: produs(5) | info+btn(3) | rec(1) | qty(3) = 12
                 Placeholder::make('col_info')
                     ->label('Stoc / Vânzări')
-                    ->content(fn (Get $get): HtmlString => static::renderCompactInfo(
-                        $get('info_stock'),
-                        $get('info_sales_7d'),
-                        $get('info_sales_30d'),
-                        $get('info_days_stockout'),
-                        $get('sources_json'),
-                    ))
-                    ->columnSpan(2),
+                    ->content(function (Get $get): HtmlString {
+                        $info = static::renderCompactInfo(
+                            $get('info_stock'),
+                            $get('info_sales_7d'),
+                            $get('info_sales_30d'),
+                            $get('info_days_stockout'),
+                            $get('sources_json'),
+                        );
+                        $btn = static::renderSourcesInfo($get('sources_json'), $get('recommendation_json'), $get('product_name'), (int) $get('woo_product_id'));
+
+                        return new HtmlString(
+                            $info->toHtml()
+                            .'<div style="margin-top:4px">'.$btn->toHtml().'</div>'
+                        );
+                    })
+                    ->columnSpan(3),
 
                 Placeholder::make('col_recommended')
                     ->label('Rec.')
@@ -672,12 +684,7 @@ class PurchaseOrderResource extends Resource
                             $set('unit_price', (float) $ps->purchase_price);
                         }
                     })
-                    ->columnSpan(2),
-
-                Placeholder::make('sources_info')
-                    ->label('')->hiddenLabel()
-                    ->content(fn (Get $get): HtmlString => static::renderSourcesInfo($get('sources_json'), $get('recommendation_json'), $get('product_name'), (int) $get('woo_product_id')))
-                    ->columnSpan(2),
+                    ->columnSpan(3),
 
                 // Hidden — data storage (all still present, unchanged)
                 Hidden::make('product_name'),
@@ -780,8 +787,10 @@ class PurchaseOrderResource extends Resource
     {
         static $cache = [];
 
+        $placeholder = '<span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:4px;background:#f3f4f6;color:#9ca3af;font-size:9px;flex-shrink:0">—</span>';
+
         if (! $productId) {
-            return new HtmlString('<span class="inline-flex h-8 w-8 items-center justify-center rounded bg-gray-100 text-[9px] text-gray-400">—</span>');
+            return new HtmlString($placeholder);
         }
 
         if (! array_key_exists($productId, $cache)) {
@@ -791,11 +800,11 @@ class PurchaseOrderResource extends Resource
         $url = filled($cache[$productId]) ? e((string) $cache[$productId]) : null;
 
         if (! $url) {
-            return new HtmlString('<span class="inline-flex h-8 w-8 items-center justify-center rounded bg-gray-100 text-[9px] text-gray-400">—</span>');
+            return new HtmlString($placeholder);
         }
 
         return new HtmlString(
-            '<img src="'.$url.'" alt="" class="h-8 w-8 rounded object-cover ring-1 ring-gray-200/70" loading="lazy" />'
+            '<img src="'.$url.'" alt="" style="width:36px;height:36px;border-radius:4px;object-fit:cover;flex-shrink:0;border:1px solid #e5e7eb" loading="lazy" />'
         );
     }
 
@@ -835,6 +844,7 @@ class PurchaseOrderResource extends Resource
             }
         }
 
+        $lbl = 'style="font-size:11px;color:#9ca3af"';
         $cells = [];
 
         // Urgent badge
@@ -850,29 +860,27 @@ class PurchaseOrderResource extends Resource
             elseif ($daysStockout !== null && (float) $daysStockout < 7) $stockColor = '#dc2626';
             elseif ($daysStockout !== null && (float) $daysStockout < 14) $stockColor = '#ea580c';
 
-            $cells[] = '<span style="font-size:11px;color:#9ca3af">Stoc</span> <b style="color:'.$stockColor.'">'.number_format($stockVal, 0, '.', '').'</b>';
+            $cells[] = '<span '.$lbl.'>Stoc:</span> <b style="color:'.$stockColor.'">'.number_format($stockVal, 0, '.', '').' buc</b>';
         }
 
-        // Sales 7d / 30d — inline
-        $salesParts = [];
+        // Sales 7d
         if ($sales7d !== null && $sales7d !== '' && (float) $sales7d > 0) {
-            $salesParts[] = '<span style="color:#2563eb">'.number_format((float) $sales7d, 0, '.', '').'</span><span style="color:#9ca3af">/7z</span>';
-        }
-        if ($sales30d !== null && $sales30d !== '' && (float) $sales30d > 0) {
-            $salesParts[] = '<span style="color:#2563eb">'.number_format((float) $sales30d, 0, '.', '').'</span><span style="color:#9ca3af">/30z</span>';
-        }
-        if ($salesParts) {
-            $cells[] = '<span style="font-size:11px">'.implode(' ', $salesParts).'</span>';
+            $cells[] = '<span '.$lbl.'>Vânz. 7 zile:</span> <span style="font-weight:500;color:#374151">'.number_format((float) $sales7d, 0, '.', '').' buc</span>';
         }
 
-        // Days to stockout — just number + color
+        // Sales 30d
+        if ($sales30d !== null && $sales30d !== '' && (float) $sales30d > 0) {
+            $cells[] = '<span '.$lbl.'>Vânz. 30 zile:</span> <span style="font-weight:500;color:#374151">'.number_format((float) $sales30d, 0, '.', '').' buc</span>';
+        }
+
+        // Days to stockout
         if ($daysStockout !== null && $daysStockout !== '') {
             $d = (float) $daysStockout;
             if ($d <= 0) {
-                $cells[] = '<span style="font-size:11px;color:#9ca3af">Epuiz.</span> <b style="color:#dc2626">0z</b>';
+                $cells[] = '<span '.$lbl.'>Epuizare stoc:</span> <b style="color:#dc2626">EPUIZAT</b>';
             } else {
-                $color = $d < 7 ? '#dc2626' : ($d < 14 ? '#ea580c' : '#6b7280');
-                $cells[] = '<span style="font-size:11px;color:#9ca3af">Epuiz.</span> <span style="font-weight:600;color:'.$color.'">'.round($d, 0).'z</span>';
+                $color = $d < 7 ? '#dc2626' : ($d < 14 ? '#ea580c' : '#374151');
+                $cells[] = '<span '.$lbl.'>Epuizare stoc:</span> <span style="font-weight:600;color:'.$color.'">'.round($d, 0).' zile</span>';
             }
         }
 
@@ -881,7 +889,7 @@ class PurchaseOrderResource extends Resource
         }
 
         return new HtmlString(
-            '<div style="display:flex;flex-direction:column;gap:1px;line-height:1.5;font-size:12px">'
+            '<div style="display:flex;flex-direction:column;gap:1px;line-height:1.6;font-size:12px">'
             . implode('', array_map(fn ($c) => '<div>'.$c.'</div>', $cells))
             . '</div>'
         );
@@ -898,25 +906,25 @@ class PurchaseOrderResource extends Resource
 
         $qty = (int) $hint;
 
+        // JS: walk up to find the repeater item container, then find the quantity input
+        $js = 'var el=this;var p=el.parentElement;while(p&&!p.hasAttribute("wire:sortable.item")&&!p.dataset.id){p=p.parentElement}if(!p)return;'
+            . 'var inputs=p.querySelectorAll("input");var inp=null;for(var i=0;i<inputs.length;i++){if(inputs[i].name&&inputs[i].name.indexOf("quantity")!==-1){inp=inputs[i];break}}if(!inp)return;'
+            . 'var s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,"value").set;'
+            . 's.call(inp,"'.$qty.'");'
+            . 'inp.dispatchEvent(new Event("input",{bubbles:true}));'
+            . 'inp.dispatchEvent(new Event("change",{bubbles:true}));'
+            . 'inp.dispatchEvent(new Event("blur",{bubbles:true}));'
+            . 'inp.focus();';
+
         return new HtmlString(
-            '<span style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;padding:4px 10px;border-radius:6px;background:#eff6ff;border:1px solid #bfdbfe;transition:background .15s"'
-            .' onclick="(function(el){'
-            .'var item=el.closest(\'[wire\\\\:sortable\\\\.item]\') || el.closest(\'[data-id]\');'
-            .'if(!item) return;'
-            .'var inp=item.querySelector(\'input[type=number],input[inputmode=decimal]\');'
-            .'if(!inp) return;'
-            .'var nativeInputValueSetter=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,\'value\').set;'
-            .'nativeInputValueSetter.call(inp,'.$qty.');'
-            .'inp.dispatchEvent(new Event(\'input\',{bubbles:true}));'
-            .'inp.dispatchEvent(new Event(\'change\',{bubbles:true}));'
-            .'inp.focus();'
-            .'})(this)"'
-            .' onmouseover="this.style.background=\'#dbeafe\'"'
-            .' onmouseout="this.style.background=\'#eff6ff\'"'
+            '<span style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;padding:3px 8px;border-radius:6px;background:#eff6ff;border:1px solid #bfdbfe;transition:background .15s"'
+            .' onclick="'.$js.'"'
+            .' onmouseover="this.style.background=\'#f5e0e0\'"'
+            .' onmouseout="this.style.background=\'#fdf2f2\'"'
             .' title="Click pentru a aplica cantitatea recomandată">'
-            .'<span style="font-size:16px;font-weight:700;color:#1d4ed8;font-variant-numeric:tabular-nums">'.$qty.'</span>'
-            .'<span style="font-size:11px;color:#6b7280">buc</span>'
-            .'<svg style="width:14px;height:14px;color:#3b82f6;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">'
+            .'<span style="font-size:15px;font-weight:700;color:#8B1A1A;font-variant-numeric:tabular-nums">'.$qty.'</span>'
+            .'<span style="font-size:10px;color:#6b7280">buc</span>'
+            .'<svg style="width:12px;height:12px;color:#8B1A1A;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">'
             .'<path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>'
             .'</svg>'
             .'</span>'
@@ -930,50 +938,57 @@ class PurchaseOrderResource extends Resource
     {
         return <<<'CSS'
 <style>
-/* Strip card styling from repeater items — make them table rows */
-[data-id] > .fi-fo-repeater-item-content {
-    border: none !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-    padding: 8px 12px !important;
-    border-bottom: 1px solid #f3f4f6 !important;
-}
-[data-id] {
+/* ── PO Create: compact table-like repeater ── */
+
+/* Strip card borders & shadows from repeater items */
+[wire\:sortable\.item] {
     border: none !important;
     box-shadow: none !important;
     border-radius: 0 !important;
     background: transparent !important;
+    border-bottom: 1px solid #f3f4f6 !important;
 }
-[data-id]:hover {
-    background: #f9fafb !important;
+[wire\:sortable\.item]:hover {
+    background: #fafbfc !important;
 }
-/* Reduce gap between repeater items */
-.fi-fo-repeater-items {
+
+/* Remove gap between items, add outer border */
+[wire\:sortable] {
     gap: 0 !important;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     overflow: hidden;
 }
-/* Compact field labels */
-.fi-fo-repeater-item-content .fi-fo-field-wrp label {
-    font-size: 11px !important;
-    color: #9ca3af !important;
-    margin-bottom: 2px !important;
+
+/* Reduce padding inside each item row */
+[wire\:sortable\.item] > div {
+    padding: 6px 8px !important;
 }
+
+/* Compact grid gap */
+[wire\:sortable\.item] .grid {
+    gap: 6px !important;
+    align-items: center !important;
+}
+
+/* Smaller labels */
+[wire\:sortable\.item] label {
+    font-size: 11px !important;
+    margin-bottom: 1px !important;
+}
+
 /* Compact inputs */
-.fi-fo-repeater-item-content .fi-input {
+[wire\:sortable\.item] input {
     padding: 4px 8px !important;
     font-size: 13px !important;
-    min-height: unset !important;
     height: 32px !important;
 }
-/* Reduce grid gap inside items */
-.fi-fo-repeater-item-content > div > div {
-    gap: 8px !important;
-}
-/* Align items vertically center */
-.fi-fo-repeater-item-content .fi-fo-component-ctn {
-    align-items: center !important;
+
+/* Move delete button inline */
+[wire\:sortable\.item] [data-action] {
+    position: absolute;
+    top: 4px;
+    right: 4px;
 }
 </style>
 CSS;
@@ -1072,9 +1087,9 @@ CSS;
             $totalRec   = (float) ($rec['total_recommended'] ?? 0);
             $method     = $rec['calc_method'] ?? null;
 
-            $recSection .= '<div style="border-radius:8px;border:1px solid #bfdbfe;overflow:hidden">';
-            $recSection .= '<div style="background:#eff6ff;padding:8px 12px;border-bottom:1px solid #bfdbfe">';
-            $recSection .= '<span style="font-size:14px;font-weight:700;color:#1e40af">Recomandare cantitate</span>';
+            $recSection .= '<div style="border-radius:8px;border:1px solid #e8c4c4;overflow:hidden">';
+            $recSection .= '<div style="background:#fdf2f2;padding:8px 12px;border-bottom:1px solid #e8c4c4">';
+            $recSection .= '<span style="font-size:14px;font-weight:700;color:#8B1A1A">Recomandare cantitate</span>';
             $recSection .= '</div>';
             $recSection .= '<div>';
 
@@ -1109,12 +1124,12 @@ CSS;
                     'velocity'  => 'Suplimentar pt. stoc magazin',
                     default     => 'Suplimentar magazin',
                 };
-                $recSection .= $row($methodLabel, '<span style="color:#1d4ed8;font-weight:700">+'.number_format($addStore, 0, '.', '').' buc.</span>', '');
+                $recSection .= $row($methodLabel, '<span style="color:#8B1A1A;font-weight:700">+'.number_format($addStore, 0, '.', '').' buc.</span>', '');
             }
 
             $recSection .= '</div>';
             // Total footer
-            $recSection .= '<div style="display:flex;align-items:center;justify-content:space-between;background:#2563eb;padding:12px">';
+            $recSection .= '<div style="display:flex;align-items:center;justify-content:space-between;background:#8B1A1A;padding:12px">';
             $recSection .= '<span style="font-size:14px;font-weight:700;color:#fff">Total recomandat</span>';
             $recSection .= '<span style="font-size:18px;font-weight:900;color:#fff">'.number_format($totalRec, 0, '.', '').' buc.</span>';
             $recSection .= '</div>';
@@ -1172,14 +1187,14 @@ CSS;
 <div style="display:inline-block;position:relative">
     <button type="button"
             onclick="var m=this.nextElementSibling;m.style.cssText='display:flex;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;padding:1rem;background:rgba(17,24,39,.6)'"
-            style="display:inline-flex;align-items:center;gap:4px;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:500;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;cursor:pointer;transition:background .15s">
+            style="display:inline-flex;align-items:center;gap:4px;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:500;background:#fdf2f2;color:#8B1A1A;border:1px solid #e8c4c4;cursor:pointer;transition:background .15s">
         <svg style="width:12px;height:12px;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
         {$label}
     </button>
 
-    <div style="display:none"
+    <div data-po-modal style="display:none"
          onclick="if(event.target===this)this.style.display='none'">
 
         <div onclick="event.stopPropagation()"
@@ -1188,7 +1203,7 @@ CSS;
             <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid #e5e7eb">
                 <h3 style="font-size:15px;font-weight:600;color:#111827;margin:0">Detalii cantitate</h3>
                 <button type="button"
-                        onclick="this.closest('[style*=position\\:fixed]').style.display='none'"
+                        onclick="this.closest('[data-po-modal]').style.display='none'"
                         style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:6px;background:none;border:none;cursor:pointer;color:#9ca3af">
                     <svg style="width:20px;height:20px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
