@@ -203,17 +203,44 @@ class ImportPurchasePricesCommand extends Command
             ];
         }
 
-        $this->info("Rânduri valide pentru import: " . count($rows));
+        // Dedup: eliminăm rândurile care există deja în DB (match pe product+supplier+price+date)
+        $this->info("Verific duplicate...");
+        $existingKeys = DB::table('product_purchase_price_logs')
+            ->select('woo_product_id', 'supplier_id', 'unit_price', 'acquired_at')
+            ->get()
+            ->map(fn ($r) => $r->woo_product_id . '|' . ($r->supplier_id ?? 0) . '|' . round((float) $r->unit_price, 4) . '|' . ($r->acquired_at ?? ''))
+            ->flip()
+            ->toArray();
+
+        $uniqueRows = [];
+        $duplicateCount = 0;
+        foreach ($rows as $row) {
+            $key = $row['woo_product_id'] . '|' . ($row['supplier_id'] ?? 0) . '|' . round($row['unit_price'], 4) . '|' . ($row['acquired_at'] ?? '');
+            if (isset($existingKeys[$key])) {
+                $duplicateCount++;
+            } else {
+                $uniqueRows[] = $row;
+                $existingKeys[$key] = true; // prevent duplicates within same file
+            }
+        }
+
+        $this->info("Rânduri valide pentru import: " . count($rows) . " (din care {$duplicateCount} duplicate eliminate, " . count($uniqueRows) . " noi)");
 
         if ($dryRun) {
             $this->warn("[DRY RUN] Nu s-a salvat nimic.");
-            $this->printStats($stats, count($rows));
+            $this->printStats($stats, count($uniqueRows));
+            return 0;
+        }
+
+        if (empty($uniqueRows)) {
+            $this->info("Nimic nou de importat — toate rândurile există deja.");
+            $this->printStats($stats, 0);
             return 0;
         }
 
         // Insert în batch
         $this->info("Salvez în DB...");
-        $chunks = array_chunk($rows, 500);
+        $chunks = array_chunk($uniqueRows, 500);
         $now = now()->toDateTimeString();
         foreach ($chunks as $chunk) {
             $insert = array_map(fn($r) => array_merge($r, ['created_at' => $now, 'updated_at' => $now]), $chunk);
