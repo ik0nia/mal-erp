@@ -143,7 +143,13 @@ class PurchaseOrderResource extends Resource
             // ── Items section ──
             Section::make('Produse comandate')
                 ->columnSpanFull()
-                ->schema(fn (string $operation): array => [
+                ->schema(fn (string $operation): array => array_filter([
+                    // Inject compact CSS for create mode — strips card styling from repeater
+                    $operation === 'create' ? Placeholder::make('compact_css')
+                        ->label('')->hiddenLabel()
+                        ->content(new HtmlString(static::compactRepeaterCss()))
+                        : null,
+
                     static::buildItemsRepeater($operation),
 
                     Placeholder::make('total_value')
@@ -159,7 +165,7 @@ class PurchaseOrderResource extends Resource
                                 2, ',', '.'
                             ).' RON</span>'
                         )),
-                ]),
+                ])),
 
             // ── Notes: collapsible section on create ──
             Section::make('Notițe (opțional)')
@@ -552,6 +558,7 @@ class PurchaseOrderResource extends Resource
 
                         $set('info_stock',          $stock);
                         $set('info_sales_7d',        $sales7d);
+                        $set('info_sales_30d',       $sales30d);
                         $set('info_days_stockout',   $daysToStockout);
                         $set('quantity_hint',        $addStore > 0 ? $addStore : null);
                         $set('recommendation_json', json_encode([
@@ -571,6 +578,7 @@ class PurchaseOrderResource extends Resource
                     } else {
                         $set('info_stock',          null);
                         $set('info_sales_7d',        null);
+                        $set('info_sales_30d',       null);
                         $set('info_days_stockout',   null);
                         $set('quantity_hint',        null);
                         $set('recommendation_json',  null);
@@ -580,39 +588,54 @@ class PurchaseOrderResource extends Resource
             ->nullable();
 
         if ($isCreate) {
-            // CREATE: compact single-row layout — 12 columns
-            // thumbnail(1) | produs(3) | stoc+info(2) | recomandat(2) | cantitate(2) | context(2)
+            // CREATE: ultra-compact table-like layout — 1 dense row per product
+            // Columns: produs(5) | stoc+info(2) | recomandat(1) | cantitate(2) | context(2) = 12
             $schema = [
-                Placeholder::make('thumbnail')
-                    ->label('')->hiddenLabel()
-                    ->content(fn (Get $get): HtmlString => static::productThumbnail($get('woo_product_id')))
-                    ->columnSpan(1),
+                // Product: thumbnail inline + name as compact display
+                Placeholder::make('product_display')
+                    ->label('Produs')
+                    ->content(function (Get $get): HtmlString {
+                        $productId = (int) ($get('woo_product_id') ?? 0);
+                        $name = $get('product_name') ?? '';
+                        $sku = $get('sku') ?? '';
+                        $supplierSku = $get('supplier_sku') ?? '';
 
-                $productSelectField
-                    ->helperText(function (Get $get): ?string {
-                        $sku = $get('sku');
-                        $supplierSku = $get('supplier_sku');
-                        $parts = [];
-                        if ($sku) $parts[] = $sku;
-                        if ($supplierSku) $parts[] = 'F: '.$supplierSku;
-                        return $parts ? implode(' · ', $parts) : null;
+                        $thumb = static::productThumbnail($productId ?: null);
+                        $nameHtml = $name ? e(html_entity_decode($name, ENT_QUOTES, 'UTF-8')) : '<span style="color:#9ca3af">—</span>';
+                        $skuParts = [];
+                        if ($sku) $skuParts[] = e($sku);
+                        if ($supplierSku) $skuParts[] = 'F: '.e($supplierSku);
+                        $skuHtml = $skuParts ? '<div style="font-size:11px;color:#9ca3af;margin-top:1px">'.implode(' · ', $skuParts).'</div>' : '';
+
+                        return new HtmlString(
+                            '<div style="display:flex;align-items:center;gap:8px">'
+                            .$thumb->toHtml()
+                            .'<div style="min-width:0">'
+                            .'<div style="font-size:13px;font-weight:500;color:#111827;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:320px" title="'.e(html_entity_decode($name, ENT_QUOTES, 'UTF-8')).'">'.$nameHtml.'</div>'
+                            .$skuHtml
+                            .'</div></div>'
+                        );
                     })
-                    ->columnSpan(3),
+                    ->columnSpan(5),
+
+                // Hidden product select — still needed for afterStateUpdated logic and for adding new items
+                $productSelectField->hidden()->columnSpan(1),
 
                 Placeholder::make('col_info')
                     ->label('Stoc / Vânzări')
                     ->content(fn (Get $get): HtmlString => static::renderCompactInfo(
                         $get('info_stock'),
                         $get('info_sales_7d'),
+                        $get('info_sales_30d'),
                         $get('info_days_stockout'),
                         $get('sources_json'),
                     ))
                     ->columnSpan(2),
 
                 Placeholder::make('col_recommended')
-                    ->label('Recomandat')
+                    ->label('Rec.')
                     ->content(fn (Get $get): HtmlString => static::renderRecommended($get('quantity_hint')))
-                    ->columnSpan(2),
+                    ->columnSpan(1),
 
                 TextInput::make('quantity')
                     ->label('Cantitate')->numeric()->minValue(0.001)
@@ -667,6 +690,7 @@ class PurchaseOrderResource extends Resource
                 Hidden::make('quantity_hint'),
                 Hidden::make('info_stock'),
                 Hidden::make('info_sales_7d'),
+                Hidden::make('info_sales_30d'),
                 Hidden::make('info_days_stockout'),
             ];
         } else {
@@ -799,9 +823,9 @@ class PurchaseOrderResource extends Resource
     }
 
     /**
-     * Compact stacked info for create: stock, sales 7d, days to stockout + urgency badge.
+     * Compact stacked info: stock, sales 7d/30d, days to stockout, urgency.
      */
-    private static function renderCompactInfo(mixed $stock, mixed $sales7d, mixed $daysStockout, ?string $sourcesJson): HtmlString
+    private static function renderCompactInfo(mixed $stock, mixed $sales7d, mixed $sales30d, mixed $daysStockout, ?string $sourcesJson): HtmlString
     {
         $hasUrgent = false;
         if ($sourcesJson) {
@@ -811,41 +835,54 @@ class PurchaseOrderResource extends Resource
             }
         }
 
-        $lines = [];
+        $cells = [];
 
         // Urgent badge
         if ($hasUrgent) {
-            $lines[] = '<span style="display:inline-flex;align-items:center;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;background:#fee2e2;color:#b91c1c;letter-spacing:0.05em">URGENT</span>';
+            $cells[] = '<span style="display:inline-block;border-radius:3px;padding:0 5px;font-size:10px;font-weight:700;background:#fee2e2;color:#b91c1c;letter-spacing:0.05em;line-height:18px">URGENT</span>';
         }
 
-        // Stock
+        // Stock — bold, color-coded
         if ($stock !== null && $stock !== '') {
             $stockVal = (float) $stock;
-            $stockColor = '#111827';
+            $stockColor = '#374151';
             if ($stockVal <= 0) $stockColor = '#dc2626';
             elseif ($daysStockout !== null && (float) $daysStockout < 7) $stockColor = '#dc2626';
             elseif ($daysStockout !== null && (float) $daysStockout < 14) $stockColor = '#ea580c';
 
-            $lines[] = '<span style="font-size:12px;color:#6b7280">Stoc:</span> <span style="font-size:13px;font-weight:600;color:'.$stockColor.';font-variant-numeric:tabular-nums">'.number_format($stockVal, 0, '.', '').'</span>';
+            $cells[] = '<span style="font-size:11px;color:#9ca3af">Stoc</span> <b style="color:'.$stockColor.'">'.number_format($stockVal, 0, '.', '').'</b>';
         }
 
-        // Sales 7d
+        // Sales 7d / 30d — inline
+        $salesParts = [];
         if ($sales7d !== null && $sales7d !== '' && (float) $sales7d > 0) {
-            $lines[] = '<span style="font-size:12px;color:#6b7280">7z:</span> <span style="font-size:12px;font-weight:500;color:#2563eb;font-variant-numeric:tabular-nums">'.number_format((float)$sales7d, 1, '.', '').'</span>';
+            $salesParts[] = '<span style="color:#2563eb">'.number_format((float) $sales7d, 0, '.', '').'</span><span style="color:#9ca3af">/7z</span>';
+        }
+        if ($sales30d !== null && $sales30d !== '' && (float) $sales30d > 0) {
+            $salesParts[] = '<span style="color:#2563eb">'.number_format((float) $sales30d, 0, '.', '').'</span><span style="color:#9ca3af">/30z</span>';
+        }
+        if ($salesParts) {
+            $cells[] = '<span style="font-size:11px">'.implode(' ', $salesParts).'</span>';
         }
 
-        // Days to stockout
+        // Days to stockout — just number + color
         if ($daysStockout !== null && $daysStockout !== '') {
-            $lines[] = static::renderDaysToStockout($daysStockout);
+            $d = (float) $daysStockout;
+            if ($d <= 0) {
+                $cells[] = '<span style="font-size:11px;color:#9ca3af">Epuiz.</span> <b style="color:#dc2626">0z</b>';
+            } else {
+                $color = $d < 7 ? '#dc2626' : ($d < 14 ? '#ea580c' : '#6b7280');
+                $cells[] = '<span style="font-size:11px;color:#9ca3af">Epuiz.</span> <span style="font-weight:600;color:'.$color.'">'.round($d, 0).'z</span>';
+            }
         }
 
-        if (empty($lines)) {
-            return new HtmlString('<span style="font-size:12px;color:#d1d5db">—</span>');
+        if (empty($cells)) {
+            return new HtmlString('<span style="font-size:11px;color:#d1d5db">—</span>');
         }
 
         return new HtmlString(
-            '<div style="display:flex;flex-direction:column;gap:2px;line-height:1.4">'
-            . implode('', array_map(fn ($l) => '<div>'.$l.'</div>', $lines))
+            '<div style="display:flex;flex-direction:column;gap:1px;line-height:1.5;font-size:12px">'
+            . implode('', array_map(fn ($c) => '<div>'.$c.'</div>', $cells))
             . '</div>'
         );
     }
@@ -884,6 +921,62 @@ class PurchaseOrderResource extends Resource
             .'</svg>'
             .'</span>'
         );
+    }
+
+    /**
+     * CSS injected into the create form to make repeater items look like compact table rows.
+     */
+    private static function compactRepeaterCss(): string
+    {
+        return <<<'CSS'
+<style>
+/* Strip card styling from repeater items — make them table rows */
+[data-id] > .fi-fo-repeater-item-content {
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 8px 12px !important;
+    border-bottom: 1px solid #f3f4f6 !important;
+}
+[data-id] {
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
+[data-id]:hover {
+    background: #f9fafb !important;
+}
+/* Reduce gap between repeater items */
+.fi-fo-repeater-items {
+    gap: 0 !important;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+}
+/* Compact field labels */
+.fi-fo-repeater-item-content .fi-fo-field-wrp label {
+    font-size: 11px !important;
+    color: #9ca3af !important;
+    margin-bottom: 2px !important;
+}
+/* Compact inputs */
+.fi-fo-repeater-item-content .fi-input {
+    padding: 4px 8px !important;
+    font-size: 13px !important;
+    min-height: unset !important;
+    height: 32px !important;
+}
+/* Reduce grid gap inside items */
+.fi-fo-repeater-item-content > div > div {
+    gap: 8px !important;
+}
+/* Align items vertically center */
+.fi-fo-repeater-item-content .fi-fo-component-ctn {
+    align-items: center !important;
+}
+</style>
+CSS;
     }
 
     private static function computeLineTotal($price, $qty): string

@@ -543,6 +543,7 @@ class CreatePurchaseOrder extends CreateRecord
                 'quantity_hint'       => $totalRecommended > 0 ? $totalRecommended : ($vi['hint'] ?? null),
                 'info_stock'          => $vi['stock'] ?? null,
                 'info_sales_7d'       => $vi['sales_7d'] ?? null,
+                'info_sales_30d'      => $vi['sales_30d'] ?? null,
                 'info_days_stockout'  => $vi['days_to_stockout'] ?? null,
             ];
         })->values()->all();
@@ -684,6 +685,7 @@ class CreatePurchaseOrder extends CreateRecord
                 'quantity_hint'       => $hint > 0 ? $hint : null,
                 'info_stock'          => $data['stock'],
                 'info_sales_7d'       => $data['sales_7d'],
+                'info_sales_30d'      => $data['sales_30d'],
                 'info_days_stockout'  => $data['days_to_stockout'],
             ];
         }
