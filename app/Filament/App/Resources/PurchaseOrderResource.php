@@ -369,6 +369,10 @@ class PurchaseOrderResource extends Resource
                 User::ROLE_MANAGER_ACHIZITII,
                 User::ROLE_MANAGER,
                 User::ROLE_CONSULTANT_VANZARI,
+                User::ROLE_DIRECTOR_FINANCIAR,
+                User::ROLE_DIRECTOR_ECONOMIC,
+                User::ROLE_DIRECTOR_VANZARI,
+                User::ROLE_SUPORT_FINANCIAR,
             ], true);
     }
 
