@@ -917,8 +917,8 @@ class PurchaseOrderResource extends Resource
 
         // UOM info
         if ($purchaseUom && $conversionFactor && (float) $conversionFactor > 0) {
-            $cfVal = rtrim(rtrim(number_format((float) $conversionFactor, 0, '.', ''), '0'), '.');
-            $cells[] = '<span '.$lbl.'>Cmd:</span> <span style="font-weight:500;color:#8B1A1A">'.e($purchaseUom).' ('.$cfVal.' buc)</span>';
+            $cfVal = (int) $conversionFactor;
+            $cells[] = '<span '.$lbl.'>Cmd:</span> <span style="font-weight:500;color:#8B1A1A">'.e($purchaseUom).' ('.$cfVal.' buc/'.e($purchaseUom).')</span>';
         }
 
         if (empty($cells)) {
