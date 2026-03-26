@@ -593,7 +593,7 @@ class PurchaseOrderResource extends Resource
             $schema = [
                 // Product: thumbnail inline + name as compact display (only for pre-populated items)
                 Placeholder::make('product_display')
-                    ->label('Produs')
+                    ->label('')->hiddenLabel()
                     ->hidden(fn (Get $get): bool => blank($get('woo_product_id')))
                     ->content(function (Get $get): HtmlString {
                         $productId = (int) ($get('woo_product_id') ?? 0);
@@ -787,7 +787,7 @@ class PurchaseOrderResource extends Resource
     {
         static $cache = [];
 
-        $placeholder = '<span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:4px;background:#f3f4f6;color:#9ca3af;font-size:9px;flex-shrink:0">—</span>';
+        $placeholder = '<span style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:6px;background:#f3f4f6;color:#9ca3af;font-size:9px;flex-shrink:0">—</span>';
 
         if (! $productId) {
             return new HtmlString($placeholder);
@@ -804,7 +804,7 @@ class PurchaseOrderResource extends Resource
         }
 
         return new HtmlString(
-            '<img src="'.$url.'" alt="" style="width:36px;height:36px;border-radius:4px;object-fit:cover;flex-shrink:0;border:1px solid #e5e7eb" loading="lazy" />'
+            '<img src="'.$url.'" alt="" style="width:56px;height:56px;border-radius:6px;object-fit:cover;flex-shrink:0;border:1px solid #e5e7eb" loading="lazy" />'
         );
     }
 
