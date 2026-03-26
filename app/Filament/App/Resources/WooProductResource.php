@@ -1520,20 +1520,19 @@ class WooProductResource extends Resource
                 $priceLogsHtml .= '</div>';
             }
 
-            // Persoane de contact
+            // Contact principal (doar cel marcat is_primary, sau primul daca nu exista)
             $contactsHtml = '';
-            foreach ($supplier->contacts as $contact) {
-                $primaryBadge = $contact->is_primary
-                    ? '<span style="background:#fef9c3;color:#854d0e;border-radius:4px;padding:1px 6px;font-size:0.7rem;font-weight:600;margin-left:6px;">Principal</span>'
-                    : '';
+            $primaryContact = $supplier->contacts->firstWhere('is_primary', true)
+                ?? $supplier->contacts->first();
+            if ($primaryContact) {
                 $contactsHtml .= '<div style="background:#f9fafb;border-radius:8px;padding:10px 12px;margin-top:8px;">'
                     . '<div style="font-weight:600;color:#111827;font-size:0.85rem;margin-bottom:4px;">'
-                    . e($contact->name) . $primaryBadge
-                    . ($contact->role ? ' <span style="color:#6b7280;font-weight:400;">· ' . e($contact->role) . '</span>' : '')
+                    . e($primaryContact->name)
+                    . '<span style="background:#fef9c3;color:#854d0e;border-radius:4px;padding:1px 6px;font-size:0.7rem;font-weight:600;margin-left:6px;">Principal</span>'
+                    . ($primaryContact->role ? ' <span style="color:#6b7280;font-weight:400;">· ' . e($primaryContact->role) . '</span>' : '')
                     . '</div>'
-                    . $field('phone', 'Telefon', $contact->phone)
-                    . $field('envelope', 'Email', $contact->email)
-                    . $field('note', 'Notițe', $contact->notes)
+                    . $field('phone', 'Telefon', $primaryContact->phone)
+                    . $field('envelope', 'Email', $primaryContact->email)
                     . '</div>';
             }
 
