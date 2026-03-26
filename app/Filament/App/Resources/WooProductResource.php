@@ -1106,6 +1106,7 @@ class WooProductResource extends Resource
                             ->label('')
                             ->columnSpanFull(),
                     ])
+                    ->columnSpanFull()
                     ->hidden(fn (WooProduct $record): bool => blank($record->winmentor_name)),
 
                 // ── Descriere ────────────────────────────────────────────────
@@ -1116,6 +1117,7 @@ class WooProductResource extends Resource
                             ->html()
                             ->columnSpanFull(),
                     ])
+                    ->columnSpanFull()
                     ->hidden(fn (WooProduct $record): bool =>
                         blank($record->description)
                         || ! \App\Models\RolePermission::check('woo_product_section_descriere')
@@ -1130,6 +1132,7 @@ class WooProductResource extends Resource
                             ->state(fn (WooProduct $record): HtmlString => static::renderAttributesTable($record))
                             ->html(),
                     ])
+                    ->columnSpanFull()
                     ->visible(fn (): bool => \App\Models\RolePermission::check('woo_product_section_atribute_tehnice')),
 
                 Section::make('Istoric variație stoc')
@@ -1140,6 +1143,7 @@ class WooProductResource extends Resource
                             ->state(fn (WooProduct $record): HtmlString => static::renderDailyVariationHistory($record))
                             ->html(),
                     ])
+                    ->columnSpanFull()
                     ->visible(fn (): bool => \App\Models\RolePermission::check('woo_product_section_istoric_stoc')),
                 Section::make('Rezumat variații')
                     ->columns(2)
@@ -1153,6 +1157,7 @@ class WooProductResource extends Resource
                             ->state(fn (WooProduct $record): HtmlString => static::renderValueVariationCard($record))
                             ->html(),
                     ])
+                    ->columnSpanFull()
                     ->visible(fn (): bool => \App\Models\RolePermission::check('woo_product_section_rezumat_variatii')),
 
                 // ── Istoric prețuri achiziție ─────────────────────────────────
@@ -1166,6 +1171,7 @@ class WooProductResource extends Resource
                             ->state(fn (WooProduct $record): HtmlString => static::renderPurchasePriceHistory($record))
                             ->html(),
                     ])
+                    ->columnSpanFull()
                     ->hidden(fn (WooProduct $record): bool => $record->purchasePriceLogs()->doesntExist())
                     ->visible(fn (): bool => auth()->user()?->email === 'codrut@ikonia.ro'),
 
@@ -1180,6 +1186,7 @@ class WooProductResource extends Resource
                             ))
                             ->html(),
                     ])
+                    ->columnSpanFull()
                     ->visible(fn (): bool => \App\Models\RolePermission::check('woo_product_section_payload_brut')),
             ]);
     }
