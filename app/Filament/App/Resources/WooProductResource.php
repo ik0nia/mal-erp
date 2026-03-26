@@ -1513,8 +1513,8 @@ class WooProductResource extends Resource
                     $logPriceVat = number_format((float) $log->unit_price * 1.21, 2, ',', '.') . ' RON';
                     $priceLogsHtml .= '<div style="display:flex;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:0.82rem;">'
                         . '<span style="color:#6b7280;min-width:80px;">' . $logDate . '</span>'
-                        . '<span style="font-weight:600;color:#111827;">' . $logPrice . '</span>'
-                        . '<span style="color:#9ca3af;font-size:0.75rem;">(TVA inclus: ' . $logPriceVat . ')</span>'
+                        . '<span style="font-weight:600;color:#111827;">' . $logPriceVat . '</span>'
+                        . '<span style="color:#9ca3af;font-size:0.75rem;">(TVA inclus)</span>'
                         . '</div>';
                 }
                 $priceLogsHtml .= '</div>';
