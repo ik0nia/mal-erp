@@ -103,15 +103,33 @@ class ComputeAbcClassificationCommand extends Command
         foreach ($consumptionStats as $productId => $stats) {
             // Average daily consumption across ALL days (not just days with consumption)
             // Total consumed / total days gives true daily average
-            $totalConsumed = (float) $stats->avg_consumption * (int) $stats->days_with_consumption;
+            $daysWithConsumption = (int) $stats->days_with_consumption;
+            $totalConsumed = (float) $stats->avg_consumption * $daysWithConsumption;
             $avgDaily = $totalDays > 0 ? $totalConsumed / $totalDays : 0;
             $avgDailyMap[$productId] = round($avgDaily, 4);
 
-            // XYZ: coefficient of variation based on days that had consumption
-            $mean = (float) $stats->avg_consumption;
-            $stddev = (float) $stats->stddev_consumption;
+            // XYZ: coefficient of variation including zero-consumption days
+            // Mean across ALL days in window (not just days with consumption)
+            $mean = $avgDaily; // = totalConsumed / totalDays
 
-            if ($mean > 0) {
+            if ($mean > 0 && $totalDays > 0) {
+                // Variance = (sum_of_squared_deviations) / totalDays
+                // For days WITH consumption: each day's deviation = (day_value - mean)
+                // For days WITHOUT consumption (zeroDays): each day's deviation = (0 - mean) = -mean
+                // We can reconstruct from the SQL stats:
+                //   STDDEV_POP² = E[X²] - E[X]² (over consumption days only)
+                //   E[X²]_consumption = STDDEV_POP² + AVG²
+                $sqlMean = (float) $stats->avg_consumption;
+                $sqlStddev = (float) $stats->stddev_consumption;
+                $sumOfSquaresConsumption = ($sqlStddev * $sqlStddev + $sqlMean * $sqlMean) * $daysWithConsumption;
+
+                // Zero-consumption days contribute 0² = 0 to sum of squares
+                // Total variance = (sumOfSquares / totalDays) - mean²
+                $variance = ($sumOfSquaresConsumption / $totalDays) - ($mean * $mean);
+                // Guard against floating-point rounding yielding tiny negative values
+                $variance = max(0, $variance);
+                $stddev = sqrt($variance);
+
                 $cv = $stddev / $mean;
             } else {
                 $cv = 999; // no meaningful data

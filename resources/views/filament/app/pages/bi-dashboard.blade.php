@@ -60,22 +60,52 @@
     </div>
     <div class="bi-kpi-card">
       <div class="bi-kpi-label">Produse în stoc</div>
-      <div class="bi-kpi-value">{{ number_format($this->inStock, 0, '.', '') }}</div>
-      <div class="bi-kpi-sub">{{ number_format($this->outOfStock, 0, '.', '') }} fără stoc</div>
+      <div class="bi-kpi-value">
+        {{ number_format($this->inStock, 0, '.', '') }}
+        @if(isset($this->kpiDeltas['in_stock']) && $this->kpiDeltas['in_stock'] != 0)
+          @php $d = $this->kpiDeltas['in_stock']; @endphp
+          <span style="font-size:0.75rem; font-weight:500; {{ $d > 0 ? 'color:#16a34a;' : 'color:#dc2626;' }}">{{ $d > 0 ? "\u{2191}" : "\u{2193}" }} {{ $d > 0 ? '+' : '' }}{{ $d }}</span>
+        @endif
+      </div>
+      <div class="bi-kpi-sub">
+        {{ number_format($this->outOfStock, 0, '.', '') }} fără stoc
+        @if(isset($this->kpiDeltas['out_of_stock']) && $this->kpiDeltas['out_of_stock'] != 0)
+          @php $d = $this->kpiDeltas['out_of_stock']; @endphp
+          <span style="{{ $d > 0 ? 'color:#dc2626;' : 'color:#16a34a;' }}">({{ $d > 0 ? '+' : '' }}{{ $d }})</span>
+        @endif
+      </div>
     </div>
     <div class="bi-kpi-card" style="border-color:#fecaca; background:#fef2f2;">
       <div class="bi-kpi-label" style="color:#ef4444;">Critice (P0)</div>
-      <div class="bi-kpi-value" style="color:#b91c1c;">{{ number_format($this->countP0, 0, '.', '') }}</div>
+      <div class="bi-kpi-value" style="color:#b91c1c;">
+        {{ number_format($this->countP0, 0, '.', '') }}
+        @if(isset($this->kpiDeltas['countP0']) && $this->kpiDeltas['countP0'] != 0)
+          @php $d = $this->kpiDeltas['countP0']; @endphp
+          <span style="font-size:0.75rem; font-weight:500; {{ $d > 0 ? 'color:#dc2626;' : 'color:#16a34a;' }}">{{ $d > 0 ? "\u{2191}" : "\u{2193}" }} {{ $d > 0 ? '+' : '' }}{{ $d }}</span>
+        @endif
+      </div>
       <div class="bi-kpi-sub" style="color:#ef4444;">stoc 0 sau &lt; 7 zile</div>
     </div>
     <div class="bi-kpi-card" style="border-color:#fed7aa; background:#fff7ed;">
       <div class="bi-kpi-label" style="color:#f97316;">Moderate (P1)</div>
-      <div class="bi-kpi-value" style="color:#c2410c;">{{ number_format($this->countP1, 0, '.', '') }}</div>
+      <div class="bi-kpi-value" style="color:#c2410c;">
+        {{ number_format($this->countP1, 0, '.', '') }}
+        @if(isset($this->kpiDeltas['countP1']) && $this->kpiDeltas['countP1'] != 0)
+          @php $d = $this->kpiDeltas['countP1']; @endphp
+          <span style="font-size:0.75rem; font-weight:500; {{ $d > 0 ? 'color:#dc2626;' : 'color:#16a34a;' }}">{{ $d > 0 ? "\u{2191}" : "\u{2193}" }} {{ $d > 0 ? '+' : '' }}{{ $d }}</span>
+        @endif
+      </div>
       <div class="bi-kpi-sub" style="color:#f97316;">7–14 zile rămase</div>
     </div>
     <div class="bi-kpi-card" style="border-color:#fde68a; background:#fefce8;">
       <div class="bi-kpi-label" style="color:#ca8a04;">Capital Blocat — Dead Stock (P2)</div>
-      <div class="bi-kpi-value" style="color:#a16207;">{{ number_format($this->countP2, 0, '.', '') }}</div>
+      <div class="bi-kpi-value" style="color:#a16207;">
+        {{ number_format($this->countP2, 0, '.', '') }}
+        @if(isset($this->kpiDeltas['countP2']) && $this->kpiDeltas['countP2'] != 0)
+          @php $d = $this->kpiDeltas['countP2']; @endphp
+          <span style="font-size:0.75rem; font-weight:500; {{ $d > 0 ? 'color:#dc2626;' : 'color:#16a34a;' }}">{{ $d > 0 ? "\u{2191}" : "\u{2193}" }} {{ $d > 0 ? '+' : '' }}{{ $d }}</span>
+        @endif
+      </div>
       <div class="bi-kpi-sub" style="color:#ca8a04;">capital blocat ≥ 300 RON</div>
     </div>
   </div>

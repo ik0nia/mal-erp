@@ -48,10 +48,10 @@ Schedule::command('woo:sync-categories')
 // BI data layer — zilnic la 00:30 (Europe/Bucharest).
 // Procesează ziua de ieri (complet înghețată după miezul nopții).
 // Ordinea internă: KPI → Velocity → Alerts.
-// NOTE: fără withoutOverlapping() — comanda e idempotentă (UPDATE ON DUPLICATE KEY).
 Schedule::command('bi:compute-daily')
     ->dailyAt('00:30')
     ->timezone('Europe/Bucharest')
+    ->withoutOverlapping()
     ->runInBackground();
 
 // Watchdog BI — zilnic la 09:00 (Europe/Bucharest).

@@ -46,6 +46,10 @@ class BiDashboardPage extends Page
     /** @var array<int, array<string, mixed>> */
     public array  $marginRows           = [];
 
+    // ── KPI Yesterday (for trend indicators) ──────────────────────────────
+    public array $kpiYesterday = [];
+    public array $kpiDeltas    = [];
+
     // ── Alerte ───────────────────────────────────────────────────────────────
     public string $alertDay = '—';
     public int    $countP0  = 0;
@@ -120,6 +124,19 @@ class BiDashboardPage extends Page
             $this->stockDeltaPct = $prevVal > 0
                 ? round($this->stockDelta / $prevVal * 100, 2)
                 : 0.0;
+
+            // Yesterday KPI data for trend indicators
+            $this->kpiYesterday = [
+                'stock_value'    => round($prevVal, 2),
+                'in_stock'       => (int) $prev->products_in_stock,
+                'out_of_stock'   => (int) $prev->products_out_of_stock,
+            ];
+
+            $this->kpiDeltas = [
+                'stock_value'    => round($this->stockValue - $prevVal, 2),
+                'in_stock'       => $this->inStock - (int) $prev->products_in_stock,
+                'out_of_stock'   => $this->outOfStock - (int) $prev->products_out_of_stock,
+            ];
         }
     }
 
@@ -202,6 +219,25 @@ class BiDashboardPage extends Page
         $this->countP0 = (int) ($counts->get('P0')?->cnt ?? 0);
         $this->countP1 = (int) ($counts->get('P1')?->cnt ?? 0);
         $this->countP2 = (int) ($counts->get('P2')?->cnt ?? 0);
+
+        // Previous day alert counts for trend indicators
+        $prevAlertDay = DB::table('bi_inventory_alert_candidates_daily')
+            ->where('day', '<', $alertDay)
+            ->orderByDesc('day')
+            ->value('day');
+
+        if ($prevAlertDay) {
+            $prevCounts = DB::table('bi_inventory_alert_candidates_daily')
+                ->where('day', $prevAlertDay)
+                ->selectRaw('risk_level, COUNT(*) as cnt')
+                ->groupBy('risk_level')
+                ->get()
+                ->keyBy('risk_level');
+
+            $this->kpiDeltas['countP0'] = $this->countP0 - (int) ($prevCounts->get('P0')?->cnt ?? 0);
+            $this->kpiDeltas['countP1'] = $this->countP1 - (int) ($prevCounts->get('P1')?->cnt ?? 0);
+            $this->kpiDeltas['countP2'] = $this->countP2 - (int) ($prevCounts->get('P2')?->cnt ?? 0);
+        }
 
         $this->loadAlertRows();
     }

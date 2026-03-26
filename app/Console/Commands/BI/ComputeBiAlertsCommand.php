@@ -44,6 +44,14 @@ class ComputeBiAlertsCommand extends Command
         $p0Days    = (int)   config('bi.alert_p0_days_left',         7);
         $p1Days    = (int)   config('bi.alert_p1_days_left',         14);
 
+        // Încarcă lead_days de la furnizorul preferat per produs
+        // (folosit pentru praguri P0/P1 dinamice)
+        $supplierLeadDays = DB::table('product_suppliers')
+            ->where('is_preferred', true)
+            ->whereNotNull('lead_days')
+            ->where('lead_days', '>', 0)
+            ->pluck('lead_days', 'woo_product_id');
+
         // Încarcă produsele zilei de tip 'shop' + velocity + denumire Woo
         // LEFT JOIN velocity (poate lipsi dacă e prima rulare)
         // JOIN woo_products pe sku = reference_product_id — filtrăm strict pe product_type = 'shop'
@@ -63,6 +71,7 @@ class ComputeBiAlertsCommand extends Command
                 'dsm.opening_sell_price',
                 DB::raw('COALESCE(v.avg_out_qty_30d, 0) AS avg_out_30d'),
                 'wp.name AS product_name',
+                'wp.id AS woo_product_id',
             ])
             ->get();
 
@@ -86,16 +95,25 @@ class ComputeBiAlertsCommand extends Command
                 ? round(($closingPrice - $openingPrice) / $openingPrice * 100, 2)
                 : 0.0;
 
+            // ── Dynamic P0/P1 thresholds based on supplier lead_days ────────
+            $productId = $p->woo_product_id ?? null;
+            $leadDays = $productId ? ($supplierLeadDays[$productId] ?? null) : null;
+
+            // If supplier has lead_days, use it: P0 = stock runs out before delivery, P1 = 2x buffer
+            // Otherwise fall back to config thresholds
+            $effectiveP0 = $leadDays ? (int) $leadDays : $p0Days;
+            $effectiveP1 = $leadDays ? (int) $leadDays * 2 : $p1Days;
+
             // ── Reason flags ──────────────────────────────────────────────────
             $flags = [];
 
             if ($closingQty <= 0) {
                 $flags[] = 'out_of_stock';
             }
-            if ($daysLeft !== null && $daysLeft <= $p0Days) {
+            if ($daysLeft !== null && $daysLeft <= $effectiveP0) {
                 $flags[] = 'critical_stock';
             }
-            if ($daysLeft !== null && $daysLeft > $p0Days && $daysLeft <= $p1Days) {
+            if ($daysLeft !== null && $daysLeft > $effectiveP0 && $daysLeft <= $effectiveP1) {
                 $flags[] = 'low_stock';
             }
             if ($priceChangePct >= $spikePct) {
@@ -110,13 +128,13 @@ class ComputeBiAlertsCommand extends Command
 
             // ── Risk level (P0 ia prioritate) ────────────────────────────────
             $isP0 = $closingQty <= 0
-                || ($daysLeft !== null && $daysLeft <= $p0Days)
+                || ($daysLeft !== null && $daysLeft <= $effectiveP0)
                 || $priceChangePct >= $spikePct;
 
             $isP1 = ! $isP0
                 && $daysLeft !== null
-                && $daysLeft > $p0Days
-                && $daysLeft <= $p1Days;
+                && $daysLeft > $effectiveP0
+                && $daysLeft <= $effectiveP1;
 
             $isP2 = ! $isP0
                 && ! $isP1
