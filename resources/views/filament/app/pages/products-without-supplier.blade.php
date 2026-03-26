@@ -1,22 +1,22 @@
 <x-filament-panels::page>
 
     {{-- Stat pills --}}
-    <div class="flex flex-wrap gap-2">
-        <span class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs dark:border-white/10 dark:bg-gray-900">
-            <span class="text-gray-500 dark:text-gray-400">Total fără furnizor:</span>
-            <span class="font-bold text-gray-800 dark:text-gray-100">{{ number_format($this->statTotal, 0, '.', '') }}</span>
+    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+        <span style="display: inline-flex; align-items: center; gap: 0.375rem; border-radius: 9999px; border: 1px solid #e5e7eb; background: #fff; padding: 0.25rem 0.75rem; font-size: 0.75rem; line-height: 1rem;">
+            <span style="color: #6b7280;">Total fără furnizor:</span>
+            <span style="font-weight: 700; color: #1f2937;">{{ number_format($this->statTotal, 0, '.', '') }}</span>
         </span>
-        <span class="inline-flex items-center gap-1.5 rounded-full border border-warning-200 bg-warning-50 px-3 py-1 text-xs dark:border-warning-400/20 dark:bg-warning-950/20">
-            <span class="text-warning-700 dark:text-warning-300">Placeholder:</span>
-            <span class="font-bold text-warning-700 dark:text-warning-300">{{ number_format($this->statPlaceholder, 0, '.', '') }}</span>
+        <span style="display: inline-flex; align-items: center; gap: 0.375rem; border-radius: 9999px; border: 1px solid #fde68a; background: #fffbeb; padding: 0.25rem 0.75rem; font-size: 0.75rem; line-height: 1rem;">
+            <span style="color: #b45309;">Placeholder:</span>
+            <span style="font-weight: 700; color: #b45309;">{{ number_format($this->statPlaceholder, 0, '.', '') }}</span>
         </span>
-        <span class="inline-flex items-center gap-1.5 rounded-full border border-success-200 bg-success-50 px-3 py-1 text-xs dark:border-success-400/20 dark:bg-success-950/20">
-            <span class="text-success-700 dark:text-success-300">Cu stoc > 0:</span>
-            <span class="font-bold text-success-700 dark:text-success-300">{{ number_format($this->statWithStock, 0, '.', '') }}</span>
+        <span style="display: inline-flex; align-items: center; gap: 0.375rem; border-radius: 9999px; border: 1px solid #bbf7d0; background: #f0fdf4; padding: 0.25rem 0.75rem; font-size: 0.75rem; line-height: 1rem;">
+            <span style="color: #15803d;">Cu stoc > 0:</span>
+            <span style="font-weight: 700; color: #15803d;">{{ number_format($this->statWithStock, 0, '.', '') }}</span>
         </span>
-        <span class="inline-flex items-center gap-1.5 rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-xs dark:border-primary-400/20 dark:bg-primary-950/20">
-            <span class="text-primary-700 dark:text-primary-300">Cu brand identificat:</span>
-            <span class="font-bold text-primary-700 dark:text-primary-300">{{ number_format($this->statWithBrand, 0, '.', '') }}</span>
+        <span style="display: inline-flex; align-items: center; gap: 0.375rem; border-radius: 9999px; border: 1px solid #e8c4c4; background: #fdf2f2; padding: 0.25rem 0.75rem; font-size: 0.75rem; line-height: 1rem;">
+            <span style="color: #8B1A1A;">Cu brand identificat:</span>
+            <span style="font-weight: 700; color: #8B1A1A;">{{ number_format($this->statWithBrand, 0, '.', '') }}</span>
         </span>
     </div>
 

@@ -3,92 +3,98 @@
     @php $accounts = $this->getAccounts(); @endphp
 
     @if($accounts->isEmpty())
-        <div class="text-center py-12 text-gray-400">
-            <x-filament::icon icon="heroicon-o-share" class="w-12 h-12 mx-auto mb-3 opacity-40" />
-            <p class="text-lg font-medium">Niciun cont conectat</p>
-            <p class="text-sm mt-1">Adaugă un cont Facebook din butonul de sus.</p>
+        <div style="text-align: center; padding: 3rem 0; color: #9ca3af;">
+            <x-filament::icon icon="heroicon-o-share" style="width: 3rem; height: 3rem; margin: 0 auto 0.75rem; opacity: 0.4;" />
+            <p style="font-size: 1.125rem; font-weight: 500;">Niciun cont conectat</p>
+            <p style="font-size: 0.875rem; margin-top: 0.25rem;">Adauga un cont Facebook din butonul de sus.</p>
         </div>
     @else
-        <div class="space-y-4">
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
             @foreach($accounts as $account)
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow p-5">
-                    <div class="flex items-start justify-between gap-4 flex-wrap">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                <div style="background: #fff; border-radius: 0.75rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1.25rem;">
+                    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <div style="width: 2.5rem; height: 2.5rem; border-radius: 9999px; background: #2563eb; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 0.875rem;">
                                 FB
                             </div>
                             <div>
-                                <p class="font-semibold text-gray-900 dark:text-white">{{ $account->name }}</p>
-                                <p class="text-xs text-gray-500">Page ID: {{ $account->account_id }}</p>
+                                <p style="font-weight: 600; color: #111827;">{{ $account->name }}</p>
+                                <p style="font-size: 0.75rem; color: #6b7280;">Page ID: {{ $account->account_id }}</p>
                             </div>
                         </div>
 
-                        <div class="flex items-center gap-2 flex-wrap">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                             {{-- Status token --}}
                             @if($account->isTokenExpired())
-                                <span class="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 font-medium">
+                                <span style="font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 9999px; background: #fee2e2; color: #b91c1c; font-weight: 500;">
                                     ⚠️ Token expirat
                                 </span>
                             @elseif($account->isTokenExpiringSoon())
-                                <span class="text-xs px-2 py-1 rounded-full bg-orange-100 text-orange-700 font-medium">
-                                    ⚠️ Expiră curând
+                                <span style="font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 9999px; background: #ffedd5; color: #c2410c; font-weight: 500;">
+                                    ⚠️ Expira curand
                                 </span>
                             @else
-                                <span class="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 font-medium">
+                                <span style="font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 9999px; background: #dcfce7; color: #15803d; font-weight: 500;">
                                     ✓ Token activ
                                 </span>
                             @endif
 
                             {{-- Activ/inactiv --}}
-                            <span class="text-xs px-2 py-1 rounded-full {{ $account->is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500' }}">
+                            <span style="font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 9999px; {{ $account->is_active ? 'background: #d1fae5; color: #047857;' : 'background: #f3f4f6; color: #6b7280;' }}">
                                 {{ $account->is_active ? 'Activ' : 'Inactiv' }}
                             </span>
                         </div>
                     </div>
 
-                    <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-gray-600 dark:text-gray-400">
+                    <div style="margin-top: 1rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; font-size: 0.875rem; color: #6b7280;">
                         <div>
-                            <p class="text-xs text-gray-400">Postări fetchate</p>
-                            <p class="font-semibold text-gray-800 dark:text-gray-200">{{ $account->fetchedPosts()->count() }}</p>
+                            <p style="font-size: 0.75rem; color: #9ca3af;">Postari fetchate</p>
+                            <p style="font-weight: 600; color: #1f2937;">{{ $account->fetchedPosts()->count() }}</p>
                         </div>
                         <div>
-                            <p class="text-xs text-gray-400">Stil analizat</p>
-                            <p class="font-semibold text-gray-800 dark:text-gray-200">
+                            <p style="font-size: 0.75rem; color: #9ca3af;">Stil analizat</p>
+                            <p style="font-weight: 600; color: #1f2937;">
                                 {{ $account->style_analyzed_at ? $account->style_analyzed_at->format('d.m.Y') : '—' }}
                             </p>
                         </div>
                         <div>
-                            <p class="text-xs text-gray-400">Token expiră</p>
-                            <p class="font-semibold text-gray-800 dark:text-gray-200">
+                            <p style="font-size: 0.75rem; color: #9ca3af;">Token expira</p>
+                            <p style="font-weight: 600; color: #1f2937;">
                                 {{ $account->token_expires_at ? $account->token_expires_at->format('d.m.Y') : 'Nedefinit' }}
                             </p>
                         </div>
                         <div>
-                            <p class="text-xs text-gray-400">Profil stil activ</p>
-                            <p class="font-semibold text-gray-800 dark:text-gray-200">
-                                {{ $account->activeStyleProfile() ? 'Da (' . $account->activeStyleProfile()->posts_analyzed . ' postări)' : 'Nu' }}
+                            <p style="font-size: 0.75rem; color: #9ca3af;">Profil stil activ</p>
+                            <p style="font-weight: 600; color: #1f2937;">
+                                {{ $account->activeStyleProfile() ? 'Da (' . $account->activeStyleProfile()->posts_analyzed . ' postari)' : 'Nu' }}
                             </p>
                         </div>
                     </div>
 
-                    <div class="mt-4 flex gap-2 flex-wrap">
+                    <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
                         <button
                             wire:click="fetchPosts({{ $account->id }})"
-                            class="px-3 py-1.5 rounded-lg text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 font-medium transition"
+                            style="padding: 0.375rem 0.75rem; border-radius: 0.5rem; font-size: 0.875rem; background: #eff6ff; color: #1d4ed8; font-weight: 500; border: none; cursor: pointer; transition: background 0.15s;"
+                            onmouseover="this.style.background='#dbeafe'"
+                            onmouseout="this.style.background='#eff6ff'"
                         >
-                            📥 Fetch postări istorice
+                            📥 Fetch postari istorice
                         </button>
                         <button
                             wire:click="analyzeStyle({{ $account->id }})"
-                            class="px-3 py-1.5 rounded-lg text-sm bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-300 font-medium transition"
+                            style="padding: 0.375rem 0.75rem; border-radius: 0.5rem; font-size: 0.875rem; background: #faf5ff; color: #7e22ce; font-weight: 500; border: none; cursor: pointer; transition: background 0.15s;"
+                            onmouseover="this.style.background='#f3e8ff'"
+                            onmouseout="this.style.background='#faf5ff'"
                         >
-                            🧠 Analizează stil
+                            🧠 Analizeaza stil
                         </button>
                         <button
                             wire:click="toggleActive({{ $account->id }})"
-                            class="px-3 py-1.5 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 font-medium transition"
+                            style="padding: 0.375rem 0.75rem; border-radius: 0.5rem; font-size: 0.875rem; background: #f3f4f6; color: #374151; font-weight: 500; border: none; cursor: pointer; transition: background 0.15s;"
+                            onmouseover="this.style.background='#e5e7eb'"
+                            onmouseout="this.style.background='#f3f4f6'"
                         >
-                            {{ $account->is_active ? 'Dezactivează' : 'Activează' }}
+                            {{ $account->is_active ? 'Dezactiveaza' : 'Activeaza' }}
                         </button>
                     </div>
                 </div>
@@ -96,45 +102,39 @@
         </div>
     @endif
 
-    {{-- Referințe vizuale --}}
+    {{-- Referinte vizuale --}}
     @php $references = $this->getStyleReferences(); @endphp
-    <div class="mt-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow p-5">
-        <div class="flex items-center justify-between mb-4">
+    <div style="margin-top: 1.5rem; background: #fff; border-radius: 0.75rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1.25rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
             <div>
-                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Referințe vizuale stil</h3>
-                <p class="text-xs text-gray-500 mt-0.5">
-                    Selectează imagini și generează automat structuri de template pentru editorul grafic.
+                <h3 style="font-weight: 600; color: #1f2937;">Referinte vizuale stil</h3>
+                <p style="font-size: 0.75rem; color: #6b7280; margin-top: 0.125rem;">
+                    Selecteaza imagini si genereaza automat structuri de template pentru editorul grafic.
                 </p>
             </div>
-            <span class="text-xs text-gray-400">{{ count($references) }} imagine(i)</span>
+            <span style="font-size: 0.75rem; color: #9ca3af;">{{ count($references) }} imagine(i)</span>
         </div>
 
         @if(empty($references))
-            <div class="text-center py-8 text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
-                <x-filament::icon icon="heroicon-o-photo" class="w-10 h-10 mx-auto mb-2 opacity-30" />
-                <p class="text-sm">Nicio referință încărcată</p>
-                <p class="text-xs mt-1">Folosește butonul "Încarcă referințe vizuale" din sus.</p>
+            <div style="text-align: center; padding: 2rem 0; color: #9ca3af; border: 2px dashed #e5e7eb; border-radius: 0.5rem;">
+                <x-filament::icon icon="heroicon-o-photo" style="width: 2.5rem; height: 2.5rem; margin: 0 auto 0.5rem; opacity: 0.3;" />
+                <p style="font-size: 0.875rem;">Nicio referinta incarcata</p>
+                <p style="font-size: 0.75rem; margin-top: 0.25rem;">Foloseste butonul "Incarca referinte vizuale" din sus.</p>
             </div>
         @else
-            {{-- Grid imagini cu selecție --}}
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {{-- Grid imagini cu selectie --}}
+            <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.75rem;">
                 @foreach($references as $ref)
                     @php
                         $isSelected = in_array($ref['path'], $this->selectedReferences, true);
                     @endphp
                     <div
                         wire:click="toggleReferenceSelection('{{ addslashes($ref['path']) }}')"
-                        class="relative rounded-lg overflow-hidden border-2 cursor-pointer transition-all
-                            {{ $isSelected
-                                ? 'border-violet-500 ring-2 ring-violet-400 ring-offset-1'
-                                : 'border-gray-200 dark:border-gray-700 hover:border-violet-300' }}"
+                        style="position: relative; border-radius: 0.5rem; overflow: hidden; cursor: pointer; transition: all 0.15s; border: 2px solid {{ $isSelected ? '#8b5cf6' : '#e5e7eb' }}; {{ $isSelected ? 'box-shadow: 0 0 0 2px #a78bfa, 0 0 0 3px #fff;' : '' }}"
                     >
                         {{-- Checkbox indicator --}}
-                        <div class="absolute top-2 left-2 z-10">
-                            <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold transition-all
-                                {{ $isSelected
-                                    ? 'bg-violet-500 text-white'
-                                    : 'bg-white/80 border border-gray-300 text-transparent' }}">
+                        <div style="position: absolute; top: 0.5rem; left: 0.5rem; z-index: 10;">
+                            <div style="width: 1.25rem; height: 1.25rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; transition: all 0.15s; {{ $isSelected ? 'background: #8b5cf6; color: #fff;' : 'background: rgba(255,255,255,0.8); border: 1px solid #d1d5db; color: transparent;' }}">
                                 ✓
                             </div>
                         </div>
@@ -142,45 +142,49 @@
                         <img
                             src="{{ $ref['url'] }}"
                             alt="{{ $ref['name'] }}"
-                            class="w-full h-28 object-cover {{ $isSelected ? 'opacity-90' : '' }}"
+                            style="width: 100%; height: 7rem; object-fit: cover; {{ $isSelected ? 'opacity: 0.9;' : '' }}"
                         />
-                        <div class="p-1.5 bg-gray-50 dark:bg-gray-700 flex items-center justify-between gap-1">
-                            <span class="text-xs text-gray-400 truncate">{{ $ref['size'] }}</span>
+                        <div style="padding: 0.375rem; background: #f9fafb; display: flex; align-items: center; justify-content: space-between; gap: 0.25rem;">
+                            <span style="font-size: 0.75rem; color: #9ca3af; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ $ref['size'] }}</span>
                             <button
                                 wire:click.stop="deleteStyleReference('{{ addslashes($ref['path']) }}')"
-                                class="shrink-0 px-2 py-0.5 rounded text-xs bg-red-100 text-red-700 hover:bg-red-200 transition font-medium"
+                                style="flex-shrink: 0; padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; background: #fee2e2; color: #b91c1c; font-weight: 500; border: none; cursor: pointer; transition: background 0.15s;"
+                                onmouseover="this.style.background='#fecaca'"
+                                onmouseout="this.style.background='#fee2e2'"
                             >
-                                Șterge
+                                Sterge
                             </button>
                         </div>
                     </div>
                 @endforeach
             </div>
 
-            {{-- Bara de acțiuni pentru generare template-uri --}}
-            <div class="mt-4 flex items-center justify-between gap-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                <div class="flex items-center gap-2">
+            {{-- Bara de actiuni pentru generare template-uri --}}
+            <div style="margin-top: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-top: 1rem; border-top: 1px solid #f3f4f6;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
                     @if(count($this->selectedReferences) > 0)
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 text-sm font-medium">
-                            <span class="w-4 h-4 rounded-full bg-violet-500 text-white text-xs flex items-center justify-center font-bold">
+                        <span style="display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.25rem 0.75rem; border-radius: 9999px; background: #ede9fe; color: #6d28d9; font-size: 0.875rem; font-weight: 500;">
+                            <span style="width: 1rem; height: 1rem; border-radius: 9999px; background: #8b5cf6; color: #fff; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; font-weight: 700;">
                                 {{ count($this->selectedReferences) }}
                             </span>
-                            {{ count($this->selectedReferences) === 1 ? 'imagine selectată' : 'imagini selectate' }}
+                            {{ count($this->selectedReferences) === 1 ? 'imagine selectata' : 'imagini selectate' }}
                         </span>
                     @else
-                        <span class="text-sm text-gray-400 italic">
-                            Click pe imagini pentru a le selecta ca referință
+                        <span style="font-size: 0.875rem; color: #9ca3af; font-style: italic;">
+                            Click pe imagini pentru a le selecta ca referinta
                         </span>
                     @endif
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
                     @if(count($this->selectedReferences) > 0)
                         <button
                             wire:click="$set('selectedReferences', [])"
-                            class="px-3 py-1.5 rounded-lg text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 transition font-medium"
+                            style="padding: 0.375rem 0.75rem; border-radius: 0.5rem; font-size: 0.875rem; background: #f3f4f6; color: #4b5563; font-weight: 500; border: none; cursor: pointer; transition: background 0.15s;"
+                            onmouseover="this.style.background='#e5e7eb'"
+                            onmouseout="this.style.background='#f3f4f6'"
                         >
-                            Deselectează tot
+                            Deselecteaza tot
                         </button>
                     @endif
 
@@ -193,52 +197,52 @@
                             onmouseover="this.style.background='#6d28d9'"
                             onmouseout="this.style.background='#7c3aed'"
                         >
-                            <span wire:loading.remove wire:target="generateTemplates">🪄 Generează template-uri</span>
-                            <span wire:loading wire:target="generateTemplates">⏳ Se analizează...</span>
+                            <span wire:loading.remove wire:target="generateTemplates">🪄 Genereaza template-uri</span>
+                            <span wire:loading wire:target="generateTemplates">⏳ Se analizeaza...</span>
                         </button>
                     @else
                         <button
                             disabled
                             style="background:#f3f4f6;color:#9ca3af;padding:6px 16px;border-radius:8px;font-size:14px;font-weight:600;border:none;cursor:not-allowed"
                         >
-                            🪄 Generează template-uri
+                            🪄 Genereaza template-uri
                         </button>
                     @endif
                 </div>
             </div>
 
-            {{-- Notă despre ce face butonul --}}
+            {{-- Nota despre ce face butonul --}}
             @if(count($this->selectedReferences) > 0)
-                <div class="mt-3 p-3 rounded-lg bg-violet-50 dark:bg-violet-900/20 border border-violet-100 dark:border-violet-800">
-                    <p class="text-xs text-violet-700 dark:text-violet-300">
+                <div style="margin-top: 0.75rem; padding: 0.75rem; border-radius: 0.5rem; background: #f5f3ff; border: 1px solid #ede9fe;">
+                    <p style="font-size: 0.75rem; color: #6d28d9;">
                         <strong>Claude AI</strong> va analiza {{ count($this->selectedReferences) }} imagine(i),
-                        va detecta structuri de layout recurente și va genera șabloane grafice refolosibile
-                        în editorul de template-uri. Durată estimată: 15–30 secunde.
+                        va detecta structuri de layout recurente si va genera sabloane grafice refolosibile
+                        in editorul de template-uri. Durata estimata: 15–30 secunde.
                     </p>
                 </div>
             @endif
         @endif
     </div>
 
-    {{-- Setări API --}}
-    <div class="mt-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow p-5">
-        <h3 class="font-semibold text-gray-800 dark:text-gray-100 mb-3">Setări API</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+    {{-- Setari API --}}
+    <div style="margin-top: 1.5rem; background: #fff; border-radius: 0.75rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1.25rem;">
+        <h3 style="font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">Setari API</h3>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; font-size: 0.875rem;">
             <div>
-                <p class="text-xs text-gray-400 mb-1">Gemini API Key</p>
-                <p class="font-mono text-xs text-gray-600 dark:text-gray-400">
-                    {{ \App\Models\AppSetting::getEncrypted(\App\Models\AppSetting::KEY_GEMINI_API_KEY) ? '✓ Setat' : '✗ Lipsă' }}
+                <p style="font-size: 0.75rem; color: #9ca3af; margin-bottom: 0.25rem;">Gemini API Key</p>
+                <p style="font-family: monospace; font-size: 0.75rem; color: #4b5563;">
+                    {{ \App\Models\AppSetting::getEncrypted(\App\Models\AppSetting::KEY_GEMINI_API_KEY) ? '✓ Setat' : '✗ Lipsa' }}
                 </p>
             </div>
             <div>
-                <p class="text-xs text-gray-400 mb-1">Meta App ID</p>
-                <p class="font-mono text-xs text-gray-600 dark:text-gray-400">
+                <p style="font-size: 0.75rem; color: #9ca3af; margin-bottom: 0.25rem;">Meta App ID</p>
+                <p style="font-family: monospace; font-size: 0.75rem; color: #4b5563;">
                     {{ \App\Models\AppSetting::get(\App\Models\AppSetting::KEY_META_APP_ID) ?: '—' }}
                 </p>
             </div>
             <div>
-                <p class="text-xs text-gray-400 mb-1">Meta App Secret</p>
-                <p class="font-mono text-xs text-gray-600 dark:text-gray-400">
+                <p style="font-size: 0.75rem; color: #9ca3af; margin-bottom: 0.25rem;">Meta App Secret</p>
+                <p style="font-family: monospace; font-size: 0.75rem; color: #4b5563;">
                     {{ \App\Models\AppSetting::getEncrypted(\App\Models\AppSetting::KEY_META_APP_SECRET) ? '✓ Setat' : '—' }}
                 </p>
             </div>

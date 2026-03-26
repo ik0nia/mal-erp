@@ -2,48 +2,48 @@
     @php $stats = $this->getStats(); @endphp
 
     {{-- Stats cards --}}
-    <div class="grid grid-cols-7 gap-3 mb-6">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 text-center">
-            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total'], 0, '.', '') }}</div>
-            <div class="text-xs text-gray-500 mt-1">Total propuneri</div>
+    <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.75rem; margin-bottom: 1.5rem;">
+        <div style="background: #fff; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1rem; text-align: center;">
+            <div style="font-size: 1.5rem; font-weight: 700; color: #111827;">{{ number_format($stats['total'], 0, '.', '') }}</div>
+            <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">Total propuneri</div>
         </div>
-        <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl shadow p-4 text-center">
-            <div class="text-2xl font-bold text-amber-600">{{ number_format($stats['pending'], 0, '.', '') }}</div>
-            <div class="text-xs text-gray-500 mt-1">În așteptare</div>
+        <div style="background: #fffbeb; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1rem; text-align: center;">
+            <div style="font-size: 1.5rem; font-weight: 700; color: #d97706;">{{ number_format($stats['pending'], 0, '.', '') }}</div>
+            <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">In asteptare</div>
         </div>
-        <div class="bg-green-50 dark:bg-green-900/20 rounded-xl shadow p-4 text-center">
-            <div class="text-2xl font-bold text-green-600">{{ number_format($stats['approved'], 0, '.', '') }}</div>
-            <div class="text-xs text-gray-500 mt-1">Aprobate</div>
+        <div style="background: #f0fdf4; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1rem; text-align: center;">
+            <div style="font-size: 1.5rem; font-weight: 700; color: #16a34a;">{{ number_format($stats['approved'], 0, '.', '') }}</div>
+            <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">Aprobate</div>
         </div>
-        <div class="bg-red-50 dark:bg-red-900/20 rounded-xl shadow p-4 text-center">
-            <div class="text-2xl font-bold text-red-600">{{ number_format($stats['rejected'], 0, '.', '') }}</div>
-            <div class="text-xs text-gray-500 mt-1">Respinse</div>
+        <div style="background: #fef2f2; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1rem; text-align: center;">
+            <div style="font-size: 1.5rem; font-weight: 700; color: #dc2626;">{{ number_format($stats['rejected'], 0, '.', '') }}</div>
+            <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">Respinse</div>
         </div>
-        <div class="bg-gray-50 dark:bg-gray-700 rounded-xl shadow p-4 text-center">
-            <div class="text-2xl font-bold text-gray-500">{{ number_format($stats['no_match'], 0, '.', '') }}</div>
-            <div class="text-xs text-gray-500 mt-1">Fără potrivire</div>
+        <div style="background: #f9fafb; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1rem; text-align: center;">
+            <div style="font-size: 1.5rem; font-weight: 700; color: #6b7280;">{{ number_format($stats['no_match'], 0, '.', '') }}</div>
+            <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">Fara potrivire</div>
         </div>
-        <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl shadow p-4 text-center">
-            <div class="text-2xl font-bold text-blue-600">
+        <div style="background: #eff6ff; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1rem; text-align: center;">
+            <div style="font-size: 1.5rem; font-weight: 700; color: #2563eb;">
                 {{ number_format($stats['products_with_cat'], 0, '.', '') }}
-                <span class="text-sm font-normal text-gray-500">/ {{ number_format($stats['products_total'], 0, '.', '') }}</span>
+                <span style="font-size: 0.875rem; font-weight: 400; color: #6b7280;">/ {{ number_format($stats['products_total'], 0, '.', '') }}</span>
             </div>
-            <div class="text-xs text-gray-500 mt-1">Produse cu categorie</div>
+            <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">Produse cu categorie</div>
         </div>
     </div>
 
     @if($stats['total'] === 0)
-        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 text-center mb-6">
-            <x-filament::icon icon="heroicon-o-sparkles" class="w-10 h-10 text-blue-400 mx-auto mb-3" />
-            <p class="text-blue-700 dark:text-blue-300 font-medium">Nicio propunere încă.</p>
-            <p class="text-blue-600 dark:text-blue-400 text-sm mt-1">
-                Apasă <strong>„Pornește 15 agenți AI"</strong> din dreapta sus pentru a genera propunerile de categorii.
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 0.75rem; padding: 1.5rem; text-align: center; margin-bottom: 1.5rem;">
+            <x-filament::icon icon="heroicon-o-sparkles" style="width: 2.5rem; height: 2.5rem; color: #60a5fa; margin: 0 auto 0.75rem;" />
+            <p style="color: #1d4ed8; font-weight: 500;">Nicio propunere inca.</p>
+            <p style="color: #2563eb; font-size: 0.875rem; margin-top: 0.25rem;">
+                Apasa <strong>„Porneste 15 agenti AI"</strong> din dreapta sus pentru a genera propunerile de categorii.
             </p>
         </div>
     @elseif($stats['pending'] === 0 && $stats['approved'] > 0)
-        <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 text-center mb-6">
-            <p class="text-green-700 dark:text-green-300 text-sm">
-                ✓ Toate propunerile au fost procesate. Apasă <strong>„Aplică aprobate"</strong> pentru a actualiza produsele.
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 0.75rem; padding: 1rem; text-align: center; margin-bottom: 1.5rem;">
+            <p style="color: #15803d; font-size: 0.875rem;">
+                ✓ Toate propunerile au fost procesate. Apasa <strong>„Aplica aprobate"</strong> pentru a actualiza produsele.
             </p>
         </div>
     @endif
