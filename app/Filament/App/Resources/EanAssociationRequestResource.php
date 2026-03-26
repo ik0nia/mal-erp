@@ -26,6 +26,18 @@ class EanAssociationRequestResource extends Resource
     protected static ?string $pluralModelLabel = 'Cereri asociere EAN';
     protected static ?int $navigationSort = 99;
 
+    public static function getNavigationBadge(): ?string
+    {
+        $count = static::getModel()::where('status', 'pending')->count();
+
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): string
+    {
+        return 'warning';
+    }
+
     public static function table(Table $table): Table
     {
         return $table
