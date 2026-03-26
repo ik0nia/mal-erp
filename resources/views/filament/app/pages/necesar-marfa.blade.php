@@ -39,77 +39,74 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
 }">
 
     {{-- Stat cards + filtru acoperire --}}
-    <div class="flex flex-wrap items-stretch gap-4">
-        <div class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900 overflow-hidden">
-            <div class="p-4">
-                <p class="text-sm text-gray-500 dark:text-gray-400">Furnizori afectați</p>
-                <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ $this->statSuppliers }}</p>
+    <div style="display:flex;flex-wrap:wrap;align-items:stretch;gap:16px;">
+        <div style="border-radius:12px;border:1px solid #e5e7eb;background-color:#ffffff;overflow:hidden;">
+            <div style="padding:16px;">
+                <p style="font-size:0.875rem;color:#6b7280;">Furnizori afectați</p>
+                <p style="margin-top:4px;font-size:1.5rem;font-weight:700;color:#111827;">{{ $this->statSuppliers }}</p>
             </div>
         </div>
-        <div class="rounded-xl border border-warning-200 bg-warning-50 dark:border-warning-400/20 dark:bg-warning-950/20 overflow-hidden">
-            <div class="p-4">
-                <p class="text-sm text-warning-700 dark:text-warning-300">Produse afectate</p>
-                <p class="mt-1 text-2xl font-bold text-warning-700 dark:text-warning-300">{{ $this->statProducts }}</p>
+        <div style="border-radius:12px;border:1px solid #fde68a;background-color:#fff7ed;overflow:hidden;">
+            <div style="padding:16px;">
+                <p style="font-size:0.875rem;color:#c2410c;">Produse afectate</p>
+                <p style="margin-top:4px;font-size:1.5rem;font-weight:700;color:#c2410c;">{{ $this->statProducts }}</p>
             </div>
         </div>
-        <div class="rounded-xl border border-danger-200 bg-danger-50 dark:border-danger-400/20 dark:bg-danger-950/20 overflow-hidden">
-            <div class="p-4">
-                <p class="text-sm text-danger-700 dark:text-danger-300">Stoc zero</p>
-                <p class="mt-1 text-2xl font-bold text-danger-700 dark:text-danger-300">{{ $this->statZeroStock }}</p>
+        <div style="border-radius:12px;border:1px solid #fecaca;background-color:#fef2f2;overflow:hidden;">
+            <div style="padding:16px;">
+                <p style="font-size:0.875rem;color:#b91c1c;">Stoc zero</p>
+                <p style="margin-top:4px;font-size:1.5rem;font-weight:700;color:#b91c1c;">{{ $this->statZeroStock }}</p>
             </div>
         </div>
-        <div class="rounded-xl border border-danger-300 bg-danger-100 dark:border-danger-400/30 dark:bg-danger-900/30 overflow-hidden">
-            <div class="p-4">
-                <p class="text-sm font-medium text-danger-800 dark:text-danger-200">Urgente (&lt;7 zile)</p>
-                <p class="mt-1 text-2xl font-bold text-danger-800 dark:text-danger-200">{{ $this->statUrgent }}</p>
+        <div style="border-radius:12px;border:1px solid #fca5a5;background-color:#fee2e2;overflow:hidden;">
+            <div style="padding:16px;">
+                <p style="font-size:0.875rem;font-weight:500;color:#991b1b;">Urgente (&lt;7 zile)</p>
+                <p style="margin-top:4px;font-size:1.5rem;font-weight:700;color:#991b1b;">{{ $this->statUrgent }}</p>
             </div>
         </div>
-        <div class="rounded-xl border border-warning-300 bg-warning-100 dark:border-warning-400/30 dark:bg-warning-900/30 overflow-hidden">
-            <div class="p-4">
-                <p class="text-sm font-medium text-warning-800 dark:text-warning-200">Curând (7–14 zile)</p>
-                <p class="mt-1 text-2xl font-bold text-warning-800 dark:text-warning-200">{{ $this->statSoon }}</p>
+        <div style="border-radius:12px;border:1px solid #fdba74;background-color:#ffedd5;overflow:hidden;">
+            <div style="padding:16px;">
+                <p style="font-size:0.875rem;font-weight:500;color:#9a3412;">Curând (7–14 zile)</p>
+                <p style="margin-top:4px;font-size:1.5rem;font-weight:700;color:#9a3412;">{{ $this->statSoon }}</p>
             </div>
         </div>
 
-        <div class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900 overflow-hidden ml-auto">
-            <div class="flex items-center gap-3 px-4 py-3">
-                <label class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+        <div style="border-radius:12px;border:1px solid #e5e7eb;background-color:#ffffff;overflow:hidden;margin-left:auto;">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;">
+                <label style="font-size:0.875rem;font-weight:500;color:#374151;white-space:nowrap;">
                     Acoperire comandă (zile):
                 </label>
                 <input
                     type="number" min="7" max="60"
                     wire:model.live.debounce.500ms="coverDays"
-                    class="w-20 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-center
-                           focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500
-                           dark:border-white/20 dark:bg-gray-800 dark:text-white"
+                    style="width:5rem;border-radius:8px;border:1px solid #d1d5db;background-color:#ffffff;padding:6px 12px;font-size:0.875rem;text-align:center;outline:none;"
                 />
-                <span class="text-xs text-gray-400 dark:text-gray-500">zile</span>
+                <span style="font-size:0.75rem;color:#9ca3af;">zile</span>
             </div>
         </div>
     </div>
 
     {{-- Banner selecție + buton Creează necesar --}}
     <div x-show="selected.length > 0" x-cloak x-transition
-         class="flex items-center justify-between rounded-xl border border-primary-200 bg-primary-50 px-5 py-3 dark:border-primary-700/40 dark:bg-primary-900/20">
-        <div class="flex items-center gap-3">
-            <span class="text-sm font-semibold text-primary-700 dark:text-primary-300">
+         style="display:flex;align-items:center;justify-content:space-between;border-radius:12px;border:1px solid #e8c8c8;background-color:#fdf2f2;padding:12px 20px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+            <span style="font-size:0.875rem;font-weight:600;color:#8B1A1A;">
                 <span x-text="selected.length"></span> poziții selectate
             </span>
             <button @click="selected = []; itemData = {}"
-                    class="text-xs text-primary-500 underline hover:text-primary-700 dark:text-primary-400">
+                    style="font-size:0.75rem;color:#8B1A1A;text-decoration:underline;background:none;border:none;cursor:pointer;">
                 Deselectează tot
             </button>
         </div>
         <button
             @click="$wire.createNecesarFromSelection(selected.map(pid => itemData[pid]))"
             wire:loading.attr="disabled"
-            class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm
-                   hover:bg-primary-700 active:bg-primary-800 disabled:opacity-60 transition-colors">
-            <svg wire:loading wire:target="createNecesarFromSelection" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+            style="display:inline-flex;align-items:center;gap:8px;border-radius:8px;background-color:#8B1A1A;padding:8px 16px;font-size:0.875rem;font-weight:600;color:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,0.05);border:none;cursor:pointer;">
+            <svg wire:loading wire:target="createNecesarFromSelection" style="height:16px;width:16px;animation:spin 1s linear infinite;" fill="none" viewBox="0 0 24 24">
+                <circle style="opacity:0.25;" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path style="opacity:0.75;" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
             </svg>
-            <svg wire:loading.remove wire:target="createNecesarFromSelection" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <svg wire:loading.remove wire:target="createNecesarFromSelection" style="height:16px;width:16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
             </svg>
             Creează necesar
@@ -117,32 +114,32 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
     </div>
 
     {{-- Tab Navigation --}}
-    <div class="flex rounded-xl bg-gray-100 p-1 gap-1 dark:bg-gray-800">
+    <div style="display:flex;border-radius:12px;background-color:#f3f4f6;padding:4px;gap:4px;">
         <button @click="activeTab = 'urgent'"
-                class="flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-all"
-                :class="activeTab === 'urgent'
-                    ? 'bg-white shadow text-danger-700 dark:bg-gray-900 dark:text-danger-400'
-                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'">
+                style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:8px;padding:12px 16px;font-size:0.875rem;font-weight:600;border:none;cursor:pointer;transition:all 0.2s;"
+                :style="activeTab === 'urgent'
+                    ? 'background-color:#ffffff;box-shadow:0 1px 3px rgba(0,0,0,0.1);color:#b91c1c;'
+                    : 'background-color:transparent;color:#6b7280;'">
             <span>🔴 Epuizare &lt;7 zile</span>
-            <span class="rounded-full bg-danger-100 px-2 py-0.5 text-xs font-bold text-danger-700 dark:bg-danger-900/50 dark:text-danger-300">
+            <span style="border-radius:9999px;padding:2px 8px;font-size:0.75rem;font-weight:700;background-color:#fee2e2;color:#b91c1c;">
                 {{ $this->statUrgent }}
             </span>
         </button>
         <button @click="activeTab = 'soon'"
-                class="flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-all"
-                :class="activeTab === 'soon'
-                    ? 'bg-white shadow text-warning-700 dark:bg-gray-900 dark:text-warning-400'
-                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'">
+                style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:8px;padding:12px 16px;font-size:0.875rem;font-weight:600;border:none;cursor:pointer;transition:all 0.2s;"
+                :style="activeTab === 'soon'
+                    ? 'background-color:#ffffff;box-shadow:0 1px 3px rgba(0,0,0,0.1);color:#c2410c;'
+                    : 'background-color:transparent;color:#6b7280;'">
             <span>⚠️ Epuizare 7–14 zile</span>
-            <span class="rounded-full bg-warning-100 px-2 py-0.5 text-xs font-bold text-warning-700 dark:bg-warning-900/50 dark:text-warning-300">
+            <span style="border-radius:9999px;padding:2px 8px;font-size:0.75rem;font-weight:700;background-color:#ffedd5;color:#c2410c;">
                 {{ $this->statSoon }}
             </span>
         </button>
         <button @click="activeTab = 'supplier'"
-                class="flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-all"
-                :class="activeTab === 'supplier'
-                    ? 'bg-white shadow text-primary-700 dark:bg-gray-900 dark:text-primary-400'
-                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'">
+                style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:8px;padding:12px 16px;font-size:0.875rem;font-weight:600;border:none;cursor:pointer;transition:all 0.2s;"
+                :style="activeTab === 'supplier'
+                    ? 'background-color:#ffffff;box-shadow:0 1px 3px rgba(0,0,0,0.1);color:#8B1A1A;'
+                    : 'background-color:transparent;color:#6b7280;'">
             <span>📦 Situație / Furnizor</span>
         </button>
     </div>
@@ -150,35 +147,34 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
     {{-- ===== TAB 1: URGENȚE <7 ZILE ===== --}}
     <div x-show="activeTab === 'urgent'">
         @if($this->urgentProducts->isEmpty())
-            <div class="rounded-xl border border-success-200 bg-success-50 p-6 text-center dark:border-success-400/20 dark:bg-success-950/20">
-                <x-filament::icon icon="heroicon-o-check-circle" class="mx-auto h-8 w-8 text-success-500" />
-                <p class="mt-2 text-success-700 dark:text-success-300 font-medium">Niciun produs cu stoc critic și mișcare recentă.</p>
+            <div style="border-radius:12px;border:1px solid #bbf7d0;background-color:#f0fdf4;padding:24px;text-align:center;">
+                <x-filament::icon icon="heroicon-o-check-circle" style="margin:0 auto;height:32px;width:32px;color:#22c55e;" />
+                <p style="margin-top:8px;color:#16a34a;font-weight:500;">Niciun produs cu stoc critic și mișcare recentă.</p>
             </div>
         @else
-            <div class="overflow-hidden rounded-xl border border-danger-200 bg-white shadow-sm dark:border-danger-400/20 dark:bg-gray-900">
-                <table class="w-full text-base">
+            <div style="overflow:hidden;border-radius:12px;border:1px solid #fecaca;background-color:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                <table style="width:100%;font-size:1rem;border-collapse:collapse;">
                     <thead>
-                        <tr class="border-b border-danger-100 bg-danger-50 dark:border-danger-400/20 dark:bg-danger-950/20
-                                   text-xs font-medium uppercase tracking-wide text-danger-700 dark:text-danger-400">
-                            <th class="w-10 px-3 py-2.5" title="Selectează / deselectează tot">
-                                <div class="mx-auto flex h-5 w-5 items-center justify-center rounded-full border-2 cursor-pointer transition-all"
+                        <tr style="border-bottom:1px solid #fee2e2;background-color:#fef2f2;font-size:0.75rem;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:#b91c1c;">
+                            <th style="width:40px;padding:10px 12px;" title="Selectează / deselectează tot">
+                                <div style="margin:0 auto;display:flex;height:20px;width:20px;align-items:center;justify-content:center;border-radius:9999px;border:2px solid #d1d5db;cursor:pointer;transition:all 0.2s;"
                                      @click="toggleAll(urgentItems)"
                                      :style="allSelected(urgentItems) ? 'border-color:#16a34a;background-color:#16a34a' : 'border-color:#d1d5db'">
-                                    <svg x-show="allSelected(urgentItems)" class="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5">
+                                    <svg x-show="allSelected(urgentItems)" style="height:12px;width:12px;color:#ffffff;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                                     </svg>
                                 </div>
                             </th>
-                            <th class="px-4 py-2.5 text-left">Furnizor</th>
-                            <th class="px-4 py-2.5 text-left">Denumire produs</th>
-                            <th class="px-4 py-2.5 text-right" title="Cantitate recomandată pentru {{ $this->coverDays }} zile acoperire + 3 zile safety stock, ajustată cu trendul cererii">De comandat</th>
-                            <th class="px-4 py-2.5 text-right" title="Câte zile mai durează stocul la viteza actuală de vânzare">Zile până la epuizare</th>
-                            <th class="px-4 py-2.5 text-right">Stoc actual</th>
-                            <th class="px-4 py-2.5 text-right" title="Cantitate vândută în ultimele 7 zile">Vândut 7 zile</th>
-                            <th class="px-4 py-2.5 text-right" title="Medie zilnică ajustată cu trendul recent (7z vs 30z). ↑ cerere în creștere, ↓ cerere în scădere">Viteză estimată/zi</th>
+                            <th style="padding:10px 16px;text-align:left;">Furnizor</th>
+                            <th style="padding:10px 16px;text-align:left;">Denumire produs</th>
+                            <th style="padding:10px 16px;text-align:right;" title="Cantitate recomandată pentru {{ $this->coverDays }} zile acoperire + 3 zile safety stock, ajustată cu trendul cererii">De comandat</th>
+                            <th style="padding:10px 16px;text-align:right;" title="Câte zile mai durează stocul la viteza actuală de vânzare">Zile până la epuizare</th>
+                            <th style="padding:10px 16px;text-align:right;">Stoc actual</th>
+                            <th style="padding:10px 16px;text-align:right;" title="Cantitate vândută în ultimele 7 zile">Vândut 7 zile</th>
+                            <th style="padding:10px 16px;text-align:right;" title="Medie zilnică ajustată cu trendul recent (7z vs 30z). ↑ cerere în creștere, ↓ cerere în scădere">Viteză estimată/zi</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-50 dark:divide-white/5">
+                    <tbody>
                         @foreach($this->urgentProducts as $product)
                             @php
                                 $days       = $product->days_until_stockout;
@@ -191,74 +187,75 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                             <tr @click="selected.includes({{ $pid }})
                                     ? (selected.splice(selected.indexOf({{ $pid }}), 1), delete itemData[{{ $pid }}])
                                     : (selected.push({{ $pid }}), itemData[{{ $pid }}] = { product_id: {{ $pid }}, supplier_id: {{ $sid }}, qty: {{ $qty }} })"
-                                :class="! selected.includes({{ $pid }}) ? 'hover:bg-danger-50/40 dark:hover:bg-danger-950/20' : ''" :style="selected.includes({{ $pid }}) ? 'background-color:#dcfce7' : ''"
-                                class="cursor-pointer transition-colors">
-                                <td class="px-3 py-3">
-                                    <div class="mx-auto flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all"
-                                         :class="true" :style="selected.includes({{ $pid }}) ? 'border-color:#16a34a;background-color:#16a34a' : 'border-color:#d1d5db'">
-                                        <svg x-show="selected.includes({{ $pid }})" class="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5">
+                                :style="selected.includes({{ $pid }}) ? 'background-color:#dcfce7;cursor:pointer;transition:background-color 0.2s;' : 'cursor:pointer;transition:background-color 0.2s;'"
+                                onmouseover="if(!this.__alpine_selected) this.style.backgroundColor='#fff5f5';"
+                                onmouseout="if(!this.__alpine_selected) this.style.backgroundColor='';">
+                                <td style="padding:12px;">
+                                    <div style="margin:0 auto;display:flex;height:20px;width:20px;align-items:center;justify-content:center;border-radius:9999px;border:2px solid #d1d5db;transition:all 0.2s;"
+                                         :style="selected.includes({{ $pid }}) ? 'border-color:#16a34a;background-color:#16a34a' : 'border-color:#d1d5db'">
+                                        <svg x-show="selected.includes({{ $pid }})" style="height:12px;width:12px;color:#ffffff;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                                         </svg>
                                     </div>
                                 </td>
-                                <td class="px-4 py-3 font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                <td style="padding:12px 16px;font-weight:500;color:#374151;white-space:nowrap;">
                                     @if($noSupplier)
-                                        <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-white/10 dark:text-gray-400">N/A</span>
+                                        <span style="display:inline-flex;align-items:center;border-radius:9999px;background-color:#f3f4f6;padding:2px 8px;font-size:0.75rem;font-weight:500;color:#6b7280;">N/A</span>
                                     @else
                                         {{ $product->supplier_name }}
                                     @endif
                                 </td>
-                                <td class="px-4 py-3">
-                                    <span class="font-medium text-gray-900 dark:text-white">{{ $product->name }}</span>
+                                <td style="padding:12px 16px;">
+                                    <span style="font-weight:500;color:#111827;">{{ $product->name }}</span>
                                     @if($product->brand)
-                                        <span class="text-gray-500 dark:text-gray-400"> ({{ $product->brand }})</span>
+                                        <span style="color:#6b7280;"> ({{ $product->brand }})</span>
                                     @endif
                                     @if($product->sku)
-                                        <span class="block font-mono text-xs text-gray-400 dark:text-gray-500 mt-0.5">{{ $product->sku }}</span>
+                                        <span style="display:block;font-family:monospace;font-size:0.75rem;color:#9ca3af;margin-top:2px;">{{ $product->sku }}</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-right tabular-nums">
+                                <td style="padding:12px 16px;text-align:right;font-variant-numeric:tabular-nums;">
                                     @if($product->recommended_qty > 0)
-                                        <span class="font-bold text-gray-900 dark:text-white">{{ number_format($product->recommended_qty, 0, '.', '') }}</span>
-                                        <span class="ml-1 text-sm text-gray-400 dark:text-gray-500">{{ $product->unit ?? 'buc' }}</span>
+                                        <span style="font-weight:700;color:#111827;">{{ number_format($product->recommended_qty, 0, '.', '') }}</span>
+                                        <span style="margin-left:4px;font-size:0.875rem;color:#9ca3af;">{{ $product->unit ?? 'buc' }}</span>
                                     @else
-                                        <span class="text-gray-400">—</span>
+                                        <span style="color:#9ca3af;">—</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-right tabular-nums font-semibold">
+                                <td style="padding:12px 16px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">
                                     @if($days === null)
-                                        <span class="text-gray-400">—</span>
+                                        <span style="color:#9ca3af;">—</span>
                                     @elseif($days < 1)
-                                        <span class="text-danger-600 dark:text-danger-400">&lt;1 zi 🔴</span>
+                                        <span style="color:#dc2626;">&lt;1 zi 🔴</span>
                                     @else
-                                        <span class="text-danger-600 dark:text-danger-400">~{{ round($days) }} {{ round($days) == 1 ? 'zi' : 'zile' }} 🔴</span>
+                                        <span style="color:#dc2626;">~{{ round($days) }} {{ round($days) == 1 ? 'zi' : 'zile' }} 🔴</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-right tabular-nums">
+                                <td style="padding:12px 16px;text-align:right;font-variant-numeric:tabular-nums;">
                                     @if((float)$product->stock <= 0)
-                                        <span class="inline-flex items-center rounded-full bg-danger-100 px-2 py-0.5 text-sm font-semibold text-danger-700 dark:bg-danger-900/40 dark:text-danger-300">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
+                                        <span style="display:inline-flex;align-items:center;border-radius:9999px;background-color:#fee2e2;padding:2px 8px;font-size:0.875rem;font-weight:600;color:#b91c1c;">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
                                     @else
-                                        <span class="inline-flex items-center rounded-full bg-warning-100 px-2 py-0.5 text-sm font-semibold text-warning-700 dark:bg-warning-900/40 dark:text-warning-300">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
+                                        <span style="display:inline-flex;align-items:center;border-radius:9999px;background-color:#ffedd5;padding:2px 8px;font-size:0.875rem;font-weight:600;color:#c2410c;">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-right text-gray-600 dark:text-gray-400 tabular-nums">
+                                <td style="padding:12px 16px;text-align:right;color:#4b5563;font-variant-numeric:tabular-nums;">
                                     {{ $product->consumed_7d > 0 ? number_format($product->consumed_7d, $product->consumed_7d < 10 ? 1 : 0, '.', '') : '—' }}
                                 </td>
-                                <td class="px-4 py-3 text-right tabular-nums font-medium">
+                                <td style="padding:12px 16px;text-align:right;font-variant-numeric:tabular-nums;font-weight:500;">
                                     @if($adj > 0)
-                                        <span class="{{ ($product->trend_direction ?? 0) > 0 ? 'text-danger-600 dark:text-danger-400' : (($product->trend_direction ?? 0) < 0 ? 'text-success-600 dark:text-success-400' : 'text-primary-600 dark:text-primary-400') }}">
+                                        <span style="color:{{ ($product->trend_direction ?? 0) > 0 ? '#dc2626' : (($product->trend_direction ?? 0) < 0 ? '#16a34a' : '#8B1A1A') }};">
                                             {{ number_format($adj, $adj < 10 ? 2 : 1, '.', '') }}
                                             @if(($product->trend_direction ?? 0) > 0) ↑@elseif(($product->trend_direction ?? 0) < 0) ↓@endif
                                         </span>
                                     @else
-                                        <span class="text-gray-400">—</span>
+                                        <span style="color:#9ca3af;">—</span>
                                     @endif
                                 </td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
-                <p class="px-4 py-2 text-right text-xs text-gray-400 dark:text-gray-600 border-t border-gray-100 dark:border-white/5">
+                <p style="padding:8px 16px;text-align:right;font-size:0.75rem;color:#9ca3af;border-top:1px solid #f3f4f6;">
                     * De comandat = max(avg7z, avg30z, avg90z) × {{ $this->coverDays }}z + safety 3z. ↑/↓ = cerere în creștere/scădere față de medie.
                 </p>
             </div>
@@ -268,35 +265,34 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
     {{-- ===== TAB 2: CURÂND 7–14 ZILE ===== --}}
     <div x-show="activeTab === 'soon'">
         @if($this->soonProducts->isEmpty())
-            <div class="rounded-xl border border-success-200 bg-success-50 p-6 text-center dark:border-success-400/20 dark:bg-success-950/20">
-                <x-filament::icon icon="heroicon-o-check-circle" class="mx-auto h-8 w-8 text-success-500" />
-                <p class="mt-2 text-success-700 dark:text-success-300 font-medium">Niciun produs cu epuizare iminentă în 7–14 zile.</p>
+            <div style="border-radius:12px;border:1px solid #bbf7d0;background-color:#f0fdf4;padding:24px;text-align:center;">
+                <x-filament::icon icon="heroicon-o-check-circle" style="margin:0 auto;height:32px;width:32px;color:#22c55e;" />
+                <p style="margin-top:8px;color:#16a34a;font-weight:500;">Niciun produs cu epuizare iminentă în 7–14 zile.</p>
             </div>
         @else
-            <div class="overflow-hidden rounded-xl border border-warning-200 bg-white shadow-sm dark:border-warning-400/20 dark:bg-gray-900">
-                <table class="w-full text-base">
+            <div style="overflow:hidden;border-radius:12px;border:1px solid #fde68a;background-color:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                <table style="width:100%;font-size:1rem;border-collapse:collapse;">
                     <thead>
-                        <tr class="border-b border-warning-100 bg-warning-50 dark:border-warning-400/20 dark:bg-warning-950/20
-                                   text-xs font-medium uppercase tracking-wide text-warning-700 dark:text-warning-400">
-                            <th class="w-10 px-3 py-2.5" title="Selectează / deselectează tot">
-                                <div class="mx-auto flex h-5 w-5 items-center justify-center rounded-full border-2 cursor-pointer transition-all"
+                        <tr style="border-bottom:1px solid #ffedd5;background-color:#fff7ed;font-size:0.75rem;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:#c2410c;">
+                            <th style="width:40px;padding:10px 12px;" title="Selectează / deselectează tot">
+                                <div style="margin:0 auto;display:flex;height:20px;width:20px;align-items:center;justify-content:center;border-radius:9999px;border:2px solid #d1d5db;cursor:pointer;transition:all 0.2s;"
                                      @click="toggleAll(soonItems)"
                                      :style="allSelected(soonItems) ? 'border-color:#16a34a;background-color:#16a34a' : 'border-color:#d1d5db'">
-                                    <svg x-show="allSelected(soonItems)" class="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5">
+                                    <svg x-show="allSelected(soonItems)" style="height:12px;width:12px;color:#ffffff;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                                     </svg>
                                 </div>
                             </th>
-                            <th class="px-4 py-2.5 text-left">Furnizor</th>
-                            <th class="px-4 py-2.5 text-left">Denumire produs</th>
-                            <th class="px-4 py-2.5 text-right" title="Cantitate recomandată pentru {{ $this->coverDays }} zile acoperire + 3 zile safety stock, ajustată cu trendul cererii">De comandat</th>
-                            <th class="px-4 py-2.5 text-right" title="Câte zile mai durează stocul la viteza actuală de vânzare">Zile până la epuizare</th>
-                            <th class="px-4 py-2.5 text-right">Stoc actual</th>
-                            <th class="px-4 py-2.5 text-right" title="Cantitate vândută în ultimele 7 zile">Vândut 7 zile</th>
-                            <th class="px-4 py-2.5 text-right" title="Medie zilnică ajustată cu trendul recent (7z vs 30z). ↑ cerere în creștere, ↓ cerere în scădere">Viteză estimată/zi</th>
+                            <th style="padding:10px 16px;text-align:left;">Furnizor</th>
+                            <th style="padding:10px 16px;text-align:left;">Denumire produs</th>
+                            <th style="padding:10px 16px;text-align:right;" title="Cantitate recomandată pentru {{ $this->coverDays }} zile acoperire + 3 zile safety stock, ajustată cu trendul cererii">De comandat</th>
+                            <th style="padding:10px 16px;text-align:right;" title="Câte zile mai durează stocul la viteza actuală de vânzare">Zile până la epuizare</th>
+                            <th style="padding:10px 16px;text-align:right;">Stoc actual</th>
+                            <th style="padding:10px 16px;text-align:right;" title="Cantitate vândută în ultimele 7 zile">Vândut 7 zile</th>
+                            <th style="padding:10px 16px;text-align:right;" title="Medie zilnică ajustată cu trendul recent (7z vs 30z). ↑ cerere în creștere, ↓ cerere în scădere">Viteză estimată/zi</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-50 dark:divide-white/5">
+                    <tbody>
                         @foreach($this->soonProducts as $product)
                             @php
                                 $days       = $product->days_until_stockout;
@@ -309,72 +305,73 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                             <tr @click="selected.includes({{ $pid }})
                                     ? (selected.splice(selected.indexOf({{ $pid }}), 1), delete itemData[{{ $pid }}])
                                     : (selected.push({{ $pid }}), itemData[{{ $pid }}] = { product_id: {{ $pid }}, supplier_id: {{ $sid }}, qty: {{ $qty }} })"
-                                :class="! selected.includes({{ $pid }}) ? 'hover:bg-warning-50/40 dark:hover:bg-warning-950/20' : ''" :style="selected.includes({{ $pid }}) ? 'background-color:#dcfce7' : ''"
-                                class="cursor-pointer transition-colors">
-                                <td class="px-3 py-3">
-                                    <div class="mx-auto flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all"
-                                         :class="true" :style="selected.includes({{ $pid }}) ? 'border-color:#16a34a;background-color:#16a34a' : 'border-color:#d1d5db'">
-                                        <svg x-show="selected.includes({{ $pid }})" class="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5">
+                                :style="selected.includes({{ $pid }}) ? 'background-color:#dcfce7;cursor:pointer;transition:background-color 0.2s;' : 'cursor:pointer;transition:background-color 0.2s;'"
+                                onmouseover="if(!this.__alpine_selected) this.style.backgroundColor='#fff7ed';"
+                                onmouseout="if(!this.__alpine_selected) this.style.backgroundColor='';">
+                                <td style="padding:12px;">
+                                    <div style="margin:0 auto;display:flex;height:20px;width:20px;align-items:center;justify-content:center;border-radius:9999px;border:2px solid #d1d5db;transition:all 0.2s;"
+                                         :style="selected.includes({{ $pid }}) ? 'border-color:#16a34a;background-color:#16a34a' : 'border-color:#d1d5db'">
+                                        <svg x-show="selected.includes({{ $pid }})" style="height:12px;width:12px;color:#ffffff;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                                         </svg>
                                     </div>
                                 </td>
-                                <td class="px-4 py-3 font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                <td style="padding:12px 16px;font-weight:500;color:#374151;white-space:nowrap;">
                                     @if($noSupplier)
-                                        <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-white/10 dark:text-gray-400">N/A</span>
+                                        <span style="display:inline-flex;align-items:center;border-radius:9999px;background-color:#f3f4f6;padding:2px 8px;font-size:0.75rem;font-weight:500;color:#6b7280;">N/A</span>
                                     @else
                                         {{ $product->supplier_name }}
                                     @endif
                                 </td>
-                                <td class="px-4 py-3">
-                                    <span class="font-medium text-gray-900 dark:text-white">{{ $product->name }}</span>
+                                <td style="padding:12px 16px;">
+                                    <span style="font-weight:500;color:#111827;">{{ $product->name }}</span>
                                     @if($product->brand)
-                                        <span class="text-gray-500 dark:text-gray-400"> ({{ $product->brand }})</span>
+                                        <span style="color:#6b7280;"> ({{ $product->brand }})</span>
                                     @endif
                                     @if($product->sku)
-                                        <span class="block font-mono text-xs text-gray-400 dark:text-gray-500 mt-0.5">{{ $product->sku }}</span>
+                                        <span style="display:block;font-family:monospace;font-size:0.75rem;color:#9ca3af;margin-top:2px;">{{ $product->sku }}</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-right tabular-nums">
+                                <td style="padding:12px 16px;text-align:right;font-variant-numeric:tabular-nums;">
                                     @if($product->recommended_qty > 0)
-                                        <span class="font-bold text-gray-900 dark:text-white">{{ number_format($product->recommended_qty, 0, '.', '') }}</span>
-                                        <span class="ml-1 text-sm text-gray-400 dark:text-gray-500">{{ $product->unit ?? 'buc' }}</span>
+                                        <span style="font-weight:700;color:#111827;">{{ number_format($product->recommended_qty, 0, '.', '') }}</span>
+                                        <span style="margin-left:4px;font-size:0.875rem;color:#9ca3af;">{{ $product->unit ?? 'buc' }}</span>
                                     @else
-                                        <span class="text-gray-400">—</span>
+                                        <span style="color:#9ca3af;">—</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-right tabular-nums font-semibold">
+                                <td style="padding:12px 16px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">
                                     @if($days === null)
-                                        <span class="text-gray-400">—</span>
+                                        <span style="color:#9ca3af;">—</span>
                                     @else
-                                        <span class="text-warning-600 dark:text-warning-400">~{{ round($days) }} {{ round($days) == 1 ? 'zi' : 'zile' }} ⚠️</span>
+                                        <span style="color:#ea580c;">~{{ round($days) }} {{ round($days) == 1 ? 'zi' : 'zile' }} ⚠️</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-right tabular-nums">
+                                <td style="padding:12px 16px;text-align:right;font-variant-numeric:tabular-nums;">
                                     @if((float)$product->stock <= 0)
-                                        <span class="inline-flex items-center rounded-full bg-danger-100 px-2 py-0.5 text-sm font-semibold text-danger-700 dark:bg-danger-900/40 dark:text-danger-300">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
+                                        <span style="display:inline-flex;align-items:center;border-radius:9999px;background-color:#fee2e2;padding:2px 8px;font-size:0.875rem;font-weight:600;color:#b91c1c;">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
                                     @else
-                                        <span class="inline-flex items-center rounded-full bg-warning-100 px-2 py-0.5 text-sm font-semibold text-warning-700 dark:bg-warning-900/40 dark:text-warning-300">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
+                                        <span style="display:inline-flex;align-items:center;border-radius:9999px;background-color:#ffedd5;padding:2px 8px;font-size:0.875rem;font-weight:600;color:#c2410c;">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-right text-gray-600 dark:text-gray-400 tabular-nums">
+                                <td style="padding:12px 16px;text-align:right;color:#4b5563;font-variant-numeric:tabular-nums;">
                                     {{ $product->consumed_7d > 0 ? number_format($product->consumed_7d, $product->consumed_7d < 10 ? 1 : 0, '.', '') : '—' }}
                                 </td>
-                                <td class="px-4 py-3 text-right tabular-nums font-medium">
+                                <td style="padding:12px 16px;text-align:right;font-variant-numeric:tabular-nums;font-weight:500;">
                                     @if($adj > 0)
-                                        <span class="{{ ($product->trend_direction ?? 0) > 0 ? 'text-danger-600 dark:text-danger-400' : (($product->trend_direction ?? 0) < 0 ? 'text-success-600 dark:text-success-400' : 'text-primary-600 dark:text-primary-400') }}">
+                                        <span style="color:{{ ($product->trend_direction ?? 0) > 0 ? '#dc2626' : (($product->trend_direction ?? 0) < 0 ? '#16a34a' : '#8B1A1A') }};">
                                             {{ number_format($adj, $adj < 10 ? 2 : 1, '.', '') }}
                                             @if(($product->trend_direction ?? 0) > 0) ↑@elseif(($product->trend_direction ?? 0) < 0) ↓@endif
                                         </span>
                                     @else
-                                        <span class="text-gray-400">—</span>
+                                        <span style="color:#9ca3af;">—</span>
                                     @endif
                                 </td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
-                <p class="px-4 py-2 text-right text-xs text-gray-400 dark:text-gray-600 border-t border-gray-100 dark:border-white/5">
+                <p style="padding:8px 16px;text-align:right;font-size:0.75rem;color:#9ca3af;border-top:1px solid #f3f4f6;">
                     * De comandat = max(avg7z, avg30z, avg90z) × {{ $this->coverDays }}z + safety 3z. ↑/↓ = cerere în creștere/scădere față de medie.
                 </p>
             </div>
@@ -477,43 +474,42 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                 $primaryCount = $selSupplier->products->count();
                 $extraCount   = $selSupplier->extraProducts->count();
             @endphp
-            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-900">
+            <div style="overflow:hidden;border-radius:12px;border:1px solid #e5e7eb;background-color:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                 {{-- Header furnizor --}}
-                <div class="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-6 py-4 dark:border-white/10 dark:bg-white/5">
-                    <div class="flex items-center gap-3">
+                <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f3f4f6;background-color:#f9fafb;padding:16px 24px;">
+                    <div style="display:flex;align-items:center;gap:12px;">
                         @if($selSupplier->logo)
-                            <img src="{{ Storage::url($selSupplier->logo) }}" alt="{{ $selSupplier->name }}" class="h-8 w-8 rounded object-contain">
+                            <img src="{{ Storage::url($selSupplier->logo) }}" alt="{{ $selSupplier->name }}" style="height:32px;width:32px;border-radius:4px;object-fit:contain;">
                         @endif
-                        <span class="text-base font-semibold text-gray-900 dark:text-white">{{ $selSupplier->name }}</span>
+                        <span style="font-size:1rem;font-weight:600;color:#111827;">{{ $selSupplier->name }}</span>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div style="display:flex;align-items:center;gap:8px;">
                         @if($extraCount > 0)
-                            <span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500 dark:bg-white/10 dark:text-gray-400">
+                            <span style="border-radius:9999px;background-color:#f3f4f6;padding:2px 10px;font-size:0.75rem;font-weight:500;color:#6b7280;">
                                 +{{ $extraCount }} noi
                             </span>
                         @endif
-                        <span class="rounded-full bg-warning-100 px-2.5 py-0.5 text-xs font-medium text-warning-800 dark:bg-warning-900/30 dark:text-warning-300">
+                        <span style="border-radius:9999px;background-color:#ffedd5;padding:2px 10px;font-size:0.75rem;font-weight:500;color:#9a3412;">
                             {{ $primaryCount }} {{ $primaryCount === 1 ? 'produs' : 'produse' }}
                         </span>
                     </div>
                 </div>
 
-                <table class="w-full text-base">
+                <table style="width:100%;font-size:1rem;border-collapse:collapse;">
                     <thead>
-                        <tr class="border-b border-gray-100 dark:border-white/10
-                                   text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                            <th class="w-10 px-3 py-2.5"></th>
-                            <th class="px-6 py-2.5 text-left">Denumire produs</th>
-                            <th class="px-4 py-2.5 text-right" title="Cantitate recomandată pentru {{ $this->coverDays }} zile acoperire + 3 zile safety stock, ajustată cu trendul cererii">De comandat</th>
-                            <th class="px-4 py-2.5 text-right" title="Câte zile mai durează stocul la viteza actuală de vânzare">Zile până la epuizare</th>
-                            <th class="px-4 py-2.5 text-right">Stoc actual</th>
-                            <th class="px-4 py-2.5 text-right" title="Cantitate vândută în ultimele 7 zile">Vândut 7 zile</th>
-                            <th class="px-4 py-2.5 text-right" title="Medie zilnică ajustată cu trendul recent (7z vs 30z). ↑ cerere în creștere, ↓ cerere în scădere">Viteză estimată/zi</th>
+                        <tr style="border-bottom:1px solid #f3f4f6;font-size:0.75rem;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;">
+                            <th style="width:40px;padding:10px 12px;"></th>
+                            <th style="padding:10px 24px;text-align:left;">Denumire produs</th>
+                            <th style="padding:10px 16px;text-align:right;" title="Cantitate recomandată pentru {{ $this->coverDays }} zile acoperire + 3 zile safety stock, ajustată cu trendul cererii">De comandat</th>
+                            <th style="padding:10px 16px;text-align:right;" title="Câte zile mai durează stocul la viteza actuală de vânzare">Zile până la epuizare</th>
+                            <th style="padding:10px 16px;text-align:right;">Stoc actual</th>
+                            <th style="padding:10px 16px;text-align:right;" title="Cantitate vândută în ultimele 7 zile">Vândut 7 zile</th>
+                            <th style="padding:10px 16px;text-align:right;" title="Medie zilnică ajustată cu trendul recent (7z vs 30z). ↑ cerere în creștere, ↓ cerere în scădere">Viteză estimată/zi</th>
                         </tr>
                     </thead>
 
                     @if($primaryCount > 0)
-                        <tbody class="divide-y divide-gray-50 dark:divide-white/5">
+                        <tbody>
                             @foreach($selSupplier->products as $product)
                                 @php
                                     $days = $product->days_until_stockout;
@@ -525,66 +521,67 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                                 <tr @click="selected.includes({{ $pid }})
                                         ? (selected.splice(selected.indexOf({{ $pid }}), 1), delete itemData[{{ $pid }}])
                                         : (selected.push({{ $pid }}), itemData[{{ $pid }}] = { product_id: {{ $pid }}, supplier_id: {{ $sid }}, qty: {{ $qty }} })"
-                                    :class="! selected.includes({{ $pid }}) ? 'hover:bg-gray-50 dark:hover:bg-white/5' : ''" :style="selected.includes({{ $pid }}) ? 'background-color:#dcfce7' : ''"
-                                    class="cursor-pointer transition-colors">
-                                    <td class="px-3 py-3">
-                                        <div class="mx-auto flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all"
-                                             :class="true" :style="selected.includes({{ $pid }}) ? 'border-color:#16a34a;background-color:#16a34a' : 'border-color:#d1d5db'">
-                                            <svg x-show="selected.includes({{ $pid }})" class="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5">
+                                    :style="selected.includes({{ $pid }}) ? 'background-color:#dcfce7;cursor:pointer;transition:background-color 0.2s;' : 'cursor:pointer;transition:background-color 0.2s;border-bottom:1px solid #f9fafb;'"
+                                    onmouseover="if(!this.__alpine_selected) this.style.backgroundColor='#f9fafb';"
+                                    onmouseout="if(!this.__alpine_selected) this.style.backgroundColor='';">
+                                    <td style="padding:12px;">
+                                        <div style="margin:0 auto;display:flex;height:20px;width:20px;align-items:center;justify-content:center;border-radius:9999px;border:2px solid #d1d5db;transition:all 0.2s;"
+                                             :style="selected.includes({{ $pid }}) ? 'border-color:#16a34a;background-color:#16a34a' : 'border-color:#d1d5db'">
+                                            <svg x-show="selected.includes({{ $pid }})" style="height:12px;width:12px;color:#ffffff;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                                             </svg>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-3">
-                                        <span class="font-medium text-gray-900 dark:text-white">{{ $product->name }}</span>
+                                    <td style="padding:12px 24px;">
+                                        <span style="font-weight:500;color:#111827;">{{ $product->name }}</span>
                                         @if($product->brand)
-                                            <span class="text-gray-500 dark:text-gray-400"> ({{ $product->brand }})</span>
+                                            <span style="color:#6b7280;"> ({{ $product->brand }})</span>
                                         @endif
                                         @if($product->sku)
-                                            <span class="block font-mono text-xs text-gray-400 dark:text-gray-500 mt-0.5">{{ $product->sku }}</span>
+                                            <span style="display:block;font-family:monospace;font-size:0.75rem;color:#9ca3af;margin-top:2px;">{{ $product->sku }}</span>
                                         @endif
                                     </td>
-                                    <td class="px-4 py-3 text-right tabular-nums">
+                                    <td style="padding:12px 16px;text-align:right;font-variant-numeric:tabular-nums;">
                                         @if($product->recommended_qty > 0)
-                                            <span class="font-bold text-gray-900 dark:text-white">{{ number_format($product->recommended_qty, 0, '.', '') }}</span>
-                                            <span class="ml-1 text-sm text-gray-400 dark:text-gray-500">{{ $product->unit ?? 'buc' }}</span>
+                                            <span style="font-weight:700;color:#111827;">{{ number_format($product->recommended_qty, 0, '.', '') }}</span>
+                                            <span style="margin-left:4px;font-size:0.875rem;color:#9ca3af;">{{ $product->unit ?? 'buc' }}</span>
                                         @else
-                                            <span class="text-gray-300 dark:text-gray-600">—</span>
+                                            <span style="color:#d1d5db;">—</span>
                                         @endif
                                     </td>
-                                    <td class="px-4 py-3 text-right tabular-nums font-semibold">
+                                    <td style="padding:12px 16px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">
                                         @if($days === null)
-                                            <span class="text-gray-300 dark:text-gray-600">—</span>
+                                            <span style="color:#d1d5db;">—</span>
                                         @elseif($days < 1)
-                                            <span class="text-danger-600 dark:text-danger-400">&lt;1 zi 🔴</span>
+                                            <span style="color:#dc2626;">&lt;1 zi 🔴</span>
                                         @elseif($days < 7)
-                                            <span class="text-danger-600 dark:text-danger-400">~{{ round($days) }} {{ round($days) == 1 ? 'zi' : 'zile' }} 🔴</span>
+                                            <span style="color:#dc2626;">~{{ round($days) }} {{ round($days) == 1 ? 'zi' : 'zile' }} 🔴</span>
                                         @elseif($days < 14)
-                                            <span class="text-warning-600 dark:text-warning-400">~{{ round($days) }} zile ⚠️</span>
+                                            <span style="color:#ea580c;">~{{ round($days) }} zile ⚠️</span>
                                         @elseif($days < 21)
-                                            <span class="text-warning-500 dark:text-warning-500">~{{ round($days) }} zile</span>
+                                            <span style="color:#f97316;">~{{ round($days) }} zile</span>
                                         @else
-                                            <span class="text-gray-500 dark:text-gray-400">~{{ round($days) }} zile</span>
+                                            <span style="color:#6b7280;">~{{ round($days) }} zile</span>
                                         @endif
                                     </td>
-                                    <td class="px-4 py-3 text-right tabular-nums">
+                                    <td style="padding:12px 16px;text-align:right;font-variant-numeric:tabular-nums;">
                                         @if((float)$product->stock <= 0)
-                                            <span class="inline-flex items-center rounded-full bg-danger-100 px-2 py-0.5 text-sm font-semibold text-danger-700 dark:bg-danger-900/40 dark:text-danger-300">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
+                                            <span style="display:inline-flex;align-items:center;border-radius:9999px;background-color:#fee2e2;padding:2px 8px;font-size:0.875rem;font-weight:600;color:#b91c1c;">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
                                         @else
-                                            <span class="inline-flex items-center rounded-full bg-warning-100 px-2 py-0.5 text-sm font-semibold text-warning-700 dark:bg-warning-900/40 dark:text-warning-300">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
+                                            <span style="display:inline-flex;align-items:center;border-radius:9999px;background-color:#ffedd5;padding:2px 8px;font-size:0.875rem;font-weight:600;color:#c2410c;">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
                                         @endif
                                     </td>
-                                    <td class="px-4 py-3 text-right text-gray-600 dark:text-gray-400 tabular-nums">
+                                    <td style="padding:12px 16px;text-align:right;color:#4b5563;font-variant-numeric:tabular-nums;">
                                         {{ $product->consumed_7d > 0 ? number_format($product->consumed_7d, $product->consumed_7d < 10 ? 1 : 0, '.', '') : '—' }}
                                     </td>
-                                    <td class="px-4 py-3 text-right tabular-nums font-medium">
+                                    <td style="padding:12px 16px;text-align:right;font-variant-numeric:tabular-nums;font-weight:500;">
                                         @if($adj > 0)
-                                            <span class="{{ ($product->trend_direction ?? 0) > 0 ? 'text-danger-600 dark:text-danger-400' : (($product->trend_direction ?? 0) < 0 ? 'text-success-600 dark:text-success-400' : 'text-primary-600 dark:text-primary-400') }}">
+                                            <span style="color:{{ ($product->trend_direction ?? 0) > 0 ? '#dc2626' : (($product->trend_direction ?? 0) < 0 ? '#16a34a' : '#8B1A1A') }};">
                                                 {{ number_format($adj, $adj < 10 ? 2 : 1, '.', '') }}
                                                 @if(($product->trend_direction ?? 0) > 0) ↑@elseif(($product->trend_direction ?? 0) < 0) ↓@endif
                                             </span>
                                         @else
-                                            <span class="text-gray-300 dark:text-gray-600">—</span>
+                                            <span style="color:#d1d5db;">—</span>
                                         @endif
                                     </td>
                                 </tr>
@@ -594,11 +591,13 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
 
                     @if($extraCount > 0)
                         <tbody x-data="{ expanded: false }">
-                            <tr class="border-t border-dashed border-gray-200 dark:border-white/10">
-                                <td colspan="7" class="p-0">
+                            <tr style="border-top:1px dashed #e5e7eb;">
+                                <td colspan="7" style="padding:0;">
                                     <button type="button" @click.stop="expanded = !expanded"
-                                        class="flex w-full items-center gap-2 px-6 py-2 text-left text-xs font-medium text-gray-500 transition hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-white/5">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 transition-transform duration-200" :class="expanded ? 'rotate-90' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        style="display:flex;width:100%;align-items:center;gap:8px;padding:8px 24px;text-align:left;font-size:0.75rem;font-weight:500;color:#6b7280;background:none;border:none;cursor:pointer;transition:background-color 0.2s;"
+                                        onmouseover="this.style.backgroundColor='#f9fafb';"
+                                        onmouseout="this.style.backgroundColor='';">
+                                        <svg xmlns="http://www.w3.org/2000/svg" style="height:14px;width:14px;transition:transform 0.2s;" :style="expanded ? 'transform:rotate(90deg);' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
                                         </svg>
                                         <span x-show="!expanded">Arată {{ $extraCount }} {{ $extraCount === 1 ? 'produs nou' : 'produse noi' }} (fără istoric mișcare)</span>
@@ -615,36 +614,37 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                                     @click="selected.includes({{ $pid }})
                                         ? (selected.splice(selected.indexOf({{ $pid }}), 1), delete itemData[{{ $pid }}])
                                         : (selected.push({{ $pid }}), itemData[{{ $pid }}] = { product_id: {{ $pid }}, supplier_id: {{ $sid }}, qty: 1 })"
-                                    :class="! selected.includes({{ $pid }}) ? 'opacity-75 bg-gray-50/50 hover:bg-gray-100 dark:bg-white/[0.02] dark:hover:bg-white/5' : ''" :style="selected.includes({{ $pid }}) ? 'background-color:#dcfce7' : ''"
-                                    class="cursor-pointer transition-colors">
-                                    <td class="px-3 py-2.5">
-                                        <div class="mx-auto flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all"
-                                             :class="true" :style="selected.includes({{ $pid }}) ? 'border-color:#16a34a;background-color:#16a34a' : 'border-color:#d1d5db'">
-                                            <svg x-show="selected.includes({{ $pid }})" class="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5">
+                                    :style="selected.includes({{ $pid }}) ? 'background-color:#dcfce7;cursor:pointer;transition:background-color 0.2s;' : 'opacity:0.75;background-color:#fcfcfc;cursor:pointer;transition:background-color 0.2s;'"
+                                    onmouseover="this.style.backgroundColor=this.style.backgroundColor==='rgb(220, 252, 231)' ? '#dcfce7' : '#f3f4f6';"
+                                    onmouseout="this.style.backgroundColor=this.style.backgroundColor==='rgb(220, 252, 231)' ? '#dcfce7' : '#fcfcfc';">
+                                    <td style="padding:10px 12px;">
+                                        <div style="margin:0 auto;display:flex;height:20px;width:20px;align-items:center;justify-content:center;border-radius:9999px;border:2px solid #d1d5db;transition:all 0.2s;"
+                                             :style="selected.includes({{ $pid }}) ? 'border-color:#16a34a;background-color:#16a34a' : 'border-color:#d1d5db'">
+                                            <svg x-show="selected.includes({{ $pid }})" style="height:12px;width:12px;color:#ffffff;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                                             </svg>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-2.5">
-                                        <span class="text-gray-600 dark:text-gray-400">{{ $product->name }}</span>
+                                    <td style="padding:10px 24px;">
+                                        <span style="color:#4b5563;">{{ $product->name }}</span>
                                         @if($product->brand)
-                                            <span class="text-gray-400 dark:text-gray-500"> ({{ $product->brand }})</span>
+                                            <span style="color:#9ca3af;"> ({{ $product->brand }})</span>
                                         @endif
                                         @if($product->sku)
-                                            <span class="block font-mono text-xs text-gray-400 dark:text-gray-500 mt-0.5">{{ $product->sku }}</span>
+                                            <span style="display:block;font-family:monospace;font-size:0.75rem;color:#9ca3af;margin-top:2px;">{{ $product->sku }}</span>
                                         @endif
                                     </td>
-                                    <td class="px-4 py-2.5 text-right text-gray-300 dark:text-gray-600">—</td>
-                                    <td class="px-4 py-2.5 text-right text-gray-300 dark:text-gray-600">—</td>
-                                    <td class="px-4 py-2.5 text-right tabular-nums">
+                                    <td style="padding:10px 16px;text-align:right;color:#d1d5db;">—</td>
+                                    <td style="padding:10px 16px;text-align:right;color:#d1d5db;">—</td>
+                                    <td style="padding:10px 16px;text-align:right;font-variant-numeric:tabular-nums;">
                                         @if((float)$product->stock <= 0)
-                                            <span class="inline-flex items-center rounded-full bg-danger-100 px-2 py-0.5 text-sm font-semibold text-danger-700 dark:bg-danger-900/40 dark:text-danger-300">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
+                                            <span style="display:inline-flex;align-items:center;border-radius:9999px;background-color:#fee2e2;padding:2px 8px;font-size:0.875rem;font-weight:600;color:#b91c1c;">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
                                         @else
-                                            <span class="inline-flex items-center rounded-full bg-warning-100 px-2 py-0.5 text-sm font-semibold text-warning-700 dark:bg-warning-900/40 dark:text-warning-300">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
+                                            <span style="display:inline-flex;align-items:center;border-radius:9999px;background-color:#ffedd5;padding:2px 8px;font-size:0.875rem;font-weight:600;color:#c2410c;">{{ number_format((float)$product->stock, 0, '.', '') }}</span>
                                         @endif
                                     </td>
-                                    <td class="px-4 py-2.5 text-right text-gray-300 dark:text-gray-600">—</td>
-                                    <td class="px-4 py-2.5 text-right text-gray-300 dark:text-gray-600">—</td>
+                                    <td style="padding:10px 16px;text-align:right;color:#d1d5db;">—</td>
+                                    <td style="padding:10px 16px;text-align:right;color:#d1d5db;">—</td>
                                 </tr>
                             @endforeach
                         </tbody>
