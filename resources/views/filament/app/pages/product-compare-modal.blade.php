@@ -1,23 +1,28 @@
-<div class="grid grid-cols-2 gap-6 p-2">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:8px">
 
     @php
         $sides = [
             ['label' => 'Produs existent', 'product' => $source, 'color' => 'blue'],
             ['label' => 'Propunere Toya',  'product' => $proposed, 'color' => 'green'],
         ];
+        $colorMap = [
+            'blue'  => ['bg' => '#eff6ff', 'text' => '#2563eb', 'border' => '#bfdbfe'],
+            'green' => ['bg' => '#f0fdf4', 'text' => '#16a34a', 'border' => '#bbf7d0'],
+        ];
     @endphp
 
     @foreach($sides as $side)
-        @php $p = $side['product']; $color = $side['color']; @endphp
-        <div class="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
+        @php $p = $side['product']; $color = $side['color']; $c = $colorMap[$color]; @endphp
+        <div style="border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;display:flex;flex-direction:column">
 
             {{-- Header --}}
-            <div class="px-4 py-2 bg-{{ $color }}-50 dark:bg-{{ $color }}-900/20 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                <span class="text-xs font-semibold uppercase tracking-wide text-{{ $color }}-600 dark:text-{{ $color }}-400">{{ $side['label'] }}</span>
+            <div style="padding:8px 16px;background:{{ $c['bg'] }};border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:{{ $c['text'] }}">{{ $side['label'] }}</span>
                 @if($p)
                     <a href="{{ \App\Filament\App\Resources\WooProductResource::getUrl('view', ['record' => $p->id]) }}"
                        target="_blank"
-                       class="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
+                       style="font-size:12px;color:#9ca3af;text-decoration:none;display:flex;align-items:center;gap:4px"
+                       onmouseover="this.style.color='#4b5563'" onmouseout="this.style.color='#9ca3af'">
                         <x-filament::icon icon="heroicon-o-arrow-top-right-on-square" class="w-3 h-3"/>
                         Deschide
                     </a>
@@ -25,69 +30,70 @@
             </div>
 
             @if(!$p)
-                <div class="flex-1 flex items-center justify-center py-12 text-gray-400 text-sm">Fără propunere</div>
+                <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:48px 0;color:#9ca3af;font-size:14px">Fără propunere</div>
             @else
                 {{-- Imagine --}}
-                <div class="flex items-center justify-center bg-gray-50 dark:bg-gray-800 h-48">
+                <div style="display:flex;align-items:center;justify-content:center;background:#f9fafb;height:192px">
                     @php $img = $p->main_image_url ?: ($p->data['images'][0]['src'] ?? null); @endphp
                     @if($img)
-                        <img src="{{ $img }}" alt="{{ $p->name }}" class="max-h-44 max-w-full object-contain p-2">
+                        <img src="{{ $img }}" alt="{{ $p->name }}" style="max-height:176px;max-width:100%;object-fit:contain;padding:8px">
                     @else
-                        <x-filament::icon icon="heroicon-o-photo" class="w-16 h-16 text-gray-300"/>
+                        <x-filament::icon icon="heroicon-o-photo" class="w-16 h-16" style="color:#d1d5db"/>
                     @endif
                 </div>
 
                 {{-- Info --}}
-                <div class="flex-1 p-4 space-y-3">
+                <div style="flex:1;padding:16px">
 
                     <div>
-                        <p class="font-semibold text-sm text-gray-900 dark:text-gray-100 leading-snug">{{ $p->name }}</p>
-                        <p class="text-xs text-gray-500 mt-0.5">SKU: {{ $p->sku ?: '—' }}</p>
+                        <p style="font-weight:600;font-size:14px;color:#111827;line-height:1.4">{{ $p->name }}</p>
+                        <p style="font-size:12px;color:#6b7280;margin-top:2px">SKU: {{ $p->sku ?: '—' }}</p>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;column-gap:16px;row-gap:6px;font-size:12px;margin-top:12px">
                         @if($p->brand)
-                            <div class="text-gray-500">Marcă</div>
-                            <div class="font-medium text-gray-800 dark:text-gray-200">{{ $p->brand }}</div>
+                            <div style="color:#6b7280">Marcă</div>
+                            <div style="font-weight:500;color:#1f2937">{{ $p->brand }}</div>
                         @endif
 
                         @if($p->price)
-                            <div class="text-gray-500">Preț</div>
-                            <div class="font-medium text-gray-800 dark:text-gray-200">{{ number_format($p->price, 2) }} lei</div>
+                            <div style="color:#6b7280">Preț</div>
+                            <div style="font-weight:500;color:#1f2937">{{ number_format($p->price, 2) }} lei</div>
                         @endif
 
                         @if($p->weight)
-                            <div class="text-gray-500">Greutate</div>
-                            <div class="font-medium text-gray-800 dark:text-gray-200">{{ $p->weight }} kg</div>
+                            <div style="color:#6b7280">Greutate</div>
+                            <div style="font-weight:500;color:#1f2937">{{ $p->weight }} kg</div>
                         @endif
 
                         @if($p->dim_length || $p->dim_width || $p->dim_height)
-                            <div class="text-gray-500">Dimensiuni</div>
-                            <div class="font-medium text-gray-800 dark:text-gray-200">
+                            <div style="color:#6b7280">Dimensiuni</div>
+                            <div style="font-weight:500;color:#1f2937">
                                 {{ $p->dim_length }}×{{ $p->dim_width }}×{{ $p->dim_height }} cm
                             </div>
                         @endif
 
                         @if($side['label'] === 'Produs existent' && $p->suppliers?->count())
-                            <div class="text-gray-500">Furnizor</div>
-                            <div class="font-medium text-gray-800 dark:text-gray-200">
+                            <div style="color:#6b7280">Furnizor</div>
+                            <div style="font-weight:500;color:#1f2937">
                                 {{ $p->suppliers->pluck('name')->implode(', ') }}
                             </div>
                         @endif
 
-                        <div class="text-gray-500">Status</div>
+                        <div style="color:#6b7280">Status</div>
                         <div>
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium
-                                {{ $p->status === 'publish' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' }}">
-                                {{ $p->status === 'publish' ? 'Publicat' : ($p->status ?: '—') }}
-                            </span>
+                            @if($p->status === 'publish')
+                                <span style="display:inline-flex;align-items:center;padding:2px 6px;border-radius:4px;font-size:12px;font-weight:500;background:#dcfce7;color:#15803d">Publicat</span>
+                            @else
+                                <span style="display:inline-flex;align-items:center;padding:2px 6px;border-radius:4px;font-size:12px;font-weight:500;background:#fef9c3;color:#a16207">{{ $p->status ?: '—' }}</span>
+                            @endif
                         </div>
                     </div>
 
                     @if($p->short_description || $p->description)
-                        <div class="border-t border-gray-100 dark:border-gray-700 pt-3">
-                            <p class="text-xs font-medium text-gray-500 mb-1">Descriere</p>
-                            <p class="text-xs text-gray-700 dark:text-gray-300 leading-relaxed line-clamp-5">
+                        <div style="border-top:1px solid #f3f4f6;padding-top:12px;margin-top:12px">
+                            <p style="font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px">Descriere</p>
+                            <p style="font-size:12px;color:#374151;line-height:1.6;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden">
                                 {{ strip_tags($p->short_description ?: $p->description) }}
                             </p>
                         </div>
@@ -101,15 +107,15 @@
 
 {{-- AI reasoning --}}
 @if($record->reasoning)
-    <div class="mt-4 mx-2 mb-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-4 py-3">
-        <p class="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-1 flex items-center gap-1">
+    <div style="margin:16px 8px 8px;border-radius:8px;background:#fffbeb;border:1px solid #fde68a;padding:12px 16px">
+        <p style="font-size:12px;font-weight:600;color:#b45309;margin-bottom:4px;display:flex;align-items:center;gap:4px">
             <x-filament::icon icon="heroicon-o-sparkles" class="w-3.5 h-3.5"/> Motivare AI
             @if($record->confidence)
-                <span class="ml-auto font-normal text-amber-600">
+                <span style="margin-left:auto;font-weight:400;color:#d97706">
                     Încredere: {{ round($record->confidence * 100) }}%
                 </span>
             @endif
         </p>
-        <p class="text-xs text-amber-800 dark:text-amber-300">{{ $record->reasoning }}</p>
+        <p style="font-size:12px;color:#92400e">{{ $record->reasoning }}</p>
     </div>
 @endif

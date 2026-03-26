@@ -138,12 +138,12 @@ onRowEscape(index) {
     style="min-width:0"
 >
     {{-- Header --}}
-    <div class="erp-pr-row pb-2 mb-0.5 border-b-2 border-gray-200 dark:border-gray-700" style="min-width:620px">
-        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Produs</div>
-        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide text-center">Cant.</div>
-        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Termen</div>
-        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide text-center">Urgent</div>
-        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide text-center">Rezervat</div>
+    <div class="erp-pr-row" style="padding-bottom:8px;margin-bottom:2px;border-bottom:2px solid #e5e7eb;min-width:620px">
+        <div style="font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em">Produs</div>
+        <div style="font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;text-align:center">Cant.</div>
+        <div style="font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em">Termen</div>
+        <div style="font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;text-align:center">Urgent</div>
+        <div style="font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;text-align:center">Rezervat</div>
         <div></div>
         <div></div>
     </div>
@@ -152,12 +152,13 @@ onRowEscape(index) {
     <template x-for="(item, index) in items" :key="index">
         <div class="erp-pr-item" style="min-width:620px">
 
-            <div class="erp-pr-row py-1 border-b border-gray-100 dark:border-gray-800">
+            <div class="erp-pr-row" style="padding-top:4px;padding-bottom:4px;border-bottom:1px solid #f3f4f6">
 
                 {{-- Produs --}}
-                <div class="relative min-w-0">
+                <div style="position:relative;min-width:0">
                     <input type="text"
-                        class="erp-prod w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-400 shadow-sm"
+                        class="erp-prod"
+                        style="width:100%;font-size:14px;border:1px solid #d1d5db;border-radius:8px;padding:8px 12px;background:#fff;color:#111827;outline:none;box-shadow:0 1px 2px rgba(0,0,0,0.05)"
                         placeholder="Caută produs…" autocomplete="off"
                         :value="ui[index]?.search"
                         @input.debounce.300ms="doSearch(index, $event.target.value)"
@@ -165,23 +166,22 @@ onRowEscape(index) {
                         @focus="ui[index]?.results?.length && (ui[index].open = true)"
                         @blur="setTimeout(() => { if(ui[index]) { ui[index].open = false; ui[index].search = item.woo_product_id ? item.product_label : ''; } }, 200)"
                     />
-                    <div x-show="ui[index]?.loading" class="absolute right-2.5 top-2.5 pointer-events-none">
-                        <svg class="animate-spin h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    <div x-show="ui[index]?.loading" style="position:absolute;right:10px;top:10px;pointer-events:none">
+                        <svg style="animation:spin 1s linear infinite;width:16px;height:16px;color:#9ca3af" fill="none" viewBox="0 0 24 24">
+                            <circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                         </svg>
                     </div>
                     <div x-show="ui[index]?.open" @click.outside="if(ui[index]) ui[index].open = false"
-                        class="absolute z-50 left-0 top-full mt-0.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl overflow-y-auto"
-                        style="display:none;max-height:360px;min-width:750px">
+                        style="display:none;position:absolute;z-index:50;left:0;top:100%;margin-top:2px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);overflow-y:auto;max-height:360px;min-width:750px">
                         <template x-for="res in ui[index]?.results ?? []" :key="res.id">
                             <div @mousedown.prevent="pick(index, res)"
-                                class="flex items-center justify-between px-3 py-2 text-sm cursor-pointer text-gray-800 dark:text-gray-100 border-b border-gray-100 dark:border-gray-700 last:border-0"
+                                style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;font-size:14px;cursor:pointer;color:#1f2937;border-bottom:1px solid #f3f4f6"
                                 @mouseover="$el.style.background='#eef2ff'"
                                 @mouseout="$el.style.background=''">
-                                <span x-text="res.label" class="truncate mr-4"></span>
+                                <span x-text="res.label" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:16px"></span>
                                 <span x-show="res.price" x-text="res.price ? parseFloat(res.price).toFixed(2) + ' lei' : ''"
-                                    class="flex-shrink-0 text-xs font-semibold" style="color:#ef4444"></span>
+                                    style="flex-shrink:0;font-size:12px;font-weight:600;color:#ef4444"></span>
                             </div>
                         </template>
                     </div>
@@ -189,7 +189,8 @@ onRowEscape(index) {
 
                 {{-- Cantitate --}}
                 <input type="number"
-                    class="erp-qty w-full text-sm text-center border border-gray-300 dark:border-gray-600 rounded-lg px-1 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 shadow-sm"
+                    class="erp-qty"
+                    style="width:100%;font-size:14px;text-align:center;border:1px solid #d1d5db;border-radius:8px;padding:8px 4px;background:#fff;color:#111827;outline:none;box-shadow:0 1px 2px rgba(0,0,0,0.05)"
                     min="0.001" step="any"
                     :value="item.quantity"
                     @change="setField(index, 'quantity', parseFloat($event.target.value) || 1)"
@@ -200,7 +201,7 @@ onRowEscape(index) {
                 {{-- Termen — tabindex=-1 ca Tab să sară peste el --}}
                 <input type="date"
                     tabindex="-1"
-                    class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 shadow-sm"
+                    style="width:100%;font-size:14px;border:1px solid #d1d5db;border-radius:8px;padding:8px;background:#fff;color:#111827;outline:none;box-shadow:0 1px 2px rgba(0,0,0,0.05)"
                     :value="item.needed_by"
                     @change="setField(index, 'needed_by', $event.target.value)"
                     @keydown.escape="onRowEscape(index)"
@@ -208,80 +209,86 @@ onRowEscape(index) {
 
                 {{-- Urgent --}}
                 <button type="button" tabindex="-1"
-                    class="erp-toggle-btn w-full h-8 rounded-lg border text-xs font-medium transition-all duration-150 flex items-center justify-center gap-1"
+                    class="erp-toggle-btn"
+                    style="width:100%;height:32px;border-radius:8px;border:1px solid;font-size:12px;font-weight:500;transition:all 150ms;display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer"
                     :style="item.is_urgent
-                        ? 'background:#ef4444;color:#fff;border-color:#ef4444;'
-                        : 'background:#fff;color:#9ca3af;border-color:#d1d5db;'"
+                        ? 'width:100%;height:32px;border-radius:8px;border:1px solid;font-size:12px;font-weight:500;transition:all 150ms;display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;background:#ef4444;color:#fff;border-color:#ef4444;'
+                        : 'width:100%;height:32px;border-radius:8px;border:1px solid;font-size:12px;font-weight:500;transition:all 150ms;display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;background:#fff;color:#9ca3af;border-color:#d1d5db;'"
                     @click="setField(index, 'is_urgent', !item.is_urgent)"
                     :title="item.is_urgent ? 'Urgent — dezactivează' : 'Marchează urgent'">
-                    <svg class="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg style="width:12px;height:12px;flex-shrink:0" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
                     </svg>
                     <span>Urgent</span>
                 </button>
 
                 {{-- Rezervat --}}
-                <div class="flex flex-col items-stretch gap-0.5">
+                <div style="display:flex;flex-direction:column;align-items:stretch;gap:2px">
                     <button type="button" tabindex="-1"
-                        class="erp-toggle-btn w-full h-8 rounded-lg border text-xs font-medium transition-all duration-150 flex items-center justify-center gap-1"
+                        class="erp-toggle-btn"
+                        style="width:100%;height:32px;border-radius:8px;border:1px solid;font-size:12px;font-weight:500;transition:all 150ms;display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer"
                         :style="item.is_reserved
-                            ? 'background:#f59e0b;color:#fff;border-color:#f59e0b;'
-                            : 'background:#fff;color:#9ca3af;border-color:#d1d5db;'"
+                            ? 'width:100%;height:32px;border-radius:8px;border:1px solid;font-size:12px;font-weight:500;transition:all 150ms;display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;background:#f59e0b;color:#fff;border-color:#f59e0b;'
+                            : 'width:100%;height:32px;border-radius:8px;border:1px solid;font-size:12px;font-weight:500;transition:all 150ms;display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;background:#fff;color:#9ca3af;border-color:#d1d5db;'"
                         @click="openRezervat(index)"
                         :title="item.is_reserved ? rezTooltip(item) : 'Marchează rezervat'">
-                        <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <svg style="width:12px;height:12px;flex-shrink:0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
                         </svg>
                         <span>Rezervat</span>
                     </button>
-                    <div x-show="item.is_reserved" class="flex items-center gap-0.5" style="display:none">
-                        <span class="text-xs truncate flex-1 leading-none"
-                              style="color:#d97706;max-width:62px"
+                    <div x-show="item.is_reserved" style="display:none;align-items:center;gap:2px" x-bind:style="item.is_reserved ? 'display:flex;align-items:center;gap:2px' : 'display:none'">
+                        <span style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;line-height:1;color:#d97706;max-width:62px"
                               :text="item.customer_label || item.offer_label"
                               x-text="item.customer_label || item.offer_label || '—'"></span>
                         <button type="button" @click.stop="clearRezervat(index)"
-                            class="flex-shrink-0 text-gray-400 hover:text-red-500 transition-colors leading-none"
-                            title="Elimină rezervarea" style="font-size:10px">✕</button>
+                            style="flex-shrink:0;color:#9ca3af;transition:color 150ms;line-height:1;font-size:10px;background:none;border:none;cursor:pointer"
+                            onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#9ca3af'"
+                            title="Elimină rezervarea">✕</button>
                     </div>
                 </div>
 
                 {{-- Notițe --}}
                 <button type="button" tabindex="-1" @click="toggleNotes(index)"
-                    class="w-full h-8 rounded-lg border flex items-center justify-center transition-colors"
+                    style="width:100%;height:32px;border-radius:8px;border:1px solid transparent;display:flex;align-items:center;justify-content:center;transition:color 150ms;cursor:pointer;background:none"
                     :style="(item.notes && item.notes.length) || ui[index]?.showNotes
-                        ? 'color:#f59e0b;background:#fffbeb;border-color:#fcd34d;'
-                        : 'color:#9ca3af;border-color:transparent;'"
+                        ? 'width:100%;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:color 150ms;cursor:pointer;color:#f59e0b;background:#fffbeb;border:1px solid #fcd34d;'
+                        : 'width:100%;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:color 150ms;cursor:pointer;color:#9ca3af;border:1px solid transparent;background:none;'"
                     :class="!((item.notes && item.notes.length) || ui[index]?.showNotes) ? 'erp-act-btn' : ''"
                     title="Notițe">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <svg style="width:16px;height:16px" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
                     </svg>
                 </button>
 
                 {{-- Șterge --}}
                 <button type="button" tabindex="-1" @click="removeRow(index)"
-                    class="erp-act-btn w-full h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    class="erp-act-btn"
+                    style="width:100%;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#9ca3af;transition:color 150ms;cursor:pointer;background:none;border:none"
+                    onmouseover="this.style.color='#ef4444';this.style.background='#fef2f2'" onmouseout="this.style.color='#9ca3af';this.style.background='none'"
                     title="Șterge">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <svg style="width:14px;height:14px" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
                 </button>
             </div>
 
             {{-- Notițe expandabile --}}
-            <div x-show="ui[index]?.showNotes" class="py-1 border-b border-gray-100 dark:border-gray-800" style="display:none">
-                <div class="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-1.5">
-                    <svg class="w-3.5 h-3.5 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <div x-show="ui[index]?.showNotes" style="display:none;padding-top:4px;padding-bottom:4px;border-bottom:1px solid #f3f4f6">
+                <div style="display:flex;align-items:center;gap:8px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:6px 12px">
+                    <svg style="width:14px;height:14px;color:#fbbf24;flex-shrink:0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
                     </svg>
                     <input type="text"
-                        class="erp-notes flex-1 text-sm bg-transparent border-none outline-none text-gray-800 dark:text-gray-200 placeholder-gray-400"
+                        class="erp-notes"
+                        style="flex:1;font-size:14px;background:transparent;border:none;outline:none;color:#1f2937"
                         placeholder="Notițe pentru acest produs…"
                         :value="item.notes"
                         @change="setField(index, 'notes', $event.target.value)"
                     />
-                    <button type="button" @click="toggleNotes(index)" class="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <button type="button" @click="toggleNotes(index)" style="color:#9ca3af;transition:color 150ms;flex-shrink:0;background:none;border:none;cursor:pointer"
+                        onmouseover="this.style.color='#4b5563'" onmouseout="this.style.color='#9ca3af'">
+                        <svg style="width:14px;height:14px" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
                     </button>
@@ -293,14 +300,14 @@ onRowEscape(index) {
 
     {{-- Adaugă linie --}}
     <button type="button" @click="addRow()"
-        class="mt-2 flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        style="margin-top:8px;display:flex;align-items:center;gap:6px;font-size:14px;color:#8B1A1A;font-weight:500;transition:color 150ms;background:none;border:none;cursor:pointer">
+        <svg style="width:16px;height:16px" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
         </svg>
         Adaugă produs
     </button>
 
-    <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-600">
+    <p style="margin-top:6px;font-size:12px;color:#9ca3af">
         Tab din cantitate → linie nouă &nbsp;·&nbsp; Esc pe linie goală → șterge linia
     </p>
 
