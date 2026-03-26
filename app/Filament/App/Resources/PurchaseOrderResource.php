@@ -906,28 +906,21 @@ class PurchaseOrderResource extends Resource
 
         $qty = (int) $hint;
 
-        // Use a global function to avoid inline JS quoting issues
-        $uid = 'rec_'.substr(md5((string) $qty . uniqid()), 0, 6);
-
-        $script = '<script>'
-            . 'document.getElementById(\''.$uid.'\').addEventListener(\'click\',function(){'
-            . 'var p=this;while(p&&!p.hasAttribute(\'x-sortable-item\')){p=p.parentElement}'
-            . 'if(!p)return;'
-            . 'var inputs=p.querySelectorAll(\'input\');'
-            . 'for(var i=0;i<inputs.length;i++){'
-            . 'if(inputs[i].name&&inputs[i].name.indexOf(\'quantity\')!==-1){'
-            . 'var s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,\'value\').set;'
-            . 's.call(inputs[i],\''.$qty.'\');'
-            . 'inputs[i].dispatchEvent(new Event(\'input\',{bubbles:true}));'
-            . 'inputs[i].dispatchEvent(new Event(\'change\',{bubbles:true}));'
-            . 'inputs[i].focus();'
-            . 'setTimeout(function(){inputs[i].dispatchEvent(new Event(\'blur\',{bubbles:true}))},100);'
-            . 'break;}}'
-            . '});'
-            . '</script>';
+        // Inline onclick using single quotes only — find input by type=number in parent LI
+        $onclick = "var p=this;while(p&amp;&amp;p.tagName!=='LI'){p=p.parentElement}"
+            . "if(!p)return;"
+            . "var inp=p.querySelector('input[type=number]');"
+            . "if(!inp)return;"
+            . "var s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;"
+            . "s.call(inp,'{$qty}');"
+            . "inp.dispatchEvent(new Event('input',{bubbles:true}));"
+            . "inp.dispatchEvent(new Event('change',{bubbles:true}));"
+            . "inp.focus();"
+            . "setTimeout(function(){inp.dispatchEvent(new Event('blur',{bubbles:true}))},100);";
 
         return new HtmlString(
-            '<span id="'.$uid.'" style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;padding:3px 8px;border-radius:6px;background:#fdf2f2;border:1px solid #e8c4c4;transition:background .15s"'
+            '<span style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;padding:3px 8px;border-radius:6px;background:#fdf2f2;border:1px solid #e8c4c4;transition:background .15s"'
+            .' onclick="'.$onclick.'"'
             .' onmouseover="this.style.background=\'#f5e0e0\'"'
             .' onmouseout="this.style.background=\'#fdf2f2\'"'
             .' title="Click pentru a aplica cantitatea recomandată">'
@@ -937,7 +930,6 @@ class PurchaseOrderResource extends Resource
             .'<path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>'
             .'</svg>'
             .'</span>'
-            .$script
         );
     }
 
