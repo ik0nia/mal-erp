@@ -369,7 +369,12 @@ Route::middleware(['web', 'auth'])->group(function () {
             'protocol'      => 'imap',
         ]);
 
-        $client->connect();
+        try {
+            $client->connect();
+        } catch (\Throwable $e) {
+            \Log::error('IMAP connection failed', ['error' => $e->getMessage()]);
+            abort(503, 'Nu s-a putut conecta la serverul de email.');
+        }
 
         // getFolder() nu funcționează pe sub-foldere — parcurgem arborele recursiv
         $folderPath = $email->imap_folder ?? 'INBOX';
@@ -385,14 +390,18 @@ Route::middleware(['web', 'auth'])->group(function () {
 
         $message = $folder->messages()->whereUid($email->imap_uid)->get()->first();
 
-        abort_unless($message, 404);
+        abort_unless($message, 404, 'Mesajul nu mai există pe serverul de email.');
 
-        $attachments = $message->getAttachments();
-        $att = $attachments->get($index);
+        try {
+            $attachments = $message->getAttachments();
+            $att = $attachments->get($index);
+            abort_unless($att, 404, 'Atașamentul nu a fost găsit.');
+            $content = $att->getContent();
+        } catch (\Throwable $e) {
+            \Log::error('IMAP attachment download failed', ['id' => $id, 'index' => $index, 'error' => $e->getMessage()]);
+            abort(500, 'Nu s-a putut descărca atașamentul.');
+        }
 
-        abort_unless($att, 404);
-
-        $content  = $att->getContent();
         $mimeType = $meta['mime_type'] ?? 'application/octet-stream';
         $name     = $meta['name'] ?? 'attachment';
 

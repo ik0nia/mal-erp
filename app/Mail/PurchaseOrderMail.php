@@ -33,18 +33,33 @@ class PurchaseOrderMail extends Mailable
 
     public function attachments(): array
     {
-        $pdf         = Pdf::loadView('pdf.purchase-order', ['order' => $this->order]);
-        $pdfFilename = str_replace('/', '-', $this->order->number) . '.pdf';
+        $attachments = [];
 
-        $excelPath     = PurchaseOrderExcelExport::generate($this->order);
-        $excelFilename = str_replace('/', '-', $this->order->number) . '.xlsx';
+        try {
+            $pdf         = Pdf::loadView('pdf.purchase-order', ['order' => $this->order]);
+            $pdfFilename = str_replace('/', '-', $this->order->number) . '.pdf';
+            $attachments[] = Attachment::fromData(fn () => $pdf->output(), $pdfFilename)
+                ->withMime('application/pdf');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('PO Mail: PDF generation failed', [
+                'order' => $this->order->number,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
-        return [
-            Attachment::fromData(fn () => $pdf->output(), $pdfFilename)
-                ->withMime('application/pdf'),
-            Attachment::fromPath($excelPath)
+        try {
+            $excelPath     = PurchaseOrderExcelExport::generate($this->order);
+            $excelFilename = str_replace('/', '-', $this->order->number) . '.xlsx';
+            $attachments[] = Attachment::fromPath($excelPath)
                 ->as($excelFilename)
-                ->withMime('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
-        ];
+                ->withMime('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('PO Mail: Excel generation failed', [
+                'order' => $this->order->number,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $attachments;
     }
 }
