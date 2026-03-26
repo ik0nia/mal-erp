@@ -294,9 +294,11 @@ class WooProductResource extends Resource
                                 ->numeric()
                                 ->minValue(0),
                             Forms\Components\DatePicker::make('date_start')
-                                ->label('Preț valid de la'),
+                                ->label('Preț valid de la')
+                                ->live(),
                             Forms\Components\DatePicker::make('date_end')
-                                ->label('Preț valid până la'),
+                                ->label('Preț valid până la')
+                                ->afterOrEqual('date_start'),
                             Forms\Components\TextInput::make('over_delivery_tolerance')
                                 ->label('Toleranță supra-livrare (%)')
                                 ->numeric()
