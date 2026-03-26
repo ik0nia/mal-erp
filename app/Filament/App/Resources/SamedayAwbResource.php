@@ -53,11 +53,6 @@ class SamedayAwbResource extends Resource
         return static::hasAnyAvailableSamedayConnection();
     }
 
-    public static function canViewAny(): bool
-    {
-        return auth()->check();
-    }
-
     public static function canCreate(): bool
     {
         return static::hasAnyAvailableSamedayConnection();

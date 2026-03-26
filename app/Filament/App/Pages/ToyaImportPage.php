@@ -22,6 +22,11 @@ class ToyaImportPage extends Page implements HasTable
 {
     use InteractsWithTable, ChecksRolePermissions;
 
+    public static function canAccess(): bool
+    {
+        return \App\Models\RolePermission::check(static::class, 'can_access');
+    }
+
     protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-arrow-down-tray';
     protected static string|\UnitEnum|null $navigationGroup = 'Produse';
     protected static ?string $navigationLabel = 'Import Toya';

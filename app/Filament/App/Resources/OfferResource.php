@@ -607,11 +607,6 @@ class OfferResource extends Resource
         ];
     }
 
-    public static function canViewAny(): bool
-    {
-        return auth()->check();
-    }
-
     public static function canCreate(): bool
     {
         return auth()->check();

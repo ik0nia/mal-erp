@@ -36,11 +36,6 @@ class WooCategoryResource extends Resource
 
     protected static ?int $navigationSort = 10;
 
-    public static function canViewAny(): bool
-    {
-        return auth()->check();
-    }
-
     public static function canCreate(): bool
     {
         return false;

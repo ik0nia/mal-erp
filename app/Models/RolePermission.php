@@ -66,8 +66,8 @@ class RolePermission extends Model
             return false;
         }
 
-        // super_admin și admin au acces la tot
-        if ($user->isSuperAdmin() || $user->isAdmin()) {
+        // Doar super_admin are acces la tot; admin respectă permisiunile din roluri
+        if ($user->isSuperAdmin()) {
             return true;
         }
 

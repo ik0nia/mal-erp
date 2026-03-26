@@ -44,11 +44,6 @@ class CustomerResource extends Resource
 
     protected static ?int $navigationSort = 5;
 
-    public static function canViewAny(): bool
-    {
-        return auth()->check();
-    }
-
     public static function canCreate(): bool
     {
         return auth()->check();
