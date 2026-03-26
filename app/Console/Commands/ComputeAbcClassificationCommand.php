@@ -204,10 +204,10 @@ class ComputeAbcClassificationCommand extends Command
             return self::SUCCESS;
         }
 
-        // Batch update using CASE statements for performance
-        $chunks = array_chunk($allProductIds, 500);
+        // Batch update using chunked upserts for performance and memory safety
+        foreach (array_chunk($allProductIds, 500) as $chunk) {
+            $rows = [];
 
-        foreach ($chunks as $chunk) {
             foreach ($chunk as $productId) {
                 $abc = $abcMap[$productId] ?? null;
                 $xyz = $xyzMap[$productId] ?? null;
@@ -223,20 +223,28 @@ class ComputeAbcClassificationCommand extends Command
                     $supplierData[$productId] ?? null
                 );
 
-                $updateData = array_filter([
-                    'abc_classification' => $abc,
-                    'xyz_classification' => $xyz,
-                    'avg_daily_consumption' => $avgDaily,
-                    'reorder_qty' => $reorderQty > 0 ? $reorderQty : null,
-                ], fn ($v) => $v !== null);
-
-                if (! empty($updateData)) {
-                    DB::table('woo_products')
-                        ->where('id', $productId)
-                        ->update($updateData);
+                if ($abc !== null || $xyz !== null || $avgDaily !== null) {
+                    $rows[] = [
+                        'id' => $productId,
+                        'abc_classification' => $abc,
+                        'xyz_classification' => $xyz,
+                        'avg_daily_consumption' => $avgDaily,
+                        'reorder_qty' => $reorderQty > 0 ? $reorderQty : null,
+                    ];
                     $updated++;
                 }
             }
+
+            if (! empty($rows)) {
+                DB::table('woo_products')
+                    ->upsert(
+                        $rows,
+                        ['id'],
+                        ['abc_classification', 'xyz_classification', 'avg_daily_consumption', 'reorder_qty']
+                    );
+            }
+
+            unset($rows);
         }
 
         $this->info("Actualizate {$updated} produse.");

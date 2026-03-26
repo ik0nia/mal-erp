@@ -90,8 +90,6 @@ Route::middleware(['web', 'auth'])->group(function () {
         $lossCount = $discrepancies->where('is_loss', true)->count();
         $totalOk += $totalCompared - $discrepancies->count() - $totalOk;
 
-        ini_set('memory_limit', '512M');
-
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.price-discrepancies', compact(
             'discrepancies', 'totalCompared', 'totalOk', 'lossCount'
         ))->setPaper('a4', 'landscape');

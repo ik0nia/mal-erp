@@ -115,4 +115,21 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | IMAP Fetch Settings
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for the IMAP email fetching job and import commands.
+    |
+    */
+
+    'imap' => [
+        // Folder suffixes to skip when fetching emails (case-insensitive)
+        'skip_folders' => ['trash', 'spam', 'junk', 'drafts'],
+
+        // How many days back to search for new emails (tolerance for scheduler downtime)
+        'since_days' => (int) env('IMAP_SINCE_DAYS', 3),
+    ],
+
 ];

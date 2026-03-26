@@ -23,8 +23,6 @@ class ImportEmailHistoryCommand extends Command
     protected $signature   = 'email:import-history {--since=2025-01-01}';
     protected $description = 'Importă istoricul emailurilor din IMAP (RAM-safe: UID search + fetch individual)';
 
-    private const SKIP_SUFFIXES = ['trash', 'spam', 'junk', 'drafts'];
-
     // Format dată pentru IMAP SEARCH: "01-Jan-2025"
     private const IMAP_DATE_FORMAT = 'd-M-Y';
 
@@ -32,7 +30,7 @@ class ImportEmailHistoryCommand extends Command
 
     public function handle(): int
     {
-        ini_set('memory_limit', '-1'); // un singur email mare poate depăși orice limită fixă
+        ini_set('memory_limit', '256M');
 
         $since = Carbon::parse($this->option('since'))->startOfDay();
         $today = now()->addDay()->startOfDay(); // BEFORE este exclusiv → tomorrow
@@ -265,10 +263,12 @@ class ImportEmailHistoryCommand extends Command
 
     private function collectFolders($folders, array &$result): void
     {
+        $skipSuffixes = config('mail.imap.skip_folders', ['trash', 'spam', 'junk', 'drafts']);
+
         foreach ($folders as $folder) {
             $pathLower = strtolower($folder->path);
             $skip      = false;
-            foreach (self::SKIP_SUFFIXES as $suffix) {
+            foreach ($skipSuffixes as $suffix) {
                 if (str_ends_with($pathLower, $suffix)) {
                     $skip = true;
                     break;

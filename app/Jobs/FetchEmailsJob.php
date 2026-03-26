@@ -24,15 +24,7 @@ class FetchEmailsJob implements ShouldQueue
     public int $timeout = 300;
     public int $tries   = 1; // Nu re-încearcă — dacă IMAP e down, așteptăm 5 min
 
-    private const SKIP_SUFFIXES  = ['trash', 'spam', 'junk', 'drafts'];
     private const IMAP_DATE_FMT  = 'd-M-Y';
-
-    /**
-     * Căutăm emailuri SINCE N zile în urmă.
-     * 3 zile = toleranță la scheduler down până la 3 zile fără pierderi.
-     * Eficient: UID SEARCH SINCE <date> — nu face FETCH ALL.
-     */
-    private const SINCE_DAYS = 3;
 
     public function handle(): void
     {
@@ -64,7 +56,8 @@ class FetchEmailsJob implements ShouldQueue
             ->pluck('id', 'email')
             ->mapWithKeys(fn ($id, $email) => [strtolower($email) => $id]);
 
-        $since = Carbon::now()->subDays(self::SINCE_DAYS)->format(self::IMAP_DATE_FMT);
+        $sinceDays = config('mail.imap.since_days', 3);
+        $since = Carbon::now()->subDays($sinceDays)->format(self::IMAP_DATE_FMT);
 
         $client     = $this->makeClient($host, (int) $port, $encryption, $username, $password);
         $folders    = $this->getAllFolders($client);
@@ -117,11 +110,13 @@ class FetchEmailsJob implements ShouldQueue
 
     private function collectFolders($folders, array &$result): void
     {
+        $skipSuffixes = config('mail.imap.skip_folders', ['trash', 'spam', 'junk', 'drafts']);
+
         foreach ($folders as $folder) {
             $pathLower = strtolower($folder->path);
             $skip = false;
 
-            foreach (self::SKIP_SUFFIXES as $suffix) {
+            foreach ($skipSuffixes as $suffix) {
                 if (str_ends_with($pathLower, $suffix)) {
                     $skip = true;
                     break;

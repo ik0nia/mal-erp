@@ -22,6 +22,7 @@ use Webklex\PHPIMAP\IMAP;
  */
 class ImapMailboxService
 {
+    /** @deprecated Use config('mail.imap.skip_folders') instead */
     private const SKIP_SUFFIXES = ['trash', 'spam', 'junk', 'drafts'];
     private const IMAP_DATE_FMT = 'd-M-Y';
 
@@ -115,7 +116,7 @@ class ImapMailboxService
             $pathLower = strtolower($folder->path);
             $skip      = false;
 
-            foreach (self::SKIP_SUFFIXES as $suffix) {
+            foreach (config('mail.imap.skip_folders', self::SKIP_SUFFIXES) as $suffix) {
                 if (str_ends_with($pathLower, $suffix)) {
                     $skip = true;
                     break;
