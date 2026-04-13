@@ -15,6 +15,17 @@ use Illuminate\Support\Facades\Route;
 // Pagină publică progres import Toya (fără autentificare)
 Route::get('/toya-import', \App\Http\Controllers\ToyaImportStatusController::class);
 
+// WinMentor Bridge — plan integrare ERP (public, fără autentificare)
+Route::middleware('web')->get('/docs/winmentor-integrare', function () {
+    $md   = file_get_contents(base_path('private/winmentor/INTEGRARE-ERP.md'));
+    $html = \Illuminate\Support\Str::markdown($md, [
+        'html_input'         => 'strip',
+        'allow_unsafe_links' => false,
+    ]);
+
+    return response()->view('docs.winmentor-integrare', ['content' => $html]);
+})->name('docs.winmentor-integrare');
+
 // Redirect permanent de la vechea cale woo-products → produse
 Route::permanentRedirect('/woo-products', '/produse');
 Route::get('/woo-products/{any}', fn (Request $request, string $any) =>
@@ -22,6 +33,14 @@ Route::get('/woo-products/{any}', fn (Request $request, string $any) =>
 )->where('any', '.*');
 
 Route::middleware(['web', 'auth'])->group(function () {
+
+    Route::get('/rapoarte/bi-marje', function () {
+        if (! auth()->user()?->isSuperAdmin()) {
+            abort(403);
+        }
+        return view('bi-marje');
+    });
+
 
     // Raport PDF — discrepanțe preț de vânzare vs WinMentor
     Route::get('/rapoarte/discrepante-pret-vanzare', function () {
@@ -311,19 +330,6 @@ Route::middleware(['web', 'auth'])->group(function () {
 
         return response()->json($products);
     })->middleware('throttle:search');
-
-    // WinMentor Bridge — plan integrare ERP (doar super_admin)
-    Route::get('/docs/winmentor-integrare', function () {
-        abort_unless(auth()->user()?->isSuperAdmin(), 403);
-
-        $md   = file_get_contents(base_path('private/winmentor/INTEGRARE-ERP.md'));
-        $html = \Illuminate\Support\Str::markdown($md, [
-            'html_input'         => 'strip',
-            'allow_unsafe_links' => false,
-        ]);
-
-        return response()->view('docs.winmentor-integrare', ['content' => $html]);
-    })->name('docs.winmentor-integrare');
 
     // WinMentor Bridge — documentație (doar super_admin)
     Route::get('/docs/winmentor', function () {

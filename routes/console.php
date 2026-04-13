@@ -8,6 +8,9 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+// Horizon metrics snapshot — la fiecare 5 minute (grafice throughput în dashboard).
+Schedule::command('horizon:snapshot')->everyFiveMinutes();
+
 // Runs every minute and dispatches due WinMentor imports based on each connection settings.
 Schedule::command('stock:dispatch-scheduled-winmentor')
     ->everyMinute()
@@ -108,6 +111,14 @@ Schedule::command('bi:generate-period-report --type=annual')
     ->withoutOverlapping()
     ->runInBackground();
 
+// Alerte prețuri achiziție — zilnic la 08:30 (Europe/Bucharest).
+// Detectează anomalii nealertate (spike/drop) unde prețul de vânzare nu a fost actualizat
+// și produse cu marjă sub 10%. Trimite notificări la buyers + manageri.
+Schedule::command('erp:alert-price-changes')
+    ->dailyAt('08:30')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();
+
 // Clasificare ABC/XYZ produse — zilnic la 01:00 (Europe/Bucharest).
 // Calculează consum mediu zilnic, clasificare ABC/XYZ și reorder_qty.
 Schedule::command('erp:compute-abc-classification')
@@ -116,8 +127,64 @@ Schedule::command('erp:compute-abc-classification')
     ->withoutOverlapping()
     ->runInBackground();
 
-// GDPR — anonimizare IP-uri chat_logs mai vechi de 90 de zile.
-Schedule::command('gdpr:cleanup-chat-logs')
-    ->weekly()
-    ->at('03:00');
+// WinMentor — asociere PO-uri cu recepții contabile (la fiecare 30 minute).
+Schedule::command('winmentor:match-po-receptie --firma=MAL2019')
+    ->everyThirtyMinutes()
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// WinMentor — arhivare loguri mai vechi de 30 de zile (1 ale lunii la 02:00).
+Schedule::command('winmentor:archive-logs')
+    ->monthlyOn(1, '02:00')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();
+
+// Health check workeri — la fiecare 30 de minute.
+// Verifică failed_jobs noi și workers cu SyncRun stale → alertă e-mail la codrut@ikonia.ro.
+Schedule::command('erp:workers-health-check')
+    ->everyThirtyMinutes()
+    ->withoutOverlapping();
+
+// WinMentor Bridge — sync stoc + preț de vânzare (la fiecare 5 minute).
+// Doar clasa 1, gestiunea MP, luni–sâmbătă 08:00–17:30.
+// Înlocuiește conexiunea CSV pentru stoc și preț de vânzare.
+Schedule::command('winmentor:sync-stock-bridge')
+    ->everyFiveMinutes()
+    ->timezone('Europe/Bucharest')
+    ->days([1, 2, 3, 4, 5, 6])
+    ->between('08:00', '17:30')
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// WinMentor Bridge — detectare modificări SKU/denumire articole (la fiecare 5 minute).
+// Când detectează o modificare, actualizează ERP + WooCommerce și trimite e-mail.
+Schedule::command('winmentor:detect-article-changes')
+    ->everyFiveMinutes()
+    ->timezone('Europe/Bucharest')
+    ->days([1, 2, 3, 4, 5, 6])
+    ->between('08:00', '17:30')
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// WinMentor — detectare intrări noi și procesare automată (la fiecare 15 minute).
+// Rulează doar luni–sâmbătă între 08:00–17:30 (Europe/Bucharest).
+// Se oprește singur dacă COM nu e conectat (WinMentor închis).
+Schedule::command('winmentor:watch-intrari --firma=MAL2019')
+    ->everyFifteenMinutes()
+    ->timezone('Europe/Bucharest')
+    ->days([1, 2, 3, 4, 5, 6])
+    ->between('08:00', '17:30')
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// WinMentor — detectare vânzări noi (la fiecare 15 minute).
+// Același program ca intrările — luni–sâmbătă 08:00–17:30.
+// Nu rulează concurent cu fetch-ul de backfill (blocat prin Cache lock).
+Schedule::command('winmentor:watch-vanzari --firma=MAL2019')
+    ->everyFifteenMinutes()
+    ->timezone('Europe/Bucharest')
+    ->days([1, 2, 3, 4, 5, 6])
+    ->between('08:00', '17:30')
+    ->withoutOverlapping()
+    ->runInBackground();
 
