@@ -442,10 +442,10 @@ class PurchaseOrderResource extends Resource
                                     'skip'   => $isRejected || $isCancelled,
                                 ],
                                 [
-                                    'label'  => 'Recepționat',
-                                    'date'   => $record->received_at?->format('d.m.Y H:i'),
-                                    'by'     => $record->receivedBy?->name,
-                                    'note'   => $record->received_notes ?? null,
+                                    'label'      => 'Recepționat',
+                                    'date'       => $record->received_at?->format('d.m.Y H:i'),
+                                    'by'         => $record->receivedBy?->name,
+                                    'note_badge' => $record->received_notes ?? null,
                                     'done'   => $record->status === PurchaseOrder::STATUS_RECEIVED,
                                     'active' => $record->status === PurchaseOrder::STATUS_SENT,
                                     'skip'   => $isRejected || $isCancelled,
@@ -519,7 +519,10 @@ class PurchaseOrderResource extends Resource
                                     $html .= '<div style="font-size:0.72rem;color:#9ca3af;margin-top:1px;">' . e($step['by']) . '</div>';
                                 }
                                 if (! empty($step['note'])) {
-                                    $escaped = e($step['note']);
+                                    $html .= '<div style="font-size:0.7rem;color:#6b7280;margin-top:2px;max-width:160px;word-break:break-word;">' . e($step['note']) . '</div>';
+                                }
+                                if (! empty($step['note_badge'])) {
+                                    $escaped = e($step['note_badge']);
                                     $html .= '<details style="display:inline-block;margin-top:4px;">'
                                         . '<summary style="cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:3px;'
                                         . 'background:#fef2f2;border:1px solid #fecaca;border-radius:5px;padding:2px 7px;'
@@ -583,46 +586,6 @@ class PurchaseOrderResource extends Resource
                             $state >= 90    => 'success',
                             $state >= 70    => 'warning',
                             default         => 'danger',
-                        }),
-                ]),
-
-            // ── 4. Note ─────────────────────────────────────────────────────
-            InfolistSection::make('note_indicators')
-                ->hiddenLabel()
-                ->columnSpanFull()
-                ->visible(fn (PurchaseOrder $record): bool =>
-                    filled($record->notes_internal) || filled($record->notes_supplier) || filled($record->received_notes)
-                )
-                ->schema([
-                    TextEntry::make('notes_html')
-                        ->hiddenLabel()
-                        ->columnSpanFull()
-                        ->html()
-                        ->getStateUsing(function (PurchaseOrder $record): string {
-                            $notes = [
-                                'Notițe interne'         => $record->notes_internal,
-                                'Notițe pentru furnizor' => $record->notes_supplier,
-                                'Observații recepție'    => $record->received_notes,
-                            ];
-
-                            $html = '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
-                            foreach ($notes as $label => $text) {
-                                if (! filled($text)) continue;
-                                $escaped = e($text);
-                                $html .= '<details style="display:inline-block;">'
-                                    . '<summary style="cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:4px;'
-                                    . 'background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:3px 10px;'
-                                    . 'font-size:0.8rem;font-weight:600;color:#dc2626;user-select:none;">'
-                                    . '▲ ' . e($label)
-                                    . '</summary>'
-                                    . '<div style="margin-top:6px;padding:10px 14px;background:#fff7f7;border:1px solid #fecaca;'
-                                    . 'border-radius:6px;font-size:0.85rem;color:#374151;white-space:pre-wrap;max-width:600px;">'
-                                    . $escaped
-                                    . '</div>'
-                                    . '</details>';
-                            }
-                            $html .= '</div>';
-                            return $html;
                         }),
                 ]),
 
