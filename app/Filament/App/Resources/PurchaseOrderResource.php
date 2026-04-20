@@ -622,51 +622,157 @@ class PurchaseOrderResource extends Resource
             InfolistSection::make('Produse comandate')
                 ->columnSpanFull()
                 ->schema([
-                    RepeatableEntry::make('items')
+                    TextEntry::make('items_table')
                         ->hiddenLabel()
-                        ->columns(5)
-                        ->schema([
-                            TextEntry::make('product_name')
-                                ->hiddenLabel()
-                                ->columnSpan(2)
-                                ->html()
-                                ->getStateUsing(function (\App\Models\PurchaseOrderItem $record): string {
-                                    $codes = array_filter([
-                                        $record->sku        ? 'SKU: ' . $record->sku : null,
-                                        $record->supplier_sku ? 'Cod furnizor: ' . $record->supplier_sku : null,
-                                    ]);
-                                    $sub = $codes
-                                        ? '<div style="font-size:0.75rem;color:#9ca3af;margin-top:2px;">' . implode(' &nbsp;·&nbsp; ', $codes) . '</div>'
-                                        : '';
-                                    return '<div style="font-size:0.95rem;font-weight:600;color:#111827;">' . e($record->product_name) . '</div>' . $sub;
-                                }),
-                            TextEntry::make('quantity')
-                                ->label('Comandat')
-                                ->formatStateUsing(fn ($state) => $state !== null ? (floor((float)$state) == (float)$state ? number_format((float)$state, 0, '.', '') : number_format((float)$state, 2, '.', '')) . ' buc.' : '—'),
-                            TextEntry::make('received_quantity')
-                                ->label('Recepționat')
-                                ->placeholder('—')
-                                ->formatStateUsing(function ($state, \App\Models\PurchaseOrderItem $record): string {
-                                    if ($state === null) return '—';
-                                    $qty     = (float) $state;
-                                    $ordered = (float) $record->quantity;
-                                    $fmt     = floor($qty) == $qty ? number_format($qty, 0, '.', '') : number_format($qty, 2, '.', '');
-                                    return $qty < $ordered ? $fmt . ' ⚠' : $fmt . ' buc.';
-                                })
-                                ->color(fn ($state, \App\Models\PurchaseOrderItem $record): string =>
-                                    $state === null ? 'gray' :
-                                    ((float) $state < (float) $record->quantity ? 'warning' : 'success')
-                                )
-                                ->badge(),
-                            TextEntry::make('unit_price')
-                                ->label('Preț (fără TVA)')
-                                ->formatStateUsing(fn ($state): string => $state
-                                    ? number_format((float) $state, 4, ',', '.').' RON'
-                                    : '—'),
-                            TextEntry::make('line_total')
-                                ->label('Total linie')
-                                ->formatStateUsing(fn ($state): string => number_format((float) $state, 2, ',', '.').' RON'),
-                        ]),
+                        ->columnSpanFull()
+                        ->html()
+                        ->getStateUsing(function (PurchaseOrder $record): string {
+                            $hasWm = filled($record->winmentor_receptie_nr);
+
+                            $wmLines = $hasWm
+                                ? \Illuminate\Support\Facades\DB::table('winmentor_intrari_raw')
+                                    ->where('nr_doc', $record->winmentor_receptie_nr)
+                                    ->get(['sku', 'cantitate', 'pret'])
+                                    ->keyBy('sku')
+                                : collect();
+
+                            $items    = $record->items()->get();
+                            $rows     = '';
+                            $totalPo  = 0.0;
+                            $totalWm  = 0.0;
+
+                            $th = fn(string $label, string $align = 'left') =>
+                                '<th style="padding:5px 8px;text-align:' . $align . ';font-size:0.72rem;color:#6b7280;font-weight:600;white-space:nowrap;border-bottom:2px solid #e5e7eb;">'
+                                . $label . '</th>';
+
+                            foreach ($items as $item) {
+                                $poPrice  = (float) $item->unit_price;
+                                $poQty    = (float) $item->quantity;
+                                $recQty   = $item->received_quantity !== null ? (float) $item->received_quantity : null;
+                                $lineTotal = $poQty * $poPrice;
+                                $totalPo  += $lineTotal;
+
+                                $fmt = fn(float $v) => floor($v) == $v
+                                    ? number_format($v, 0, ',', '.')
+                                    : number_format($v, 2, ',', '.');
+
+                                // Received badge
+                                if ($recQty === null) {
+                                    $recCell = '<span style="color:#9ca3af;">—</span>';
+                                } elseif ($recQty < $poQty) {
+                                    $recCell = '<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-size:0.75rem;font-weight:600;">' . $fmt($recQty) . ' ⚠</span>';
+                                } else {
+                                    $recCell = '<span style="background:#dcfce7;color:#15803d;padding:1px 6px;border-radius:4px;font-size:0.75rem;font-weight:600;">' . $fmt($recQty) . '</span>';
+                                }
+
+                                // WM columns
+                                $wmQty   = null;
+                                $wmPrice = null;
+                                $qtyStyle  = 'color:#9ca3af';
+                                $diffStyle = 'color:#9ca3af';
+                                $priceDiff = null;
+
+                                if ($hasWm) {
+                                    $wm      = $wmLines->get($item->sku ?? '');
+                                    $wmQty   = $wm ? (float) $wm->cantitate : null;
+                                    $wmPrice = $wm ? (float) $wm->pret : null;
+
+                                    if ($wmQty !== null && $wmPrice !== null) $totalWm += $wmQty * $wmPrice;
+
+                                    $qtyMatch  = $wmQty !== null && abs($wmQty - $poQty) < 0.01;
+                                    $qtyStyle  = $qtyMatch ? 'color:#15803d' : 'color:#dc2626;font-weight:600';
+
+                                    $priceDiff = ($wmPrice !== null && $poPrice > 0)
+                                        ? round(($wmPrice - $poPrice) / $poPrice * 100, 1)
+                                        : null;
+                                    $diffStyle = match(true) {
+                                        $priceDiff === null  => 'color:#9ca3af',
+                                        abs($priceDiff) <= 2 => 'color:#15803d;font-weight:600',
+                                        $priceDiff > 2       => 'color:#dc2626;font-weight:600',
+                                        default              => 'color:#ca8a04;font-weight:600',
+                                    };
+                                }
+
+                                $codes = array_filter([
+                                    $item->sku          ? $item->sku : null,
+                                    $item->supplier_sku ? 'Cf: ' . $item->supplier_sku : null,
+                                ]);
+                                $sub = $codes
+                                    ? '<div style="font-size:0.7rem;color:#9ca3af;margin-top:1px;">' . implode(' · ', $codes) . '</div>'
+                                    : '';
+
+                                $wmQtyCell = $hasWm
+                                    ? '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;' . $qtyStyle . '">'
+                                        . ($wmQty !== null ? $fmt($wmQty) : '—') . '</td>'
+                                    : '';
+                                $wmPriceCols = $hasWm
+                                    ? '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;' . $diffStyle . '">'
+                                        . ($wmPrice !== null ? number_format($wmPrice, 4, ',', '.') . ' RON' : '—') . '</td>'
+                                        . '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;' . $diffStyle . '">'
+                                        . ($priceDiff !== null ? ($priceDiff > 0 ? '+' : '') . $priceDiff . '%' : '—') . '</td>'
+                                    : '';
+
+                                $rows .= '<tr style="border-bottom:1px solid #f3f4f6;">'
+                                    . '<td style="padding:5px 8px;font-size:0.82rem;">'
+                                    . '<div style="font-weight:600;color:#111827;">' . e($item->product_name) . '</div>' . $sub
+                                    . '</td>'
+                                    . '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;color:#374151;">' . $fmt($poQty) . '</td>'
+                                    . '<td style="padding:5px 8px;text-align:center;font-size:0.8rem;">' . $recCell . '</td>'
+                                    . $wmQtyCell
+                                    . '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;color:#374151;">'
+                                    . ($poPrice > 0 ? number_format($poPrice, 4, ',', '.') . ' RON' : '—') . '</td>'
+                                    . '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;font-weight:600;color:#374151;">'
+                                    . number_format($lineTotal, 2, ',', '.') . ' RON</td>'
+                                    . $wmPriceCols
+                                    . '</tr>';
+                            }
+
+                            // Total row
+                            $wmTotalQtyCell = $hasWm ? '<td style="padding:7px 8px;"></td>' : '';
+                            $wmTotalPriceCols = '';
+                            if ($hasWm) {
+                                $totalDiff = $totalPo > 0
+                                    ? round(($totalWm - $totalPo) / $totalPo * 100, 1)
+                                    : null;
+                                $tdStyle = match(true) {
+                                    $totalDiff === null  => 'color:#9ca3af',
+                                    abs($totalDiff) <= 2 => 'color:#15803d;font-weight:700',
+                                    $totalDiff > 2       => 'color:#dc2626;font-weight:700',
+                                    default              => 'color:#ca8a04;font-weight:700',
+                                };
+                                $wmTotalPriceCols = '<td style="padding:7px 8px;text-align:right;font-size:0.82rem;font-weight:700;">'
+                                    . ($totalWm > 0 ? number_format($totalWm, 2, ',', '.') . ' RON' : '—') . '</td>'
+                                    . '<td style="padding:7px 8px;text-align:right;font-size:0.82rem;' . $tdStyle . '">'
+                                    . ($totalDiff !== null ? ($totalDiff > 0 ? '+' : '') . $totalDiff . '%' : '—') . '</td>';
+                            }
+
+                            $totalRow = '<tr style="background:#f9fafb;border-top:2px solid #e5e7eb;">'
+                                . '<td style="padding:7px 8px;font-size:0.8rem;font-weight:700;color:#374151;">TOTAL (fără TVA)</td>'
+                                . '<td colspan="2" style="padding:7px 8px;"></td>'
+                                . $wmTotalQtyCell
+                                . '<td style="padding:7px 8px;"></td>'
+                                . '<td style="padding:7px 8px;text-align:right;font-size:0.85rem;font-weight:700;">'
+                                . number_format($totalPo, 2, ',', '.') . ' RON</td>'
+                                . $wmTotalPriceCols
+                                . '</tr>';
+
+                            // Header
+                            $wmQtyHeader   = $hasWm ? $th('Cant. WM', 'right') : '';
+                            $wmPriceHeaders = $hasWm
+                                ? $th('Preț WM (f. TVA)', 'right') . $th('Δ%', 'right')
+                                : '';
+
+                            return '<div style="overflow-x:auto;">'
+                                . '<table style="width:100%;border-collapse:collapse;font-family:inherit;">'
+                                . '<thead><tr style="background:#f9fafb;">'
+                                . $th('Produs') . $th('PO', 'right') . $th('Rec. Cant.', 'center')
+                                . $wmQtyHeader
+                                . $th('Preț PO (f. TVA)', 'right') . $th('Total linie', 'right')
+                                . $wmPriceHeaders
+                                . '</tr></thead>'
+                                . '<tbody>' . $rows . $totalRow . '</tbody>'
+                                . '</table></div>';
+                        }),
                 ]),
 
             // ── 6. Recepție contabilă WinMentor ─────────────────────────────
@@ -704,93 +810,6 @@ class PurchaseOrderResource extends Resource
                                 ->formatStateUsing(fn ($state): string => $state !== null ? "{$state} zile" : '—')
                                 ->placeholder('—'),
                         ]),
-
-                    // ── Tabel comparativ PO vs WM ────────────────────────────
-                    TextEntry::make('wm_comparison')
-                        ->label('Comparativ linii PO vs WinMentor (prețuri fără TVA)')
-                        ->columnSpanFull()
-                        ->visible(fn (PurchaseOrder $record): bool => $record->winmentor_receptie_nr !== null)
-                        ->html()
-                        ->getStateUsing(function (PurchaseOrder $record): string {
-                            $wmLines = \Illuminate\Support\Facades\DB::table('winmentor_intrari_raw')
-                                ->where('nr_doc', $record->winmentor_receptie_nr)
-                                ->whereNotNull('pret')
-                                ->get(['sku', 'den_articol', 'cantitate', 'pret', 'uom'])
-                                ->keyBy('sku');
-
-                            $items     = $record->items()->get();
-                            $rows      = '';
-                            $totalErp  = 0.0;
-                            $totalWm   = 0.0;
-
-                            foreach ($items as $item) {
-                                $wm      = $wmLines->get($item->sku ?? '');
-                                $poPrice = (float) $item->unit_price;
-                                $wmPrice = $wm ? (float) $wm->pret : null;
-                                $wmQty   = $wm ? (float) $wm->cantitate : null;
-                                $poQty   = (float) ($item->received_quantity ?? $item->quantity);
-
-                                $lineErp = $poQty * $poPrice;
-                                $lineWm  = ($wmQty !== null && $wmPrice !== null) ? $wmQty * $wmPrice : null;
-                                $totalErp += $lineErp;
-                                if ($lineWm !== null) $totalWm += $lineWm;
-
-                                $priceDiff = ($wmPrice !== null && $poPrice > 0)
-                                    ? round(($wmPrice - $poPrice) / $poPrice * 100, 1)
-                                    : null;
-
-                                $priceStyle = match(true) {
-                                    $priceDiff === null   => 'color:#6b7280',
-                                    abs($priceDiff) <= 2  => 'color:#16a34a;font-weight:600',
-                                    $priceDiff > 2        => 'color:#dc2626;font-weight:600',
-                                    default               => 'color:#ca8a04;font-weight:600',
-                                };
-
-                                $qtyMatch = $wmQty !== null && abs($wmQty - $poQty) < 0.01;
-                                $qtyStyle = $qtyMatch ? 'color:#16a34a' : 'color:#dc2626;font-weight:600';
-
-                                $rows .= '<tr style="border-bottom:1px solid #f3f4f6;">'
-                                    . '<td style="padding:6px 10px;font-size:0.8rem;color:#6b7280;">' . e($item->sku ?? '—') . '</td>'
-                                    . '<td style="padding:6px 10px;font-size:0.8rem;">' . e($item->product_name) . '</td>'
-                                    . '<td style="padding:6px 10px;text-align:right;font-size:0.8rem;">' . number_format($poQty, 2, ',', '') . '</td>'
-                                    . '<td style="padding:6px 10px;text-align:right;font-size:0.8rem;' . $qtyStyle . '">' . ($wmQty !== null ? number_format($wmQty, 2, ',', '') : '—') . '</td>'
-                                    . '<td style="padding:6px 10px;text-align:right;font-size:0.8rem;">' . ($poPrice > 0 ? number_format($poPrice, 4, ',', '') . ' RON' : '—') . '</td>'
-                                    . '<td style="padding:6px 10px;text-align:right;font-size:0.8rem;' . $priceStyle . '">' . ($wmPrice !== null ? number_format($wmPrice, 4, ',', '') . ' RON' : '—') . '</td>'
-                                    . '<td style="padding:6px 10px;text-align:right;font-size:0.8rem;' . $priceStyle . '">' . ($priceDiff !== null ? ($priceDiff > 0 ? '+' : '') . $priceDiff . '%' : '—') . '</td>'
-                                    . '</tr>';
-                            }
-
-                            $totalDiff = $totalErp > 0
-                                ? round(($totalWm - $totalErp) / $totalErp * 100, 1)
-                                : null;
-                            $totalDiffStyle = match(true) {
-                                $totalDiff === null  => 'color:#6b7280',
-                                abs($totalDiff) <= 2 => 'color:#16a34a;font-weight:700',
-                                $totalDiff > 2       => 'color:#dc2626;font-weight:700',
-                                default              => 'color:#ca8a04;font-weight:700',
-                            };
-                            $totalRow = '<tr style="background:#f9fafb;border-top:2px solid #e5e7eb;">'
-                                . '<td colspan="2" style="padding:8px 10px;font-size:0.8rem;font-weight:700;color:#374151;">TOTAL (fără TVA)</td>'
-                                . '<td colspan="2" style="padding:8px 10px;"></td>'
-                                . '<td style="padding:8px 10px;text-align:right;font-size:0.85rem;font-weight:700;">' . number_format($totalErp, 2, ',', '.') . ' RON</td>'
-                                . '<td style="padding:8px 10px;text-align:right;font-size:0.85rem;font-weight:700;">' . ($totalWm > 0 ? number_format($totalWm, 2, ',', '.') . ' RON' : '—') . '</td>'
-                                . '<td style="padding:8px 10px;text-align:right;font-size:0.85rem;' . $totalDiffStyle . '">' . ($totalDiff !== null ? ($totalDiff > 0 ? '+' : '') . $totalDiff . '%' : '—') . '</td>'
-                                . '</tr>';
-
-                            return '<div style="overflow-x:auto;margin-top:0.5rem;">'
-                                . '<table style="width:100%;border-collapse:collapse;font-family:inherit;">'
-                                . '<thead><tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">'
-                                . '<th style="padding:6px 10px;text-align:left;font-size:0.75rem;color:#6b7280;font-weight:600;">SKU</th>'
-                                . '<th style="padding:6px 10px;text-align:left;font-size:0.75rem;color:#6b7280;font-weight:600;">Produs</th>'
-                                . '<th style="padding:6px 10px;text-align:right;font-size:0.75rem;color:#6b7280;font-weight:600;">Cant. ERP</th>'
-                                . '<th style="padding:6px 10px;text-align:right;font-size:0.75rem;color:#6b7280;font-weight:600;">Cant. WM</th>'
-                                . '<th style="padding:6px 10px;text-align:right;font-size:0.75rem;color:#6b7280;font-weight:600;">Preț ERP (fără TVA)</th>'
-                                . '<th style="padding:6px 10px;text-align:right;font-size:0.75rem;color:#6b7280;font-weight:600;">Preț WM (fără TVA)</th>'
-                                . '<th style="padding:6px 10px;text-align:right;font-size:0.75rem;color:#6b7280;font-weight:600;">Δ%</th>'
-                                . '</tr></thead>'
-                                . '<tbody>' . $rows . $totalRow . '</tbody>'
-                                . '</table></div>';
-                        }),
 
                     // ── Mesaj când nu e asociat ──────────────────────────────
                     TextEntry::make('wm_no_match_hint')
