@@ -565,6 +565,17 @@ class PurchaseOrderResource extends Resource
                         ),
                     TextEntry::make('invoice_date')->label('Data facturii')->date('d.m.Y')->placeholder('—'),
                     TextEntry::make('invoice_due_date')->label('Scadență')->date('d.m.Y')->placeholder('—'),
+                    TextEntry::make('winmentor_receptie_score')
+                        ->label('Scor potrivire WM')
+                        ->formatStateUsing(fn ($state): string => $state !== null ? "{$state}%" : '—')
+                        ->placeholder('—')
+                        ->badge()
+                        ->color(fn ($state): string => match(true) {
+                            $state === null => 'gray',
+                            $state >= 90    => 'success',
+                            $state >= 70    => 'warning',
+                            default         => 'danger',
+                        }),
                 ]),
 
             // ── 4. Note ─────────────────────────────────────────────────────
@@ -640,16 +651,6 @@ class PurchaseOrderResource extends Resource
                                 ->label('Data intrare WinMentor')
                                 ->date('d.m.Y')
                                 ->placeholder('—'),
-                            TextEntry::make('winmentor_receptie_score')
-                                ->label('Scor potrivire')
-                                ->formatStateUsing(fn ($state): string => $state !== null ? "{$state}%" : '—')
-                                ->badge()
-                                ->color(fn ($state): string => match(true) {
-                                    $state === null => 'gray',
-                                    $state >= 90    => 'success',
-                                    $state >= 70    => 'warning',
-                                    default         => 'danger',
-                                }),
                             TextEntry::make('winmentor_receptie_matched_at')
                                 ->label('Asociat la')
                                 ->dateTime('d.m.Y H:i')
