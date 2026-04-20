@@ -386,53 +386,137 @@ class PurchaseOrderResource extends Resource
                     TextEntry::make('currency')->label('Monedă'),
                 ]),
 
-            // ── 2. Flux status (cronologie) ──────────────────────────────────
+            // ── 2. Flux status (timeline) ────────────────────────────────────
             InfolistSection::make('Flux comandă')
-                ->columns(4)
                 ->columnSpanFull()
                 ->schema([
-                    TextEntry::make('created_at')
-                        ->label('Creat la')
-                        ->dateTime('d.m.Y H:i'),
-                    TextEntry::make('approved_at')
-                        ->label('Aprobat la')
-                        ->dateTime('d.m.Y H:i')
-                        ->placeholder('—'),
-                    TextEntry::make('sent_at')
-                        ->label('Trimis la')
-                        ->dateTime('d.m.Y H:i')
-                        ->placeholder('—'),
-                    TextEntry::make('received_at')
-                        ->label('Recepționat la')
-                        ->dateTime('d.m.Y H:i')
-                        ->placeholder('—'),
-                    TextEntry::make('approvedBy.name')
-                        ->label('Aprobat de')
-                        ->placeholder('—'),
-                    TextEntry::make('sent_via')
-                        ->label('Trimis prin')
-                        ->placeholder('—')
-                        ->badge()
-                        ->formatStateUsing(fn (?string $state): string => match($state) {
-                            'email'    => 'Email',
-                            'whatsapp' => 'WhatsApp',
-                            'manual'   => 'Manual (tel/fax)',
-                            default    => '—',
-                        })
-                        ->color(fn (?string $state): string => match($state) {
-                            'email'    => 'info',
-                            'whatsapp' => 'success',
-                            'manual'   => 'gray',
-                            default    => 'gray',
+                    TextEntry::make('timeline')
+                        ->label('')
+                        ->columnSpanFull()
+                        ->html()
+                        ->getStateUsing(function (PurchaseOrder $record): string {
+                            $isRejected   = $record->status === PurchaseOrder::STATUS_REJECTED;
+                            $isCancelled  = $record->status === PurchaseOrder::STATUS_CANCELLED;
+
+                            $steps = [
+                                [
+                                    'label'  => 'Creat',
+                                    'date'   => $record->created_at?->format('d.m.Y H:i'),
+                                    'by'     => $record->buyer?->name,
+                                    'done'   => true,
+                                    'active' => $record->status === PurchaseOrder::STATUS_DRAFT,
+                                ],
+                                [
+                                    'label'  => $isRejected ? 'Respins' : 'Aprobat',
+                                    'date'   => $isRejected
+                                        ? ($record->rejected_at?->format('d.m.Y H:i'))
+                                        : ($record->approved_at?->format('d.m.Y H:i')),
+                                    'by'     => $isRejected
+                                        ? ($record->rejectedBy?->name ?? null)
+                                        : ($record->approvedBy?->name ?? null),
+                                    'note'   => $isRejected ? ($record->rejection_reason ?? null) : null,
+                                    'done'   => in_array($record->status, [
+                                        PurchaseOrder::STATUS_APPROVED,
+                                        PurchaseOrder::STATUS_SENT,
+                                        PurchaseOrder::STATUS_RECEIVED,
+                                        PurchaseOrder::STATUS_REJECTED,
+                                    ]),
+                                    'active' => $record->status === PurchaseOrder::STATUS_PENDING_APPROVAL,
+                                    'danger' => $isRejected,
+                                ],
+                                [
+                                    'label'  => 'Trimis',
+                                    'date'   => $record->sent_at?->format('d.m.Y H:i'),
+                                    'by'     => match($record->sent_via) {
+                                        'email'    => 'Email',
+                                        'whatsapp' => 'WhatsApp',
+                                        'manual'   => 'Manual (tel/fax)',
+                                        default    => null,
+                                    },
+                                    'done'   => in_array($record->status, [
+                                        PurchaseOrder::STATUS_SENT,
+                                        PurchaseOrder::STATUS_RECEIVED,
+                                    ]),
+                                    'active' => $record->status === PurchaseOrder::STATUS_APPROVED,
+                                    'skip'   => $isRejected || $isCancelled,
+                                ],
+                                [
+                                    'label'  => 'Recepționat',
+                                    'date'   => $record->received_at?->format('d.m.Y H:i'),
+                                    'by'     => $record->receivedBy?->name,
+                                    'note'   => $record->received_notes ?? null,
+                                    'done'   => $record->status === PurchaseOrder::STATUS_RECEIVED,
+                                    'active' => $record->status === PurchaseOrder::STATUS_SENT,
+                                    'skip'   => $isRejected || $isCancelled,
+                                ],
+                            ];
+
+                            $html = '<div style="display:flex;align-items:flex-start;gap:0;padding:8px 0 4px;">';
+
+                            foreach ($steps as $i => $step) {
+                                $isLast = $i === count($steps) - 1;
+                                $skip   = $step['skip'] ?? false;
+
+                                if ($skip && ! $step['done']) {
+                                    if (! $isLast) {
+                                        $html .= '<div style="flex:1;height:2px;background:#e5e7eb;margin-top:20px;opacity:0.4;"></div>';
+                                    }
+                                    continue;
+                                }
+
+                                $circleBg   = '#e5e7eb';
+                                $circleText = '#9ca3af';
+                                $textColor  = '#9ca3af';
+                                $icon       = '○';
+
+                                if ($step['done'] && ($step['danger'] ?? false)) {
+                                    $circleBg   = '#fef2f2';
+                                    $circleText = '#dc2626';
+                                    $textColor  = '#374151';
+                                    $icon       = '✕';
+                                } elseif ($step['done']) {
+                                    $circleBg   = '#dcfce7';
+                                    $circleText = '#16a34a';
+                                    $textColor  = '#374151';
+                                    $icon       = '✓';
+                                } elseif ($step['active']) {
+                                    $circleBg   = '#dbeafe';
+                                    $circleText = '#2563eb';
+                                    $textColor  = '#1d4ed8';
+                                    $icon       = '●';
+                                }
+
+                                $html .= '<div style="display:flex;flex-direction:column;align-items:center;min-width:120px;max-width:180px;flex:1;">';
+                                $html .= '<div style="width:40px;height:40px;border-radius:50%;background:' . $circleBg . ';display:flex;align-items:center;justify-content:center;font-size:1rem;color:' . $circleText . ';font-weight:700;flex-shrink:0;">' . $icon . '</div>';
+                                $html .= '<div style="text-align:center;margin-top:8px;">';
+                                $html .= '<div style="font-size:0.8rem;font-weight:600;color:' . $textColor . ';">' . e($step['label']) . '</div>';
+
+                                if ($step['date']) {
+                                    $html .= '<div style="font-size:0.75rem;color:#6b7280;margin-top:2px;">' . e($step['date']) . '</div>';
+                                }
+                                if ($step['by']) {
+                                    $html .= '<div style="font-size:0.72rem;color:#9ca3af;margin-top:1px;">' . e($step['by']) . '</div>';
+                                }
+                                if (! empty($step['note'])) {
+                                    $html .= '<div style="font-size:0.7rem;color:#dc2626;margin-top:3px;max-width:160px;word-break:break-word;">' . e($step['note']) . '</div>';
+                                }
+
+                                $html .= '</div></div>';
+
+                                if (! $isLast) {
+                                    $lineColor = ($step['done'] && ! ($step['danger'] ?? false)) ? '#86efac' : '#e5e7eb';
+                                    $html .= '<div style="flex:1;height:2px;background:' . $lineColor . ';margin-top:20px;"></div>';
+                                }
+                            }
+
+                            $html .= '</div>';
+
+                            if ($isCancelled) {
+                                $html .= '<div style="margin-top:8px;padding:6px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;font-size:0.8rem;color:#6b7280;">Comanda a fost anulată.</div>';
+                            }
+
+                            return $html;
                         }),
-                    TextEntry::make('receivedBy.name')
-                        ->label('Recepționat de')
-                        ->placeholder('—'),
-                    TextEntry::make('rejection_reason')
-                        ->label('Motiv respingere')
-                        ->placeholder('—')
-                        ->columnSpan(4)
-                        ->visible(fn (PurchaseOrder $record): bool => filled($record->rejection_reason)),
                 ]),
 
             // ── 3. Factură furnizor ──────────────────────────────────────────
