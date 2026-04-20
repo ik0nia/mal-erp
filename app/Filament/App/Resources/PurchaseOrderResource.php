@@ -452,14 +452,14 @@ class PurchaseOrderResource extends Resource
                                 ],
                                 [
                                     'label'  => 'Contabilitate',
-                                    'date'   => $record->winmentor_receptie_date
-                                        ? \Carbon\Carbon::parse($record->winmentor_receptie_date)->format('d.m.Y')
+                                    'date'   => $record->winmentor_receptie_matched_at
+                                        ? \Carbon\Carbon::parse($record->winmentor_receptie_matched_at)->format('d.m.Y H:i')
                                         : null,
                                     'by'     => $record->winmentor_receptie_nr
                                         ? 'Fact. ' . $record->winmentor_receptie_nr
                                         : null,
-                                    'note'   => $record->winmentor_receptie_nr
-                                        ? 'Intrare WinMentor'
+                                    'note'   => $record->winmentor_receptie_date
+                                        ? 'Data intrare WM: ' . \Carbon\Carbon::parse($record->winmentor_receptie_date)->format('d.m.Y')
                                         : null,
                                     'done'   => $record->winmentor_receptie_nr !== null,
                                     'active' => $record->status === PurchaseOrder::STATUS_RECEIVED && $record->winmentor_receptie_nr === null,
