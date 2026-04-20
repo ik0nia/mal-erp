@@ -727,6 +727,38 @@ class PurchaseOrderResource extends Resource
                                     . '</tr>';
                             }
 
+                            // Rânduri WM fără corespondent în PO
+                            if ($hasWm) {
+                                $poSkus = $items->pluck('sku')->filter()->flip();
+                                foreach ($wmLines as $sku => $wm) {
+                                    if ($poSkus->has($sku)) continue;
+
+                                    $wmQty   = (float) $wm->cantitate;
+                                    $wmPrice = (float) $wm->pret;
+                                    $lineWm  = $wmQty * $wmPrice;
+                                    $totalWm += $lineWm;
+
+                                    $fmt = fn(float $v) => floor($v) == $v
+                                        ? number_format($v, 0, ',', '.')
+                                        : number_format($v, 2, ',', '.');
+
+                                    $colSpanPo = 3; // Produs + PO + Rec.Cant.
+                                    $rows .= '<tr style="border-bottom:1px solid #f3f4f6;background:#fffbeb;">'
+                                        . '<td style="padding:5px 8px;font-size:0.82rem;">'
+                                        . '<div style="font-weight:600;color:#92400e;">' . e($sku) . '</div>'
+                                        . '<div style="font-size:0.7rem;color:#b45309;margin-top:1px;">Doar în WinMentor</div>'
+                                        . '</td>'
+                                        . '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;color:#9ca3af;">—</td>'
+                                        . '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;color:#9ca3af;">—</td>'
+                                        . '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;font-weight:600;color:#92400e;">' . $fmt($wmQty) . '</td>'
+                                        . '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;color:#9ca3af;">—</td>'
+                                        . '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;color:#9ca3af;">—</td>'
+                                        . '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;font-weight:600;color:#92400e;">' . number_format($wmPrice, 4, ',', '.') . ' RON</td>'
+                                        . '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;color:#9ca3af;">—</td>'
+                                        . '</tr>';
+                                }
+                            }
+
                             // Total row
                             $wmTotalQtyCell = $hasWm ? '<td style="padding:7px 8px;"></td>' : '';
                             $wmTotalPriceCols = '';
