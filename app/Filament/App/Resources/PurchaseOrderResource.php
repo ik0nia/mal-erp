@@ -297,6 +297,35 @@ class PurchaseOrderResource extends Resource
                         default     => 'gray',
                     }),
 
+                Tables\Columns\TextColumn::make('winmentor_receptie_nr')
+                    ->label('NIR WinMentor')
+                    ->badge()
+                    ->getStateUsing(function (PurchaseOrder $record): ?string {
+                        if (! in_array($record->status, [PurchaseOrder::STATUS_RECEIVED, PurchaseOrder::STATUS_SENT], true)) {
+                            return null;
+                        }
+                        if ($record->winmentor_receptie_nr) {
+                            return 'confirmat';
+                        }
+                        if ($record->status === PurchaseOrder::STATUS_RECEIVED) {
+                            return 'neconfirmat';
+                        }
+                        return null;
+                    })
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'confirmat'   => '✓ Confirmat WM',
+                        'neconfirmat' => '⚠ Neconfirmat',
+                        default       => '',
+                    })
+                    ->color(fn (?string $state): string => match ($state) {
+                        'confirmat'   => 'success',
+                        'neconfirmat' => 'warning',
+                        default       => 'gray',
+                    })
+                    ->tooltip(fn (PurchaseOrder $record): ?string => $record->winmentor_receptie_nr
+                        ? "NIR: {$record->winmentor_receptie_nr} din {$record->winmentor_receptie_date} (scor {$record->winmentor_receptie_score}%)"
+                        : null),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Data')
                     ->dateTime('d.m.Y H:i')
@@ -430,37 +459,126 @@ class PurchaseOrderResource extends Resource
 
             InfolistSection::make('Recepție contabilă WinMentor')
                 ->columnSpanFull()
-                ->columns(3)
-                ->visible(fn (PurchaseOrder $record): bool => $record->winmentor_receptie_nr !== null)
+                ->visible(fn (PurchaseOrder $record): bool => in_array($record->status, [
+                    PurchaseOrder::STATUS_RECEIVED,
+                    PurchaseOrder::STATUS_SENT,
+                ], true))
                 ->schema([
-                    TextEntry::make('winmentor_receptie_nr')
-                        ->label('Nr. document intrare (NIR)')
-                        ->placeholder('—'),
-                    TextEntry::make('winmentor_receptie_date')
-                        ->label('Data intrare WinMentor')
-                        ->date('d.m.Y')
-                        ->placeholder('—'),
-                    TextEntry::make('winmentor_receptie_score')
-                        ->label('Scor potrivire')
-                        ->formatStateUsing(fn ($state): string => $state !== null ? "{$state}%" : '—')
-                        ->badge()
-                        ->color(fn ($state): string => match(true) {
-                            $state >= 90 => 'success',
-                            $state >= 70 => 'warning',
-                            default      => 'gray',
+                    // ── Status + date matching ───────────────────────────────
+                    \Filament\Infolists\Components\Grid::make(4)
+                        ->schema([
+                            TextEntry::make('winmentor_receptie_nr')
+                                ->label('Nr. document intrare (NIR)')
+                                ->placeholder('Neidentificat încă')
+                                ->weight(\Filament\Support\Enums\FontWeight::Bold),
+                            TextEntry::make('winmentor_receptie_date')
+                                ->label('Data intrare WinMentor')
+                                ->date('d.m.Y')
+                                ->placeholder('—'),
+                            TextEntry::make('winmentor_receptie_score')
+                                ->label('Scor potrivire')
+                                ->formatStateUsing(fn ($state): string => $state !== null ? "{$state}%" : '—')
+                                ->badge()
+                                ->color(fn ($state): string => match(true) {
+                                    $state === null => 'gray',
+                                    $state >= 90    => 'success',
+                                    $state >= 70    => 'warning',
+                                    default         => 'danger',
+                                }),
+                            TextEntry::make('winmentor_receptie_matched_at')
+                                ->label('Asociat la')
+                                ->dateTime('d.m.Y H:i')
+                                ->placeholder('—'),
+                        ]),
+
+                    \Filament\Infolists\Components\Grid::make(2)
+                        ->schema([
+                            TextEntry::make('lead_time_days')
+                                ->label('Lead time (zile)')
+                                ->formatStateUsing(fn ($state): string => $state !== null ? "{$state} zile" : '—')
+                                ->placeholder('—'),
+                            TextEntry::make('receptie_contabila_lag_days')
+                                ->label('Lag recepție contabilă (zile)')
+                                ->formatStateUsing(fn ($state): string => $state !== null ? "{$state} zile" : '—')
+                                ->placeholder('—'),
+                        ]),
+
+                    // ── Tabel comparativ PO vs WM ────────────────────────────
+                    TextEntry::make('wm_comparison')
+                        ->label('Comparativ linii PO vs WinMentor')
+                        ->columnSpanFull()
+                        ->visible(fn (PurchaseOrder $record): bool => $record->winmentor_receptie_nr !== null)
+                        ->getStateUsing(fn (PurchaseOrder $record): string => '')
+                        ->formatStateUsing(function ($state, PurchaseOrder $record): \Illuminate\Support\HtmlString {
+                            $wmLines = \Illuminate\Support\Facades\DB::table('winmentor_intrari_raw')
+                                ->where('nr_doc', $record->winmentor_receptie_nr)
+                                ->whereNotNull('pret')
+                                ->get(['sku', 'den_articol', 'cantitate', 'pret', 'uom'])
+                                ->keyBy('sku');
+
+                            $rows = '';
+                            foreach ($record->items as $item) {
+                                $wm      = $wmLines->get($item->sku ?? '');
+                                $poPrice = (float) $item->unit_price;
+                                $wmPrice = $wm ? (float) $wm->pret : null;
+                                $wmQty   = $wm ? (float) $wm->cantitate : null;
+                                $poQty   = (float) ($item->received_quantity ?? $item->quantity);
+
+                                $priceDiff = ($wmPrice !== null && $poPrice > 0)
+                                    ? round(($wmPrice - $poPrice) / $poPrice * 100, 1)
+                                    : null;
+
+                                $priceStyle = match(true) {
+                                    $priceDiff === null            => 'color:#6b7280',
+                                    abs($priceDiff) <= 2           => 'color:#16a34a;font-weight:600',
+                                    $priceDiff > 2                 => 'color:#dc2626;font-weight:600',
+                                    default                        => 'color:#ca8a04;font-weight:600',
+                                };
+
+                                $qtyMatch  = $wmQty !== null && abs($wmQty - $poQty) < 0.01;
+                                $qtyStyle  = $qtyMatch ? 'color:#16a34a' : 'color:#dc2626;font-weight:600';
+
+                                $rows .= '<tr style="border-bottom:1px solid #f3f4f6;">'
+                                    . '<td style="padding:6px 10px;font-size:0.8rem;color:#6b7280;">' . e($item->sku ?? '—') . '</td>'
+                                    . '<td style="padding:6px 10px;font-size:0.8rem;">' . e($item->product_name) . '</td>'
+                                    . '<td style="padding:6px 10px;text-align:right;font-size:0.8rem;">' . number_format($poQty, 2, ',', '') . '</td>'
+                                    . '<td style="padding:6px 10px;text-align:right;font-size:0.8rem;' . $qtyStyle . '">' . ($wmQty !== null ? number_format($wmQty, 2, ',', '') : '—') . '</td>'
+                                    . '<td style="padding:6px 10px;text-align:right;font-size:0.8rem;">' . ($poPrice > 0 ? number_format($poPrice, 4, ',', '') . ' RON' : '—') . '</td>'
+                                    . '<td style="padding:6px 10px;text-align:right;font-size:0.8rem;' . $priceStyle . '">' . ($wmPrice !== null ? number_format($wmPrice, 4, ',', '') . ' RON' : '—') . '</td>'
+                                    . '<td style="padding:6px 10px;text-align:right;font-size:0.8rem;' . $priceStyle . '">' . ($priceDiff !== null ? ($priceDiff > 0 ? '+' : '') . $priceDiff . '%' : '—') . '</td>'
+                                    . '</tr>';
+                            }
+
+                            $html = '<div style="overflow-x:auto;margin-top:0.5rem;">'
+                                . '<table style="width:100%;border-collapse:collapse;font-family:inherit;">'
+                                . '<thead><tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">'
+                                . '<th style="padding:6px 10px;text-align:left;font-size:0.75rem;color:#6b7280;font-weight:600;">SKU</th>'
+                                . '<th style="padding:6px 10px;text-align:left;font-size:0.75rem;color:#6b7280;font-weight:600;">Produs</th>'
+                                . '<th style="padding:6px 10px;text-align:right;font-size:0.75rem;color:#6b7280;font-weight:600;">Cant. ERP</th>'
+                                . '<th style="padding:6px 10px;text-align:right;font-size:0.75rem;color:#6b7280;font-weight:600;">Cant. WM</th>'
+                                . '<th style="padding:6px 10px;text-align:right;font-size:0.75rem;color:#6b7280;font-weight:600;">Preț ERP</th>'
+                                . '<th style="padding:6px 10px;text-align:right;font-size:0.75rem;color:#6b7280;font-weight:600;">Preț WM</th>'
+                                . '<th style="padding:6px 10px;text-align:right;font-size:0.75rem;color:#6b7280;font-weight:600;">Δ%</th>'
+                                . '</tr></thead>'
+                                . '<tbody>' . $rows . '</tbody>'
+                                . '</table></div>';
+
+                            return new \Illuminate\Support\HtmlString($html);
                         }),
-                    TextEntry::make('lead_time_days')
-                        ->label('Lead time (zile)')
-                        ->formatStateUsing(fn ($state): string => $state !== null ? "{$state} zile" : '—')
-                        ->placeholder('—'),
-                    TextEntry::make('receptie_contabila_lag_days')
-                        ->label('Lag recepție contabilă (zile)')
-                        ->formatStateUsing(fn ($state): string => $state !== null ? "{$state} zile" : '—')
-                        ->placeholder('—'),
-                    TextEntry::make('winmentor_receptie_matched_at')
-                        ->label('Asociat automat la')
-                        ->dateTime('d.m.Y H:i')
-                        ->placeholder('—'),
+
+                    // ── Mesaj când nu e asociat + hint ──────────────────────
+                    TextEntry::make('wm_no_match_hint')
+                        ->label('')
+                        ->columnSpanFull()
+                        ->visible(fn (PurchaseOrder $record): bool => $record->winmentor_receptie_nr === null && $record->status === PurchaseOrder::STATUS_RECEIVED)
+                        ->getStateUsing(fn (): string => '')
+                        ->formatStateUsing(fn (): \Illuminate\Support\HtmlString => new \Illuminate\Support\HtmlString(
+                            '<div style="padding:0.75rem 1rem;background:#fef3c7;border:1px solid #fcd34d;border-radius:0.5rem;color:#92400e;font-size:0.875rem;">'
+                            . '⚠ Recepția contabilă nu a fost identificată automat în WinMentor. '
+                            . 'Comanda de asociere rulează la fiecare 30 minute. '
+                            . 'Dacă marfa a intrat în WinMentor, asocierea va apărea în curând.'
+                            . '</div>'
+                        )),
                 ]),
         ]);
     }
