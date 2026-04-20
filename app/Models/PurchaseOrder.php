@@ -164,6 +164,11 @@ class PurchaseOrder extends Model
         return $this->belongsTo(User::class, 'received_by');
     }
 
+    public function sentBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'sent_by');
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(PurchaseOrderItem::class);

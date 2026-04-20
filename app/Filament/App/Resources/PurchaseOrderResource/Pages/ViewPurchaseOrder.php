@@ -249,6 +249,7 @@ class ViewPurchaseOrder extends ViewRecord
                                 'status'   => PurchaseOrder::STATUS_SENT,
                                 'sent_at'  => now(),
                                 'sent_via' => 'email',
+                                'sent_by'  => auth()->id(),
                             ]);
                             $this->markRequestItemsAsOrdered();
                         }
@@ -346,6 +347,7 @@ class ViewPurchaseOrder extends ViewRecord
                             'status'   => PurchaseOrder::STATUS_SENT,
                             'sent_at'  => now(),
                             'sent_via' => 'whatsapp',
+                            'sent_by'  => auth()->id(),
                         ]);
                         $this->markRequestItemsAsOrdered();
                     }
@@ -371,6 +373,7 @@ class ViewPurchaseOrder extends ViewRecord
                         'status'   => PurchaseOrder::STATUS_SENT,
                         'sent_at'  => now(),
                         'sent_via' => 'manual',
+                        'sent_by'  => auth()->id(),
                     ]);
 
                     $this->markRequestItemsAsOrdered();

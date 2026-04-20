@@ -414,7 +414,7 @@ class PurchaseOrderResource extends Resource
                                     'by'     => $isRejected
                                         ? ($record->rejectedBy?->name ?? null)
                                         : ($record->approvedBy?->name ?? null),
-                                    'note'   => $isRejected ? ($record->rejection_reason ?? null) : null,
+                                    'error'  => $isRejected ? ($record->rejection_reason ?? null) : null,
                                     'done'   => in_array($record->status, [
                                         PurchaseOrder::STATUS_APPROVED,
                                         PurchaseOrder::STATUS_SENT,
@@ -427,9 +427,10 @@ class PurchaseOrderResource extends Resource
                                 [
                                     'label'  => 'Trimis',
                                     'date'   => $record->sent_at?->format('d.m.Y H:i'),
-                                    'by'     => match($record->sent_via) {
-                                        'email'    => 'Email',
-                                        'whatsapp' => 'WhatsApp',
+                                    'by'     => $record->sentBy?->name,
+                                    'note'   => match($record->sent_via) {
+                                        'email'    => 'via Email',
+                                        'whatsapp' => 'via WhatsApp',
                                         'manual'   => 'Manual (tel/fax)',
                                         default    => null,
                                     },
@@ -447,6 +448,21 @@ class PurchaseOrderResource extends Resource
                                     'note'   => $record->received_notes ?? null,
                                     'done'   => $record->status === PurchaseOrder::STATUS_RECEIVED,
                                     'active' => $record->status === PurchaseOrder::STATUS_SENT,
+                                    'skip'   => $isRejected || $isCancelled,
+                                ],
+                                [
+                                    'label'  => 'Contabilitate',
+                                    'date'   => $record->winmentor_receptie_date
+                                        ? \Carbon\Carbon::parse($record->winmentor_receptie_date)->format('d.m.Y')
+                                        : null,
+                                    'by'     => $record->winmentor_receptie_nr
+                                        ? 'Fact. ' . $record->winmentor_receptie_nr
+                                        : null,
+                                    'note'   => $record->winmentor_receptie_nr
+                                        ? 'Intrare WinMentor'
+                                        : null,
+                                    'done'   => $record->winmentor_receptie_nr !== null,
+                                    'active' => $record->status === PurchaseOrder::STATUS_RECEIVED && $record->winmentor_receptie_nr === null,
                                     'skip'   => $isRejected || $isCancelled,
                                 ],
                             ];
@@ -498,7 +514,10 @@ class PurchaseOrderResource extends Resource
                                     $html .= '<div style="font-size:0.72rem;color:#9ca3af;margin-top:1px;">' . e($step['by']) . '</div>';
                                 }
                                 if (! empty($step['note'])) {
-                                    $html .= '<div style="font-size:0.7rem;color:#dc2626;margin-top:3px;max-width:160px;word-break:break-word;">' . e($step['note']) . '</div>';
+                                    $html .= '<div style="font-size:0.7rem;color:#6b7280;margin-top:2px;max-width:160px;word-break:break-word;">' . e($step['note']) . '</div>';
+                                }
+                                if (! empty($step['error'])) {
+                                    $html .= '<div style="font-size:0.7rem;color:#dc2626;margin-top:3px;max-width:160px;word-break:break-word;">' . e($step['error']) . '</div>';
                                 }
 
                                 $html .= '</div></div>';
@@ -737,7 +756,7 @@ class PurchaseOrderResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery()->with(['supplier', 'buyer', 'items']);
+        $query = parent::getEloquentQuery()->with(['supplier', 'buyer', 'items', 'approvedBy', 'rejectedBy', 'sentBy', 'receivedBy']);
 
         $user = auth()->user();
         if ($user && $user->role === User::ROLE_CONSULTANT_VANZARI) {
