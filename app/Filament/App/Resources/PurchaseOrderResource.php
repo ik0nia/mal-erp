@@ -666,10 +666,6 @@ class PurchaseOrderResource extends Resource
                             TextEntry::make('line_total')
                                 ->label('Total linie')
                                 ->formatStateUsing(fn ($state): string => number_format((float) $state, 2, ',', '.').' RON'),
-                            TextEntry::make('notes')
-                                ->label('Notițe')
-                                ->placeholder('—')
-                                ->columnSpan(2),
                         ]),
                 ]),
 
