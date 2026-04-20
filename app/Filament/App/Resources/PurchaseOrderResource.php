@@ -802,7 +802,7 @@ class PurchaseOrderResource extends Resource
                             // Header
                             $wmQtyHeader   = $hasWm ? $th('Cant. WM', 'right', '80px') : '';
                             $wmPriceHeaders = $hasWm
-                                ? $th('Preț WM (f. TVA)', 'right', '120px') . $th('Δ%', 'right', '50px')
+                                ? $th('Preț WM (f. TVA)', 'right', '120px') . $th('Δ%', 'right', '75px')
                                 : '';
 
                             $noMatchBanner = (!$hasWm && in_array($record->status, [PurchaseOrder::STATUS_RECEIVED, PurchaseOrder::STATUS_SENT], true))
