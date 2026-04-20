@@ -519,7 +519,15 @@ class PurchaseOrderResource extends Resource
                                     $html .= '<div style="font-size:0.72rem;color:#9ca3af;margin-top:1px;">' . e($step['by']) . '</div>';
                                 }
                                 if (! empty($step['note'])) {
-                                    $html .= '<div style="font-size:0.7rem;color:#6b7280;margin-top:2px;max-width:160px;word-break:break-word;">' . e($step['note']) . '</div>';
+                                    $escaped = e($step['note']);
+                                    $html .= '<details style="display:inline-block;margin-top:4px;">'
+                                        . '<summary style="cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:3px;'
+                                        . 'background:#fef2f2;border:1px solid #fecaca;border-radius:5px;padding:2px 7px;'
+                                        . 'font-size:0.68rem;font-weight:600;color:#dc2626;user-select:none;">▲ Obs.</summary>'
+                                        . '<div style="margin-top:4px;padding:7px 10px;background:#fff7f7;border:1px solid #fecaca;'
+                                        . 'border-radius:5px;font-size:0.75rem;color:#374151;white-space:pre-wrap;max-width:200px;text-align:left;">'
+                                        . $escaped . '</div>'
+                                        . '</details>';
                                 }
                                 if (! empty($step['error'])) {
                                     $html .= '<div style="font-size:0.7rem;color:#dc2626;margin-top:3px;max-width:160px;word-break:break-word;">' . e($step['error']) . '</div>';
@@ -656,13 +664,16 @@ class PurchaseOrderResource extends Resource
                                     ? number_format($v, 0, ',', '.')
                                     : number_format($v, 2, ',', '.');
 
-                                // Received badge
+                                // Received badge + per-item note
                                 if ($recQty === null) {
                                     $recCell = '<span style="color:#9ca3af;">—</span>';
                                 } elseif ($recQty < $poQty) {
                                     $recCell = '<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-size:0.75rem;font-weight:600;">' . $fmt($recQty) . ' ⚠</span>';
                                 } else {
                                     $recCell = '<span style="background:#dcfce7;color:#15803d;padding:1px 6px;border-radius:4px;font-size:0.75rem;font-weight:600;">' . $fmt($recQty) . '</span>';
+                                }
+                                if (filled($item->received_note)) {
+                                    $recCell .= '<div style="font-size:0.68rem;color:#6b7280;margin-top:2px;white-space:normal;">' . e($item->received_note) . '</div>';
                                 }
 
                                 // WM columns

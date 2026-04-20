@@ -20,6 +20,7 @@ class PurchaseOrderItem extends Model
         'purchase_request_item_id',
         'sources_json',
         'received_quantity',
+        'received_note',
     ];
 
     protected function casts(): array
