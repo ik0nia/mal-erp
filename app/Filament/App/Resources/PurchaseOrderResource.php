@@ -598,24 +598,34 @@ class PurchaseOrderResource extends Resource
                     RepeatableEntry::make('items')
                         ->hiddenLabel()
                         ->itemLabel(null)
-                        ->columns(4)
+                        ->columns(5)
                         ->schema([
-                            TextEntry::make('product_name')->label('Produs'),
-                            TextEntry::make('sku')->label('SKU intern')->placeholder('—'),
-                            TextEntry::make('supplier_sku')->label('SKU furnizor')->placeholder('—'),
-                            TextEntry::make('quantity')->label('Cant. comandată')
-                                ->formatStateUsing(fn ($state) => $state !== null ? (floor((float)$state) == (float)$state ? number_format((float)$state, 0, '.', '') : number_format((float)$state, 2, '.', '')) : '—'),
+                            TextEntry::make('product_name')
+                                ->hiddenLabel()
+                                ->columnSpan(2)
+                                ->html()
+                                ->getStateUsing(function (\App\Models\PurchaseOrderItem $record): string {
+                                    $codes = array_filter([
+                                        $record->sku        ? 'SKU: ' . $record->sku : null,
+                                        $record->supplier_sku ? 'Cod furnizor: ' . $record->supplier_sku : null,
+                                    ]);
+                                    $sub = $codes
+                                        ? '<div style="font-size:0.75rem;color:#9ca3af;margin-top:2px;">' . implode(' &nbsp;·&nbsp; ', $codes) . '</div>'
+                                        : '';
+                                    return '<div style="font-size:0.95rem;font-weight:600;color:#111827;">' . e($record->product_name) . '</div>' . $sub;
+                                }),
+                            TextEntry::make('quantity')
+                                ->label('Comandat')
+                                ->formatStateUsing(fn ($state) => $state !== null ? (floor((float)$state) == (float)$state ? number_format((float)$state, 0, '.', '') : number_format((float)$state, 2, '.', '')) . ' buc.' : '—'),
                             TextEntry::make('received_quantity')
-                                ->label('Cant. recepționată')
+                                ->label('Recepționat')
                                 ->placeholder('—')
                                 ->formatStateUsing(function ($state, \App\Models\PurchaseOrderItem $record): string {
                                     if ($state === null) return '—';
-                                    $qty = (float) $state;
+                                    $qty     = (float) $state;
                                     $ordered = (float) $record->quantity;
-                                    if ($qty < $ordered) {
-                                        return number_format($qty, 0, '.', '') . ' / ' . number_format($ordered, 0, '.', '') . ' ⚠';
-                                    }
-                                    return number_format($qty, 0, '.', '');
+                                    $fmt     = floor($qty) == $qty ? number_format($qty, 0, '.', '') : number_format($qty, 2, '.', '');
+                                    return $qty < $ordered ? $fmt . ' ⚠' : $fmt . ' buc.';
                                 })
                                 ->color(fn ($state, \App\Models\PurchaseOrderItem $record): string =>
                                     $state === null ? 'gray' :
@@ -623,14 +633,17 @@ class PurchaseOrderResource extends Resource
                                 )
                                 ->badge(),
                             TextEntry::make('unit_price')
-                                ->label('Preț unitar (fără TVA)')
+                                ->label('Preț (fără TVA)')
                                 ->formatStateUsing(fn ($state): string => $state
                                     ? number_format((float) $state, 4, ',', '.').' RON'
                                     : '—'),
                             TextEntry::make('line_total')
-                                ->label('Total linie (fără TVA)')
+                                ->label('Total linie')
                                 ->formatStateUsing(fn ($state): string => number_format((float) $state, 2, ',', '.').' RON'),
-                            TextEntry::make('notes')->label('Notițe')->placeholder('—'),
+                            TextEntry::make('notes')
+                                ->label('Notițe')
+                                ->placeholder('—')
+                                ->columnSpan(2),
                         ]),
                 ]),
 
