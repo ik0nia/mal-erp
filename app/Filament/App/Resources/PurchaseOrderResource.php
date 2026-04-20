@@ -794,6 +794,12 @@ class PurchaseOrderResource extends Resource
                                 ? $th('Preț WM (f. TVA)', 'right', '120px') . $th('Δ%', 'right', '50px')
                                 : '';
 
+                            $noMatchBanner = (!$hasWm && in_array($record->status, [PurchaseOrder::STATUS_RECEIVED, PurchaseOrder::STATUS_SENT], true))
+                                ? '<div style="margin-top:10px;padding:0.6rem 1rem;background:#fef3c7;border:1px solid #fcd34d;border-radius:0.5rem;color:#92400e;font-size:0.8rem;">'
+                                  . '⚠ Recepția contabilă nu a fost identificată automat în WinMentor. Asocierea rulează la fiecare 30 minute.'
+                                  . '</div>'
+                                : '';
+
                             return '<div style="overflow-x:auto;">'
                                 . '<table style="width:100%;border-collapse:collapse;font-family:inherit;table-layout:fixed;">'
                                 . '<thead><tr style="background:#f9fafb;">'
@@ -803,59 +809,9 @@ class PurchaseOrderResource extends Resource
                                 . $wmPriceHeaders
                                 . '</tr></thead>'
                                 . '<tbody>' . $rows . $totalRow . '</tbody>'
-                                . '</table></div>';
+                                . '</table></div>'
+                                . $noMatchBanner;
                         }),
-                ]),
-
-            // ── 6. Recepție contabilă WinMentor ─────────────────────────────
-            InfolistSection::make('Recepție contabilă WinMentor')
-                ->columnSpanFull()
-                ->visible(fn (PurchaseOrder $record): bool => in_array($record->status, [
-                    PurchaseOrder::STATUS_RECEIVED,
-                    PurchaseOrder::STATUS_SENT,
-                ], true))
-                ->schema([
-                    \Filament\Schemas\Components\Grid::make(4)
-                        ->schema([
-                            TextEntry::make('winmentor_receptie_nr')
-                                ->label('Nr. factură furnizor (WinMentor)')
-                                ->placeholder('Neidentificat încă')
-                                ->weight(\Filament\Support\Enums\FontWeight::Bold),
-                            TextEntry::make('winmentor_receptie_date')
-                                ->label('Data intrare WinMentor')
-                                ->date('d.m.Y')
-                                ->placeholder('—'),
-                            TextEntry::make('winmentor_receptie_matched_at')
-                                ->label('Asociat la')
-                                ->dateTime('d.m.Y H:i')
-                                ->placeholder('—'),
-                        ]),
-
-                    \Filament\Schemas\Components\Grid::make(2)
-                        ->schema([
-                            TextEntry::make('lead_time_days')
-                                ->label('Lead time (zile de la trimitere la recepție)')
-                                ->formatStateUsing(fn ($state): string => $state !== null ? "{$state} zile" : '—')
-                                ->placeholder('—'),
-                            TextEntry::make('receptie_contabila_lag_days')
-                                ->label('Lag recepție contabilă (zile de la marfă la factură)')
-                                ->formatStateUsing(fn ($state): string => $state !== null ? "{$state} zile" : '—')
-                                ->placeholder('—'),
-                        ]),
-
-                    // ── Mesaj când nu e asociat ──────────────────────────────
-                    TextEntry::make('wm_no_match_hint')
-                        ->label('')
-                        ->columnSpanFull()
-                        ->html()
-                        ->visible(fn (PurchaseOrder $record): bool => $record->winmentor_receptie_nr === null && $record->status === PurchaseOrder::STATUS_RECEIVED)
-                        ->getStateUsing(fn (): string =>
-                            '<div style="padding:0.75rem 1rem;background:#fef3c7;border:1px solid #fcd34d;border-radius:0.5rem;color:#92400e;font-size:0.875rem;">'
-                            . '⚠ Recepția contabilă nu a fost identificată automat în WinMentor. '
-                            . 'Comanda de asociere rulează la fiecare 30 minute. '
-                            . 'Dacă marfa a intrat în WinMentor, asocierea va apărea în curând.'
-                            . '</div>'
-                        ),
                 ]),
         ]);
     }
