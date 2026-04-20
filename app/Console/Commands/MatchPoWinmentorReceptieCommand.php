@@ -196,8 +196,8 @@ class MatchPoWinmentorReceptieCommand extends Command
                 $updates['received_at'] = $best->data_intrare;
             }
 
-            // Lead time: zile de la sent_at până la recepția cantitativă
-            $receivedAt = $updates['received_at'] ?? $po->received_at?->toDateString();
+            // Lead time: zile de la sent_at până la received_at real (nu data WM)
+            $receivedAt = $po->received_at ?? ($updates['received_at'] ?? null);
             if ($po->sent_at && $receivedAt) {
                 $updates['lead_time_days'] = (int) \Carbon\Carbon::parse($po->sent_at)->diffInDays($receivedAt);
             }

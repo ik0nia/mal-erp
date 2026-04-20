@@ -485,6 +485,40 @@ class SupplierResource extends Resource
         };
 
         return $schema->schema([
+            \Filament\Schemas\Components\Section::make('Performanță livrări')
+                ->columns(4)
+                ->columnSpanFull()
+                ->visible(fn (\App\Models\Supplier $record): bool =>
+                    \App\Models\PurchaseOrder::where('supplier_id', $record->id)
+                        ->whereNotNull('lead_time_days')->exists()
+                )
+                ->schema([
+                    Infolists\Components\TextEntry::make('avg_lead_time')
+                        ->label('Lead time mediu')
+                        ->getStateUsing(fn (\App\Models\Supplier $record): string =>
+                            round(\App\Models\PurchaseOrder::where('supplier_id', $record->id)
+                                ->whereNotNull('lead_time_days')->avg('lead_time_days'), 1) . ' zile'
+                        ),
+                    Infolists\Components\TextEntry::make('min_lead_time')
+                        ->label('Cel mai rapid')
+                        ->getStateUsing(fn (\App\Models\Supplier $record): string =>
+                            \App\Models\PurchaseOrder::where('supplier_id', $record->id)
+                                ->whereNotNull('lead_time_days')->min('lead_time_days') . ' zile'
+                        ),
+                    Infolists\Components\TextEntry::make('max_lead_time')
+                        ->label('Cel mai lent')
+                        ->getStateUsing(fn (\App\Models\Supplier $record): string =>
+                            \App\Models\PurchaseOrder::where('supplier_id', $record->id)
+                                ->whereNotNull('lead_time_days')->max('lead_time_days') . ' zile'
+                        ),
+                    Infolists\Components\TextEntry::make('po_count_lead')
+                        ->label('Comenzi măsurate')
+                        ->getStateUsing(fn (\App\Models\Supplier $record): string =>
+                            \App\Models\PurchaseOrder::where('supplier_id', $record->id)
+                                ->whereNotNull('lead_time_days')->count() . ' PO-uri'
+                        ),
+                ]),
+
             \Filament\Schemas\Components\Section::make('Informații generale')
                 ->columns(2)
                 ->schema([
