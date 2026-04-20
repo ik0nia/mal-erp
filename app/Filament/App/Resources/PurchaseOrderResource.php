@@ -465,7 +465,7 @@ class PurchaseOrderResource extends Resource
                 ], true))
                 ->schema([
                     // ── Status + date matching ───────────────────────────────
-                    \Filament\Infolists\Components\Grid::make(4)
+                    \Filament\Schemas\Components\Grid::make(4)
                         ->schema([
                             TextEntry::make('winmentor_receptie_nr')
                                 ->label('Nr. document intrare (NIR)')
@@ -491,7 +491,7 @@ class PurchaseOrderResource extends Resource
                                 ->placeholder('—'),
                         ]),
 
-                    \Filament\Infolists\Components\Grid::make(2)
+                    \Filament\Schemas\Components\Grid::make(2)
                         ->schema([
                             TextEntry::make('lead_time_days')
                                 ->label('Lead time (zile)')
