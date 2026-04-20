@@ -452,13 +452,20 @@ class PurchaseOrderResource extends Resource
                                 ],
                                 [
                                     'label'  => 'Contabilitate',
-                                    'date'   => $record->winmentor_receptie_date
-                                        ? \Carbon\Carbon::parse($record->winmentor_receptie_date)->format('d.m.Y')
+                                    'date'   => $record->winmentor_receptie_nr
+                                        ? (function() use ($record): ?string {
+                                            $ts = \Illuminate\Support\Facades\DB::table('winmentor_intrari_raw')
+                                                ->where('nr_doc', $record->winmentor_receptie_nr)
+                                                ->min('created_at');
+                                            return $ts ? \Carbon\Carbon::parse($ts)->format('d.m.Y H:i') : null;
+                                          })()
                                         : null,
                                     'by'     => $record->winmentor_receptie_nr
                                         ? 'Fact. ' . $record->winmentor_receptie_nr
                                         : null,
-                                    'note'   => null,
+                                    'note'   => $record->winmentor_receptie_date
+                                        ? 'Data factură: ' . \Carbon\Carbon::parse($record->winmentor_receptie_date)->format('d.m.Y')
+                                        : null,
                                     'done'   => $record->winmentor_receptie_nr !== null,
                                     'active' => $record->status === PurchaseOrder::STATUS_RECEIVED && $record->winmentor_receptie_nr === null,
                                     'skip'   => $isRejected || $isCancelled,
