@@ -391,7 +391,7 @@ class PurchaseOrderResource extends Resource
                 ->columnSpanFull()
                 ->schema([
                     TextEntry::make('timeline')
-                        ->label('')
+                        ->hiddenLabel()
                         ->columnSpanFull()
                         ->html()
                         ->getStateUsing(function (PurchaseOrder $record): string {
