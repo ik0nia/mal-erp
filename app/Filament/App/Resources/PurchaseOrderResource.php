@@ -371,13 +371,9 @@ class PurchaseOrderResource extends Resource
         return $schema->schema([
             // ── 1. Identificare comandă ──────────────────────────────────────
             InfolistSection::make('Comandă')
-                ->columns(3)
+                ->columns(4)
                 ->columnSpanFull()
                 ->schema([
-                    TextEntry::make('number')
-                        ->label('Număr PO')
-                        ->weight(\Filament\Support\Enums\FontWeight::Bold),
-                    TextEntry::make('supplier.name')->label('Furnizor'),
                     TextEntry::make('status')
                         ->label('Status')
                         ->badge()
