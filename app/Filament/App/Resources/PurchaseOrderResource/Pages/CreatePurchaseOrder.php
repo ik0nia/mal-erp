@@ -180,7 +180,7 @@ class CreatePurchaseOrder extends CreateRecord
                                 'product_name'           => $product->decoded_name ?? $product->name,
                                 'sku'                    => $product->sku ?? '',
                                 'supplier_sku'           => $ps?->supplier_sku ?? '',
-                                'unit_price'             => $ps?->purchase_price ? (float) $ps->purchase_price : 0,
+                                'unit_price'             => $ps ? (float) ($ps->last_purchase_price ?: $ps->purchase_price ?: 0) : 0,
                                 'quantity'               => (float) $newQtys[(string) $pid],
                                 'info_purchase_uom'      => $ps?->purchase_uom ?? null,
                                 'info_conversion_factor' => $ps?->conversion_factor ? (float) $ps->conversion_factor : null,
@@ -324,7 +324,7 @@ class CreatePurchaseOrder extends CreateRecord
                                     'sku'               => $ps->product->sku,
                                     'supplier_sku'      => $ps->supplier_sku,
                                     'quantity'          => $row['qty'],
-                                    'unit_price'        => $ps->purchase_price ?? 0,
+                                    'unit_price'        => (float) ($ps->last_purchase_price ?: $ps->purchase_price ?: 0),
                                 ]);
                             }
 
