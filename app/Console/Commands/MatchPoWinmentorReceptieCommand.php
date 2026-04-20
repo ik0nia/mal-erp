@@ -76,6 +76,26 @@ class MatchPoWinmentorReceptieCommand extends Command
         return self::SUCCESS;
     }
 
+    private function resolvePaymentTermDays(?\App\Models\Supplier $supplier): int
+    {
+        if (! $supplier) return 0;
+
+        $conditions = $supplier->conditions ?? [];
+        $term       = $conditions['payment']['default_term'] ?? null;
+        $netDays    = $conditions['payment']['net_days'] ?? null;
+
+        return match($term) {
+            'net_7'         => 7,
+            'net_14'        => 14,
+            'net_30'        => 30,
+            'net_45'        => 45,
+            'net_60'        => 60,
+            'net_90'        => 90,
+            'custom'        => (int) ($netDays ?? 0),
+            default         => 0,
+        };
+    }
+
     private function updatePricesFromWm(PurchaseOrder $po, string $nrDoc): void
     {
         $wmLines = DB::table('winmentor_intrari_raw')
@@ -159,6 +179,15 @@ class MatchPoWinmentorReceptieCommand extends Command
             if (blank($po->invoice_number)) {
                 $updates['invoice_number'] = $best->nr_doc;
                 $updates['invoice_date']   = $best->data_intrare;
+            }
+
+            // Calculează scadența din termenul de plată al furnizorului (independent de invoice_number)
+            if (blank($po->invoice_due_date)) {
+                $netDays = $this->resolvePaymentTermDays($po->supplier);
+                if ($netDays > 0) {
+                    $invoiceDate = $updates['invoice_date'] ?? $po->invoice_date ?? $best->data_intrare;
+                    $updates['invoice_due_date'] = \Carbon\Carbon::parse($invoiceDate)->addDays($netDays)->toDateString();
+                }
             }
 
             // Dacă PO era în status sent și avem o recepție confirmată → trecem pe received
