@@ -757,7 +757,7 @@ class PurchaseOrderResource extends Resource
                                 . '</tr>';
 
                             // Header
-                            $wmQtyHeader   = $hasWm ? $th('Cant. WM', 'right', '70px') : '';
+                            $wmQtyHeader   = $hasWm ? $th('Cant. WM', 'right', '80px') : '';
                             $wmPriceHeaders = $hasWm
                                 ? $th('Preț WM (f. TVA)', 'right', '120px') . $th('Δ%', 'right', '50px')
                                 : '';
@@ -765,7 +765,7 @@ class PurchaseOrderResource extends Resource
                             return '<div style="overflow-x:auto;">'
                                 . '<table style="width:100%;border-collapse:collapse;font-family:inherit;table-layout:fixed;">'
                                 . '<thead><tr style="background:#f9fafb;">'
-                                . $th('Produs') . $th('PO', 'right', '60px') . $th('Rec. Cant.', 'center', '80px')
+                                . $th('Produs') . $th('PO', 'right', '80px') . $th('Rec. Cant.', 'center', '80px')
                                 . $wmQtyHeader
                                 . $th('Preț PO (f. TVA)', 'right', '120px') . $th('Total linie', 'right', '110px')
                                 . $wmPriceHeaders
