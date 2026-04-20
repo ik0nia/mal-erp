@@ -147,6 +147,165 @@
     </div>
   </div>
 
+  {{-- Stoc & mișcări per furnizor --}}
+  @if(count($this->supplierRows) > 0)
+  @php
+    $totRetail    = array_sum(array_column($this->supplierRows, 'value_retail'));
+    $totCost      = array_sum(array_column($this->supplierRows, 'value_cost'));
+    $totMargin    = array_sum(array_column($this->supplierRows, 'margin_total'));
+    $totOut       = array_sum(array_column($this->supplierRows, 'out_value'));
+    $totIn        = array_sum(array_column($this->supplierRows, 'in_value'));
+    $totMarginPct = $totRetail > 0 ? round($totMargin / $totRetail * 100, 1) : 0;
+  @endphp
+  <div class="bi-card" style="margin-top:1rem;"
+       x-data="{
+         rows: {{ Js::from($this->supplierRows) }},
+         search: '',
+         page: 1,
+         perPage: 20,
+         gmroi(s) {
+           // GMROI anualizat = marjă% × (ieșiri_30z / stoc_cost × 12)
+           // Standard retail: pentru 1 RON imobilizat, câți RON marjă generezi/an
+           if (s.value_cost <= 0) return 0;
+           const rot_annual = (s.out_value / s.value_cost) * 12;
+           return (s.margin_pct / 100) * rot_annual;
+         },
+         score(s) { return this.gmroi(s); },
+         badge(s) {
+           const g = this.gmroi(s);
+           if (g >= 2.5) return { label:'Excelent', title:'GMROI ≥ 2.5 — stoc foarte eficient',    style:'background:#dcfce7;color:#15803d;border:1px solid #86efac;' };
+           if (g >= 1.5) return { label:'Bun',      title:'GMROI ≥ 1.5 — performanță solidă',      style:'background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd;' };
+           if (g >= 0.8) return { label:'Mediu',    title:'GMROI ≥ 0.8 — acceptabil, de urmărit',  style:'background:#fef3c7;color:#92400e;border:1px solid #fcd34d;' };
+           return                { label:'Slab',     title:'GMROI < 0.8 — capital blocat / marjă mică', style:'background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;' };
+         },
+         sortCol: 'score',
+         sortDir: 'desc',
+         sortBy(col) {
+           if (this.sortCol === col) { this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc'; }
+           else { this.sortCol = col; this.sortDir = col === 'supplier_name' ? 'asc' : 'desc'; }
+           this.page = 1;
+         },
+         sortIcon(col) {
+           if (this.sortCol !== col) return ' ⇅';
+           return this.sortDir === 'asc' ? ' ↑' : ' ↓';
+         },
+         thStyle(col) {
+           return this.sortCol === col
+             ? 'cursor:pointer;user-select:none;color:#6366f1;'
+             : 'cursor:pointer;user-select:none;color:#6b7280;';
+         },
+         get filtered() {
+           const q = this.search.toLowerCase().trim();
+           const list = q ? this.rows.filter(r => r.supplier_name.toLowerCase().includes(q)) : this.rows;
+           const col = this.sortCol; const dir = this.sortDir;
+           return [...list].sort((a, b) => {
+             let av = col === 'score' ? this.score(a) : (a[col] ?? 0);
+             let bv = col === 'score' ? this.score(b) : (b[col] ?? 0);
+             if (col === 'supplier_name') { av = (a.supplier_name||'').toLowerCase(); bv = (b.supplier_name||'').toLowerCase(); }
+             if (av < bv) return dir === 'asc' ? -1 : 1;
+             if (av > bv) return dir === 'asc' ? 1 : -1;
+             return 0;
+           });
+         },
+         get totalPages() { return Math.max(1, Math.ceil(this.filtered.length / this.perPage)); },
+         get paginated() {
+           const start = (this.page - 1) * this.perPage;
+           return this.filtered.slice(start, start + this.perPage);
+         },
+         fmt(n) { if (!n) return '—'; return new Intl.NumberFormat('ro-RO', {maximumFractionDigits:0}).format(n) + ' RON'; },
+         fmtPct(n) { return new Intl.NumberFormat('ro-RO', {minimumFractionDigits:1, maximumFractionDigits:1}).format(n) + '%'; },
+         marginColor(pct) { return pct >= 25 ? 'color:#16a34a;font-weight:700;' : (pct >= 15 ? 'color:#ca8a04;font-weight:600;' : 'color:#dc2626;font-weight:700;'); },
+         prevPage() { if (this.page > 1) this.page--; },
+         nextPage() { if (this.page < this.totalPages) this.page++; },
+       }"
+       x-effect="search && (page = 1)">
+    <div class="bi-card-header">
+      <div>
+        <div class="bi-card-title">Stoc & mișcări pe furnizori</div>
+        <div class="bi-card-subtitle">GMROI = marjă% × rotație anuală &mdash; câți RON marjă generezi per RON imobilizat în stoc/an &mdash; mișcări 30 zile (fără TVA)</div>
+      </div>
+      <div>
+        <input x-model="search" type="search" placeholder="Caută furnizor…"
+               style="border:1px solid #d1d5db; border-radius:0.5rem; padding:0.375rem 0.75rem; font-size:0.875rem; outline:none; width:220px;"
+               onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#d1d5db'">
+      </div>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table class="bi-table">
+        <thead><tr>
+          <th @click="sortBy('supplier_name')" :style="thStyle('supplier_name')" x-text="'Furnizor' + sortIcon('supplier_name')"></th>
+          <th @click="sortBy('score')"         :style="'text-align:center;' + thStyle('score')"         x-text="'Perf.' + sortIcon('score')"></th>
+          <th @click="sortBy('product_count')" :style="'text-align:right;' + thStyle('product_count')"  x-text="'Prod.' + sortIcon('product_count')"></th>
+          <th @click="sortBy('value_retail')"  :style="'text-align:right;' + thStyle('value_retail')"   x-text="'Val. retail' + sortIcon('value_retail')"></th>
+          <th @click="sortBy('value_cost')"    :style="'text-align:right;' + thStyle('value_cost')"     x-text="'Val. cost' + sortIcon('value_cost')"></th>
+          <th @click="sortBy('margin_pct')"    :style="'text-align:right;' + thStyle('margin_pct')"     x-text="'Marjă %' + sortIcon('margin_pct')"></th>
+          <th @click="sortBy('margin_total')"  :style="'text-align:right;' + thStyle('margin_total')"   x-text="'Marjă RON' + sortIcon('margin_total')"></th>
+          <th @click="sortBy('out_value')"     :style="'text-align:right;color:#dc2626;' + thStyle('out_value')"  x-text="'↓ Ieșiri 30z' + sortIcon('out_value')"></th>
+          <th @click="sortBy('in_value')"      :style="'text-align:right;color:#16a34a;' + thStyle('in_value')"   x-text="'↑ Intrări 30z' + sortIcon('in_value')"></th>
+        </tr></thead>
+        <tbody>
+          <template x-for="(s, i) in paginated" :key="s.supplier_id">
+            <tr>
+              <td style="font-weight:500; color:#1f2937; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" x-text="s.supplier_name"></td>
+              <td style="text-align:center;">
+                <span :style="badge(s).style" :title="badge(s).title"
+                      style="display:inline-block; padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.7rem; font-weight:700; white-space:nowrap; cursor:help;">
+                  <span x-text="badge(s).label"></span>
+                  <span style="opacity:0.7; margin-left:0.2rem;" x-text="'(' + gmroi(s).toFixed(2) + ')'"></span>
+                </span>
+              </td>
+              <td style="text-align:right; color:#6b7280;" x-text="s.product_count"></td>
+              <td style="text-align:right; color:#374151;" x-text="fmt(s.value_retail)"></td>
+              <td style="text-align:right; font-weight:600; color:#111827;" x-text="fmt(s.value_cost)"></td>
+              <td style="text-align:right;" :style="marginColor(s.margin_pct)" x-text="fmtPct(s.margin_pct)"></td>
+              <td style="text-align:right; color:#059669;" x-text="fmt(s.margin_total)"></td>
+              <td style="text-align:right;" :style="s.out_value > 0 ? 'color:#dc2626;font-weight:600;' : 'color:#9ca3af;'" x-text="fmt(s.out_value)"></td>
+              <td style="text-align:right;" :style="s.in_value > 0 ? 'color:#16a34a;font-weight:600;' : 'color:#9ca3af;'" x-text="fmt(s.in_value)"></td>
+            </tr>
+          </template>
+          <tr x-show="filtered.length === 0">
+            <td colspan="9" style="text-align:center; padding:2rem; color:#9ca3af;">Niciun furnizor găsit.</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr style="border-top:2px solid #e5e7eb; background:#f9fafb;">
+            <td style="font-weight:700; color:#111827; padding:0.625rem 1rem;">TOTAL</td>
+            <td></td>
+            <td></td>
+            <td style="text-align:right; font-weight:700; color:#111827; padding:0.625rem 1rem;">{{ number_format($totRetail, 0, ',', '.') }} RON</td>
+            <td style="text-align:right; font-weight:700; color:#111827; padding:0.625rem 1rem;">{{ number_format($totCost, 0, ',', '.') }} RON</td>
+            <td style="text-align:right; font-weight:700; padding:0.625rem 1rem; {{ $totMarginPct >= 25 ? 'color:#16a34a;' : ($totMarginPct >= 15 ? 'color:#ca8a04;' : 'color:#dc2626;') }}">{{ number_format($totMarginPct, 1, ',', '.') }}%</td>
+            <td style="text-align:right; font-weight:700; color:#059669; padding:0.625rem 1rem;">{{ number_format($totMargin, 0, ',', '.') }} RON</td>
+            <td style="text-align:right; font-weight:700; color:#dc2626; padding:0.625rem 1rem;">{{ $totOut > 0 ? number_format($totOut, 0, ',', '.') . ' RON' : '—' }}</td>
+            <td style="text-align:right; font-weight:700; color:#16a34a; padding:0.625rem 1rem;">{{ $totIn > 0 ? number_format($totIn, 0, ',', '.') . ' RON' : '—' }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    {{-- Paginare --}}
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1.25rem; border-top:1px solid #f3f4f6; flex-wrap:wrap; gap:0.75rem;">
+      <div style="font-size:0.875rem; color:#6b7280;">
+        <span x-text="filtered.length"></span> furnizori
+        <template x-if="filtered.length !== rows.length"><span> (filtrat din <span x-text="rows.length"></span>)</span></template>
+        · mișcări {{ now()->subDays(30)->toDateString() }} – {{ now()->toDateString() }}
+      </div>
+      <div x-show="totalPages > 1" style="display:flex; align-items:center; gap:0.75rem;">
+        <button @click="prevPage()" :disabled="page === 1"
+                style="display:inline-flex; align-items:center; justify-content:center; width:2.25rem; height:2.25rem; border-radius:0.5rem; border:1px solid #d1d5db; background:#fff; cursor:pointer; font-size:1.25rem; color:#374151; line-height:1;"
+                :style="page === 1 ? 'opacity:0.35; cursor:not-allowed;' : ''">‹</button>
+        <span style="font-size:0.9375rem; color:#111827; font-weight:500; font-variant-numeric:tabular-nums;">
+          pagina <strong x-text="page"></strong> <span style="color:#9ca3af;">/ <span x-text="totalPages"></span></span>
+        </span>
+        <button @click="nextPage()" :disabled="page === totalPages"
+                style="display:inline-flex; align-items:center; justify-content:center; width:2.25rem; height:2.25rem; border-radius:0.5rem; border:1px solid #d1d5db; background:#fff; cursor:pointer; font-size:1.25rem; color:#374151; line-height:1;"
+                :style="page === totalPages ? 'opacity:0.35; cursor:not-allowed;' : ''">›</button>
+      </div>
+    </div>
+  </div>
+  @endif
+
   {{-- Charts --}}
   @livewire(\App\Filament\App\Widgets\BiStockTrendChartWidget::class)
   @livewire(\App\Filament\App\Widgets\BiMarginTrendChartWidget::class)

@@ -46,6 +46,8 @@ class RolePermissionsPage extends Page implements HasForms
             'App\\Filament\\App\\Pages\\BuyerDashboardPage'                => ['label' => 'Tablou comenzi',        'group' => 'Achiziții'],
             'App\\Filament\\App\\Pages\\UnassignedItemsPage'               => ['label' => 'Iteme neasignate',      'group' => 'Achiziții'],
             'App\\Filament\\App\\Pages\\ProductsWithoutSupplier'           => ['label' => 'Fără furnizor',         'group' => 'Achiziții'],
+            'App\\Filament\\App\\Pages\\WinmentorReceptionQueuePage'      => ['label' => 'Coadă WinMentor',       'group' => 'Achiziții'],
+            'App\\Filament\\App\\Pages\\WinmentorSyncLogPage'             => ['label' => 'Log WinMentor',         'group' => 'Achiziții'],
             'App\\Filament\\App\\Pages\\SupplierPriceIntelligencePage'     => ['label' => 'Prețuri din Emailuri',  'group' => 'Comunicare'],
             // Comunicare
             'App\\Filament\\App\\Pages\\EmailInboxPage'                    => ['label' => 'Email inbox',           'group' => 'Comunicare'],
@@ -74,13 +76,13 @@ class RolePermissionsPage extends Page implements HasForms
             'App\\Filament\\App\\Pages\\NewWinmentorProducts'              => ['label' => 'Produse noi WinMentor',      'group' => 'Produse'],
             'App\\Filament\\App\\Pages\\ProductReviewRequestsPage'         => ['label' => 'Reverificări produse',        'group' => 'Produse'],
             'App\\Filament\\App\\Pages\\ToyaImportPage'                    => ['label' => 'Import Toya',                 'group' => 'Produse'],
-            'App\\Filament\\App\\Pages\\ToyaCategoryMappingPage'           => ['label' => 'Categorii Toya (mapping AI)', 'group' => 'Produse'],
             'App\\Filament\\App\\Pages\\ProductSubstitutionMatchingPage'   => ['label' => 'Matching înlocuitori Toya',   'group' => 'Produse'],
             // Secțiuni pagina produs (View)
             'woo_product_section_descriere'          => ['label' => 'Card: Descriere',             'group' => 'Pagina produs'],
             'woo_product_section_atribute_tehnice'   => ['label' => 'Card: Atribute tehnice',      'group' => 'Pagina produs'],
             'woo_product_section_istoric_stoc'       => ['label' => 'Card: Istoric variație stoc', 'group' => 'Pagina produs'],
             'woo_product_section_rezumat_variatii'   => ['label' => 'Card: Rezumat variații',      'group' => 'Pagina produs'],
+            'woo_product_section_istoric_achizitii'  => ['label' => 'Card: Istoric prețuri achiziție', 'group' => 'Pagina produs'],
             'woo_product_section_payload_brut'       => ['label' => 'Card: Payload brut (Woo)',    'group' => 'Pagina produs'],
             // Dashboard — widget-uri
             'App\\Filament\\App\\Widgets\\SalesChartWidget'                => ['label' => 'Grafic vânzări',               'group' => 'Dashboard'],

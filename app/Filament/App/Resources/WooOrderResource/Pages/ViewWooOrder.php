@@ -3,7 +3,12 @@
 namespace App\Filament\App\Resources\WooOrderResource\Pages;
 
 use App\Filament\App\Resources\WooOrderResource;
+use App\Models\ProductStock;
+use App\Models\ProductSupplier;
+use App\Models\PurchaseRequest;
+use App\Models\PurchaseRequestItem;
 use App\Models\WooOrder;
+use App\Models\WooProduct;
 use App\Services\WooCommerce\WooClient;
 use App\Services\WooCommerce\WooOrderSyncService;
 use Filament\Actions\Action;
@@ -102,6 +107,64 @@ class ViewWooOrder extends ViewRecord
                 ->color('success')
                 ->url(fn (): string => $this->buildCreateAwbUrl())
                 ->openUrlInNewTab(false),
+
+            Action::make('create_purchase_request')
+                ->label('Creare Necesar')
+                ->icon('heroicon-o-clipboard-document-list')
+                ->color('warning')
+                ->requiresConfirmation()
+                ->modalHeading('Creare Necesar din comandă')
+                ->modalDescription(function (): string {
+                    $items = $this->getDeficitItems();
+                    if (empty($items)) {
+                        return 'Toate produsele din comandă au stoc suficient. Nu este necesar un referat.';
+                    }
+                    $lines = ['Vor fi adăugate în Necesar (doar cantitățile lipsă):'];
+                    $lines[] = '';
+                    foreach ($items as $item) {
+                        $supplier = $item['supplier_name'] ? ' — '.$item['supplier_name'] : ' — fără furnizor';
+                        $lines[] = '• '.$item['product_name'].' | Comandat: '.$item['ordered'].' | Stoc: '.$item['stock'].' | Lipsă: '.$item['deficit'].$supplier;
+                    }
+                    return implode("\n", $lines);
+                })
+                ->modalSubmitActionLabel('Creează Necesar')
+                ->hidden(fn (): bool => empty($this->getDeficitItems()))
+                ->action(function (): void {
+                    $items = $this->getDeficitItems();
+                    if (empty($items)) {
+                        Notification::make()->warning()->title('Stoc suficient')->body('Nu există produse cu deficit.')->send();
+                        return;
+                    }
+
+                    /** @var WooOrder $order */
+                    $order = $this->record;
+
+                    $pr = PurchaseRequest::create([
+                        'location_id' => $order->location_id,
+                        'source_type' => PurchaseRequest::SOURCE_WOO_ORDER,
+                        'woo_order_id' => $order->id,
+                        'notes'       => 'Generat automat din comanda #'.$order->number,
+                        'status'      => PurchaseRequest::STATUS_SUBMITTED,
+                    ]);
+
+                    foreach ($items as $item) {
+                        PurchaseRequestItem::create([
+                            'purchase_request_id' => $pr->id,
+                            'woo_product_id'      => $item['woo_product_id'],
+                            'supplier_id'         => $item['supplier_id'],
+                            'product_name'        => $item['product_name'],
+                            'sku'                 => $item['sku'],
+                            'quantity'            => $item['deficit'],
+                            'status'              => PurchaseRequestItem::STATUS_PENDING,
+                        ]);
+                    }
+
+                    Notification::make()
+                        ->success()
+                        ->title('Necesar creat: '.$pr->number)
+                        ->body(count($items).' produs(e) cu deficit adăugate.')
+                        ->send();
+                }),
         ];
     }
 
@@ -130,6 +193,62 @@ class ViewWooOrder extends ViewRecord
 
             return false;
         }
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function getDeficitItems(): array
+    {
+        /** @var WooOrder $order */
+        $order      = $this->record;
+        $locationId = (int) $order->location_id;
+        $result     = [];
+
+        foreach ($order->items as $item) {
+            if (! $item->woo_product_id) {
+                continue;
+            }
+
+            $localProduct = WooProduct::where('woo_id', $item->woo_product_id)->first(['id', 'sku']);
+            if (! $localProduct) {
+                continue;
+            }
+
+            $stock = (float) ProductStock::where('woo_product_id', $localProduct->id)
+                ->when($locationId > 0, fn ($q) => $q->where('location_id', $locationId))
+                ->value('quantity') ?? 0.0;
+
+            $deficit = max(0, (float) $item->quantity - $stock);
+            if ($deficit <= 0) {
+                continue;
+            }
+
+            $preferred = ProductSupplier::where('woo_product_id', $localProduct->id)
+                ->where('is_preferred', true)
+                ->first(['id', 'supplier_id']);
+
+            if (! $preferred) {
+                $preferred = ProductSupplier::where('woo_product_id', $localProduct->id)
+                    ->first(['id', 'supplier_id']);
+            }
+
+            $supplierName = null;
+            if ($preferred) {
+                $supplierName = \App\Models\Supplier::where('id', $preferred->supplier_id)->value('name');
+            }
+
+            $result[] = [
+                'woo_product_id' => $localProduct->id,
+                'supplier_id'    => $preferred?->supplier_id,
+                'supplier_name'  => $supplierName,
+                'product_name'   => $item->name,
+                'sku'            => $item->sku ?? $localProduct->sku,
+                'ordered'        => (float) $item->quantity,
+                'stock'          => $stock,
+                'deficit'        => $deficit,
+            ];
+        }
+
+        return $result;
     }
 
     private function buildCreateAwbUrl(): string

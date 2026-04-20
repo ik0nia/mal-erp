@@ -238,32 +238,51 @@ class IntegrationConnectionResource extends Resource
                             ->helperText('Cheia generată automat la prima pornire a Bridge-ului (din appsettings.json).')
                             ->maxLength(255)
                             ->columnSpanFull(),
-                        TextInput::make('settings.firma')
+                        Select::make('settings.firma')
                             ->label('Firmă WinMentor')
                             ->required(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WINMENTOR_BRIDGE)
-                            ->placeholder('ex: MALINCO SRL')
-                            ->helperText('Numele exact al firmei, ca în WinMentor (sensibil la majuscule).')
-                            ->maxLength(255)
+                            ->options(function (?IntegrationConnection $record): array {
+                                if (! $record) return [];
+                                try {
+                                    $response = \Illuminate\Support\Facades\Http::timeout(5)
+                                        ->withoutVerifying()
+                                        ->withHeaders(['X-API-Key' => $record->bridgeApiKey()])
+                                        ->get($record->bridgeUrl() . '/api/firme');
+                                    $firme = $response->json()['data'] ?? [];
+                                    return collect($firme)
+                                        ->pluck('nume')
+                                        ->filter()
+                                        ->mapWithKeys(fn ($n) => [$n => $n])
+                                        ->all();
+                                } catch (\Throwable) {
+                                    return $record->bridgeFirma() ? [$record->bridgeFirma() => $record->bridgeFirma()] : [];
+                                }
+                            })
+                            ->searchable()
+                            ->helperText('Firmele disponibile din WinMentor Bridge.')
                             ->columnSpanFull(),
                         TextInput::make('settings.an')
                             ->label('An contabil')
-                            ->numeric()
-                            ->required(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WINMENTOR_BRIDGE)
-                            ->default(now()->year)
-                            ->minValue(2020)
-                            ->maxValue(2030),
+                            ->default(fn () => now()->year)
+                            ->dehydrateStateUsing(fn () => now()->year)
+                            ->disabled()
+                            ->helperText('Setat automat pe anul curent.'),
                         TextInput::make('settings.luna')
                             ->label('Lună contabilă')
-                            ->numeric()
-                            ->required(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WINMENTOR_BRIDGE)
-                            ->default(now()->month)
-                            ->minValue(1)
-                            ->maxValue(12),
+                            ->default(fn () => now()->month)
+                            ->dehydrateStateUsing(fn () => now()->month)
+                            ->disabled()
+                            ->helperText('Setată automat pe luna curentă.'),
                         TextInput::make('settings.timeout')
                             ->label('Timeout (sec)')
                             ->numeric()
                             ->default(15)
                             ->minValue(5),
+                        \Filament\Forms\Components\Toggle::make('settings.writes_enabled')
+                            ->label('Activează scrieri în WinMentor')
+                            ->helperText('Dezactivat = citirile funcționează normal, scrierile (creare articole, import documente) sunt blocate și logate.')
+                            ->default(true)
+                            ->columnSpanFull(),
                     ])
                     ->visible(fn (Get $get): bool => $get('provider') === IntegrationConnection::PROVIDER_WINMENTOR_BRIDGE)
                     ->columns(2),

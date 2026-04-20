@@ -27,6 +27,14 @@ class AppServiceProvider extends ServiceProvider
         // Override SMTP config from DB (fallback pe .env)
         $this->overrideMailConfig();
 
+        // BCC log pe toate emailurile trimise din sistem
+        \Illuminate\Support\Facades\Event::listen(
+            \Illuminate\Mail\Events\MessageSending::class,
+            function (\Illuminate\Mail\Events\MessageSending $event) {
+                $event->message->addBcc(new \Symfony\Component\Mime\Address('log-erp@malinco.ro'));
+            }
+        );
+
         RateLimiter::for('search', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });

@@ -37,7 +37,9 @@ class ProductsRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('name')
                     ->label('Produs')
                     ->searchable()
-                    ->limit(60),
+                    ->limit(60)
+                    ->url(fn ($record) => \App\Filament\App\Resources\WooProductResource::getUrl('view', ['record' => $record->id]))
+                    ->openUrlInNewTab(),
 
                 Tables\Columns\TextColumn::make('pivot.supplier_sku')
                     ->label('SKU furnizor')

@@ -15,6 +15,124 @@ use Illuminate\Support\Facades\Route;
 // Pagină publică progres import Toya (fără autentificare)
 Route::get('/toya-import', \App\Http\Controllers\ToyaImportStatusController::class);
 
+// Category review — pagina + API, toate cu auth (pentru tracking user)
+Route::middleware(['web', 'auth'])->group(function () {
+    Route::get('/recategorizare', function () {
+        $stats = DB::table('category_review_proposals')
+            ->selectRaw('status, COUNT(*) as cnt')
+            ->groupBy('status')
+            ->pluck('cnt', 'status');
+        $counts = [
+            'pending'  => (int) ($stats['pending']  ?? 0),
+            'approved' => (int) ($stats['approved'] ?? 0),
+            'rejected' => (int) ($stats['rejected'] ?? 0),
+        ];
+        $total = array_sum($counts);
+        $pct   = $total > 0 ? round(($counts['approved'] + $counts['rejected']) / $total * 100) : 0;
+
+        $pending = DB::table('category_review_proposals')
+            ->where('status', 'pending')
+            ->orderBy('current_cats')->orderBy('suggested_cat_name')->orderBy('product_name')
+            ->get(['id', 'woo_product_id', 'product_name', 'current_cats', 'suggested_cat_name', 'reason'])
+            ->toArray();
+
+        $processed = DB::table('category_review_proposals as p')
+            ->leftJoin('users as u', 'u.id', '=', 'p.reviewed_by')
+            ->whereIn('p.status', ['approved', 'rejected'])
+            ->orderByDesc('p.reviewed_at')
+            ->get(['p.id', 'p.woo_product_id', 'p.product_name', 'p.current_cats', 'p.suggested_cat_name', 'p.status', 'p.reviewed_at', 'u.name as reviewer_name'])
+            ->toArray();
+
+        $currentUser = Auth::user();
+
+        return view('category-review', compact('counts', 'total', 'pct', 'pending', 'processed', 'currentUser'));
+    });
+
+    // Sync endpoint (polling JS)
+    Route::get('/api/category-review/sync', function (Request $request) {
+        $since = $request->query('since', now()->subMinute()->toDateTimeString());
+        $processed = DB::table('category_review_proposals as p')
+            ->leftJoin('users as u', 'u.id', '=', 'p.reviewed_by')
+            ->where('p.status', '!=', 'pending')
+            ->where('p.reviewed_at', '>=', $since)
+            ->orderByDesc('p.reviewed_at')
+            ->get(['p.id', 'p.status', 'u.name as reviewer_name'])
+            ->toArray();
+        $stats = DB::table('category_review_proposals')
+            ->selectRaw('status, COUNT(*) as cnt')
+            ->groupBy('status')
+            ->pluck('cnt', 'status');
+        return response()->json([
+            'processed' => $processed,
+            'counts'    => [
+                'pending'  => (int) ($stats['pending']  ?? 0),
+                'approved' => (int) ($stats['approved'] ?? 0),
+                'rejected' => (int) ($stats['rejected'] ?? 0),
+            ],
+            'ts' => now()->toDateTimeString(),
+        ]);
+    });
+
+    Route::post('/api/category-review/{id}/approve', function (int $id, Request $request) {
+        if ($request->header('X-Review-Token') !== config('services.category_review_token')) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+        $proposal = \App\Models\CategoryReviewProposal::findOrFail($id);
+        if ($proposal->status !== \App\Models\CategoryReviewProposal::STATUS_PENDING) {
+            return response()->json(['error' => 'Already reviewed'], 409);
+        }
+
+        $product = $proposal->product;
+        if (!$product) {
+            return response()->json(['error' => 'Product not found'], 404);
+        }
+        $newCat = \App\Models\WooCategory::find($proposal->suggested_cat_id);
+        if (!$newCat) {
+            return response()->json(['error' => 'Category not found'], 404);
+        }
+
+        $product->categories()->sync([$proposal->suggested_cat_id]);
+
+        if ($product->woo_id) {
+            try {
+                $connection = $product->connection;
+                if ($connection) {
+                    $client = new \App\Services\WooCommerce\WooClient($connection);
+                    $client->updateProduct($product->woo_id, [
+                        'categories' => [['id' => $newCat->woo_id]],
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('[CategoryReview] WooCommerce push failed for product ' . $product->id . ': ' . $e->getMessage());
+            }
+        }
+
+        $proposal->update([
+            'status'      => \App\Models\CategoryReviewProposal::STATUS_APPROVED,
+            'reviewed_by' => Auth::id(),
+            'reviewed_at' => now(),
+        ]);
+
+        return response()->json(['ok' => true, 'reviewer' => Auth::user()?->name]);
+    });
+
+    Route::post('/api/category-review/{id}/reject', function (int $id, Request $request) {
+        if ($request->header('X-Review-Token') !== config('services.category_review_token')) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+        $proposal = \App\Models\CategoryReviewProposal::findOrFail($id);
+        if ($proposal->status !== \App\Models\CategoryReviewProposal::STATUS_PENDING) {
+            return response()->json(['error' => 'Already reviewed'], 409);
+        }
+        $proposal->update([
+            'status'      => \App\Models\CategoryReviewProposal::STATUS_REJECTED,
+            'reviewed_by' => Auth::id(),
+            'reviewed_at' => now(),
+        ]);
+        return response()->json(['ok' => true, 'reviewer' => Auth::user()?->name]);
+    });
+});
+
 // WinMentor Bridge — plan integrare ERP (public, fără autentificare)
 Route::middleware('web')->get('/docs/winmentor-integrare', function () {
     $md   = file_get_contents(base_path('private/winmentor/INTEGRARE-ERP.md'));

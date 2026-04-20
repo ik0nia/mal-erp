@@ -46,6 +46,10 @@ class BiDashboardPage extends Page
     /** @var array<int, array<string, mixed>> */
     public array  $marginRows           = [];
 
+    // ── Stoc & mișcări per furnizor ──────────────────────────────────────
+    /** @var array<int, array<string, mixed>> */
+    public array $supplierRows = [];
+
     // ── KPI Yesterday (for trend indicators) ──────────────────────────────
     public array $kpiYesterday = [];
     public array $kpiDeltas    = [];
@@ -76,6 +80,7 @@ class BiDashboardPage extends Page
         $this->loadKpi();
         $this->loadMarginKpi();
         $this->loadMarginRows();
+        $this->loadSupplierBreakdown();
         $this->loadAlerts();
         $this->loadVelocityRows();
     }
@@ -313,6 +318,74 @@ class BiDashboardPage extends Page
                 'reason_flags'     => json_decode($r->reason_flags ?? '[]', true) ?? [],
             ])
             ->toArray();
+    }
+
+    private function loadSupplierBreakdown(): void
+    {
+        // Stoc per furnizor din bi_product_margin_current
+        $stockRows = DB::table('bi_product_margin_current as m')
+            ->selectRaw("
+                COALESCE(m.supplier_id, 0)                                     AS supplier_id,
+                COALESCE(m.supplier_name, 'Fără furnizor')                     AS supplier_name,
+                COUNT(DISTINCT m.reference_product_id)                         AS product_count,
+                ROUND(SUM(m.stock_qty), 0)                                     AS stock_qty,
+                ROUND(SUM(m.stock_value_retail), 0)                            AS value_retail,
+                ROUND(SUM(m.stock_value_cost), 0)                              AS value_cost,
+                ROUND(SUM(m.stock_margin_total), 0)                            AS margin_total,
+                ROUND(
+                    CASE WHEN SUM(m.stock_value_retail) > 0
+                         THEN SUM(m.stock_margin_total) / SUM(m.stock_value_retail) * 100
+                         ELSE 0 END, 1)                                        AS margin_pct
+            ")
+            ->where('m.stock_value_cost', '>', 0)
+            ->groupByRaw("COALESCE(m.supplier_id, 0), COALESCE(m.supplier_name, 'Fără furnizor')")
+            ->orderByRaw("ROUND(SUM(m.stock_value_cost), 0) DESC")
+            ->get()
+            ->keyBy('supplier_id');
+
+        // Mișcări ultimele 7 zile per furnizor (ieșiri + intrări)
+        $since = now()->subDays(30)->toDateString();
+        $movRows = DB::table('daily_stock_metrics as dsm')
+            ->join('product_suppliers as ps', function ($j) {
+                $j->on('ps.woo_product_id', '=', 'dsm.woo_product_id')
+                  ->where('ps.is_preferred', true);
+            })
+            ->leftJoin('suppliers as s', 's.id', '=', 'ps.supplier_id')
+            ->where('dsm.day', '>=', $since)
+            ->selectRaw("
+                COALESCE(ps.supplier_id, 0)                                                          AS supplier_id,
+                ROUND(SUM(CASE WHEN dsm.daily_available_variation < 0
+                               THEN ABS(dsm.daily_available_variation * COALESCE(dsm.closing_sell_price,0))
+                               ELSE 0 END) / 1.21, 0)                                               AS out_value,
+                ROUND(SUM(CASE WHEN dsm.daily_available_variation > 0
+                               THEN dsm.daily_available_variation * COALESCE(dsm.closing_sell_price,0)
+                               ELSE 0 END) / 1.21, 0)                                               AS in_value,
+                ROUND(SUM(CASE WHEN dsm.daily_available_variation < 0
+                               THEN ABS(dsm.daily_available_variation) ELSE 0 END), 0)              AS out_qty,
+                ROUND(SUM(CASE WHEN dsm.daily_available_variation > 0
+                               THEN dsm.daily_available_variation ELSE 0 END), 0)                   AS in_qty
+            ")
+            ->groupBy('ps.supplier_id')
+            ->get()
+            ->keyBy('supplier_id');
+
+        $this->supplierRows = $stockRows->map(function ($row) use ($movRows) {
+            $mov = $movRows->get($row->supplier_id);
+            return [
+                'supplier_id'   => (int) $row->supplier_id,
+                'supplier_name' => $row->supplier_name,
+                'product_count' => (int) $row->product_count,
+                'stock_qty'     => (float) $row->stock_qty,
+                'value_retail'  => (float) $row->value_retail,
+                'value_cost'    => (float) $row->value_cost,
+                'margin_total'  => (float) $row->margin_total,
+                'margin_pct'    => (float) $row->margin_pct,
+                'out_value'     => $mov ? (float) $mov->out_value : 0,
+                'in_value'      => $mov ? (float) $mov->in_value  : 0,
+                'out_qty'       => $mov ? (float) $mov->out_qty   : 0,
+                'in_qty'        => $mov ? (float) $mov->in_qty    : 0,
+            ];
+        })->values()->toArray();
     }
 
     public function bootGuardAccess(): void

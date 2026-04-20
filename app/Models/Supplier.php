@@ -26,6 +26,8 @@ class Supplier extends Model
         'buyer_id',
         'po_approval_threshold',
         'default_markup',
+        'default_currency',
+        'winmentor_id',
     ];
 
     protected function casts(): array

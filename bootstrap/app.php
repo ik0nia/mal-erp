@@ -14,11 +14,20 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Support\Facades\Route::middleware([
                 \Illuminate\Routing\Middleware\SubstituteBindings::class,
             ])->group(base_path('routes/webhooks.php'));
+
+            // Warehouse PWA routes
+            \Illuminate\Support\Facades\Route::middleware('web')
+                ->group(base_path('routes/warehouse.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Redirecționează utilizatorii neautentificați spre Filament App login
-        $middleware->redirectGuestsTo('/login');
+        // Redirecționează utilizatorii neautentificați — PWA warehouse spre /wh/login, restul spre Filament
+        $middleware->redirectGuestsTo(function (\Illuminate\Http\Request $request): string {
+            if (str_starts_with($request->path(), 'wh')) {
+                return route('warehouse.login');
+            }
+            return '/login';
+        });
 
         // Security headers (CSP, X-Frame-Options, etc.) — doar pe rute web
         $middleware->web(append: [
@@ -26,6 +35,18 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Livewire stale snapshot: componenta nu mai are proprietatea din snapshot-ul vechi al browserului
+        // Returnăm 419 → Livewire afișează "Page Expired" și utilizatorul reîncarcă pagina
+        $exceptions->renderable(function (
+            \Livewire\Exceptions\PublicPropertyNotFoundException $e,
+            \Illuminate\Http\Request $request
+        ) {
+            if ($request->hasHeader('X-Livewire')) {
+                return response('', 419);
+            }
+            return null;
+        });
+
         $exceptions->renderable(function (
             \Symfony\Component\HttpKernel\Exception\HttpException $e,
             \Illuminate\Http\Request $request

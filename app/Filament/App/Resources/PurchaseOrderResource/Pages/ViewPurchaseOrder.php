@@ -3,6 +3,7 @@
 namespace App\Filament\App\Resources\PurchaseOrderResource\Pages;
 
 use App\Filament\App\Resources\PurchaseOrderResource;
+use App\Jobs\PushComenziFurnizoriToWinmentorJob;
 use App\Mail\PurchaseOrderMail;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseRequestItem;
@@ -12,6 +13,7 @@ use App\Notifications\PurchaseOrderRejectedNotification;
 use App\Notifications\PurchaseOrderReceivedPartialNotification;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Placeholder;
@@ -22,11 +24,29 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
 
 class ViewPurchaseOrder extends ViewRecord
 {
     protected static string $resource = PurchaseOrderResource::class;
+
+    public function mount(int | string $record): void
+    {
+        parent::mount($record);
+
+        if ($this->record->status === PurchaseOrder::STATUS_RECEIVED) {
+            $hasUnconfirmedPrices = $this->record->items()->where('unit_price', 0)->exists();
+            if ($hasUnconfirmedPrices) {
+                Notification::make()
+                    ->warning()
+                    ->title('Prețuri de achiziție neconfirmate')
+                    ->body('Unele produse au prețul de achiziție necompletat. Folosiți butonul "Confirmă prețuri" pentru a introduce prețurile și datele de factură.')
+                    ->persistent()
+                    ->send();
+            }
+        }
+    }
 
     protected function getHeaderActions(): array
     {
@@ -143,9 +163,9 @@ class ViewPurchaseOrder extends ViewRecord
 
             // Trimite email furnizor
             Actions\Action::make('send_email')
-                ->label('Trimite email furnizor')
+                ->label(fn (): string => $this->record->sent_via === 'email' ? 'Retrimite email furnizor' : 'Trimite email furnizor')
                 ->icon('heroicon-o-envelope')
-                ->color('info')
+                ->color(fn (): string => $this->record->status === PurchaseOrder::STATUS_APPROVED ? 'info' : 'gray')
                 ->visible(fn (): bool => in_array($this->record->status, [
                     PurchaseOrder::STATUS_APPROVED,
                     PurchaseOrder::STATUS_SENT,
@@ -166,19 +186,16 @@ class ViewPurchaseOrder extends ViewRecord
 
                     $lines = [];
                     foreach ($this->record->items as $item) {
-                        $line  = "- {$item->product_name}";
-                        $codes = [];
-                        if ($item->sku) {
-                            $codes[] = "Barcode: {$item->sku}";
-                        }
+                        $qty = fmod((float) $item->quantity, 1) == 0 ? (int) $item->quantity : $item->quantity;
                         if ($item->supplier_sku) {
-                            $codes[] = "cod produs: {$item->supplier_sku}";
+                            // Avem codul furnizorului — trimitem cu codul lor
+                            $line = "- {$item->product_name} (cod produs: {$item->supplier_sku}): {$qty} buc.";
+                        } elseif ($item->sku) {
+                            // Fără cod furnizor — trimitem cu SKU-ul nostru (barcode)
+                            $line = "- {$item->product_name} (Barcode: {$item->sku}): {$qty} buc.";
+                        } else {
+                            $line = "- {$item->product_name}: {$qty} buc.";
                         }
-                        if ($codes) {
-                            $line .= ' (' . implode(' | ', $codes) . ')';
-                        }
-                        $qty      = fmod((float) $item->quantity, 1) == 0 ? (int) $item->quantity : $item->quantity;
-                        $line    .= ": {$qty} buc.";
                         $lines[] = $line;
                     }
 
@@ -224,8 +241,9 @@ class ViewPurchaseOrder extends ViewRecord
                         // Dacă era approved, tranzitie automată la sent
                         if ($this->record->status === PurchaseOrder::STATUS_APPROVED) {
                             $this->record->update([
-                                'status'  => PurchaseOrder::STATUS_SENT,
-                                'sent_at' => now(),
+                                'status'   => PurchaseOrder::STATUS_SENT,
+                                'sent_at'  => now(),
+                                'sent_via' => 'email',
                             ]);
                             $this->markRequestItemsAsOrdered();
                         }
@@ -249,7 +267,7 @@ class ViewPurchaseOrder extends ViewRecord
             Actions\Action::make('send_whatsapp')
                 ->label('WhatsApp')
                 ->icon('heroicon-o-chat-bubble-left-ellipsis')
-                ->color('success')
+                ->color(fn (): string => $this->record->status === PurchaseOrder::STATUS_APPROVED ? 'success' : 'gray')
                 ->visible(fn (): bool => in_array($this->record->status, [
                     PurchaseOrder::STATUS_APPROVED,
                     PurchaseOrder::STATUS_SENT,
@@ -271,21 +289,13 @@ class ViewPurchaseOrder extends ViewRecord
                     // Construiește mesajul
                     $lines = [];
                     foreach ($this->record->items as $item) {
-                        $line  = "• {$item->product_name}";
-                        $codes = [];
-                        if ($item->sku) {
-                            $codes[] = "Barcode: {$item->sku}";
-                        }
+                        $qty = fmod((float) $item->quantity, 1) == 0 ? (int) $item->quantity : $item->quantity;
                         if ($item->supplier_sku) {
-                            $codes[] = "cod produs: {$item->supplier_sku}";
-                        }
-                        if ($codes) {
-                            $line .= ' (' . implode(' | ', $codes) . ')';
-                        }
-                        $qty   = fmod((float) $item->quantity, 1) == 0 ? (int) $item->quantity : $item->quantity;
-                        $line .= ": {$qty} buc.";
-                        if ($item->unit_price > 0) {
-                            $line .= " × " . number_format($item->unit_price, 2, ',', '.') . " lei";
+                            $line = "• {$item->product_name} (cod produs: {$item->supplier_sku}): {$qty} buc.";
+                        } elseif ($item->sku) {
+                            $line = "• {$item->product_name} (Barcode: {$item->sku}): {$qty} buc.";
+                        } else {
+                            $line = "• {$item->product_name}: {$qty} buc.";
                         }
                         $lines[] = $line;
                     }
@@ -293,9 +303,6 @@ class ViewPurchaseOrder extends ViewRecord
                     $message  = "Bună ziua,\n\n";
                     $message .= "Comanda nr. {$this->record->number} din " . now()->format('d.m.Y') . ":\n\n";
                     $message .= implode("\n", $lines);
-                    if ($this->record->total_value > 0) {
-                        $message .= "\n\n*Total: " . number_format($this->record->total_value, 2, ',', '.') . " lei*";
-                    }
                     if ($this->record->notes_supplier) {
                         $message .= "\n\nObservații: {$this->record->notes_supplier}";
                     }
@@ -331,8 +338,9 @@ class ViewPurchaseOrder extends ViewRecord
                     // Marchează ca trimis dacă e approved
                     if ($this->record->status === PurchaseOrder::STATUS_APPROVED) {
                         $this->record->update([
-                            'status'  => PurchaseOrder::STATUS_SENT,
-                            'sent_at' => now(),
+                            'status'   => PurchaseOrder::STATUS_SENT,
+                            'sent_at'  => now(),
+                            'sent_via' => 'whatsapp',
                         ]);
                         $this->markRequestItemsAsOrdered();
                     }
@@ -355,8 +363,9 @@ class ViewPurchaseOrder extends ViewRecord
                 ->modalDescription('Folosește această opțiune dacă ai comunicat comanda prin alt canal (telefon, fax). Pentru trimitere prin email folosește butonul "Trimite email furnizor".')
                 ->action(function (): void {
                     $this->record->update([
-                        'status'  => PurchaseOrder::STATUS_SENT,
-                        'sent_at' => now(),
+                        'status'   => PurchaseOrder::STATUS_SENT,
+                        'sent_at'  => now(),
+                        'sent_via' => 'manual',
                     ]);
 
                     $this->markRequestItemsAsOrdered();
@@ -366,59 +375,39 @@ class ViewPurchaseOrder extends ViewRecord
                     $this->fillForm();
                 }),
 
-            // Marchează recepționat — detaliat pe linii
-            Actions\Action::make('mark_received')
-                ->label('Recepție marfă')
-                ->icon('heroicon-o-archive-box-arrow-down')
-                ->color('success')
+            // Recepție cantitativă — fără prețuri
+            Actions\Action::make('quantitative_receive')
+                ->label('Recepție cantitativă')
+                ->icon('heroicon-o-clipboard-document-list')
+                ->color('warning')
                 ->visible(fn (): bool => $this->record->status === PurchaseOrder::STATUS_SENT)
-                ->modalHeading('Recepție marfă — ' . $this->record->number)
-                ->modalDescription('Introduceți cantitățile efectiv recepționate. Lipsurile vor fi returnate automat în coada de cumpărare.')
-                ->modalWidth('7xl')
+                ->modalHeading('Recepție cantitativă — ' . $this->record->number)
+                ->modalDescription('Introduceți cantitățile recepționate. Produsele șterse sau cu cantitate 0 vor fi returnate în coada de cumpărare.')
+                ->modalWidth('5xl')
+                ->extraModalWindowAttributes(['x-on:keydown.enter' => '$event.preventDefault()'])
                 ->form(function (): array {
                     $this->record->loadMissing('items');
 
                     $defaultItems = $this->record->items->map(function ($item) {
-                        // Get last purchase price from history if available
-                        $lastPrice = (float) $item->unit_price;
-                        if ($item->woo_product_id) {
-                            $historyPrice = \App\Models\ProductPurchasePriceLog::where('woo_product_id', $item->woo_product_id)
-                                ->latest('acquired_at')
-                                ->value('unit_price');
-                            if ($historyPrice) {
-                                $lastPrice = (float) $historyPrice;
-                            }
-                        }
-
                         $qty = (float) $item->quantity;
                         return [
                             'id'          => $item->id,
                             'name'        => $item->product_name . ($item->sku ? " [{$item->sku}]" : ''),
                             'ordered_qty' => floor($qty) == $qty ? number_format($qty, 0, '.', '') : number_format($qty, 2, '.', ''),
                             'qty'         => $qty,
-                            'price'       => round($lastPrice, 2),
                         ];
                     })->values()->all();
 
                     return [
-                        \Filament\Schemas\Components\Grid::make(4)->schema([
-                            TextInput::make('invoice_series')->label('Serie factură'),
-                            TextInput::make('invoice_number')->label('Număr factură'),
-                            \Filament\Forms\Components\DatePicker::make('invoice_date')->label('Data factură')->displayFormat('d.m.Y'),
-                            \Filament\Forms\Components\DatePicker::make('invoice_due_date')->label('Scadență factură')->displayFormat('d.m.Y'),
-                        ]),
-
                         Repeater::make('items')
                             ->label('')
                             ->schema([
                                 Hidden::make('id'),
-                                // Existing items: show name as disabled text
                                 TextInput::make('name')->label('Produs')
                                     ->disabled()
                                     ->dehydrated()
                                     ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => !empty($get('id')))
-                                    ->columnSpan(3),
-                                // New items: searchable select from supplier's products
+                                    ->columnSpan(4),
                                 \Filament\Forms\Components\Select::make('woo_product_id')
                                     ->label('Selectează produs')
                                     ->searchable()
@@ -437,12 +426,239 @@ class ViewPurchaseOrder extends ViewRecord
                                             ->mapWithKeys(fn ($p) => [$p->id => $p->name . ' [' . $p->sku . ']'])
                                             ->all();
                                     })
+                                    ->getOptionLabelUsing(fn ($value) => \App\Models\WooProduct::find($value)?->name)
                                     ->afterStateUpdated(function ($state, \Filament\Forms\Set $set) {
                                         if ($state) {
                                             $product = \App\Models\WooProduct::find($state);
                                             if ($product) {
                                                 $set('name', $product->name . ' [' . $product->sku . ']');
-                                                // Get last purchase price
+                                            }
+                                        }
+                                    })
+                                    ->live()
+                                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => empty($get('id')))
+                                    ->columnSpan(4),
+                                TextInput::make('ordered_qty')->label('Comandat')->disabled()->dehydrated(false)->suffix('buc.'),
+                                TextInput::make('qty')->label('Recepționat')->numeric()->minValue(0)->suffix('buc.')->required(),
+                            ])
+                            ->columns(6)
+                            ->default($defaultItems)
+                            ->addable(true)
+                            ->addActionLabel('+ Adaugă produs suplimentar')
+                            ->deletable(true)
+                            ->reorderable(false),
+
+                        Textarea::make('received_notes')
+                            ->label('Observații recepție')
+                            ->placeholder('Ex: lipsuri notate, produse deteriorate...')
+                            ->rows(2),
+                    ];
+                })
+                ->action(function (array $data): void {
+                    $this->record->loadMissing('items');
+
+                    $affectedRequestIds = [];
+                    $hasShortfall       = false;
+                    $shortfallProducts  = [];
+
+                    // Map submitted rows by existing item id
+                    $submittedById = [];
+                    $newRows       = [];
+                    foreach ($data['items'] as $row) {
+                        $itemId = (int) ($row['id'] ?? 0);
+                        if ($itemId) {
+                            $submittedById[$itemId] = (float) ($row['qty'] ?? 0);
+                        } else {
+                            $newRows[] = $row;
+                        }
+                    }
+
+                    foreach ($this->record->items as $orderItem) {
+                        // Items deleted from repeater → treat as qty 0
+                        $receivedQty = $submittedById[$orderItem->id] ?? 0.0;
+                        $orderedQty  = (float) $orderItem->quantity;
+                        $shortfall   = max(0, $orderedQty - $receivedQty);
+
+                        $orderItem->update(['received_quantity' => $receivedQty]);
+
+                        if ($shortfall > 0) {
+                            $hasShortfall = true;
+                            $shortfallProducts[] = $orderItem->product_name;
+                            $this->revertShortfallToRequestItems($orderItem, $shortfall, $affectedRequestIds);
+                        }
+                    }
+
+                    // New products added during reception
+                    foreach ($newRows as $row) {
+                        $receivedQty = (float) ($row['qty'] ?? 0);
+                        if ($receivedQty <= 0) {
+                            continue;
+                        }
+
+                        $wooProductId = $row['woo_product_id'] ?? null;
+                        $productName  = $row['name'] ?? '';
+                        $sku          = null;
+
+                        if ($wooProductId) {
+                            $product = \App\Models\WooProduct::find($wooProductId);
+                            if ($product) {
+                                $productName = $product->name;
+                                $sku         = $product->sku;
+                            }
+                        }
+
+                        if (! $productName) {
+                            continue;
+                        }
+
+                        $this->record->items()->create([
+                            'product_name'     => $productName,
+                            'sku'              => $sku,
+                            'woo_product_id'   => $wooProductId,
+                            'quantity'         => $receivedQty,
+                            'received_quantity' => $receivedQty,
+                            'unit_price'       => 0,
+                            'notes'            => 'Adăugat la recepție cantitativă (suplimentar)',
+                        ]);
+                    }
+
+                    foreach (array_unique($affectedRequestIds) as $requestId) {
+                        \App\Models\PurchaseRequest::find($requestId)?->recalculateStatus();
+                    }
+
+                    $this->record->update([
+                        'status'                => PurchaseOrder::STATUS_RECEIVED,
+                        'received_at'           => now(),
+                        'received_by'           => auth()->id(),
+                        'received_notes'        => $data['received_notes'] ?? null,
+                        'winmentor_sync_status' => PurchaseOrder::WINMENTOR_PENDING,
+                        'winmentor_sync_error'  => null,
+                    ]);
+
+                    PushComenziFurnizoriToWinmentorJob::dispatch($this->record->id)->afterCommit();
+
+                    $msg = $hasShortfall
+                        ? 'Recepție cantitativă înregistrată. Lipsurile au fost returnate în coada de cumpărare.'
+                        : 'Recepție cantitativă completă înregistrată.';
+
+                    Notification::make()->success()->title($msg)->send();
+
+                    if ($hasShortfall && ! empty($shortfallProducts)) {
+                        $consultantIds = collect($affectedRequestIds)
+                            ->unique()
+                            ->map(fn ($id) => \App\Models\PurchaseRequest::find($id)?->user_id)
+                            ->filter()
+                            ->unique();
+
+                        $consultants = User::query()
+                            ->whereIn('id', $consultantIds)
+                            ->where('id', '!=', auth()->id())
+                            ->get();
+
+                        foreach ($consultants as $consultant) {
+                            $consultant->notify(new PurchaseOrderReceivedPartialNotification(
+                                $this->record,
+                                $shortfallProducts,
+                            ));
+                        }
+                    }
+
+                    $this->record->refresh();
+                    $this->fillForm();
+                }),
+
+            // Marchează recepționat — detaliat pe linii
+            // Vizibil și după recepție cantitativă (STATUS_RECEIVED cu prețuri lipsă) pentru a adăuga prețurile
+            Actions\Action::make('mark_received')
+                ->label('Recepție marfă')
+                ->icon('heroicon-o-archive-box-arrow-down')
+                ->color('success')
+                ->visible(fn (): bool =>
+                    $this->record->status === PurchaseOrder::STATUS_SENT
+                    || (
+                        $this->record->status === PurchaseOrder::STATUS_RECEIVED
+                        && $this->record->items()->where('unit_price', 0)->exists()
+                    )
+                )
+                ->modalHeading('Recepție marfă — ' . $this->record->number)
+                ->modalDescription(fn (): string => $this->record->status === PurchaseOrder::STATUS_RECEIVED
+                    ? 'Cantitățile au fost preluate din recepția cantitativă. Introduceți prețurile și datele de factură.'
+                    : 'Introduceți cantitățile efectiv recepționate. Lipsurile vor fi returnate automat în coada de cumpărare.'
+                )
+                ->modalWidth('7xl')
+                ->extraModalWindowAttributes(['x-on:keydown.enter' => '$event.preventDefault()'])
+                ->form(function (): array {
+                    $this->record->loadMissing('items');
+                    $isPriceOnly = $this->record->status === PurchaseOrder::STATUS_RECEIVED;
+
+                    $defaultItems = $this->record->items->map(function ($item) use ($isPriceOnly) {
+                        $lastPrice = (float) $item->unit_price;
+                        if (! $isPriceOnly && $item->woo_product_id) {
+                            $historyPrice = \App\Models\ProductPurchasePriceLog::where('woo_product_id', $item->woo_product_id)
+                                ->latest('acquired_at')
+                                ->value('unit_price');
+                            if ($historyPrice) {
+                                $lastPrice = (float) $historyPrice;
+                            }
+                        }
+
+                        // În modul preț-only: cantitatea vine din received_quantity (deja recepționat)
+                        $qty = $isPriceOnly
+                            ? (float) $item->received_quantity
+                            : (float) $item->quantity;
+
+                        return [
+                            'id'          => $item->id,
+                            'name'        => $item->product_name . ($item->sku ? " [{$item->sku}]" : ''),
+                            'ordered_qty' => $isPriceOnly
+                                ? (floor($qty) == $qty ? number_format($qty, 0, '.', '') : number_format($qty, 2, '.', ''))
+                                : (floor((float) $item->quantity) == (float) $item->quantity ? number_format((float) $item->quantity, 0, '.', '') : number_format((float) $item->quantity, 2, '.', '')),
+                            'qty'         => $qty,
+                            'price'       => round($lastPrice, 2),
+                        ];
+                    })->values()->all();
+
+                    return [
+                        \Filament\Schemas\Components\Grid::make(4)->schema([
+                            TextInput::make('invoice_series')->label('Serie factură')->default($this->record->invoice_series),
+                            TextInput::make('invoice_number')->label('Număr factură')->default($this->record->invoice_number),
+                            \Filament\Forms\Components\DatePicker::make('invoice_date')->label('Data factură')->displayFormat('d.m.Y')->default($this->record->invoice_date),
+                            \Filament\Forms\Components\DatePicker::make('invoice_due_date')->label('Scadență factură')->displayFormat('d.m.Y')->default($this->record->invoice_due_date),
+                        ]),
+
+                        Repeater::make('items')
+                            ->label('')
+                            ->schema([
+                                Hidden::make('id'),
+                                TextInput::make('name')->label('Produs')
+                                    ->disabled()
+                                    ->dehydrated()
+                                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => !empty($get('id')))
+                                    ->columnSpan(3),
+                                \Filament\Forms\Components\Select::make('woo_product_id')
+                                    ->label('Selectează produs')
+                                    ->searchable()
+                                    ->getSearchResultsUsing(function (string $search) {
+                                        $supplierId = $this->record->supplier_id;
+                                        return \App\Models\WooProduct::query()
+                                            ->where(function ($q) use ($search) {
+                                                $q->where('name', 'like', "%{$search}%")
+                                                  ->orWhere('sku', 'like', "%{$search}%");
+                                            })
+                                            ->when($supplierId, function ($q) use ($supplierId) {
+                                                $q->whereHas('suppliers', fn ($s) => $s->where('suppliers.id', $supplierId));
+                                            })
+                                            ->limit(20)
+                                            ->get()
+                                            ->mapWithKeys(fn ($p) => [$p->id => $p->name . ' [' . $p->sku . ']'])
+                                            ->all();
+                                    })
+                                    ->getOptionLabelUsing(fn ($value) => \App\Models\WooProduct::find($value)?->name)
+                                    ->afterStateUpdated(function ($state, \Filament\Forms\Set $set) {
+                                        if ($state) {
+                                            $product = \App\Models\WooProduct::find($state);
+                                            if ($product) {
+                                                $set('name', $product->name . ' [' . $product->sku . ']');
                                                 $lastPrice = \App\Models\ProductPurchasePriceLog::where('woo_product_id', $product->id)
                                                     ->latest('acquired_at')
                                                     ->value('unit_price');
@@ -455,15 +671,19 @@ class ViewPurchaseOrder extends ViewRecord
                                     ->live()
                                     ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => empty($get('id')))
                                     ->columnSpan(3),
-                                TextInput::make('ordered_qty')->label('Comandat')->disabled()->dehydrated(false)->suffix('buc.'),
+                                TextInput::make('ordered_qty')
+                                    ->label($isPriceOnly ? 'Recepționat' : 'Comandat')
+                                    ->disabled()->dehydrated(false)->suffix('buc.'),
                                 TextInput::make('qty')->label('Recepționat')->numeric()->minValue(0)->suffix('buc.')->required()
-                                    ->live(onBlur: true),
+                                    ->live(onBlur: true)
+                                    ->disabled($isPriceOnly)
+                                    ->dehydrated(! $isPriceOnly),
                                 TextInput::make('price')->label('Preț achiziție (fără TVA)')->numeric()->minValue(0)->suffix('RON')->required()
                                     ->live(onBlur: true),
                             ])
-                            ->columns(6)
+                            ->columns($isPriceOnly ? 5 : 6)
                             ->default($defaultItems)
-                            ->addable(true)
+                            ->addable(! $isPriceOnly)
                             ->addActionLabel('+ Adaugă produs suplimentar')
                             ->deletable(false)
                             ->reorderable(false),
@@ -481,12 +701,14 @@ class ViewPurchaseOrder extends ViewRecord
 
                         Placeholder::make('total_reception')
                             ->label('')
-                            ->content(function (Get $get): HtmlString {
+                            ->content(function (Get $get) use ($isPriceOnly): HtmlString {
                                 $items = $get('items') ?? [];
                                 $subtotal = 0;
                                 $totalQty = 0;
                                 foreach ($items as $item) {
-                                    $qty = (float) ($item['qty'] ?? 0);
+                                    $qty = $isPriceOnly
+                                        ? (float) ($item['ordered_qty'] ?? 0)
+                                        : (float) ($item['qty'] ?? 0);
                                     $price = (float) ($item['price'] ?? 0);
                                     $subtotal += $qty * $price;
                                     $totalQty += $qty;
@@ -518,123 +740,156 @@ class ViewPurchaseOrder extends ViewRecord
                         Textarea::make('received_notes')
                             ->label('Observații recepție')
                             ->placeholder('Ex: Factură nr. xxx, lipsuri notate, produse deteriorate...')
+                            ->default($this->record->received_notes)
                             ->rows(2),
                     ];
                 })
                 ->action(function (array $data): void {
                     $this->record->loadMissing('items');
+                    $isPriceOnly = $this->record->status === PurchaseOrder::STATUS_RECEIVED;
+
+                    $itemsById = $this->record->items->keyBy('id');
+
+                    $transport     = (float) ($data['transport_cost'] ?? 0);
+                    $discount      = (float) ($data['discount_value'] ?? 0);
+                    $totalQty      = $isPriceOnly
+                        ? $this->record->items->sum(fn ($item) => (float) $item->received_quantity)
+                        : collect($data['items'])->sum(fn ($r) => (float) ($r['qty'] ?? 0));
+                    $adjustPerUnit = $totalQty > 0 ? ($transport - $discount) / $totalQty : 0;
 
                     $affectedRequestIds = [];
                     $hasShortfall       = false;
                     $shortfallProducts  = [];
 
-                    $itemsById = $this->record->items->keyBy('id');
-
-                    // Calculate per-unit adjustment from transport/discount
-                    $transport = (float) ($data['transport_cost'] ?? 0);
-                    $discount = (float) ($data['discount_value'] ?? 0);
-                    $totalQty = collect($data['items'])->sum(fn ($r) => (float) ($r['qty'] ?? 0));
-                    $adjustPerUnit = $totalQty > 0 ? ($transport - $discount) / $totalQty : 0;
-
-                    foreach ($data['items'] as $row) {
-                        $itemId = (int) ($row['id'] ?? 0);
-                        $orderItem = $itemId ? $itemsById->get($itemId) : null;
-
-                        $receivedQty = (float) ($row['qty'] ?? 0);
-                        $price = (float) ($row['price'] ?? 0) + $adjustPerUnit;
-
-                        if ($orderItem) {
-                            // Existing item — update received qty and price
-                            $orderedQty = (float) $orderItem->quantity;
-                            $shortfall  = max(0, $orderedQty - $receivedQty);
-
-                            $orderItem->update([
-                                'received_quantity' => $receivedQty,
-                                'unit_price'        => $price,
-                            ]);
-
-                            if ($shortfall > 0) {
-                                $hasShortfall = true;
-                                $shortfallProducts[] = $orderItem->product_name;
-                                $this->revertShortfallToRequestItems($orderItem, $shortfall, $affectedRequestIds);
+                    if ($isPriceOnly) {
+                        // Mod preț-only: cantitățile sunt fixe din recepția cantitativă
+                        foreach ($data['items'] as $row) {
+                            $item = $itemsById->get((int) ($row['id'] ?? 0));
+                            if (! $item) {
+                                continue;
                             }
-                        } elseif ($receivedQty > 0 && (!empty($row['name']) || !empty($row['woo_product_id']))) {
-                            // New item added during reception (extra product)
-                            $productName = $row['name'] ?? '';
-                            $sku = null;
-                            $wooProductId = $row['woo_product_id'] ?? null;
+                            $price = (float) ($row['price'] ?? 0) + $adjustPerUnit;
+                            $item->update(['unit_price' => $price]);
+                        }
+                    } else {
+                        // Mod normal: actualizăm cantitățile și prețurile
+                        foreach ($data['items'] as $row) {
+                            $itemId    = (int) ($row['id'] ?? 0);
+                            $orderItem = $itemId ? $itemsById->get($itemId) : null;
 
-                            if ($wooProductId) {
-                                $product = \App\Models\WooProduct::find($wooProductId);
-                                if ($product) {
-                                    $productName = $product->name;
-                                    $sku = $product->sku;
+                            $receivedQty = (float) ($row['qty'] ?? 0);
+                            $price       = (float) ($row['price'] ?? 0) + $adjustPerUnit;
+
+                            if ($orderItem) {
+                                $orderedQty = (float) $orderItem->quantity;
+                                $shortfall  = max(0, $orderedQty - $receivedQty);
+
+                                $orderItem->update([
+                                    'received_quantity' => $receivedQty,
+                                    'unit_price'        => $price,
+                                ]);
+
+                                if ($shortfall > 0) {
+                                    $hasShortfall        = true;
+                                    $shortfallProducts[] = $orderItem->product_name;
+                                    $this->revertShortfallToRequestItems($orderItem, $shortfall, $affectedRequestIds);
                                 }
-                            }
+                            } elseif ($receivedQty > 0 && (!empty($row['name']) || !empty($row['woo_product_id']))) {
+                                $productName  = $row['name'] ?? '';
+                                $sku          = null;
+                                $wooProductId = $row['woo_product_id'] ?? null;
 
-                            $this->record->items()->create([
-                                'product_name'      => $productName,
-                                'sku'               => $sku,
-                                'woo_product_id'    => $wooProductId,
-                                'quantity'           => $receivedQty,
-                                'received_quantity'  => $receivedQty,
-                                'unit_price'         => $price,
-                                'notes'              => 'Adăugat la recepție (suplimentar)',
-                            ]);
+                                if ($wooProductId) {
+                                    $product = \App\Models\WooProduct::find($wooProductId);
+                                    if ($product) {
+                                        $productName = $product->name;
+                                        $sku         = $product->sku;
+                                    }
+                                }
+
+                                $this->record->items()->create([
+                                    'product_name'     => $productName,
+                                    'sku'              => $sku,
+                                    'woo_product_id'   => $wooProductId,
+                                    'quantity'         => $receivedQty,
+                                    'received_quantity' => $receivedQty,
+                                    'unit_price'       => $price,
+                                    'notes'            => 'Adăugat la recepție (suplimentar)',
+                                ]);
+                            }
+                        }
+
+                        foreach (array_unique($affectedRequestIds) as $requestId) {
+                            \App\Models\PurchaseRequest::find($requestId)?->recalculateStatus();
                         }
                     }
 
-                    foreach (array_unique($affectedRequestIds) as $requestId) {
-                        \App\Models\PurchaseRequest::find($requestId)?->recalculateStatus();
-                    }
-
-                    $this->record->update([
-                        'status'           => PurchaseOrder::STATUS_RECEIVED,
-                        'received_at'      => now(),
-                        'received_by'      => auth()->id(),
-                        'received_notes'   => $data['received_notes'] ?? null,
+                    // Date comune indiferent de mod
+                    $updateData = [
                         'invoice_series'   => $data['invoice_series'] ?? null,
                         'invoice_number'   => $data['invoice_number'] ?? null,
                         'invoice_date'     => $data['invoice_date'] ?? null,
                         'invoice_due_date' => $data['invoice_due_date'] ?? null,
-                    ]);
+                        'received_notes'   => $data['received_notes'] ?? null,
+                    ];
 
-                    // Update last purchase info on product-supplier pivot
+                    if (! $isPriceOnly) {
+                        $updateData['status']      = PurchaseOrder::STATUS_RECEIVED;
+                        $updateData['received_at'] = now();
+                        $updateData['received_by'] = auth()->id();
+                    }
+
+                    if (! $isPriceOnly) {
+                        $updateData['winmentor_sync_status'] = PurchaseOrder::WINMENTOR_PENDING;
+                        $updateData['winmentor_sync_error']  = null;
+                    }
+
+                    $this->record->update($updateData);
+                    $this->record->recalculateTotals();
+
+                    if (! $isPriceOnly) {
+                        \App\Jobs\PushComenziFurnizoriToWinmentorJob::dispatch($this->record->id)->afterCommit();
+                    }
+
+                    // Actualizăm pivotul product-supplier cu prețul de achiziție
+                    $this->record->refresh();
                     foreach ($this->record->items as $item) {
-                        if ($item->woo_product_id && $this->record->supplier_id) {
+                        if ($item->woo_product_id && $this->record->supplier_id && $item->unit_price > 0) {
                             \App\Models\ProductSupplier::where('woo_product_id', $item->woo_product_id)
                                 ->where('supplier_id', $this->record->supplier_id)
                                 ->update([
-                                    'last_purchase_date'  => now()->toDateString(),
+                                    'last_purchase_date'  => $this->record->received_at?->toDateString() ?? now()->toDateString(),
                                     'last_purchase_price' => $item->unit_price,
                                 ]);
                         }
                     }
 
-                    $msg = $hasShortfall
-                        ? 'Recepție înregistrată. Lipsurile au fost returnate în coada de cumpărare.'
-                        : 'Recepție completă înregistrată.';
+                    if ($isPriceOnly) {
+                        Notification::make()->success()->title('Prețuri de achiziție salvate.')->send();
+                    } else {
+                        $msg = $hasShortfall
+                            ? 'Recepție înregistrată. Lipsurile au fost returnate în coada de cumpărare.'
+                            : 'Recepție completă înregistrată.';
+                        Notification::make()->success()->title($msg)->send();
 
-                    Notification::make()->success()->title($msg)->send();
+                        if ($hasShortfall && ! empty($shortfallProducts)) {
+                            $consultantIds = collect($affectedRequestIds)
+                                ->unique()
+                                ->map(fn ($id) => \App\Models\PurchaseRequest::find($id)?->user_id)
+                                ->filter()
+                                ->unique();
 
-                    // Notificăm consultanții care au items cu lipsuri
-                    if ($hasShortfall && ! empty($shortfallProducts)) {
-                        $consultantIds = collect($affectedRequestIds)
-                            ->unique()
-                            ->map(fn ($id) => \App\Models\PurchaseRequest::find($id)?->user_id)
-                            ->filter()
-                            ->unique();
+                            $consultants = User::query()
+                                ->whereIn('id', $consultantIds)
+                                ->where('id', '!=', auth()->id())
+                                ->get();
 
-                        $consultants = User::query()
-                            ->whereIn('id', $consultantIds)
-                            ->where('id', '!=', auth()->id())
-                            ->get();
-
-                        foreach ($consultants as $consultant) {
-                            $consultant->notify(new PurchaseOrderReceivedPartialNotification(
-                                $this->record,
-                                $shortfallProducts,
-                            ));
+                            foreach ($consultants as $consultant) {
+                                $consultant->notify(new PurchaseOrderReceivedPartialNotification(
+                                    $this->record,
+                                    $shortfallProducts,
+                                ));
+                            }
                         }
                     }
 
@@ -648,18 +903,113 @@ class ViewPurchaseOrder extends ViewRecord
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('gray')
                 ->action(function (): \Symfony\Component\HttpFoundation\StreamedResponse {
-                    $this->record->loadMissing(['supplier', 'buyer', 'approvedBy', 'items']);
-
-                    $pdf = Pdf::loadView('pdf.purchase-order', ['order' => $this->record])
-                        ->setPaper('a4', 'portrait');
-
-                    $filename = str_replace('/', '-', $this->record->number) . '.pdf';
+                    $content  = \App\Services\PurchaseOrderPdf::get($this->record);
+                    $filename = \App\Services\PurchaseOrderPdf::filename($this->record);
 
                     return response()->streamDownload(
-                        fn () => print($pdf->output()),
+                        fn () => print($content),
                         $filename,
                         ['Content-Type' => 'application/pdf'],
                     );
+                }),
+
+            // Descarcă CSV furnizor
+            Actions\Action::make('download_csv')
+                ->label('Descarcă CSV')
+                ->icon('heroicon-o-table-cells')
+                ->color('gray')
+                ->action(function (): \Symfony\Component\HttpFoundation\StreamedResponse {
+                    $this->record->loadMissing('items');
+
+                    $filename = str_replace('/', '-', $this->record->number) . '.csv';
+
+                    return response()->streamDownload(function () {
+                        foreach ($this->record->items as $item) {
+                            $code = $item->supplier_sku ?: $item->sku;
+                            $qty  = rtrim(rtrim((string) $item->quantity, '0'), '.');
+                            echo $code . ' ' . $qty . "\n";
+                        }
+                    }, $filename, ['Content-Type' => 'text/csv']);
+                }),
+
+            // Import CSV cantități
+            Actions\Action::make('import_csv')
+                ->label('Import CSV')
+                ->icon('heroicon-o-arrow-up-tray')
+                ->color('gray')
+                ->visible(fn (): bool => $this->record->status === PurchaseOrder::STATUS_DRAFT)
+                ->form([
+                    FileUpload::make('csv_file')
+                        ->label('Fișier CSV (cod_furnizor,cantitate)')
+                        ->disk('local')
+                        ->directory('csv-imports-tmp')
+                        ->acceptedFileTypes(['text/csv', 'text/plain', 'application/csv', 'application/octet-stream'])
+                        ->maxSize(512)
+                        ->required()
+                        ->helperText('Format: o linie per produs — cod_furnizor,cantitate'),
+                ])
+                ->action(function (array $data): void {
+                    $path = is_array($data['csv_file']) ? reset($data['csv_file']) : $data['csv_file'];
+                    $content = Storage::disk('local')->get($path);
+
+                    if (! $content) {
+                        Notification::make()->danger()->title('Fișierul nu a putut fi citit.')->send();
+                        return;
+                    }
+
+                    $this->record->loadMissing('items');
+
+                    // Indexăm itemele după supplier_sku și sku (fallback)
+                    $itemsBySupplierSku = $this->record->items->keyBy(fn ($i) => strtolower(trim((string) $i->supplier_sku)));
+                    $itemsBySku         = $this->record->items->keyBy(fn ($i) => strtolower(trim((string) $i->sku)));
+
+                    $updated   = 0;
+                    $notFound  = [];
+                    $skipped   = 0;
+
+                    $lines = preg_split('/\r\n|\r|\n/', trim($content));
+                    foreach ($lines as $line) {
+                        $line = trim($line);
+                        if ($line === '') continue;
+
+                        $cols = str_getcsv($line);
+                        if (count($cols) < 2) { $skipped++; continue; }
+
+                        $code = strtolower(trim($cols[0]));
+                        $qty  = (float) str_replace(',', '.', trim($cols[1]));
+
+                        if ($qty <= 0) { $skipped++; continue; }
+
+                        $item = $itemsBySupplierSku[$code] ?? $itemsBySku[$code] ?? null;
+
+                        if ($item) {
+                            $item->update(['quantity' => $qty]);
+                            $updated++;
+                        } else {
+                            $notFound[] = $cols[0];
+                        }
+                    }
+
+                    $this->record->recalculateTotals();
+                    $this->refreshFormData(['items', 'total_amount']);
+
+                    if ($updated > 0 && empty($notFound)) {
+                        Notification::make()->success()
+                            ->title("CSV importat: {$updated} produse actualizate.")
+                            ->send();
+                    } elseif ($updated > 0) {
+                        $missing = implode(', ', array_slice($notFound, 0, 5)) . (count($notFound) > 5 ? '...' : '');
+                        Notification::make()->warning()
+                            ->title("{$updated} produse actualizate, " . count($notFound) . ' negăsite.')
+                            ->body("Coduri negăsite pe comandă: {$missing}")
+                            ->send();
+                    } else {
+                        $missing = implode(', ', array_slice($notFound, 0, 10));
+                        Notification::make()->danger()
+                            ->title('Niciun produs nu a putut fi asociat.')
+                            ->body("Coduri negăsite: {$missing}")
+                            ->send();
+                    }
                 }),
 
             // Anulează

@@ -151,6 +151,13 @@ class WinmentorBridgeClient
             }
 
             $error = implode(', ', $result['errors'] ?? ['Eroare necunoscută']);
+
+            // Articolul există deja în WinMentor (fetch paginat l-a ratat) — nu e eroare
+            if (str_contains(strtolower($error), 'exist') || str_contains(strtolower($error), 'duplicat')) {
+                Log::channel('winmentor_bridge')->info('[WinMentor] Produs deja existent (skip creare)', ['sku' => $product->sku]);
+                return ['success' => true, 'error' => null];
+            }
+
             return ['success' => false, 'error' => $error];
         } catch (\Throwable $e) {
             return ['success' => false, 'error' => $e->getMessage()];
@@ -227,6 +234,12 @@ class WinmentorBridgeClient
         return $result['data'] ?? [];
     }
 
+    public function getComenziFurnizori(): array
+    {
+        $result = $this->get('/api/comenzi/furnizori');
+        return $result['data'] ?? [];
+    }
+
     /**
      * Returnează toate recepțiile din luna de lucru curentă.
      * Față de getIntrari(), are câmpuri suplimentare: nr_receptie, den_furnizor,
@@ -292,19 +305,24 @@ class WinmentorBridgeClient
 
     public function searchPartenerById(string $partId): ?array
     {
-        $result = $this->get('/api/parteneri', ['search' => $partId]);
-
-        if (! ($result['success'] ?? false)) {
-            return null;
-        }
-
-        $items = $result['data']['items'] ?? $result['data'] ?? [];
-
-        foreach ($items as $item) {
-            if (($item['idPartener'] ?? '') === $partId) {
-                return $item;
+        $page = 1;
+        do {
+            $result = $this->get('/api/parteneri', ['pageSize' => 500, 'page' => $page]);
+            if (! ($result['success'] ?? false)) {
+                return null;
             }
-        }
+
+            $items      = $result['data']['items'] ?? [];
+            $totalPages = (int) ($result['data']['totalPages'] ?? 1);
+
+            foreach ($items as $item) {
+                if (($item['idPartener'] ?? '') === $partId) {
+                    return $item;
+                }
+            }
+
+            $page++;
+        } while ($page <= $totalPages);
 
         return null;
     }
@@ -319,22 +337,28 @@ class WinmentorBridgeClient
     {
         $this->selectFirma();
 
-        $result = $this->get('/api/parteneri', ['search' => $cui]);
-
-        if (! ($result['success'] ?? false)) {
-            return null;
-        }
-
-        $items = $result['data']['items'] ?? $result['data'] ?? [];
-
         $cuiNormalized = preg_replace('/[^0-9]/', '', $cui);
 
-        foreach ($items as $item) {
-            $codFiscal = preg_replace('/[^0-9]/', '', $item['codFiscal'] ?? '');
-            if ($codFiscal === $cuiNormalized) {
-                return $item;
+        // Fetch paginat — search-ul text-liber din Bridge nu filtrează după CUI
+        $page = 1;
+        do {
+            $result = $this->get('/api/parteneri', ['pageSize' => 500, 'page' => $page]);
+            if (! ($result['success'] ?? false)) {
+                return null;
             }
-        }
+
+            $items      = $result['data']['items'] ?? [];
+            $totalPages = (int) ($result['data']['totalPages'] ?? 1);
+
+            foreach ($items as $item) {
+                $codFiscal = preg_replace('/[^0-9]/', '', $item['codFiscal'] ?? '');
+                if ($codFiscal === $cuiNormalized) {
+                    return $item;
+                }
+            }
+
+            $page++;
+        } while ($page <= $totalPages);
 
         return null;
     }
@@ -369,13 +393,22 @@ class WinmentorBridgeClient
      * Verifică dacă toate produsele dintr-un PO există în WinMentor.
      * Creează automat produsele lipsă.
      * Returnează ['ok' => bool, 'created' => string[], 'errors' => string[]].
+     *
+     * Optimizat: un singur fetch paginat al tuturor articolelor WinMentor → map local,
+     * apoi creăm doar ce lipsește (fără re-search per SKU și fără re-search după creare).
      */
     public function ensureArticoleExist(array $items): array
     {
         $created = [];
         $errors  = [];
-        $umMap   = []; // sku => denUM din WinMentor
+        $umMap   = [];
 
+        $this->selectFirma();
+
+        // Un singur apel bulk în loc de câte un GET per SKU
+        $articoleMap = $this->fetchAllArticoleSkuMap();
+
+        $toCreate = [];
         foreach ($items as $item) {
             $sku = $item['sku'] ?? null;
             if (! $sku) {
@@ -383,14 +416,17 @@ class WinmentorBridgeClient
                 continue;
             }
 
-            $found = $this->searchArticolBySku($sku);
+            $key = strtolower(trim($sku));
 
-            if ($found) {
-                $umMap[$sku] = $found['denUM'] ?? null;
-                continue;
+            if (isset($articoleMap[$key])) {
+                $umMap[$sku] = $articoleMap[$key]['denUM'] ?? null;
+            } else {
+                $toCreate[] = $item;
             }
+        }
 
-            // Nu există — îl creăm
+        foreach ($toCreate as $item) {
+            $sku     = $item['sku'];
             $product = isset($item['woo_product_id'])
                 ? WooProduct::find($item['woo_product_id'])
                 : null;
@@ -403,10 +439,8 @@ class WinmentorBridgeClient
             $createResult = $this->createArticol($product);
 
             if ($createResult['success']) {
-                $created[] = "{$product->name} [{$sku}]";
-                // Re-căutăm să luăm UM-ul din WinMentor după creare
-                $newArticol = $this->searchArticolBySku($sku);
-                $umMap[$sku] = $newArticol['denUM'] ?? $product->unit ?? 'Buc';
+                $created[]   = "{$product->name} [{$sku}]";
+                $umMap[$sku] = $product->unit ?? 'Buc'; // UM din ERP — fără re-search
             } else {
                 $errors[] = "Eroare la crearea \"{$product->name}\" [{$sku}]: {$createResult['error']}";
             }
@@ -416,20 +450,63 @@ class WinmentorBridgeClient
             'ok'      => empty($errors),
             'created' => $created,
             'errors'  => $errors,
-            'umMap'   => $umMap, // sku => UM din WinMentor
+            'umMap'   => $umMap,
         ];
     }
 
     /**
-     * Verifică dacă furnizorul există în WinMentor după CUI.
+     * Fetch paginat al tuturor articolelor din WinMentor.
+     * Returnează [normalizedSku => article] — cheie lowercase pentru lookup rapid.
+     * Timeout ridicat (120s) pentru că poate returna mii de articole.
+     */
+    private function fetchAllArticoleSkuMap(): array
+    {
+        $map      = [];
+        $page     = 1;
+        $pageSize = 10000; // acoperă cataloage mari; reducem numărul de pagini HTTP
+
+        do {
+            $result  = $this->get('/api/articole', ['page' => $page, 'pageSize' => $pageSize], timeout: 120);
+            $data    = $result['data'] ?? [];
+            // Bridge-ul poate returna fie {items:[...], hasNextPage:bool} fie direct [...]
+            $items   = $data['items'] ?? (is_array($data) && ! isset($data['items']) ? $data : []);
+            $hasNext = $data['hasNextPage'] ?? false;
+
+            foreach ($items as $item) {
+                $sku = $item['codExtern'] ?? $item['codIntern'] ?? null;
+                if ($sku && ! isset($map[strtolower(trim($sku))])) {
+                    $map[strtolower(trim($sku))] = $item;
+                }
+            }
+
+            $page++;
+        } while ($hasNext);
+
+        return $map;
+    }
+
+    /**
+     * Verifică dacă furnizorul există în WinMentor.
+     * Prioritate: winmentor_id (din sincronizare) → fallback CUI paginated.
      * Returnează ['ok' => bool, 'partener' => array|null, 'error' => string|null].
      */
     public function ensurePartenerExists(Supplier $supplier): array
     {
+        $this->selectFirma();
+
+        // 1. Avem winmentor_id din sincronizare → lookup direct după ID
+        if ($supplier->winmentor_id) {
+            $partener = $this->searchPartenerById($supplier->winmentor_id);
+            if ($partener) {
+                return ['ok' => true, 'partener' => $partener, 'error' => null];
+            }
+        }
+
+        // 2. Fallback: caută paginated după CUI
         $cui = $supplier->vat_number;
 
         if (! $cui) {
-            return ['ok' => false, 'partener' => null, 'error' => "Furnizorul \"{$supplier->name}\" nu are CUI/CIF completat în ERP."];
+            return ['ok' => false, 'partener' => null, 'error' => "Furnizorul \"{$supplier->name}\" nu are CUI/CIF completat în ERP și nu are winmentor_id setat."];
         }
 
         $partener = $this->searchPartenerByCui($cui);
@@ -438,9 +515,12 @@ class WinmentorBridgeClient
             return [
                 'ok'       => false,
                 'partener' => null,
-                'error'    => "Furnizorul \"{$supplier->name}\" (CUI: {$cui}) nu a fost găsit în WinMentor. Adăugați-l manual sau sincronizați partenerii.",
+                'error'    => "Furnizorul \"{$supplier->name}\" (CUI: {$cui}) nu a fost găsit în WinMentor. Sincronizați partenerii sau completați winmentor_id.",
             ];
         }
+
+        // Salvăm winmentor_id pentru viitor
+        $supplier->updateQuietly(['winmentor_id' => $partener['idPartener']]);
 
         return ['ok' => true, 'partener' => $partener, 'error' => null];
     }
@@ -490,9 +570,9 @@ class WinmentorBridgeClient
 
     // ─── HTTP helpers ────────────────────────────────────────────────────────────
 
-    private function get(string $path, array $query = [], bool $auth = true): array
+    private function get(string $path, array $query = [], bool $auth = true, int $timeout = 30): array
     {
-        $request = Http::timeout(30)->withoutVerifying();
+        $request = Http::timeout($timeout)->withoutVerifying();
 
         if ($auth) {
             $request = $request->withHeaders(['X-API-Key' => $this->apiKey]);

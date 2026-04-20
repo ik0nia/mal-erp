@@ -103,10 +103,10 @@ class BiHealthCheckCommand extends Command
 
     private function sendAdminNotification(array $repaired, array $skipped): void
     {
-        $admins = User::whereIn('role', [
-            User::ROLE_SUPER_ADMIN,
-            User::ROLE_MANAGER,
-        ])->get();
+        $admins = User::where(function ($q) {
+            $q->where('is_super_admin', true)
+              ->orWhere('role', User::ROLE_MANAGER);
+        })->get();
 
         if ($admins->isEmpty()) {
             return;

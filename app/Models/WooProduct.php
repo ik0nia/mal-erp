@@ -11,9 +11,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class WooProduct extends Model
 {
-    public const SOURCE_WOOCOMMERCE  = 'woocommerce';
-    public const SOURCE_WINMENTOR_CSV = 'winmentor_csv';
-    public const SOURCE_TOYA_API     = 'toya_api';
+    public const SOURCE_WOOCOMMERCE      = 'woocommerce';
+    public const SOURCE_WINMENTOR_CSV    = 'winmentor_csv';
+    public const SOURCE_WINMENTOR_BRIDGE = 'winmentor_bridge';
+    public const SOURCE_TOYA_API         = 'toya_api';
 
     public const TYPE_SHOP       = 'shop';
     public const TYPE_PRODUCTION = 'production';
@@ -215,6 +216,16 @@ class WooProduct extends Model
     public function offerItems(): HasMany
     {
         return $this->hasMany(OfferItem::class, 'woo_product_id');
+    }
+
+    public function images(): HasMany
+    {
+        return $this->hasMany(ProductImage::class, 'woo_product_id')->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function primaryImage(): HasOne
+    {
+        return $this->hasOne(ProductImage::class, 'woo_product_id')->where('is_primary', true);
     }
 
     protected function decodedName(): Attribute

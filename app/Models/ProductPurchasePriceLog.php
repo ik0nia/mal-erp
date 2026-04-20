@@ -13,10 +13,16 @@ class ProductPurchasePriceLog extends Model
         'supplier_name_raw',
         'unit_price',
         'currency',
+        'exchange_rate',
         'acquired_at',
         'source',
         'uom',
         'notes',
+        'firma',
+        'nr_doc',
+        'quantity',
+        'intrare_raw_id',
+        'has_anomaly',
     ];
 
     protected function casts(): array

@@ -10,6 +10,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class PurchaseOrder extends Model
 {
     use HasStatusEnum;
+    public const WINMENTOR_PENDING = 'pending';
+    public const WINMENTOR_SYNCED  = 'synced';
+    public const WINMENTOR_FAILED  = 'failed';
+
     public const STATUS_DRAFT            = 'draft';
     public const STATUS_PENDING_APPROVAL = 'pending_approval';
     public const STATUS_APPROVED         = 'approved';
@@ -33,6 +37,7 @@ class PurchaseOrder extends Model
         'rejected_at',
         'rejection_reason',
         'sent_at',
+        'sent_via',
         'received_at',
         'received_by',
         'received_notes',
@@ -40,6 +45,16 @@ class PurchaseOrder extends Model
         'invoice_number',
         'invoice_date',
         'invoice_due_date',
+        'winmentor_sync_status',
+        'winmentor_sync_error',
+        'winmentor_order_nr',
+        'winmentor_synced_at',
+        'winmentor_receptie_nr',
+        'winmentor_receptie_date',
+        'winmentor_receptie_score',
+        'winmentor_receptie_matched_at',
+        'lead_time_days',
+        'receptie_contabila_lag_days',
     ];
 
     protected function casts(): array
@@ -55,8 +70,14 @@ class PurchaseOrder extends Model
             'sent_at'      => 'datetime',
             'received_at'  => 'datetime',
             'received_by'    => 'integer',
-            'invoice_date'   => 'date',
-            'invoice_due_date' => 'date',
+            'invoice_date'       => 'date',
+            'invoice_due_date'   => 'date',
+            'winmentor_synced_at'             => 'datetime',
+            'winmentor_receptie_date'         => 'date',
+            'winmentor_receptie_matched_at'   => 'datetime',
+            'winmentor_receptie_score'        => 'integer',
+            'lead_time_days'                  => 'integer',
+            'receptie_contabila_lag_days'     => 'integer',
         ];
     }
 
@@ -75,6 +96,21 @@ class PurchaseOrder extends Model
             }
         });
 
+        static::updated(function (self $record): void {
+            if ($record->wasChanged('winmentor_sync_status')
+                && $record->winmentor_sync_status === self::WINMENTOR_PENDING) {
+                \App\Jobs\PushComenziFurnizoriToWinmentorJob::dispatch($record->id)->afterCommit();
+            }
+
+            if ($record->wasChanged('status') && $record->status === self::STATUS_SENT) {
+                $supplier = $record->supplier?->name ?? 'Furnizor necunoscut';
+                \App\Jobs\SendWhPushNotificationJob::dispatch(
+                    title: '📦 Comandă nouă de recepționat',
+                    body:  "{$record->number} — {$supplier}",
+                    url:   '/wh/',
+                )->afterCommit();
+            }
+        });
     }
 
     public static function statusLabels(): array
@@ -181,14 +217,19 @@ class PurchaseOrder extends Model
 
     private static function generateNumber(): string
     {
-        $max = self::query()
-            ->where('number', 'like', 'PO-%')
-            ->get(['number'])
-            ->map(fn ($r): int => (int) ltrim(substr($r->number, 3), '0'))
-            ->max() ?? 0;
+        $lock = \Illuminate\Support\Facades\Cache::lock('po_number_generate', 10);
+        $lock->block(10);
 
-        $next = max($max + 1, 100000);
+        try {
+            $max = self::query()
+                ->where('number', 'like', 'PO-%')
+                ->get(['number'])
+                ->map(fn ($r): int => (int) ltrim(substr($r->number, 3), '0'))
+                ->max() ?? 0;
 
-        return 'PO-' . $next;
+            return 'PO-' . max($max + 1, 100000);
+        } finally {
+            $lock->release();
+        }
     }
 }

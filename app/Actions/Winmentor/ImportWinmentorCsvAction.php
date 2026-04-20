@@ -292,6 +292,13 @@ class ImportWinmentorCsvAction
                     }
                 }
 
+                // Produsele de tip "external" (manoperă, pachete H+, servicii) nu au stoc fizic
+                // — le excludem din daily_stock_metrics și product_stocks.
+                if ($product->type === 'external') {
+                    $stats['unchanged']++;
+                    continue;
+                }
+
                 $stats['matched_products']++;
 
                 // Setează winmentor_name din CSV pentru orice produs matched

@@ -11,6 +11,15 @@ Artisan::command('inspire', function () {
 // Horizon metrics snapshot — la fiecare 5 minute (grafice throughput în dashboard).
 Schedule::command('horizon:snapshot')->everyFiveMinutes();
 
+// Snapshot de închidere zilnică la 17:30 (closing stock pentru rapoarte).
+// Snapshot-urile intra-zi sunt preluate direct de winmentor:sync-stock-bridge (la 5 minute).
+Schedule::command('stock:snapshot-daily-metrics')
+    ->dailyAt('17:30')
+    ->days([1, 2, 3, 4, 5, 6])
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping()
+    ->runInBackground();
+
 // Runs every minute and dispatches due WinMentor imports based on each connection settings.
 Schedule::command('stock:dispatch-scheduled-winmentor')
     ->everyMinute()
@@ -20,6 +29,13 @@ Schedule::command('stock:dispatch-scheduled-winmentor')
 Schedule::job(new \App\Jobs\FetchEmailsJob())
     ->everyFiveMinutes()
     ->withoutOverlapping();
+
+// Parsare documente furnizori (PDF/XLSX) — zilnic la 02:00, prinde emailurile ratate.
+Schedule::command('email:parse-supplier-docs --no-report')
+    ->dailyAt('02:00')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping()
+    ->runInBackground();
 
 // Procesare AI emailuri neprocesate — DEZACTIVAT temporar (consum API).
 // Schedule::command('email:process-ai --limit=100')
@@ -47,6 +63,13 @@ Schedule::command('woo:sync-orders')
 Schedule::command('woo:sync-categories')
     ->everySixHours()
     ->withoutOverlapping();
+
+// Curățare sync_runs mai vechi de 30 de zile — zilnic la 00:15.
+Schedule::call(function () {
+    \DB::table('sync_runs')
+        ->where('created_at', '<', now()->subDays(30))
+        ->delete();
+})->dailyAt('00:15')->timezone('Europe/Bucharest');
 
 // BI data layer — zilnic la 00:30 (Europe/Bucharest).
 // Procesează ziua de ieri (complet înghețată după miezul nopții).
@@ -107,6 +130,13 @@ Schedule::command('bi:generate-period-report --type=semiannual')
 // Context: rapoartele semestriale + trimestriale + lunare din an.
 Schedule::command('bi:generate-period-report --type=annual')
     ->yearlyOn(1, 1, '10:00')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// Toya — sync prețuri achiziție + alerte modificări semnificative (zilnic la 07:00).
+Schedule::command('toya:sync-prices')
+    ->dailyAt('07:00')
     ->timezone('Europe/Bucharest')
     ->withoutOverlapping()
     ->runInBackground();

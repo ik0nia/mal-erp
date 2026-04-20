@@ -56,13 +56,20 @@ class ComputeBiAlertsCommand extends Command
         // LEFT JOIN velocity (poate lipsi dacă e prima rulare)
         // JOIN woo_products pe sku = reference_product_id — filtrăm strict pe product_type = 'shop'
         // (excludem producție internă și garanție palet din alerting)
+        // Subquery: un singur rând per SKU — preferăm produsul publicat (woo_id not null)
+        // Evităm duplicate key errors când același SKU există de 2+ ori în woo_products
+        $wpSub = DB::table('woo_products')
+            ->selectRaw('sku, MIN(CASE WHEN woo_id IS NOT NULL THEN id ELSE NULL END) as preferred_id, MIN(id) as fallback_id')
+            ->groupBy('sku');
+
         $products = DB::table('daily_stock_metrics as dsm')
             ->where('dsm.day', $day)
             ->leftJoin(
                 'bi_product_velocity_current as v',
                 'v.reference_product_id', '=', 'dsm.reference_product_id'
             )
-            ->leftJoin('woo_products as wp', 'wp.sku', '=', 'dsm.reference_product_id')
+            ->leftJoinSub($wpSub, 'wp_dedup', 'wp_dedup.sku', '=', 'dsm.reference_product_id')
+            ->leftJoin('woo_products as wp', 'wp.id', '=', DB::raw('COALESCE(wp_dedup.preferred_id, wp_dedup.fallback_id)'))
             ->whereRaw("COALESCE(wp.product_type, 'shop') = 'shop'")
             ->select([
                 'dsm.reference_product_id',
@@ -167,6 +174,12 @@ class ComputeBiAlertsCommand extends Command
                 'updated_at'           => $now,
             ];
         }
+
+        // Deduplicăm după reference_product_id (safety net dacă join produce duplicate)
+        $upsertRows = collect($upsertRows)
+            ->keyBy('reference_product_id')
+            ->values()
+            ->toArray();
 
         // Idempotent: șterge rândurile existente pentru ziua asta, re-inserează
         // (tratează corect și cazul când pragurile s-au schimbat și rulăm din nou)

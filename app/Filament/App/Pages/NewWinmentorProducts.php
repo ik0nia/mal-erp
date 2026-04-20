@@ -38,7 +38,7 @@ class NewWinmentorProducts extends Page implements HasTable
     {
         $count = WooProduct::query()
             ->where('is_placeholder', true)
-            ->where('source', WooProduct::SOURCE_WINMENTOR_CSV)
+            ->whereIn('source', [WooProduct::SOURCE_WINMENTOR_CSV, WooProduct::SOURCE_WINMENTOR_BRIDGE])
             ->count();
 
         return $count > 0 ? (string) $count : null;
@@ -55,7 +55,7 @@ class NewWinmentorProducts extends Page implements HasTable
             ->query(
                 WooProduct::query()
                     ->where('is_placeholder', true)
-                    ->where('source', WooProduct::SOURCE_WINMENTOR_CSV)
+                    ->whereIn('source', [WooProduct::SOURCE_WINMENTOR_CSV, WooProduct::SOURCE_WINMENTOR_BRIDGE])
                     ->with(['categories', 'suppliers', 'stocks'])
                     ->latest()
             )

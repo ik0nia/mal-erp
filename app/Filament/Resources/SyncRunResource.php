@@ -191,7 +191,7 @@ class SyncRunResource extends Resource
             ])
             ->deferFilters(false)
             ->recordActions([
-                Actions\Action::make('stop')
+                \Filament\Actions\Action::make('stop')
                     ->label('Stop')
                     ->icon('heroicon-o-stop')
                     ->color('danger')
@@ -237,7 +237,7 @@ class SyncRunResource extends Resource
                             ->body('Execuția va fi întreruptă în siguranță la următorul checkpoint.')
                             ->send();
                     }),
-                Actions\Action::make('details')
+                \Filament\Actions\Action::make('details')
                     ->label('View details')
                     ->icon('heroicon-o-eye')
                     ->modalSubmitAction(false)

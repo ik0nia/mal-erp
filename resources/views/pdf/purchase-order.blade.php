@@ -141,7 +141,12 @@
             @endif
           @endif
         </td>
-        <td class="muted">{{ $item->supplier_sku ?: '—' }}</td>
+        <td class="muted">
+          {{ $item->supplier_sku ?: '—' }}
+          @if($item->sku)
+            <div style="font-size:7px;color:#9ca3af;margin-top:1px">EAN: {{ $item->sku }}</div>
+          @endif
+        </td>
         <td class="right">{{ number_format((float)$item->quantity, 0, ',', '.') }}</td>
       </tr>
       @endforeach
@@ -178,7 +183,7 @@
 
   {{-- Footer --}}
   <div class="footer">
-    <div class="footer-left">Generat din ERP Malinco — {{ now()->format('d.m.Y H:i') }}</div>
+    <div class="footer-left">ERP Malinco — {{ $order->created_at->setTimezone('Europe/Bucharest')->format('d.m.Y H:i') }}</div>
     <div class="footer-right">{{ $order->number }}</div>
   </div>
 

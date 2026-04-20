@@ -124,7 +124,7 @@ class ProductReviewRequestsPage extends Page implements HasTable
                         . '</div>'
                     ))
                     ->modalSubmitAction(false)
-                    ->modalCancelAction(fn (\Filament\Actions\StaticAction $action) => $action->label('Închide')),
+                    ->modalCancelAction(fn ($action) => $action->label('Închide')),
 
                 TableAction::make('resolve')
                     ->label('Marchează rezolvat')

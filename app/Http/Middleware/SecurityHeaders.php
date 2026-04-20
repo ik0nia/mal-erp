@@ -22,7 +22,9 @@ class SecurityHeaders
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
         // Dezactivează feature-uri browser neutilizate
-        $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()');
+        // Camera permisă pe /wh/ (PWA recepție folosește BarcodeScanner)
+        $cameraPolicy = $request->is('wh/*') || $request->is('wh') ? 'camera=(self)' : 'camera=()';
+        $response->headers->set('Permissions-Policy', "{$cameraPolicy}, microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()");
 
         // Content-Security-Policy
         //

@@ -51,9 +51,9 @@ class WatchWinmentorVanzariCommand extends Command
         // Construiește set de chei existente pentru luna curentă
         $existing = DB::table('winmentor_vanzari_raw')
             ->where('firma', $firma)->where('an', $an)->where('luna', $luna)
-            ->select(['nr_factura', 'sku', 'part_id', 'zi'])
+            ->select(['nr_factura', 'sku', 'part_id', 'zi', 'cantitate', 'pret'])
             ->get()
-            ->map(fn($r) => "{$r->nr_factura}|{$r->sku}|{$r->part_id}|{$r->zi}")
+            ->map(fn($r) => "{$r->nr_factura}|{$r->sku}|{$r->part_id}|{$r->zi}|{$r->cantitate}|{$r->pret}")
             ->flip()
             ->all();
 
@@ -68,7 +68,7 @@ class WatchWinmentorVanzariCommand extends Command
             $partId    = trim($row['partID'] ?? '');
             $zi        = is_numeric($row['zi'] ?? '') ? (int) $row['zi'] : null;
 
-            $key = "{$nrFactura}|{$sku}|{$partId}|{$zi}";
+            $key = "{$nrFactura}|{$sku}|{$partId}|{$zi}|{$cantStr}|{$pretStr}";
             if (isset($existing[$key])) continue;
 
             $cantStr = trim($row['artID'] ?? '');

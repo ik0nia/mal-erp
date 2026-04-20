@@ -44,6 +44,18 @@ class ComputeBiReplenishmentCommand extends Command
 
         $this->line("  Produse cu consum: <info>{$products->count()}</info>");
 
+        // Pas 1b: Produse cu comenzi active (trimise/aprobate/pending) — se exclud
+        $openOrderProductIds = DB::table('purchase_order_items as poi')
+            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->whereIn('po.status', ['pending_approval', 'approved', 'sent'])
+            ->whereNotNull('poi.woo_product_id')
+            ->pluck('poi.woo_product_id')
+            ->unique()
+            ->flip()
+            ->all(); // folosim ca hashmap pentru O(1) lookup
+
+        $this->line("  Produse cu comanda activă (excluse): <info>" . count($openOrderProductIds) . "</info>");
+
         // Pas 2: Stoc curent din daily_stock_metrics
         $stockMap = DB::table('daily_stock_metrics')
             ->where('day', $day)
@@ -76,6 +88,11 @@ class ComputeBiReplenishmentCommand extends Command
         $now = now();
 
         foreach ($products as $product) {
+            // Sărim produsele care au deja o comandă activă (netrimisă/trimisă/nereceptionată)
+            if (isset($openOrderProductIds[$product->id])) {
+                continue;
+            }
+
             $sku = $product->sku;
             $currentStock = (float) ($stockMap[$sku] ?? 0);
             $avgConsumption = (float) $product->avg_daily_consumption;

@@ -112,6 +112,13 @@ class NecesarMarfa extends Page
                 ->where('s.is_active', true)
                 ->where('wp.is_discontinued', false)
                 ->whereRaw("COALESCE(wp.procurement_type, 'stock') != 'on_demand'")
+                ->whereNotExists(function ($q) {
+                    $q->select(DB::raw(1))
+                      ->from('purchase_order_items as poi')
+                      ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+                      ->whereColumn('poi.woo_product_id', 'wp.id')
+                      ->whereIn('po.status', ['pending_approval', 'approved', 'sent']);
+                })
                 ->whereRaw("COALESCE(stk.total_qty, 0) < GREATEST(
                     COALESCE(bpv.avg_out_qty_7d, 0),
                     COALESCE(bpv.avg_out_qty_30d, 0)
@@ -134,6 +141,13 @@ class NecesarMarfa extends Page
                 ->leftJoin('bi_product_velocity_current as bpv', 'bpv.reference_product_id', '=', 'wp.sku')
                 ->where('wp.is_discontinued', false)
                 ->whereRaw("COALESCE(wp.procurement_type, 'stock') != 'on_demand'")
+                ->whereNotExists(function ($q) {
+                    $q->select(DB::raw(1))
+                      ->from('purchase_order_items as poi')
+                      ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+                      ->whereColumn('poi.woo_product_id', 'wp.id')
+                      ->whereIn('po.status', ['pending_approval', 'approved', 'sent']);
+                })
                 ->whereRaw("COALESCE(stk.total_qty, 0) < GREATEST(
                     COALESCE(bpv.avg_out_qty_7d, 0),
                     COALESCE(bpv.avg_out_qty_30d, 0)

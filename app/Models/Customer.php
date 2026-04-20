@@ -28,9 +28,11 @@ class Customer extends Model
         'address',
         'city',
         'county',
+        'country',
         'postal_code',
         'notes',
         'is_active',
+        'winmentor_id',
     ];
 
     protected function casts(): array

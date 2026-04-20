@@ -558,6 +558,15 @@ class WooProductResource extends Resource
                 TextColumn::make('price')
                     ->label('Preț')
                     ->placeholder('-'),
+                TextColumn::make('winmentor_stock')
+                    ->label('Stoc WM')
+                    ->getStateUsing(fn (WooProduct $record): ?string =>
+                        $record->stocks->sum('quantity') ?: null
+                    )
+                    ->placeholder('-')
+                    ->numeric(decimalPlaces: 0)
+                    ->alignEnd()
+                    ->toggleable(),
                 TextColumn::make('stock_status')
                     ->label('Stoc')
                     ->badge(),
@@ -681,9 +690,17 @@ class WooProductResource extends Resource
                             $categoryQuery->where('woo_categories.id', $categoryId);
                         });
                     }),
+                Tables\Filters\SelectFilter::make('supplier_id')
+                    ->label('Furnizor')
+                    ->options(fn (): array => Supplier::orderBy('name')->pluck('name', 'id')->all())
+                    ->query(fn (Builder $query, array $data): Builder =>
+                        filled($data['value'])
+                            ? $query->whereHas('suppliers', fn (Builder $q) => $q->where('suppliers.id', $data['value']))
+                            : $query
+                    ),
             ], layout: FiltersLayout::AboveContent)
             ->deferFilters(false)
-            ->filtersFormColumns(['default' => 2, 'sm' => 3, 'lg' => 5])
+            ->filtersFormColumns(['default' => 2, 'sm' => 3, 'lg' => 6])
             ->persistFiltersInSession()
             ->recordUrl(fn (WooProduct $record): string => static::getUrl('view', ['record' => $record]))
             ->searchPlaceholder('Caută după nume, SKU, slug sau categorie...')
@@ -749,6 +766,7 @@ class WooProductResource extends Resource
             'connection.location',
             'categories',
             'suppliers',
+            'stocks',
         ]);
 
         $user = static::currentUser();
@@ -814,6 +832,53 @@ class WooProductResource extends Resource
                             ->columnSpanFull(),
                     ])
                     ->columnSpanFull(),
+
+                // ── Buton Adaugă la necesar (full-width, roșu) ──────────────
+                Actions::make([
+                    InfolistAction::make('add_to_necesar')
+                        ->label('Adaugă la necesar')
+                        ->icon('heroicon-o-shopping-cart')
+                        ->color('danger')
+                        ->size(\Filament\Support\Enums\Size::Large)
+                        ->modalHeading(fn (WooProduct $record) => 'Adaugă la necesar: '.($record->decoded_name ?? $record->name))
+                        ->modalDescription(fn (WooProduct $record) => $record->substituted_by_id
+                            ? '⚠️ Atenție: acest produs are un înlocuitor setat. Considerați să comandați "' . ($record->substitutedBy?->name ?? '') . '" în schimb.'
+                            : null)
+                        ->modalSubmitActionLabel('Adaugă')
+                        ->form(static::necesarModalForm())
+                        ->action(function (WooProduct $record, array $data): void {
+                            $user = auth()->user();
+                            if (! $user instanceof User) {
+                                return;
+                            }
+
+                            $draft    = PurchaseRequest::getOrCreateDraft($user);
+                            $existing = $draft->items()->where('woo_product_id', $record->id)->first();
+
+                            if ($existing) {
+                                $existing->update(['quantity' => (float) $existing->quantity + (float) $data['quantity']]);
+                            } else {
+                                $draft->items()->create([
+                                    'woo_product_id' => $record->id,
+                                    'quantity'       => $data['quantity'],
+                                    'is_urgent'      => $data['is_urgent'] ?? false,
+                                    'notes'          => $data['notes'] ?? null,
+                                ]);
+                            }
+
+                            Notification::make()
+                                ->success()
+                                ->title('Produs adăugat la necesar')
+                                ->actions([
+                                    \Filament\Actions\Action::make('open_cart')
+                                        ->label('Deschide coșul →')
+                                        ->url(PurchaseRequestResource::getUrl('edit', ['record' => $draft->id])),
+                                ])
+                                ->send();
+                        }),
+                ])
+                ->extraAttributes(['style' => 'margin-bottom: 0;'])
+                ->columnSpanFull(),
 
                 // ── Acțiuni utilitare stânga (edit, contact) ────────────────
                 Actions::make([
@@ -1172,8 +1237,10 @@ class WooProductResource extends Resource
                             ->html(),
                     ])
                     ->columnSpanFull()
-                    ->hidden(fn (WooProduct $record): bool => $record->purchasePriceLogs()->doesntExist())
-                    ->visible(fn (): bool => auth()->user()?->email === 'codrut@ikonia.ro'),
+                    ->visible(fn (WooProduct $record): bool =>
+                        \App\Models\RolePermission::check('woo_product_section_istoric_achizitii')
+                        && $record->purchasePriceLogs()->exists()
+                    ),
 
                 Section::make('Payload brut (Woo)')
                     ->collapsible()
@@ -1193,7 +1260,15 @@ class WooProductResource extends Resource
 
     public static function renderPurchasePriceHistory(WooProduct $record): HtmlString
     {
-        $logs = $record->purchasePriceLogs()->with('supplier')->get();
+        $logs = $record->purchasePriceLogs()
+            ->with('supplier')
+            ->select(['woo_product_id', 'supplier_id', 'supplier_name_raw', 'unit_price', 'currency', 'uom',
+                \Illuminate\Support\Facades\DB::raw('MAX(acquired_at) as acquired_at'),
+                \Illuminate\Support\Facades\DB::raw('COUNT(*) as occurrences'),
+            ])
+            ->groupBy(['supplier_id', 'supplier_name_raw', 'unit_price', 'currency', 'uom'])
+            ->orderByDesc('acquired_at')
+            ->get();
 
         if ($logs->isEmpty()) {
             return new HtmlString('<p style="font-size:0.875rem;color:#9ca3af;">Nu există istoric.</p>');
@@ -1201,19 +1276,20 @@ class WooProductResource extends Resource
 
         $rows = '';
         foreach ($logs as $log) {
-            $date = $log->acquired_at ? $log->acquired_at->format('d.m.Y') : '—';
-            $price = number_format((float) $log->unit_price, 2, '.', ' ') . ' ' . $log->currency;
+            $date = $log->acquired_at ? \Carbon\Carbon::parse($log->acquired_at)->format('d.m.Y') : '—';
+            $price        = number_format((float) $log->unit_price, 2, '.', ' ') . ' ' . $log->currency;
             $priceWithVat = number_format((float) $log->unit_price * 1.21, 2, '.', ' ') . ' ' . $log->currency;
-            $uom = e($log->uom ?? '—');
-            $source = match ($log->source) {
-                'winmentor_import' => '<span style="font-size:0.75rem;color:#9ca3af;">WinMentor</span>',
-                'crm'              => '<span style="font-size:0.75rem;color:#3b82f6;">CRM</span>',
-                default            => '<span style="font-size:0.75rem;color:#9ca3af;">Manual</span>',
-            };
+            $uom          = e($log->uom ?? '—');
+            $occ          = (int) $log->occurrences;
+            $occHtml      = $occ > 1 ? "<span style=\"font-size:0.75rem;color:#9ca3af;\">{$occ}×</span>" : '<span style="color:#e5e7eb;">1×</span>';
 
             if ($log->supplier) {
-                $supplierUrl = \App\Filament\App\Resources\SupplierResource::getUrl('view', ['record' => $log->supplier_id]);
-                $supplierHtml = '<a href="' . e($supplierUrl) . '" style="color:#8B1A1A;text-decoration:none;font-size:0.875rem;" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">' . e($log->supplier->name) . '</a>';
+                if ($log->supplier->is_active) {
+                    $supplierUrl  = \App\Filament\App\Resources\SupplierResource::getUrl('view', ['record' => $log->supplier_id]);
+                    $supplierHtml = '<a href="' . e($supplierUrl) . '" style="color:#8B1A1A;text-decoration:none;font-size:0.875rem;" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">' . e($log->supplier->name) . '</a>';
+                } else {
+                    $supplierHtml = '<span style="font-size:0.875rem;color:#6b7280;">' . e($log->supplier->name) . '</span>';
+                }
             } elseif ($log->supplier_name_raw) {
                 $supplierHtml = '<span style="font-size:0.875rem;color:#6b7280;font-style:italic;">' . e($log->supplier_name_raw) . '</span>';
             } else {
@@ -1221,12 +1297,12 @@ class WooProductResource extends Resource
             }
 
             $rows .= "<tr style=\"border-bottom:1px solid #e5e7eb;\">
-                <td style=\"padding:6px 12px;font-size:0.875rem;\">{$date}</td>
-                <td style=\"padding:6px 12px;font-size:0.875rem;font-family:monospace;font-weight:600;\">{$price}</td>
-                <td style=\"padding:6px 12px;font-size:0.75rem;color:#6b7280;\">{$priceWithVat} <span style=\"color:#9ca3af;\">(TVA inclus)</span></td>
+                <td style=\"padding:6px 12px;font-size:0.875rem;white-space:nowrap;\">{$date}</td>
+                <td style=\"padding:6px 12px;font-size:0.875rem;font-family:monospace;font-weight:600;white-space:nowrap;\">{$price}</td>
+                <td style=\"padding:6px 12px;font-size:0.75rem;color:#6b7280;white-space:nowrap;\">{$priceWithVat} <span style=\"color:#9ca3af;\">(+TVA)</span></td>
                 <td style=\"padding:6px 12px;font-size:0.875rem;\">{$uom}</td>
                 <td style=\"padding:6px 12px;\">{$supplierHtml}</td>
-                <td style=\"padding:6px 12px;\">{$source}</td>
+                <td style=\"padding:6px 12px;text-align:center;\">{$occHtml}</td>
             </tr>";
         }
 
@@ -1235,12 +1311,12 @@ class WooProductResource extends Resource
                 <table style=\"width:100%;text-align:left;border-collapse:collapse;\">
                     <thead>
                         <tr style=\"border-bottom:2px solid #d1d5db;\">
-                            <th style=\"padding:8px 12px;font-size:0.75rem;color:#6b7280;text-transform:uppercase;font-weight:600;\">Data</th>
+                            <th style=\"padding:8px 12px;font-size:0.75rem;color:#6b7280;text-transform:uppercase;font-weight:600;\">Ultima dată</th>
                             <th style=\"padding:8px 12px;font-size:0.75rem;color:#6b7280;text-transform:uppercase;font-weight:600;\">Preț achiziție</th>
                             <th style=\"padding:8px 12px;font-size:0.75rem;color:#6b7280;text-transform:uppercase;font-weight:600;\">cu TVA 21%</th>
                             <th style=\"padding:8px 12px;font-size:0.75rem;color:#6b7280;text-transform:uppercase;font-weight:600;\">U.M.</th>
                             <th style=\"padding:8px 12px;font-size:0.75rem;color:#6b7280;text-transform:uppercase;font-weight:600;\">Furnizor</th>
-                            <th style=\"padding:8px 12px;font-size:0.75rem;color:#6b7280;text-transform:uppercase;font-weight:600;\">Sursă</th>
+                            <th style=\"padding:8px 12px;font-size:0.75rem;color:#6b7280;text-transform:uppercase;font-weight:600;text-align:center;\">Apariții</th>
                         </tr>
                     </thead>
                     <tbody>{$rows}</tbody>
@@ -1254,13 +1330,43 @@ class WooProductResource extends Resource
      */
     public static function renderProductHeader(WooProduct $record): HtmlString
     {
-        $imageUrl   = filled($record->main_image_url) ? e($record->main_image_url) : 'https://placehold.co/320x320?text=No+Image';
-        $name       = e($record->decoded_name);
+        $name = e($record->decoded_name);
+
+        // Imagini pentru slider
+        $record->loadMissing('images');
+        $images = $record->images->map(fn ($img) => [
+            'id'         => $img->id,
+            'url'        => $img->url,
+            'is_primary' => (bool) $img->is_primary,
+            'source'     => $img->source,
+        ])->values()->toArray();
+
+        if (empty($images)) {
+            // Fallback dacă nu există nicio imagine în tabel
+            $fallbackUrl = filled($record->main_image_url) ? $record->main_image_url : 'https://placehold.co/320x320?text=No+Image';
+            $images = [['id' => 0, 'url' => $fallbackUrl, 'is_primary' => true, 'source' => 'none']];
+        }
+
+        $imagesJson = htmlspecialchars(json_encode($images, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
+
+        // canManage — poate gestiona galeria
+        $canManage = false;
+        $authUser  = auth()->user();
+        if ($authUser instanceof User) {
+            $canManage = $authUser->isAdmin() || in_array($authUser->role, [
+                User::ROLE_MANAGER,
+                User::ROLE_DIRECTOR_VANZARI,
+            ], true);
+        }
+        $canManageJs = $canManage ? 'true' : 'false';
+
+        // isToyaProduct — arată buton import Toya
+        $isToya      = $record->source === WooProduct::SOURCE_TOYA_API;
+        $isToyaJs    = $isToya ? 'true' : 'false';
 
         // Buton Resync WooCommerce (icon-only, logo Woo)
         $canResync = false;
         if ($record->woo_id && $record->connection_id) {
-            $authUser = auth()->user();
             if ($authUser instanceof User) {
                 $canResync = $authUser->isAdmin() || in_array($authUser->role, [
                     User::ROLE_MANAGER,
@@ -1343,19 +1449,6 @@ class WooProductResource extends Resource
         // Cod de bare
         $barcodeHtml = static::renderBarcodeHtml($record->sku ?? '');
 
-        // Buton Adaugă la necesar
-        $addToNecesarBtn = '<button'
-            . ' x-on:click="$wire.mountAction(\'add_to_necesar\')"'
-            . ' type="button"'
-            . ' title="Adaugă la necesar"'
-            . ' style="margin-top:10px;background:#dc2626;color:#fff;border:none;cursor:pointer;'
-            . 'border-radius:8px;padding:11px 18px;font-size:0.875rem;font-weight:600;'
-            . 'display:flex;align-items:center;justify-content:center;gap:8px;width:100%;">'
-            . '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;">'
-            . '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />'
-            . '</svg>'
-            . 'Adaugă la necesar'
-            . '</button>';
 
         // Descriere scurtă
         $shortDesc = filled($record->short_description)
@@ -1390,14 +1483,126 @@ class WooProductResource extends Resource
             . 'flex-shrink:0;'
             . '"></span>';
 
+        // Slider imagini
+        $sliderHtml = '<div'
+            . ' x-data="{ current: 0, images: [], canManage: ' . $canManageJs . ', isToya: ' . $isToyaJs . ', lightbox: false }"'
+            . ' x-init="images = JSON.parse($el.dataset.images)"'
+            . ' x-on:keydown.escape.window="lightbox = false"'
+            . ' data-images="' . $imagesJson . '"'
+            . ' style="flex:0 0 auto;width:min(420px,100%);position:relative;">'
+
+            // ── Lightbox overlay ────────────────────────────────────────────
+            . '<div x-show="lightbox" x-cloak'
+            . ' x-on:click.self="lightbox = false"'
+            . ' style="position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;">'
+
+            // Imagine mare
+            . '<img :src="images[current]?.url"'
+            . ' style="max-width:90vw;max-height:88vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.6);"'
+            . ' x-on:error="$el.src=\'https://placehold.co/800x800?text=Eroare\'" />'
+
+            // Săgeată stânga lightbox
+            . '<button x-show="current > 0" x-on:click.stop="current--" type="button"'
+            . ' style="position:absolute;left:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);color:white;border:none;border-radius:50%;width:48px;height:48px;font-size:2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">&#8249;</button>'
+
+            // Săgeată dreapta lightbox
+            . '<button x-show="current < images.length - 1" x-on:click.stop="current++" type="button"'
+            . ' style="position:absolute;right:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);color:white;border:none;border-radius:50%;width:48px;height:48px;font-size:2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">&#8250;</button>'
+
+            // Buton închide
+            . '<button x-on:click="lightbox = false" type="button"'
+            . ' style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.15);color:white;border:none;border-radius:50%;width:40px;height:40px;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>'
+
+            // Contor lightbox
+            . '<div x-show="images.length > 1"'
+            . ' style="position:absolute;bottom:16px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.7);font-size:0.85rem;font-weight:600;"'
+            . ' x-text="(current+1) + \' / \' + images.length"></div>'
+
+            . '</div>'  // end lightbox
+
+            // Cadru imagine
+            . '<div style="position:relative;aspect-ratio:1/1;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;background:#fafafa;">'
+
+            // Imaginea curentă — click deschide lightbox
+            . '<img :src="images[current]?.url" :alt="images[current]?.url"'
+            . ' style="width:100%;height:100%;object-fit:contain;cursor:zoom-in;"'
+            . ' x-on:click="lightbox = true"'
+            . ' x-on:error="$el.src=\'https://placehold.co/320x320?text=Eroare\'" />'
+
+            // Dot status listat
+            . $dotHtml
+
+            // Săgeată stânga
+            . '<button x-show="current > 0" x-on:click="current--" type="button"'
+            . ' style="position:absolute;left:6px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.4);color:white;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:1.3rem;line-height:1;display:flex;align-items:center;justify-content:center;z-index:2;">&#8249;</button>'
+
+            // Săgeată dreapta
+            . '<button x-show="current < images.length - 1" x-on:click="current++" type="button"'
+            . ' style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.4);color:white;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:1.3rem;line-height:1;display:flex;align-items:center;justify-content:center;z-index:2;">&#8250;</button>'
+
+            // Bar overlay jos: contor + acțiuni
+            . '<div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.55));border-radius:0 0 12px 12px;padding:10px 8px 8px;display:flex;align-items:center;justify-content:space-between;gap:4px;z-index:2;">'
+
+            // Contor + badge Primary
+            . '<div style="display:flex;align-items:center;gap:5px;flex-shrink:0;">'
+            . '<span x-show="images.length > 1" x-text="(current+1) + \'/\' + images.length" style="color:white;font-size:0.7rem;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.5);"></span>'
+            . '<span x-show="images[current]?.is_primary" style="background:#2563eb;color:white;border-radius:4px;padding:1px 6px;font-size:0.65rem;font-weight:700;">★ Principal</span>'
+            . '</div>'
+
+            // Butoane acțiuni (canManage)
+            . '<div x-show="canManage" style="display:flex;gap:3px;align-items:center;">'
+
+            // Setează ca principal
+            . '<button x-show="!images[current]?.is_primary && images[current]?.id" type="button" title="Setează ca imagine principală"'
+            . ' x-on:click="$wire.mountAction(\'gallery_set_primary\', {image_id: images[current].id})"'
+            . ' style="background:rgba(37,99,235,0.85);color:white;border:none;border-radius:5px;padding:3px 7px;font-size:0.72rem;cursor:pointer;white-space:nowrap;">★ Principal</button>'
+
+            // Mută mai în față (sort_order -)
+            . '<button x-show="current > 0 && images[current]?.id" type="button" title="Mută mai în față"'
+            . ' x-on:click="$wire.mountAction(\'gallery_move_before\', {image_id: images[current].id})"'
+            . ' style="background:rgba(107,114,128,0.8);color:white;border:none;border-radius:5px;padding:3px 7px;font-size:0.8rem;cursor:pointer;">←</button>'
+
+            // Mută mai în spate (sort_order +)
+            . '<button x-show="current < images.length - 1 && images[current]?.id" type="button" title="Mută mai în spate"'
+            . ' x-on:click="$wire.mountAction(\'gallery_move_after\', {image_id: images[current].id})"'
+            . ' style="background:rgba(107,114,128,0.8);color:white;border:none;border-radius:5px;padding:3px 7px;font-size:0.8rem;cursor:pointer;">→</button>'
+
+            // Șterge
+            . '<button x-show="images[current]?.id" type="button" title="Șterge imaginea"'
+            . ' x-on:click="$wire.mountAction(\'gallery_delete_image\', {image_id: images[current].id})"'
+            . ' style="background:rgba(220,38,38,0.85);color:white;border:none;border-radius:5px;padding:3px 7px;font-size:0.75rem;cursor:pointer;">✕</button>'
+
+            // Adaugă
+            . '<button type="button" title="Adaugă imagine"'
+            . ' x-on:click="$wire.mountAction(\'gallery_add_url\')"'
+            . ' style="background:rgba(22,163,74,0.85);color:white;border:none;border-radius:5px;padding:3px 7px;font-size:0.85rem;cursor:pointer;">+</button>'
+
+            . '</div>'  // end butoane
+            . '</div>'  // end bar overlay
+
+            . '</div>'  // end cadru imagine
+
+            // Puncte indicator
+            . '<div x-show="images.length > 1" style="display:flex;justify-content:center;gap:4px;margin-top:6px;">'
+            . '<template x-for="(img2, i) in images" :key="i">'
+            . '<button type="button" x-on:click="current = i"'
+            . ' :style="i === current ? \'background:#2563eb;width:18px;\' : \'background:#d1d5db;width:8px;\'"'
+            . ' style="height:8px;border-radius:10px;border:none;cursor:pointer;padding:0;transition:width .2s,background .2s;"></button>'
+            . '</template>'
+            . '</div>'
+
+            // Import Toya (doar produse Toya, canManage)
+            . '<div x-show="isToya && canManage" style="text-align:center;margin-top:6px;">'
+            . '<button type="button" x-on:click="$wire.mountAction(\'gallery_import_toya\')"'
+            . ' style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:6px;padding:3px 10px;font-size:0.72rem;cursor:pointer;font-weight:500;">↓ Import poze Toya</button>'
+            . '</div>'
+
+            . '</div>'; // end x-data wrapper
+
         $html = $style . '<div style="display:flex;flex-wrap:wrap;gap:24px;align-items:start;width:100%;">'
 
-            // Poza produs — responsivă
-            . '<div style="flex:0 0 auto;width:min(340px,100%);position:relative;">'
-            . '<img src="' . $imageUrl . '" alt="' . $name . '" '
-            . 'style="width:100%;aspect-ratio:1/1;object-fit:contain;border-radius:12px;border:1px solid #e5e7eb;background:#fafafa;" />'
-            . $dotHtml
-            . '</div>'
+            // Slider imagini — responsiv
+            . $sliderHtml
 
             // Coloana dreapta: brand + nume + preț + tags + grid + descriere
             . '<div style="display:flex;flex-direction:column;gap:10px;min-width:0;flex:1 1 280px;">'
@@ -1428,9 +1633,6 @@ class WooProductResource extends Resource
 
             // Cod de bare
             . $barcodeHtml
-
-            // Buton Adaugă la necesar (după barcode pe desktop; pe mobil barcode e hidden → apare după stoc)
-            . $addToNecesarBtn
 
             // Descriere scurtă
             . $shortDesc

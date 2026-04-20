@@ -61,6 +61,7 @@ class BuyerDashboardPage extends Page
             || in_array($user->role, [
                 User::ROLE_MANAGER_ACHIZITII,
                 User::ROLE_MANAGER,
+                User::ROLE_CONSULTANT_VANZARI,
             ], true);
     }
 

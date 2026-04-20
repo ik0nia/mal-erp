@@ -5,6 +5,7 @@ namespace App\Filament\App\Resources\PurchaseRequestResource\Pages;
 use App\Filament\App\Resources\PurchaseRequestResource;
 use App\Models\EmailMessage;
 use App\Models\PurchaseRequest;
+use App\Models\User;
 use Filament\Actions;
 use Filament\Schemas\Components\Section;
 use Filament\Infolists\Components\ViewEntry;
@@ -46,6 +47,26 @@ class ViewPurchaseRequest extends ViewRecord
                 ->action(function (): void {
                     $this->record->update(['status' => PurchaseRequest::STATUS_CANCELLED]);
                     Notification::make()->success()->title('Necesarul a fost anulat.')->send();
+                    $this->record->refresh();
+                    $this->fillForm();
+                }),
+
+            Actions\Action::make('reject')
+                ->label('Respinge necesar')
+                ->icon('heroicon-o-hand-thumb-down')
+                ->color('danger')
+                ->visible(function (): bool {
+                    if ($this->record->status !== PurchaseRequest::STATUS_SUBMITTED) return false;
+                    $user = auth()->user();
+                    return $user && ($user->isSuperAdmin() || $user->isAdmin() || $user->isBuyer());
+                })
+                ->requiresConfirmation()
+                ->modalHeading('Respinge necesarul?')
+                ->modalDescription('Necesarul va fi anulat și nu va mai apărea în comenzile viitoare. Acțiunea este reversibilă doar de admin.')
+                ->modalSubmitActionLabel('Da, respinge')
+                ->action(function (): void {
+                    $this->record->update(['status' => PurchaseRequest::STATUS_CANCELLED]);
+                    Notification::make()->warning()->title('Necesarul a fost respins.')->send();
                     $this->record->refresh();
                     $this->fillForm();
                 }),

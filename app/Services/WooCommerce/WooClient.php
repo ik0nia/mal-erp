@@ -63,6 +63,30 @@ class WooClient
     }
 
     /**
+     * Lightweight fetch: only id + images for published products.
+     * Used to detect products without images without pulling full payloads.
+     *
+     * @return array<int, array{id: int, images: array}>
+     */
+    public function getProductImages(int $page, int $perPage = 100): array
+    {
+        return $this->get('products', [
+            'page'     => $page,
+            'per_page' => max(1, min(100, $perPage)),
+            'status'   => 'publish',
+            'orderby'  => 'id',
+            'order'    => 'asc',
+            '_fields'  => 'id,images',
+        ]);
+    }
+
+    public function findProductBySku(string $sku): ?array
+    {
+        $results = $this->get('products', ['sku' => $sku, 'per_page' => 1]);
+        return ! empty($results[0]) ? $results[0] : null;
+    }
+
+    /**
      * Fetch only id+status for all products (any status) — lightweight, for status sync.
      *
      * @return array<int, array{id: int, status: string}>
@@ -262,6 +286,28 @@ class WooClient
      * @param  array<string, mixed>  $fields
      * @return array<string, mixed>
      */
+    /**
+     * Update multiple products in one batch request.
+     * Each item must have 'id' + fields to update.
+     * Returns the decoded response (keys: 'update').
+     */
+    public function updateProductsBatch(array $items): array
+    {
+        if (empty($items)) {
+            return ['update' => []];
+        }
+
+        $response = $this->retryRequest(
+            fn () => $this->http->post(
+                $this->apiBase.'/products/batch',
+                ['update' => $items],
+            )
+        );
+        $response->throw();
+
+        return $response->json() ?? ['update' => []];
+    }
+
     public function updateProduct(int $productId, array $fields): array
     {
         $response = $this->retryRequest(
@@ -426,7 +472,7 @@ class WooClient
                 return $fn();
             } catch (\Throwable $e) {
                 $msg = $e->getMessage();
-                $isTransient = str_contains($msg, 'cURL error 28') || str_contains($msg, '503');
+                $isTransient = str_contains($msg, 'cURL error 28'); // 503 nu se retransmite — trecem mai departe
 
                 if (! $isTransient) {
                     throw $e;

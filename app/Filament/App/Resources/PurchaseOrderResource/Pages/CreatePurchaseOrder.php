@@ -5,20 +5,26 @@ namespace App\Filament\App\Resources\PurchaseOrderResource\Pages;
 use App\Filament\App\Resources\PurchaseOrderResource;
 use App\Models\ProductSupplier;
 use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
 use App\Models\PurchaseRequest;
 use App\Models\PurchaseRequestItem;
 use App\Models\User;
 use Filament\Actions\Action;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Placeholder;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\HtmlString;
 
 class CreatePurchaseOrder extends CreateRecord
 {
     protected static string $resource = PurchaseOrderResource::class;
 
-    public bool $skipEmptyCheck = false;
-    public int  $emptyItemCount = 0;
-    public int  $supplierId     = 0;
+    public int   $supplierId        = 0;
+    public array $csvImportRows     = [];   // [{code, name, sku, qty, found, ps_id}]
+    public string $csvImportPath    = '';
 
     public function mount(): void
     {
@@ -32,21 +38,19 @@ class CreatePurchaseOrder extends CreateRecord
      */
     public function create(bool $another = false): void
     {
-        if (! $this->skipEmptyCheck) {
-            $rawState  = $this->form->getRawState();
-            $emptyCount = collect($rawState['items'] ?? [])
-                ->filter(fn ($item) => ! isset($item['quantity']) || (float) $item['quantity'] <= 0)
-                ->count();
+        $rawState   = $this->form->getRawState();
+        $totalItems = collect($rawState['items'] ?? []);
+        $withQty    = $totalItems->filter(fn ($item) => isset($item['quantity']) && (float) $item['quantity'] > 0);
 
-            if ($emptyCount > 0) {
-                $this->emptyItemCount = $emptyCount;
-                $this->mountAction('confirmEmptyItems');
-
-                return;
-            }
+        if ($withQty->isEmpty()) {
+            \Filament\Notifications\Notification::make()
+                ->warning()
+                ->title('Niciun produs cu cantitate completată')
+                ->body('Completează cantitatea pentru cel puțin un produs înainte de a crea comanda.')
+                ->send();
+            return;
         }
 
-        $this->skipEmptyCheck = false;
         parent::create($another);
     }
 
@@ -89,42 +93,309 @@ class CreatePurchaseOrder extends CreateRecord
                 })
                 ->action(function (array $data): void {
                     $newQtys = json_decode($data['qtys_json'] ?? '{}', true) ?? [];
+                    if (empty($newQtys)) {
+                        return;
+                    }
 
                     $items = $this->data['items'] ?? [];
+
+                    // Actualizează cantitățile pentru itemele existente
+                    $existingPids = [];
                     foreach ($items as &$item) {
                         $pid = $item['woo_product_id'] ?? null;
-                        if ($pid && isset($newQtys[$pid])) {
-                            $item['quantity'] = (float) $newQtys[$pid];
+                        if ($pid) {
+                            $existingPids[(string) $pid] = true;
+                            if (isset($newQtys[(string) $pid])) {
+                                $item['quantity'] = (float) $newQtys[(string) $pid];
+                            }
                         }
                     }
                     unset($item);
 
-                    $this->data['items'] = $items;
+                    // Adaugă rânduri noi pentru produsele care nu sunt încă în PO
+                    $newPids = array_keys(array_diff_key($newQtys, $existingPids));
+                    if (! empty($newPids)) {
+                        $products = \App\Models\WooProduct::whereIn('id', $newPids)
+                            ->get()->keyBy('id');
+
+                        $psMap = \App\Models\ProductSupplier::where('supplier_id', $this->supplierId)
+                            ->whereIn('woo_product_id', $newPids)
+                            ->get()->keyBy('woo_product_id');
+
+                        // Stock + velocity data pentru toate produsele noi dintr-o singură query
+                        $infoRows = DB::table('woo_products as wp')
+                            ->leftJoin('bi_product_velocity_current as bpv', 'bpv.reference_product_id', '=', 'wp.sku')
+                            ->leftJoin(
+                                DB::raw('(SELECT woo_product_id, COALESCE(SUM(quantity),0) as total_qty FROM product_stocks GROUP BY woo_product_id) stk'),
+                                'stk.woo_product_id', '=', 'wp.id'
+                            )
+                            ->whereIn('wp.id', $newPids)
+                            ->select([
+                                'wp.id',
+                                'wp.min_stock_qty',
+                                'wp.max_stock_qty',
+                                DB::raw('COALESCE(stk.total_qty, 0) as stock'),
+                                DB::raw('COALESCE(bpv.avg_out_qty_7d, 0)  as avg7'),
+                                DB::raw('COALESCE(bpv.avg_out_qty_30d, 0) as avg30'),
+                                DB::raw('COALESCE(bpv.avg_out_qty_90d, 0) as avg90'),
+                            ])
+                            ->get()->keyBy('id');
+
+                        foreach ($newPids as $pid) {
+                            $product = $products->get($pid);
+                            if (! $product) continue;
+
+                            $ps   = $psMap->get($pid);
+                            $info = $infoRows->get($pid);
+
+                            $stock    = $info ? (float) $info->stock : 0;
+                            $avg7     = $info ? (float) $info->avg7  : 0;
+                            $avg30    = $info ? (float) $info->avg30 : 0;
+                            $avg90    = $info ? (float) $info->avg90 : 0;
+                            $minStk   = $info && $info->min_stock_qty !== null ? (float) $info->min_stock_qty : null;
+                            $maxStk   = $info && $info->max_stock_qty !== null ? (float) $info->max_stock_qty : null;
+
+                            $base    = max($avg7, $avg30, $avg90);
+                            $trend   = ($avg30 > 0 && $avg7 > 0 && $avg7 < $avg30 * 0.85) ? max(0.5, $avg7 / $avg30) : 1.0;
+                            $velDay  = $base * $trend;
+                            $sales7d = round($avg7 * 7, 1);
+                            $sales30d = round($avg30 * 30, 1);
+                            $safetyStock = $velDay * 3;
+                            $hint    = max(0, (int) ceil($velDay * 7 + $safetyStock - $stock));
+                            $daysToStockout = $avg7 > 0 ? round($stock / $avg7, 1) : null;
+
+                            if ($maxStk !== null && $maxStk > 0) {
+                                $addStore   = max(0, (int) ceil($maxStk - $stock));
+                                $calcMethod = 'max_stock';
+                            } elseif ($hint > 0) {
+                                $addStore   = $hint;
+                                $calcMethod = 'velocity';
+                            } else {
+                                $addStore   = 0;
+                                $calcMethod = null;
+                            }
+
+                            $items[] = [
+                                'woo_product_id'         => (string) $pid,
+                                'product_name'           => $product->decoded_name ?? $product->name,
+                                'sku'                    => $product->sku ?? '',
+                                'supplier_sku'           => $ps?->supplier_sku ?? '',
+                                'unit_price'             => $ps?->purchase_price ? (float) $ps->purchase_price : 0,
+                                'quantity'               => (float) $newQtys[(string) $pid],
+                                'info_purchase_uom'      => $ps?->purchase_uom ?? null,
+                                'info_conversion_factor' => $ps?->conversion_factor ? (float) $ps->conversion_factor : null,
+                                'info_stock'             => $stock,
+                                'info_sales_7d'          => $sales7d,
+                                'info_sales_30d'         => $sales30d,
+                                'info_days_stockout'     => $daysToStockout,
+                                'quantity_hint'          => $addStore > 0 ? $addStore : null,
+                                'recommendation_json'    => json_encode([
+                                    'from_requests'     => 0,
+                                    'reserved_qty'      => 0,
+                                    'general_qty'       => 0,
+                                    'current_stock'     => $stock,
+                                    'velocity_day'      => $velDay,
+                                    'sales_7d'          => $sales7d,
+                                    'sales_30d'         => $sales30d,
+                                    'min_stock_qty'     => $minStk,
+                                    'max_stock_qty'     => $maxStk,
+                                    'additional_store'  => $addStore,
+                                    'total_recommended' => $addStore,
+                                    'calc_method'       => $calcMethod,
+                                ], JSON_UNESCAPED_UNICODE),
+                            ];
+                        }
+                    }
+
+                    $this->data['items'] = array_values($items);
                     $this->form->fill($this->data);
+
+                    $added   = count($newPids);
+                    $updated = count($newQtys) - $added;
+                    $msg     = [];
+                    if ($updated > 0) $msg[] = "{$updated} cantități actualizate";
+                    if ($added > 0)   $msg[] = "{$added} produse noi adăugate";
 
                     \Filament\Notifications\Notification::make()
                         ->success()
-                        ->title('Cantități aplicate în PO')
+                        ->title(implode(', ', $msg))
                         ->send();
                 })
                 ->visible(fn (): bool => $this->supplierId > 0),
 
-            Action::make('confirmEmptyItems')
-                ->hidden()
-                ->requiresConfirmation()
-                ->modalHeading('Poziții fără cantitate')
-                ->modalDescription(fn () => 'Există ' . $this->emptyItemCount . ' ' .
-                    ($this->emptyItemCount === 1 ? 'poziție' : 'poziții') .
-                    ' fără cantitate completată. Dacă continui, acestea vor fi ignorate. Ești sigur că vrei să creezi PO-ul?')
-                ->modalIcon('heroicon-o-exclamation-triangle')
-                ->modalIconColor('warning')
-                ->modalSubmitActionLabel('Da, creează PO')
-                ->modalCancelActionLabel('Nu, vreau să completez')
-                ->color('warning')
-                ->action(function () {
-                    $this->skipEmptyCheck = true;
-                    $this->create();
+            // Import CSV — flux 2 pași în o singură acțiune (re-mount cu stare)
+            Action::make('import_csv')
+                ->label(fn (): string => empty($this->csvImportRows) ? 'Import CSV' : 'Import CSV — Confirmare')
+                ->icon('heroicon-o-arrow-up-tray')
+                ->color('gray')
+                ->visible(fn (): bool => $this->supplierId > 0)
+                ->modalHeading(fn (): string => empty($this->csvImportRows) ? 'Import CSV — Pasul 1: Încarcă fișier' : 'Import CSV — Pasul 2: Confirmare')
+                ->modalSubmitActionLabel(fn (): string => empty($this->csvImportRows) ? 'Previzualizează →' : 'Creează PO cu aceste produse')
+                ->modalWidth('4xl')
+                ->mountUsing(function (): void {
+                    // resetăm preview-ul doar la deschidere fresh (nu la re-mount din action)
+                })
+                ->form(function (): array {
+                    if (! empty($this->csvImportRows)) {
+                        // Pasul 2: preview tabel
+                        $rows   = $this->csvImportRows;
+                        $found  = array_values(array_filter($rows, fn ($r) => $r['found']));
+                        $missed = array_values(array_filter($rows, fn ($r) => ! $r['found']));
+
+                        $html  = '<div style="font-size:13px;line-height:1.5">';
+                        $html .= '<div style="margin-bottom:12px;display:flex;gap:20px;font-weight:600">';
+                        $html .= '<span style="color:#16a34a">✓ ' . count($found) . ' produse găsite</span>';
+                        if ($missed) {
+                            $html .= '<span style="color:#dc2626">✗ ' . count($missed) . ' coduri negăsite</span>';
+                        }
+                        $html .= '</div>';
+                        $html .= '<div style="max-height:400px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:6px">';
+                        $html .= '<table style="width:100%;border-collapse:collapse">';
+                        $html .= '<thead style="position:sticky;top:0;z-index:1"><tr style="background:#f3f4f6;text-align:left">';
+                        $html .= '<th style="padding:7px 10px;border-bottom:1px solid #e5e7eb">Cod furnizor</th>';
+                        $html .= '<th style="padding:7px 10px;border-bottom:1px solid #e5e7eb">Produs</th>';
+                        $html .= '<th style="padding:7px 10px;border-bottom:1px solid #e5e7eb">SKU</th>';
+                        $html .= '<th style="padding:7px 10px;border-bottom:1px solid #e5e7eb;text-align:right">Cantitate</th>';
+                        $html .= '</tr></thead><tbody>';
+
+                        foreach ($rows as $row) {
+                            $bg    = $row['found'] ? 'background:#fff' : 'background:#fff5f5';
+                            $color = $row['found'] ? '#111827' : '#dc2626';
+                            $html .= "<tr style=\"{$bg};border-bottom:1px solid #f3f4f6\">";
+                            $html .= "<td style=\"padding:5px 10px;font-family:monospace;font-size:12px;color:{$color}\">{$row['code']}</td>";
+                            $html .= "<td style=\"padding:5px 10px;color:{$color}\">{$row['name']}</td>";
+                            $html .= "<td style=\"padding:5px 10px;font-family:monospace;font-size:12px;color:#6b7280\">{$row['sku']}</td>";
+                            $html .= "<td style=\"padding:5px 10px;text-align:right;font-weight:600\">{$row['qty']}</td>";
+                            $html .= '</tr>';
+                        }
+
+                        $html .= '</tbody></table></div></div>';
+
+                        return [
+                            Placeholder::make('csv_preview')
+                                ->label('')
+                                ->content(new HtmlString($html)),
+                        ];
+                    }
+
+                    // Pasul 1: upload fișier
+                    return [
+                        FileUpload::make('csv_file')
+                            ->label('Fișier CSV (cod_furnizor,cantitate)')
+                            ->disk('local')
+                            ->directory('csv-imports-tmp')
+                            ->acceptedFileTypes(['text/csv', 'text/plain', 'application/csv', 'application/octet-stream'])
+                            ->maxSize(1024)
+                            ->required()
+                            ->helperText('Format: o linie per produs — cod_furnizor,cantitate (cu sau fără header)'),
+                    ];
+                })
+                ->action(function (array $data): void {
+                    // Pasul 2 — creăm PO direct
+                    if (! empty($this->csvImportRows)) {
+                        $rows = array_values(array_filter($this->csvImportRows, fn ($r) => $r['found']));
+
+                        if (empty($rows)) {
+                            Notification::make()->danger()->title('Niciun produs valid de importat.')->send();
+                            return;
+                        }
+
+                        $order = DB::transaction(function () use ($rows): PurchaseOrder {
+                            $order = PurchaseOrder::create([
+                                'supplier_id' => $this->supplierId,
+                                'buyer_id'    => auth()->id(),
+                                'status'      => PurchaseOrder::STATUS_DRAFT,
+                            ]);
+
+                            // Bulk load ProductSupplier cu product pentru toți ps_ids
+                            $psMap = ProductSupplier::with('product')
+                                ->whereIn('id', array_column($rows, 'ps_id'))
+                                ->get()
+                                ->keyBy('id');
+
+                            foreach ($rows as $row) {
+                                $ps = $psMap->get($row['ps_id']);
+                                if (! $ps?->product) continue;
+
+                                PurchaseOrderItem::create([
+                                    'purchase_order_id' => $order->id,
+                                    'woo_product_id'    => $ps->product->id,
+                                    'product_name'      => $ps->product->decoded_name ?? $ps->product->name,
+                                    'sku'               => $ps->product->sku,
+                                    'supplier_sku'      => $ps->supplier_sku,
+                                    'quantity'          => $row['qty'],
+                                    'unit_price'        => $ps->purchase_price ?? 0,
+                                ]);
+                            }
+
+                            $order->recalculateTotals();
+                            return $order;
+                        });
+
+                        $this->csvImportRows = [];
+                        $this->redirect(PurchaseOrderResource::getUrl('view', ['record' => $order]));
+                        return;
+                    }
+
+                    // Pasul 1 — parsăm CSV și setăm preview
+                    $path    = is_array($data['csv_file']) ? reset($data['csv_file']) : $data['csv_file'];
+                    $content = Storage::disk('local')->get($path);
+
+                    if (! $content) {
+                        Notification::make()->danger()->title('Fișierul nu a putut fi citit.')->send();
+                        return;
+                    }
+
+                    $firstLine = strtok($content, "\r\n");
+                    $delimiter = substr_count($firstLine, ';') >= substr_count($firstLine, ',') ? ';' : ',';
+
+                    $csvRows = [];
+                    foreach (preg_split('/\r\n|\r|\n/', trim($content)) as $line) {
+                        $line = trim($line);
+                        if ($line === '') continue;
+                        $cols = str_getcsv($line, $delimiter);
+                        if (count($cols) < 2) continue;
+                        $code = trim($cols[0]);
+                        $qty  = (float) str_replace(',', '.', trim($cols[1]));
+                        if ($code !== '' && $qty > 0) {
+                            $csvRows[$code] = $qty;
+                        }
+                    }
+
+                    if (empty($csvRows)) {
+                        Notification::make()->danger()->title('CSV-ul nu conține date valide.')->send();
+                        return;
+                    }
+
+                    $psRecords = ProductSupplier::with('product')
+                        ->where('supplier_id', $this->supplierId)
+                        ->whereIn('supplier_sku', array_keys($csvRows))
+                        ->get()
+                        ->keyBy('supplier_sku');
+
+                    $rows = [];
+                    foreach ($csvRows as $code => $qty) {
+                        $ps      = $psRecords->get($code);
+                        $product = $ps?->product;
+                        $rows[]  = [
+                            'code'  => $code,
+                            'name'  => $product ? ($product->decoded_name ?? $product->name) : '—',
+                            'sku'   => $product?->sku ?? '—',
+                            'qty'   => $qty,
+                            'found' => (bool) $product,
+                            'ps_id' => $ps?->id,
+                        ];
+                    }
+
+                    $this->csvImportRows = $rows;
+
+                    // Ștergem schema cacheată ca form() să fie re-evaluat cu preview
+                    unset($this->cachedSchemas['mountedActionSchema0']);
+
+                    // Halt — păstrăm modalul deschis
+                    throw new \Filament\Support\Exceptions\Halt();
                 }),
+
         ];
     }
 
@@ -302,7 +573,7 @@ class CreatePurchaseOrder extends CreateRecord
             return [];
         }
 
-        // Produse furnizor cu date velocity și stoc
+        // Produse furnizor cu date velocity și stoc — toate, inclusiv fără rulaj
         $rows = \Illuminate\Support\Facades\DB::table('product_suppliers as ps')
             ->join('woo_products as wp', 'wp.id', '=', 'ps.woo_product_id')
             ->leftJoin('bi_product_velocity_current as bpv', 'bpv.reference_product_id', '=', 'wp.sku')
@@ -314,7 +585,7 @@ class CreatePurchaseOrder extends CreateRecord
             ->where('wp.is_discontinued', false)
             ->select([
                 'wp.id', 'wp.name', 'wp.sku', 'wp.min_stock_qty', 'wp.max_stock_qty',
-                'ps.supplier_sku',
+                'ps.supplier_sku', 'ps.order_multiple',
                 \Illuminate\Support\Facades\DB::raw('COALESCE(stk.total_qty, 0) as stock'),
                 \Illuminate\Support\Facades\DB::raw('COALESCE(bpv.avg_out_qty_7d, 0)  as avg7'),
                 \Illuminate\Support\Facades\DB::raw('COALESCE(bpv.avg_out_qty_30d, 0) as avg30'),
@@ -328,7 +599,23 @@ class CreatePurchaseOrder extends CreateRecord
 
         // Calculăm cantitatea recomandată per produs
         $productIds = $rows->pluck('id')->all();
-        $products   = [];
+
+        // Cantități din necesare (purchase request items PENDING pentru furnizorul ăsta)
+        $pendingQtys = \Illuminate\Support\Facades\DB::table('purchase_request_items as pri')
+            ->join('woo_products as wp', 'wp.id', '=', 'pri.woo_product_id')
+            ->where('pri.supplier_id', $supplierId)
+            ->whereIn('pri.status', [
+                \App\Models\PurchaseRequestItem::STATUS_PENDING,
+                \App\Models\PurchaseRequestItem::STATUS_ORDERED,
+            ])
+            ->whereIn('pri.woo_product_id', $productIds)
+            ->select('pri.woo_product_id', \Illuminate\Support\Facades\DB::raw('SUM(GREATEST(pri.quantity - pri.ordered_quantity, 0)) as pending_qty'))
+            ->groupBy('pri.woo_product_id')
+            ->pluck('pending_qty', 'woo_product_id')
+            ->map(fn ($v) => (float) $v)
+            ->all();
+
+        $products = [];
 
         foreach ($rows as $row) {
             $avg7  = (float) $row->avg7;
@@ -336,30 +623,32 @@ class CreatePurchaseOrder extends CreateRecord
             $avg90 = (float) $row->avg90;
             $stock = (float) $row->stock;
 
-            $base  = max($avg7, $avg30, $avg90);
-            if ($base <= 0) {
-                continue; // fără rulaj — skip
-            }
+            $base = max($avg7, $avg30, $avg90);
 
-            $trend  = ($avg30 > 0 && $avg7 > 0 && $avg7 < ($avg30 * 0.85))
-                ? max(0.5, $avg7 / $avg30) : 1.0;
-            $daily  = $base * $trend;
+            if ($base > 0) {
+                $trend  = ($avg30 > 0 && $avg7 > 0 && $avg7 < ($avg30 * 0.85))
+                    ? max(0.5, $avg7 / $avg30) : 1.0;
+                $daily  = $base * $trend;
 
-            $maxStock = $row->max_stock_qty !== null ? (float) $row->max_stock_qty : null;
-            if ($maxStock !== null && $maxStock > 0) {
-                $recommended = max(0, (int) ceil($maxStock - $stock));
+                $maxStock = $row->max_stock_qty !== null ? (float) $row->max_stock_qty : null;
+                if ($maxStock !== null && $maxStock > 0) {
+                    $salesRecommended = max(0, $maxStock - $stock);
+                } else {
+                    $safety           = $daily * 3;
+                    $salesRecommended = max(0, $daily * 7 + $safety - $stock);
+                }
             } else {
-                $safety      = $daily * 3;
-                $recommended = max(0, (int) ceil($daily * 7 + $safety - $stock));
+                $salesRecommended = 0; // fără rulaj — nu recomandăm cantitate din vânzări
             }
+
+            $pendingQty  = $pendingQtys[$row->id] ?? 0;
+            $recommended = (int) ceil($salesRecommended) + (int) ceil($pendingQty);
 
             // Round to order multiple if set
-            if ($recommended > 0) {
-                $psRec = ProductSupplier::where('woo_product_id', $row->id)
-                    ->where('supplier_id', $supplierId)
-                    ->first();
-                if ($psRec) {
-                    $recommended = (int) $psRec->roundToOrderMultiple((float) $recommended);
+            if ($recommended > 0 && ! empty($row->order_multiple)) {
+                $om = (float) $row->order_multiple;
+                if ($om > 0) {
+                    $recommended = (int) (ceil($recommended / $om) * $om);
                 }
             }
 
@@ -371,6 +660,7 @@ class CreatePurchaseOrder extends CreateRecord
                 'stock'          => $stock,
                 'sales_7d'       => round($avg7 * 7, 1),
                 'sales_30d'      => round($avg30 * 30, 1),
+                'pending_qty'    => $pendingQty,
                 'recommended'    => $recommended,
             ];
         }
@@ -402,13 +692,13 @@ class CreatePurchaseOrder extends CreateRecord
             }
         }
 
-        // Produse fără nicio categorie
-        $uncategorized = array_keys(array_diff_key($products, $catRows->toArray()));
-        foreach ($uncategorized as $productId) {
-            $categories['Fără categorie'][] = $products[$productId];
-        }
-
+        // Sortare: categorii normale alfabetic, "Fără categorie" la final
+        $noCategory = $categories['Fără categorie'] ?? null;
+        unset($categories['Fără categorie']);
         ksort($categories);
+        if ($noCategory !== null) {
+            $categories['Fără categorie'] = $noCategory;
+        }
 
         return $categories;
     }

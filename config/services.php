@@ -40,4 +40,12 @@ return [
         'model'   => env('ANTHROPIC_MODEL', 'claude-haiku-4-5-20251001'),
     ],
 
+    'vapid' => [
+        'subject'     => env('VAPID_SUBJECT', 'mailto:erp@malinco.ro'),
+        'public_key'  => env('VAPID_PUBLIC_KEY'),
+        'private_key' => env('VAPID_PRIVATE_KEY'),
+    ],
+
+    'category_review_token' => env('CATEGORY_REVIEW_TOKEN', '060155cb555b0465f1099f01da6a6798'),
+
 ];

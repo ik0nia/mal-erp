@@ -29,6 +29,7 @@ class User extends Authenticatable implements FilamentUser
         'location_id',
         'is_admin',
         'is_super_admin',
+        'warehouse_pin',
     ];
 
     /**

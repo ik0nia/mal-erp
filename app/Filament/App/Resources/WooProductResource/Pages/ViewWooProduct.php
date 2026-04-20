@@ -2,9 +2,9 @@
 
 namespace App\Filament\App\Resources\WooProductResource\Pages;
 
-use App\Filament\App\Resources\PurchaseRequestResource;
 use App\Filament\App\Resources\WooProductResource;
-use App\Models\PurchaseRequest;
+use App\Jobs\ImportToyaImagesJob;
+use App\Models\ProductImage;
 use App\Models\User;
 use App\Models\WooCategory;
 use App\Models\WooProduct;
@@ -173,50 +173,205 @@ class ViewWooProduct extends ViewRecord
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $product->getRouteKey()]));
                 }),
 
-            // Hidden from header but needed for $wire.mountAction('add_to_necesar') from infolist body
-            Actions\Action::make('add_to_necesar')
-                ->label('Adaugă la necesar')
-                ->icon('heroicon-o-shopping-cart')
-                ->color('danger')
-                ->hidden()
-                ->modalHeading(fn () => 'Adaugă la necesar: '.($this->record->decoded_name ?? $this->record->name))
-                ->modalDescription(fn () => $this->record->substituted_by_id
-                    ? '⚠️ Atenție: acest produs are un înlocuitor setat. Considerați să comandați "' . ($this->record->substitutedBy?->name ?? '') . '" în schimb.'
-                    : null)
-                ->modalSubmitActionLabel('Adaugă')
-                ->form(WooProductResource::necesarModalForm())
-                ->action(function (array $data): void {
-                    $user = auth()->user();
-                    if (! $user instanceof User) {
+            // ── Gallery: setează poza principală ─────────────────────────
+            Actions\Action::make('gallery_set_primary')
+                ->label('Setează ca principală')
+                ->extraAttributes(['class' => 'hidden'])
+                ->action(function (array $arguments): void {
+                    $imageId = (int) ($arguments['image_id'] ?? 0);
+                    if (! $imageId) {
                         return;
                     }
 
-                    /** @var WooProduct $product */
-                    $product  = $this->record;
-                    $draft    = PurchaseRequest::getOrCreateDraft($user);
-                    $existing = $draft->items()->where('woo_product_id', $product->id)->first();
+                    /** @var ProductImage|null $image */
+                    $image = ProductImage::where('id', $imageId)
+                        ->where('woo_product_id', $this->record->id)
+                        ->first();
 
-                    if ($existing) {
-                        $existing->update(['quantity' => (float) $existing->quantity + (float) $data['quantity']]);
-                    } else {
-                        $draft->items()->create([
-                            'woo_product_id' => $product->id,
-                            'quantity'       => $data['quantity'],
-                            'is_urgent'      => $data['is_urgent'] ?? false,
-                            'notes'          => $data['notes'] ?? null,
-                        ]);
+                    if (! $image) {
+                        Notification::make()->danger()->title('Imaginea nu a fost găsită.')->send();
+
+                        return;
                     }
 
-                    Notification::make()
-                        ->success()
-                        ->title('Produs adăugat la necesar')
-                        ->actions([
-                            \Filament\Actions\Action::make('open_cart')
-                                ->label('Deschide coșul →')
-                                ->url(PurchaseRequestResource::getUrl('edit', ['record' => $draft->id])),
-                        ])
+                    $image->setAsPrimary();
+                    $this->record->refresh();
+
+                    Notification::make()->success()->title('Imaginea principală a fost actualizată.')->send();
+                    $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record->getRouteKey()]));
+                }),
+
+            // ── Gallery: șterge o imagine ─────────────────────────────────
+            Actions\Action::make('gallery_delete_image')
+                ->label('Șterge imaginea')
+                ->extraAttributes(['class' => 'hidden'])
+                ->requiresConfirmation()
+                ->modalHeading('Șterge imaginea?')
+                ->modalDescription('Această acțiune nu poate fi anulată.')
+                ->modalSubmitActionLabel('Șterge')
+                ->action(function (array $arguments): void {
+                    $imageId = (int) ($arguments['image_id'] ?? 0);
+                    if (! $imageId) {
+                        return;
+                    }
+
+                    /** @var ProductImage|null $image */
+                    $image = ProductImage::where('id', $imageId)
+                        ->where('woo_product_id', $this->record->id)
+                        ->first();
+
+                    if (! $image) {
+                        Notification::make()->danger()->title('Imaginea nu a fost găsită.')->send();
+
+                        return;
+                    }
+
+                    $wasPrimary = $image->is_primary;
+                    $image->delete();
+
+                    // Dacă era principală, setăm prima rămasă ca principală
+                    if ($wasPrimary) {
+                        $next = ProductImage::where('woo_product_id', $this->record->id)->orderBy('sort_order')->orderBy('id')->first();
+                        if ($next) {
+                            $next->setAsPrimary();
+                        } else {
+                            WooProduct::where('id', $this->record->id)->update(['main_image_url' => null]);
+                        }
+                    }
+
+                    Notification::make()->success()->title('Imaginea a fost ștearsă.')->send();
+                    $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record->getRouteKey()]));
+                }),
+
+            // ── Gallery: adaugă URL manual ────────────────────────────────
+            Actions\Action::make('gallery_add_url')
+                ->label('Adaugă URL imagine')
+                ->extraAttributes(['class' => 'hidden'])
+                ->modalHeading('Adaugă imagine')
+                ->modalSubmitActionLabel('Adaugă')
+                ->form([
+                    \Filament\Forms\Components\TextInput::make('url')
+                        ->label('URL imagine')
+                        ->url()
+                        ->required()
+                        ->placeholder('https://...'),
+                    \Filament\Forms\Components\Toggle::make('is_primary')
+                        ->label('Setează ca principală')
+                        ->default(fn () => $this->record->images()->count() === 0),
+                ])
+                ->action(function (array $data): void {
+                    /** @var WooProduct $product */
+                    $product = $this->record;
+
+                    // Evităm duplicate
+                    $exists = ProductImage::where('woo_product_id', $product->id)
+                        ->where('url', $data['url'])
+                        ->exists();
+
+                    if ($exists) {
+                        Notification::make()->warning()->title('Această imagine există deja.')->send();
+
+                        return;
+                    }
+
+                    $maxOrder = ProductImage::where('woo_product_id', $product->id)->max('sort_order') ?? -1;
+
+                    $image = ProductImage::create([
+                        'woo_product_id' => $product->id,
+                        'url'            => $data['url'],
+                        'sort_order'     => $maxOrder + 1,
+                        'is_primary'     => false,
+                        'source'         => ProductImage::SOURCE_MANUAL,
+                    ]);
+
+                    if ($data['is_primary'] ?? false) {
+                        $image->setAsPrimary();
+                    }
+
+                    Notification::make()->success()->title('Imaginea a fost adăugată.')->send();
+                    $this->redirect($this->getResource()::getUrl('view', ['record' => $product->getRouteKey()]));
+                }),
+
+            // ── Gallery: mută imaginea mai în față (swap sort_order cu precedenta) ──
+            Actions\Action::make('gallery_move_before')
+                ->label('Mută mai în față')
+                ->extraAttributes(['class' => 'hidden'])
+                ->action(function (array $arguments): void {
+                    $imageId = (int) ($arguments['image_id'] ?? 0);
+                    if (! $imageId) {
+                        return;
+                    }
+
+                    $image = ProductImage::where('id', $imageId)
+                        ->where('woo_product_id', $this->record->id)
+                        ->first();
+
+                    if (! $image) {
+                        return;
+                    }
+
+                    $prev = ProductImage::where('woo_product_id', $this->record->id)
+                        ->where('sort_order', '<', $image->sort_order)
+                        ->orderByDesc('sort_order')
+                        ->first();
+
+                    if ($prev) {
+                        [$image->sort_order, $prev->sort_order] = [$prev->sort_order, $image->sort_order];
+                        $image->save();
+                        $prev->save();
+                    }
+
+                    $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record->getRouteKey()]));
+                }),
+
+            // ── Gallery: mută imaginea mai în spate (swap sort_order cu următoarea) ──
+            Actions\Action::make('gallery_move_after')
+                ->label('Mută mai în spate')
+                ->extraAttributes(['class' => 'hidden'])
+                ->action(function (array $arguments): void {
+                    $imageId = (int) ($arguments['image_id'] ?? 0);
+                    if (! $imageId) {
+                        return;
+                    }
+
+                    $image = ProductImage::where('id', $imageId)
+                        ->where('woo_product_id', $this->record->id)
+                        ->first();
+
+                    if (! $image) {
+                        return;
+                    }
+
+                    $next = ProductImage::where('woo_product_id', $this->record->id)
+                        ->where('sort_order', '>', $image->sort_order)
+                        ->orderBy('sort_order')
+                        ->first();
+
+                    if ($next) {
+                        [$image->sort_order, $next->sort_order] = [$next->sort_order, $image->sort_order];
+                        $image->save();
+                        $next->save();
+                    }
+
+                    $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record->getRouteKey()]));
+                }),
+
+            // ── Gallery: import poze din Toya ─────────────────────────────
+            Actions\Action::make('gallery_import_toya')
+                ->label('Import poze Toya')
+                ->extraAttributes(['class' => 'hidden'])
+                ->modalHeading('Import imagini din Toya')
+                ->modalDescription('Se vor importa toate imaginile suplimentare din feedul Toya. Imaginile deja existente nu vor fi duplicate.')
+                ->modalSubmitActionLabel('Importă')
+                ->visible(fn () => $this->record->source === WooProduct::SOURCE_TOYA_API)
+                ->action(function (): void {
+                    ImportToyaImagesJob::dispatch($this->record->id);
+                    Notification::make()->success()
+                        ->title('Job trimis')
+                        ->body('Imaginile vor fi importate în câteva secunde. Reîncarcă pagina după.')
                         ->send();
                 }),
+
         ];
     }
 }

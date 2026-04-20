@@ -182,6 +182,41 @@ class PurchaseOrderResource extends Resource
                         ->label('Notițe pentru furnizor')
                         ->rows(2),
                 ]),
+
+            // ── WinMentor sync status ──
+            Section::make('WinMentor')
+                ->columnSpanFull()
+                ->hiddenOn('create')
+                ->visible(fn (?PurchaseOrder $record): bool => $record?->status === PurchaseOrder::STATUS_RECEIVED)
+                ->columns(4)
+                ->schema([
+                    Placeholder::make('winmentor_sync_status')
+                        ->label('Status sincronizare')
+                        ->content(fn (?PurchaseOrder $record): HtmlString => new HtmlString(match($record?->winmentor_sync_status) {
+                            PurchaseOrder::WINMENTOR_SYNCED  => '<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">✓ Importat în WinMentor</span>',
+                            PurchaseOrder::WINMENTOR_PENDING => '<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">⏳ În așteptare</span>',
+                            PurchaseOrder::WINMENTOR_FAILED  => '<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">✗ Eroare</span>',
+                            default                          => '<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">— Nesincronizat</span>',
+                        })),
+
+                    Placeholder::make('winmentor_synced_at')
+                        ->label('Importat la')
+                        ->content(fn (?PurchaseOrder $record): string => $record?->winmentor_synced_at
+                            ? $record->winmentor_synced_at->format('d.m.Y H:i:s')
+                            : '—'),
+
+                    Placeholder::make('winmentor_order_nr')
+                        ->label('Nr. document WinMentor')
+                        ->content(fn (?PurchaseOrder $record): string => $record?->winmentor_order_nr ?? '—'),
+
+                    Placeholder::make('winmentor_sync_error')
+                        ->label('Eroare')
+                        ->visible(fn (?PurchaseOrder $record): bool => filled($record?->winmentor_sync_error))
+                        ->content(fn (?PurchaseOrder $record): HtmlString => new HtmlString(
+                            '<span class="text-red-600 text-sm">' . e($record?->winmentor_sync_error ?? '') . '</span>'
+                        ))
+                        ->columnSpanFull(),
+                ]),
         ]);
     }
 
@@ -218,7 +253,13 @@ class PurchaseOrderResource extends Resource
                     ->label('Trimis la')
                     ->dateTime('d.m.Y')
                     ->placeholder('—')
-                    ->sortable(),
+                    ->sortable()
+                    ->description(fn (PurchaseOrder $record): string => match($record->sent_via) {
+                        'email'    => '✉ Email',
+                        'whatsapp' => '💬 WhatsApp',
+                        'manual'   => '📞 Manual',
+                        default    => '',
+                    }),
 
                 Tables\Columns\TextColumn::make('reception_status')
                     ->label('Recepție')
@@ -321,6 +362,22 @@ class PurchaseOrderResource extends Resource
                     TextEntry::make('approvedBy.name')->label('Aprobat de')->placeholder('—'),
                     TextEntry::make('rejection_reason')->label('Motiv respingere')->placeholder('—')->columnSpanFull(),
                     TextEntry::make('sent_at')->label('Trimis la')->dateTime('d.m.Y H:i')->placeholder('—'),
+                    TextEntry::make('sent_via')
+                        ->label('Trimis prin')
+                        ->placeholder('—')
+                        ->badge()
+                        ->formatStateUsing(fn (?string $state): string => match($state) {
+                            'email'    => 'Email',
+                            'whatsapp' => 'WhatsApp',
+                            'manual'   => 'Manual (tel/fax)',
+                            default    => '—',
+                        })
+                        ->color(fn (?string $state): string => match($state) {
+                            'email'    => 'info',
+                            'whatsapp' => 'success',
+                            'manual'   => 'gray',
+                            default    => 'gray',
+                        }),
                     TextEntry::make('received_at')->label('Recepționat la')->dateTime('d.m.Y H:i')->placeholder('—'),
                     TextEntry::make('receivedBy.name')->label('Recepționat de')->placeholder('—'),
                     TextEntry::make('received_notes')->label('Observații recepție')->placeholder('—')->columnSpanFull(),
@@ -370,6 +427,41 @@ class PurchaseOrderResource extends Resource
                             TextEntry::make('notes')->label('Notițe')->placeholder('—'),
                         ]),
                 ]),
+
+            InfolistSection::make('Recepție contabilă WinMentor')
+                ->columnSpanFull()
+                ->columns(3)
+                ->visible(fn (PurchaseOrder $record): bool => $record->winmentor_receptie_nr !== null)
+                ->schema([
+                    TextEntry::make('winmentor_receptie_nr')
+                        ->label('Nr. document intrare (NIR)')
+                        ->placeholder('—'),
+                    TextEntry::make('winmentor_receptie_date')
+                        ->label('Data intrare WinMentor')
+                        ->date('d.m.Y')
+                        ->placeholder('—'),
+                    TextEntry::make('winmentor_receptie_score')
+                        ->label('Scor potrivire')
+                        ->formatStateUsing(fn ($state): string => $state !== null ? "{$state}%" : '—')
+                        ->badge()
+                        ->color(fn ($state): string => match(true) {
+                            $state >= 90 => 'success',
+                            $state >= 70 => 'warning',
+                            default      => 'gray',
+                        }),
+                    TextEntry::make('lead_time_days')
+                        ->label('Lead time (zile)')
+                        ->formatStateUsing(fn ($state): string => $state !== null ? "{$state} zile" : '—')
+                        ->placeholder('—'),
+                    TextEntry::make('receptie_contabila_lag_days')
+                        ->label('Lag recepție contabilă (zile)')
+                        ->formatStateUsing(fn ($state): string => $state !== null ? "{$state} zile" : '—')
+                        ->placeholder('—'),
+                    TextEntry::make('winmentor_receptie_matched_at')
+                        ->label('Asociat automat la')
+                        ->dateTime('d.m.Y H:i')
+                        ->placeholder('—'),
+                ]),
         ]);
     }
 
@@ -379,7 +471,7 @@ class PurchaseOrderResource extends Resource
 
         $user = auth()->user();
         if ($user && $user->role === User::ROLE_CONSULTANT_VANZARI) {
-            $query->whereHas('supplier', fn ($q) => $q->where('buyer_id', $user->id));
+            $query->whereHas('supplier', fn ($q) => $q->whereHas('buyers', fn ($q2) => $q2->where('users.id', $user->id)));
         }
 
         return $query;
@@ -465,20 +557,27 @@ class PurchaseOrderResource extends Resource
                 }
 
                 return WooProduct::query()
-                    ->whereHas('suppliers', fn ($q) => $q->where('suppliers.id', $supplierId))
+                    ->join('product_suppliers as ps', function ($join) use ($supplierId) {
+                        $join->on('ps.woo_product_id', '=', 'woo_products.id')
+                             ->where('ps.supplier_id', $supplierId);
+                    })
                     ->where(fn (Builder $q) => $q
-                        ->where('name', 'like', "%{$search}%")
-                        ->orWhere('sku', 'like', "%{$search}%")
+                        ->where('woo_products.name', 'like', "%{$search}%")
+                        ->orWhere('woo_products.sku', 'like', "%{$search}%")
+                        ->orWhere('ps.supplier_sku', 'like', "%{$search}%")
                     )
-                    ->limit(30)->get()
+                    ->limit(30)
+                    ->get(['woo_products.id', 'woo_products.name', 'woo_products.sku', 'ps.supplier_sku'])
                     ->mapWithKeys(fn (WooProduct $p): array => [
-                        $p->id => "[{$p->sku}] ".($p->decoded_name ?? $p->name),
+                        $p->id => "[{$p->sku}] " . ($p->decoded_name ?? $p->name)
+                            . ($p->supplier_sku ? " ({$p->supplier_sku})" : ''),
                     ])
                     ->all();
             })
             ->getOptionLabelUsing(function ($value): ?string {
-                $p = WooProduct::query()->find($value, ['id', 'name', 'sku']);
-                return $p ? "[{$p->sku}] ".($p->decoded_name ?? $p->name) : null;
+                $p = WooProduct::find($value, ['id', 'name', 'sku']);
+                if (! $p) return null;
+                return "[{$p->sku}] " . ($p->decoded_name ?? $p->name);
             })
             ->live()
             ->afterStateUpdated(function ($state, Set $set, Get $get) use ($isCreate): void {
@@ -660,9 +759,10 @@ class PurchaseOrderResource extends Resource
                     ->columnSpan(1),
 
                 TextInput::make('quantity')
-                    ->label('Cantitate')->numeric()->minValue(0.001)
+                    ->label('Cantitate')->numeric()->minValue(0)->nullable()
                     ->formatStateUsing(fn ($state) => $state !== null ? (float) $state : null)
                     ->placeholder(fn (Get $get): ?string => $get('quantity_hint') ? '→ '.((string)(int)$get('quantity_hint')) : null)
+                    ->extraInputAttributes(['x-on:keydown.enter' => '$event.preventDefault()'])
                     ->helperText(function (Get $get): ?HtmlString {
                         $productId  = (int) ($get('woo_product_id') ?? 0);
                         $supplierId = (int) ($get('../../supplier_id') ?? 0);
@@ -746,6 +846,7 @@ class PurchaseOrderResource extends Resource
                     ->label('Cantitate')->numeric()->minValue(0.001)->required()
                     ->default(1)
                     ->formatStateUsing(fn ($state) => $state !== null ? (float) $state : null)
+                    ->extraInputAttributes(['x-on:keydown.enter' => '$event.preventDefault()'])
                     ->helperText(function (Get $get): ?string {
                         $productId  = (int) ($get('woo_product_id') ?? 0);
                         $supplierId = (int) ($get('../../supplier_id') ?? 0);
@@ -811,7 +912,14 @@ class PurchaseOrderResource extends Resource
             ->schema($schema)
             ->columns($isCreate ? 12 : 10)
             ->defaultItems($isCreate ? 0 : 1)
-            ->addActionLabel('Adaugă produs');
+            ->addActionLabel('Adaugă produs')
+            ->mutateRelationshipDataBeforeCreateUsing(function (array $data): ?array {
+                // Nu salvăm items fără cantitate (lăsate goale în formularul de creare)
+                if (! isset($data['quantity']) || (float) $data['quantity'] <= 0) {
+                    return null;
+                }
+                return $data;
+            });
     }
 
     private static function productThumbnail(?int $productId): HtmlString

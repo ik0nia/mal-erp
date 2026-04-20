@@ -105,7 +105,7 @@ class ProductPriceLogResource extends Resource
             ])
             ->deferFilters(false)
             ->recordActions([
-                Actions\Action::make('details')
+                \Filament\Actions\Action::make('details')
                     ->label('Detalii')
                     ->icon('heroicon-o-eye')
                     ->modalSubmitAction(false)

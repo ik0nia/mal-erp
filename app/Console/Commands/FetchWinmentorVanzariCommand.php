@@ -213,6 +213,11 @@ class FetchWinmentorVanzariCommand extends Command
 
         if (empty($rows)) return 0;
 
+        // Deduplicare: elimină rânduri identice (același document, SKU, cantitate, preț, zi)
+        $rows = collect($rows)->unique(fn($r) => implode('|', [
+            $r['nr_factura'], $r['sku'], $r['part_id'], $r['zi'], $r['cantitate'], $r['pret'],
+        ]))->values()->all();
+
         collect($rows)->chunk(500)->each(fn($chunk) => DB::table('winmentor_vanzari_raw')->insert($chunk->all()));
 
         return count($rows);

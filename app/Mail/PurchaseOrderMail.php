@@ -4,7 +4,7 @@ namespace App\Mail;
 
 use App\Models\PurchaseOrder;
 use App\Services\PurchaseOrderExcelExport;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\PurchaseOrderPdf;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Attachment;
@@ -36,9 +36,9 @@ class PurchaseOrderMail extends Mailable
         $attachments = [];
 
         try {
-            $pdf         = Pdf::loadView('pdf.purchase-order', ['order' => $this->order]);
-            $pdfFilename = str_replace('/', '-', $this->order->number) . '.pdf';
-            $attachments[] = Attachment::fromData(fn () => $pdf->output(), $pdfFilename)
+            $pdfContent  = PurchaseOrderPdf::generateAndStore($this->order);
+            $pdfFilename = PurchaseOrderPdf::filename($this->order);
+            $attachments[] = Attachment::fromData(fn () => $pdfContent, $pdfFilename)
                 ->withMime('application/pdf');
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('PO Mail: PDF generation failed', [

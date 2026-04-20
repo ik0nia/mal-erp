@@ -66,10 +66,11 @@ return [
         ],
 
         'daily' => [
-            'driver' => 'daily',
-            'path' => storage_path('logs/laravel.log'),
-            'level' => env('LOG_LEVEL', 'debug'),
-            'days' => env('LOG_DAILY_DAYS', 14),
+            'driver'     => 'daily',
+            'path'       => storage_path('logs/laravel.log'),
+            'level'      => env('LOG_LEVEL', 'debug'),
+            'days'       => env('LOG_DAILY_DAYS', 14),
+            'permission' => 0666,
             'replace_placeholders' => true,
         ],
 
@@ -125,6 +126,26 @@ return [
 
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
+        ],
+
+        // WinMentor Bridge — apeluri API brute (GET/POST către bridge, răspunsuri)
+        'winmentor_bridge' => [
+            'driver'     => 'daily',
+            'path'       => storage_path('logs/winmentor/bridge/bridge.log'),
+            'level'      => 'debug',
+            'days'       => 35,
+            'permission' => 0666,
+            'replace_placeholders' => true,
+        ],
+
+        // WinMentor Sync — operațiuni de sincronizare (intrări detectate, salvate, erori procesare)
+        'winmentor_sync' => [
+            'driver'     => 'daily',
+            'path'       => storage_path('logs/winmentor/sync/sync.log'),
+            'level'      => 'info',
+            'days'       => 35,
+            'permission' => 0666,
+            'replace_placeholders' => true,
         ],
 
     ],

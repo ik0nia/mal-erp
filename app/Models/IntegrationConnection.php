@@ -97,7 +97,8 @@ class IntegrationConnection extends Model
 
     public function resolveTimeoutSeconds(int $default = 30): int
     {
-        $value = (int) data_get($this->settings, 'timeout', $default);
+        $raw   = data_get($this->settings, 'timeout');
+        $value = $raw !== null ? (int) $raw : $default;
 
         return max(5, $value);
     }
@@ -134,12 +135,17 @@ class IntegrationConnection extends Model
 
     public function bridgeAn(): int
     {
-        return (int) data_get($this->settings, 'an', now()->year);
+        return now()->year;
     }
 
     public function bridgeLuna(): int
     {
-        return (int) data_get($this->settings, 'luna', now()->month);
+        return now()->month;
+    }
+
+    public function bridgeWritesEnabled(): bool
+    {
+        return (bool) data_get($this->settings, 'writes_enabled', true);
     }
 
     public function isSameday(): bool

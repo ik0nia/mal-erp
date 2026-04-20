@@ -29,10 +29,19 @@ class DailyStockMetricAggregator
 
         $processedProducts = 0;
 
+        $prevDay = Carbon::parse($day)->subDay()->toDateString();
+
         foreach (array_chunk($snapshotsByReferenceId, 1000, true) as $snapshotChunk) {
             $referenceProductIds = array_keys($snapshotChunk);
             $existingRows = DailyStockMetric::query()
                 ->where('day', $day)
+                ->whereIn('reference_product_id', $referenceProductIds)
+                ->get()
+                ->keyBy('reference_product_id');
+
+            // Ziua precedentă — folosită ca opening când nu există înregistrare azi
+            $prevDayRows = DailyStockMetric::query()
+                ->where('day', $prevDay)
                 ->whereIn('reference_product_id', $referenceProductIds)
                 ->get()
                 ->keyBy('reference_product_id');
@@ -42,7 +51,9 @@ class DailyStockMetricAggregator
             foreach ($snapshotChunk as $referenceProductId => $snapshot) {
                 /** @var DailyStockMetric|null $existing */
                 $existing = $existingRows->get($referenceProductId);
-                $upsertRows[] = $this->buildMetricRow($day, $snapshotAt, $snapshot, $existing);
+                /** @var DailyStockMetric|null $prevDay */
+                $prevDayRow = $prevDayRows->get($referenceProductId);
+                $upsertRows[] = $this->buildMetricRow($day, $snapshotAt, $snapshot, $existing, $prevDayRow);
                 $processedProducts++;
             }
 
@@ -109,7 +120,7 @@ class DailyStockMetricAggregator
     /**
      * @param  array{reference_product_id:string, woo_product_id:int, quantity:float, sell_price:?float}  $snapshot
      */
-    private function buildMetricRow(string $day, Carbon $snapshotAt, array $snapshot, ?DailyStockMetric $existing): array
+    private function buildMetricRow(string $day, Carbon $snapshotAt, array $snapshot, ?DailyStockMetric $existing, ?DailyStockMetric $prevDayRow = null): array
     {
         $wooProductId = (int) ($snapshot['woo_product_id'] ?? 0);
         $quantity = $snapshot['quantity'];
@@ -118,24 +129,29 @@ class DailyStockMetricAggregator
         $snapshotPrice = $snapshot['sell_price'];
 
         if (! $existing instanceof DailyStockMetric) {
+            // Opening = closing din ziua precedentă (dacă există), altfel cantitatea curentă
+            $openingQty   = $prevDayRow !== null ? $this->toFloat($prevDayRow->closing_total_qty) : $quantity;
+            $openingPrice = $prevDayRow !== null ? $this->toNullableFloat($prevDayRow->closing_sell_price) : $snapshotPrice;
+
+            $openingSalesValue = $this->calculateSalesValue($openingQty, $openingPrice);
             $closingSalesValue = $this->calculateSalesValue($availableQty, $snapshotPrice);
 
             return [
                 'day' => $day,
                 'reference_product_id' => $snapshot['reference_product_id'],
                 'woo_product_id' => $wooProductId,
-                'opening_total_qty' => $quantity,
+                'opening_total_qty' => $openingQty,
                 'closing_total_qty' => $quantity,
-                'opening_available_qty' => $availableQty,
+                'opening_available_qty' => $openingQty,
                 'closing_available_qty' => $availableQty,
-                'opening_sell_price' => $snapshotPrice,
+                'opening_sell_price' => $openingPrice,
                 'closing_sell_price' => $snapshotPrice,
-                'daily_total_variation' => 0.0,
-                'daily_available_variation' => 0.0,
+                'daily_total_variation' => $quantity - $openingQty,
+                'daily_available_variation' => $availableQty - $openingQty,
                 'closing_sales_value' => $closingSalesValue,
-                'daily_sales_value_variation' => 0.0,
-                'min_available_qty' => $availableQty,
-                'max_available_qty' => $availableQty,
+                'daily_sales_value_variation' => $closingSalesValue - $openingSalesValue,
+                'min_available_qty' => min($openingQty, $availableQty),
+                'max_available_qty' => max($openingQty, $availableQty),
                 'snapshots_count' => 1,
                 'first_snapshot_at' => $snapshotAt,
                 'last_snapshot_at' => $snapshotAt,

@@ -80,8 +80,21 @@
             } catch (_) {}
 
             const video = this.$refs.video;
-            video.srcObject = this.stream;
-            await video.play();
+            if (!video) {
+                this.errorMessage = 'Elementul video nu a fost gasit. Reincarca pagina.';
+                this.stream.getTracks().forEach(t => t.stop());
+                this.stream = null;
+                return;
+            }
+            try {
+                video.srcObject = this.stream;
+                await video.play();
+            } catch (err) {
+                this.errorMessage = 'Nu s-a putut porni camera: ' + err.message;
+                this.stream.getTracks().forEach(t => t.stop());
+                this.stream = null;
+                return;
+            }
 
             this.statusMessage = 'Se focalizeaza camera...';
             await new Promise(r => setTimeout(r, 1000));
@@ -287,8 +300,8 @@
             x-transition:leave="transition ease-in duration-100"
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
-            style="display:none; position:fixed; inset:0; z-index:9999; flex-direction:column;"
-            x-bind:style="(detected || notFound || associating || submitted) ? 'display:flex; position:fixed; inset:0; z-index:9999; flex-direction:column; background:#fff;' : 'display:flex; position:fixed; inset:0; z-index:9999; flex-direction:column; background:#000;'"
+            style="display:flex; position:fixed; inset:0; z-index:9999; flex-direction:column; background:#000;"
+            x-bind:style="(detected || notFound || associating || submitted) ? 'background:#fff;' : 'background:#000;'"
         >
             {{-- Header --}}
             <div style="display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1rem; flex-shrink:0;"
@@ -453,7 +466,7 @@
 
             {{-- 5 Camera (scanner activ) --}}
             <div x-show="!detected && !notFound && !associating && !submitted" style="flex:1; position:relative; min-height:0; overflow:hidden;">
-                <video x-ref="video" playsinline muted style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block;"></video>
+                <video x-ref="video" autoplay playsinline muted style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block;"></video>
 
                 <div style="position:absolute; inset:0; pointer-events:none; z-index:2;">
                     <div style="position:absolute; inset:0; bottom:calc(50% + 70px); background:rgba(0,0,0,0.45);"></div>

@@ -28,6 +28,7 @@ class SupplierMovementChartWidget extends ChartWidget
     {
         $this->days = $days;
         $this->cachedData = null;
+        $this->updateChartData();
     }
 
     #[On('stockMovementsSetSupplier')]
@@ -35,6 +36,7 @@ class SupplierMovementChartWidget extends ChartWidget
     {
         $this->supplierId = $supplierId;
         $this->cachedData = null;
+        $this->updateChartData();
     }
 
     #[On('stockMovementsSetCategory')]
@@ -42,6 +44,7 @@ class SupplierMovementChartWidget extends ChartWidget
     {
         $this->categoryId = $categoryId;
         $this->cachedData = null;
+        $this->updateChartData();
     }
 
     protected function getFilters(): ?array

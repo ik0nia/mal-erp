@@ -27,6 +27,7 @@ class StockMovementChartWidget extends ChartWidget
     {
         $this->days = $days;
         $this->cachedData = null;
+        $this->updateChartData();
     }
 
     protected function getFilters(): ?array

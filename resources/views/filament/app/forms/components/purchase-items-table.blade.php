@@ -64,6 +64,43 @@
             } catch(e) {} finally { this.ui[index].loading = false; }
         },
 
+        focusQty(index) {
+            // Folosim setTimeout pentru a aștepta re-render-ul Livewire după entangle update
+            setTimeout(() => {
+                this.$el.querySelectorAll('.erp-qty')[index]?.focus();
+            }, 80);
+        },
+
+        async onEnterSearch(index, el) {
+            const q = el.value.trim();
+            if (!q) return;
+            // Dacă rezultatele sunt deja încărcate, alege primul
+            if (this.ui[index]?.results?.length) {
+                this.pick(index, this.ui[index].results[0]);
+                this.focusQty(index);
+                return;
+            }
+            // Altfel caută imediat (fără debounce) și alege când vine răspunsul
+            if (q.length < 2) { this.focusQty(index); return; }
+            this.ui[index].loading = true;
+            try {
+                const r = await fetch('/achizirii/products-search?q=' + encodeURIComponent(q));
+                if (r.ok) {
+                    const d = await r.json();
+                    this.ui[index].results = d;
+                    if (d.length > 0) {
+                        this.pick(index, d[0]);
+                        this.focusQty(index);
+                    } else {
+                        this.ui[index].open = false;
+                        this.focusQty(index);
+                    }
+                }
+            } catch(e) {
+                this.focusQty(index);
+            } finally { this.ui[index].loading = false; }
+        },
+
         pick(index, product) {
             this.items = this.items.map((item, i) => i !== index ? item : { ...item, woo_product_id: product.id, product_label: product.label });
             this.ui[index].search = product.label; this.ui[index].results = []; this.ui[index].open = false;
@@ -162,6 +199,7 @@ onRowEscape(index) {
                         placeholder="Caută produs…" autocomplete="off"
                         :value="ui[index]?.search"
                         @input.debounce.300ms="doSearch(index, $event.target.value)"
+                        @keydown.enter.prevent="onEnterSearch(index, $el)"
                         @keydown.escape.stop="ui[index]?.open ? (ui[index].open = false) : onRowEscape(index)"
                         @focus="ui[index]?.results?.length && (ui[index].open = true)"
                         @blur="setTimeout(() => { if(ui[index]) { ui[index].open = false; ui[index].search = item.woo_product_id ? item.product_label : ''; } }, 200)"
@@ -194,6 +232,7 @@ onRowEscape(index) {
                     min="0.001" step="any"
                     :value="item.quantity"
                     @change="setField(index, 'quantity', parseFloat($event.target.value) || 1)"
+                    @keydown.enter.prevent
                     @keydown.tab="if (index === items.length - 1) { $event.preventDefault(); addRow(); }"
                     @keydown.escape="onRowEscape(index)"
                 />

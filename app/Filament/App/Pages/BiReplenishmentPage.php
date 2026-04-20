@@ -73,6 +73,13 @@ class BiReplenishmentPage extends Page
 
         $stats = DB::table('bi_replenishment_suggestions')
             ->where('calculated_for_day', $day)
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                  ->from('purchase_order_items as poi')
+                  ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+                  ->whereColumn('poi.woo_product_id', 'bi_replenishment_suggestions.woo_product_id')
+                  ->whereIn('po.status', ['pending_approval', 'approved', 'sent']);
+            })
             ->selectRaw("
                 SUM(suggested_qty) as total_qty,
                 SUM(estimated_cost) as total_cost,
@@ -99,7 +106,14 @@ class BiReplenishmentPage extends Page
         }
 
         $query = DB::table('bi_replenishment_suggestions')
-            ->where('calculated_for_day', $this->calcDay);
+            ->where('calculated_for_day', $this->calcDay)
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                  ->from('purchase_order_items as poi')
+                  ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+                  ->whereColumn('poi.woo_product_id', 'bi_replenishment_suggestions.woo_product_id')
+                  ->whereIn('po.status', ['pending_approval', 'approved', 'sent']);
+            });
 
         if ($this->tab !== 'all') {
             $query->where('priority', $this->tab);

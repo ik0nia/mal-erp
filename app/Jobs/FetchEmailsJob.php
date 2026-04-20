@@ -69,7 +69,18 @@ class FetchEmailsJob implements ShouldQueue
             unset($client);
             gc_collect_cycles();
 
-            $client = $this->makeClient($host, (int) $port, $encryption, $username, $password);
+            try {
+                $client = $this->makeClient($host, (int) $port, $encryption, $username, $password);
+            } catch (\Throwable $e) {
+                // Serverul IMAP poate refuza reconectarea imediată — așteptăm 2s și reîncercăm o dată
+                sleep(2);
+                try {
+                    $client = $this->makeClient($host, (int) $port, $encryption, $username, $password);
+                } catch (\Throwable $e2) {
+                    Log::warning("FetchEmailsJob: reconectare eșuată pentru folder '{$folderPath}': " . $e2->getMessage());
+                    break; // serverul e down, oprim procesarea
+                }
+            }
 
             $saved = $this->processFolder(
                 $client, $folderPath, $since,
@@ -247,10 +258,19 @@ class FetchEmailsJob implements ShouldQueue
                     'supplier_contact_id' => $contactId,
                 ]);
 
-                // Dispatch AI pentru emailuri noi din INBOX/Sent cu furnizor cunoscut — DEZACTIVAT temporar (consum API).
-                // if (in_array($folderPath, ['INBOX', 'INBOX.Sent']) && $supplierId) {
-                //     ProcessEmailAIJob::dispatch($emailRecord->id)->delay(now()->addSeconds(15));
-                // }
+                // Parsare PDF/XLSX atașamente pentru emailuri cu furnizor cunoscut
+                $hasRelevantAtt = collect($attList)->contains(function ($att) {
+                    $name = strtolower($att['name'] ?? '');
+                    $mime = strtolower($att['mime_type'] ?? '');
+                    return str_ends_with($name, '.pdf') || str_ends_with($name, '.xlsx')
+                        || str_ends_with($name, '.xls') || str_contains($mime, 'pdf')
+                        || str_contains($mime, 'spreadsheet') || str_contains($mime, 'excel');
+                });
+                if ($supplierId && $hasRelevantAtt) {
+                    \App\Jobs\ParseEmailAttachmentJob::dispatch($emailRecord->id)
+                        ->delay(now()->addSeconds(30))
+                        ->onQueue('default');
+                }
 
                 $saved++;
 
