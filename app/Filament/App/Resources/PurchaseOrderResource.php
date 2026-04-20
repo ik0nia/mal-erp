@@ -579,16 +579,43 @@ class PurchaseOrderResource extends Resource
                 ]),
 
             // ── 4. Note ─────────────────────────────────────────────────────
-            InfolistSection::make('Note')
-                ->columns(1)
+            InfolistSection::make('note_indicators')
+                ->hiddenLabel()
                 ->columnSpanFull()
                 ->visible(fn (PurchaseOrder $record): bool =>
                     filled($record->notes_internal) || filled($record->notes_supplier) || filled($record->received_notes)
                 )
                 ->schema([
-                    TextEntry::make('notes_internal')->label('Notițe interne')->placeholder('—'),
-                    TextEntry::make('notes_supplier')->label('Notițe pentru furnizor')->placeholder('—'),
-                    TextEntry::make('received_notes')->label('Observații recepție')->placeholder('—'),
+                    TextEntry::make('notes_html')
+                        ->hiddenLabel()
+                        ->columnSpanFull()
+                        ->html()
+                        ->getStateUsing(function (PurchaseOrder $record): string {
+                            $notes = [
+                                'Notițe interne'         => $record->notes_internal,
+                                'Notițe pentru furnizor' => $record->notes_supplier,
+                                'Observații recepție'    => $record->received_notes,
+                            ];
+
+                            $html = '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+                            foreach ($notes as $label => $text) {
+                                if (! filled($text)) continue;
+                                $escaped = e($text);
+                                $html .= '<details style="display:inline-block;">'
+                                    . '<summary style="cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:4px;'
+                                    . 'background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:3px 10px;'
+                                    . 'font-size:0.8rem;font-weight:600;color:#dc2626;user-select:none;">'
+                                    . '▲ ' . e($label)
+                                    . '</summary>'
+                                    . '<div style="margin-top:6px;padding:10px 14px;background:#fff7f7;border:1px solid #fecaca;'
+                                    . 'border-radius:6px;font-size:0.85rem;color:#374151;white-space:pre-wrap;max-width:600px;">'
+                                    . $escaped
+                                    . '</div>'
+                                    . '</details>';
+                            }
+                            $html .= '</div>';
+                            return $html;
+                        }),
                 ]),
 
             // ── 5. Produse comandate ─────────────────────────────────────────
