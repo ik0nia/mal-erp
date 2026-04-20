@@ -539,6 +539,20 @@ class PurchaseOrderResource extends Resource
                                 $html .= '<div style="margin-top:8px;padding:6px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;font-size:0.8rem;color:#6b7280;">Comanda a fost anulată.</div>';
                             }
 
+                            // Linie lead time sub timeline
+                            $stats = [];
+                            if ($record->lead_time_days !== null) {
+                                $stats[] = '🕐 Lead time: <strong>' . $record->lead_time_days . ' zile</strong> (de la trimitere la recepție)';
+                            }
+                            if ($record->receptie_contabila_lag_days !== null) {
+                                $stats[] = '📋 Lag contabil: <strong>' . $record->receptie_contabila_lag_days . ' zile</strong> (de la recepție la intrare WM)';
+                            }
+                            if (! empty($stats)) {
+                                $html .= '<div style="margin-top:10px;padding:6px 14px;background:#f9fafb;border-radius:6px;font-size:0.8rem;color:#6b7280;display:flex;gap:24px;flex-wrap:wrap;">'
+                                    . implode('<span style="color:#d1d5db;">|</span>', $stats)
+                                    . '</div>';
+                            }
+
                             return $html;
                         }),
                 ]),
