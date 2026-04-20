@@ -508,16 +508,18 @@ class PurchaseOrderResource extends Resource
                         ->label('Comparativ linii PO vs WinMentor')
                         ->columnSpanFull()
                         ->visible(fn (PurchaseOrder $record): bool => $record->winmentor_receptie_nr !== null)
-                        ->getStateUsing(fn (PurchaseOrder $record): string => '')
-                        ->formatStateUsing(function ($state, PurchaseOrder $record): \Illuminate\Support\HtmlString {
+                        ->html()
+                        ->getStateUsing(function (PurchaseOrder $record): string {
                             $wmLines = \Illuminate\Support\Facades\DB::table('winmentor_intrari_raw')
                                 ->where('nr_doc', $record->winmentor_receptie_nr)
                                 ->whereNotNull('pret')
                                 ->get(['sku', 'den_articol', 'cantitate', 'pret', 'uom'])
                                 ->keyBy('sku');
 
-                            $rows = '';
-                            foreach ($record->items as $item) {
+                            $items = $record->items()->get();
+                            $rows  = '';
+
+                            foreach ($items as $item) {
                                 $wm      = $wmLines->get($item->sku ?? '');
                                 $poPrice = (float) $item->unit_price;
                                 $wmPrice = $wm ? (float) $wm->pret : null;
@@ -529,14 +531,14 @@ class PurchaseOrderResource extends Resource
                                     : null;
 
                                 $priceStyle = match(true) {
-                                    $priceDiff === null            => 'color:#6b7280',
-                                    abs($priceDiff) <= 2           => 'color:#16a34a;font-weight:600',
-                                    $priceDiff > 2                 => 'color:#dc2626;font-weight:600',
-                                    default                        => 'color:#ca8a04;font-weight:600',
+                                    $priceDiff === null   => 'color:#6b7280',
+                                    abs($priceDiff) <= 2  => 'color:#16a34a;font-weight:600',
+                                    $priceDiff > 2        => 'color:#dc2626;font-weight:600',
+                                    default               => 'color:#ca8a04;font-weight:600',
                                 };
 
-                                $qtyMatch  = $wmQty !== null && abs($wmQty - $poQty) < 0.01;
-                                $qtyStyle  = $qtyMatch ? 'color:#16a34a' : 'color:#dc2626;font-weight:600';
+                                $qtyMatch = $wmQty !== null && abs($wmQty - $poQty) < 0.01;
+                                $qtyStyle = $qtyMatch ? 'color:#16a34a' : 'color:#dc2626;font-weight:600';
 
                                 $rows .= '<tr style="border-bottom:1px solid #f3f4f6;">'
                                     . '<td style="padding:6px 10px;font-size:0.8rem;color:#6b7280;">' . e($item->sku ?? '—') . '</td>'
@@ -549,7 +551,7 @@ class PurchaseOrderResource extends Resource
                                     . '</tr>';
                             }
 
-                            $html = '<div style="overflow-x:auto;margin-top:0.5rem;">'
+                            return '<div style="overflow-x:auto;margin-top:0.5rem;">'
                                 . '<table style="width:100%;border-collapse:collapse;font-family:inherit;">'
                                 . '<thead><tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">'
                                 . '<th style="padding:6px 10px;text-align:left;font-size:0.75rem;color:#6b7280;font-weight:600;">SKU</th>'
@@ -562,23 +564,21 @@ class PurchaseOrderResource extends Resource
                                 . '</tr></thead>'
                                 . '<tbody>' . $rows . '</tbody>'
                                 . '</table></div>';
-
-                            return new \Illuminate\Support\HtmlString($html);
                         }),
 
-                    // ── Mesaj când nu e asociat + hint ──────────────────────
+                    // ── Mesaj când nu e asociat ──────────────────────────────
                     TextEntry::make('wm_no_match_hint')
                         ->label('')
                         ->columnSpanFull()
+                        ->html()
                         ->visible(fn (PurchaseOrder $record): bool => $record->winmentor_receptie_nr === null && $record->status === PurchaseOrder::STATUS_RECEIVED)
-                        ->getStateUsing(fn (): string => '')
-                        ->formatStateUsing(fn (): \Illuminate\Support\HtmlString => new \Illuminate\Support\HtmlString(
+                        ->getStateUsing(fn (): string =>
                             '<div style="padding:0.75rem 1rem;background:#fef3c7;border:1px solid #fcd34d;border-radius:0.5rem;color:#92400e;font-size:0.875rem;">'
                             . '⚠ Recepția contabilă nu a fost identificată automat în WinMentor. '
                             . 'Comanda de asociere rulează la fiecare 30 minute. '
                             . 'Dacă marfa a intrat în WinMentor, asocierea va apărea în curând.'
                             . '</div>'
-                        )),
+                        ),
                 ]),
         ]);
     }
