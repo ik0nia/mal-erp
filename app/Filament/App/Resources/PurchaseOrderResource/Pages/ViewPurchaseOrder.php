@@ -31,6 +31,11 @@ class ViewPurchaseOrder extends ViewRecord
 {
     protected static string $resource = PurchaseOrderResource::class;
 
+    public function getTitle(): string
+    {
+        return $this->record->number . ' — ' . ($this->record->supplier?->name ?? '');
+    }
+
     public function mount(int | string $record): void
     {
         parent::mount($record);
