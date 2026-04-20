@@ -641,8 +641,8 @@ class PurchaseOrderResource extends Resource
                             $totalPo  = 0.0;
                             $totalWm  = 0.0;
 
-                            $th = fn(string $label, string $align = 'left') =>
-                                '<th style="padding:5px 8px;text-align:' . $align . ';font-size:0.72rem;color:#6b7280;font-weight:600;white-space:nowrap;border-bottom:2px solid #e5e7eb;">'
+                            $th = fn(string $label, string $align = 'left', string $width = '') =>
+                                '<th style="padding:5px 8px;text-align:' . $align . ';font-size:0.72rem;color:#6b7280;font-weight:600;white-space:nowrap;border-bottom:2px solid #e5e7eb;' . ($width ? 'width:' . $width . ';' : '') . '">'
                                 . $label . '</th>';
 
                             foreach ($items as $item) {
@@ -757,17 +757,17 @@ class PurchaseOrderResource extends Resource
                                 . '</tr>';
 
                             // Header
-                            $wmQtyHeader   = $hasWm ? $th('Cant. WM', 'right') : '';
+                            $wmQtyHeader   = $hasWm ? $th('Cant. WM', 'right', '70px') : '';
                             $wmPriceHeaders = $hasWm
-                                ? $th('Preț WM (f. TVA)', 'right') . $th('Δ%', 'right')
+                                ? $th('Preț WM (f. TVA)', 'right', '120px') . $th('Δ%', 'right', '50px')
                                 : '';
 
                             return '<div style="overflow-x:auto;">'
-                                . '<table style="width:100%;border-collapse:collapse;font-family:inherit;">'
+                                . '<table style="width:100%;border-collapse:collapse;font-family:inherit;table-layout:fixed;">'
                                 . '<thead><tr style="background:#f9fafb;">'
-                                . $th('Produs') . $th('PO', 'right') . $th('Rec. Cant.', 'center')
+                                . $th('Produs') . $th('PO', 'right', '60px') . $th('Rec. Cant.', 'center', '80px')
                                 . $wmQtyHeader
-                                . $th('Preț PO (f. TVA)', 'right') . $th('Total linie', 'right')
+                                . $th('Preț PO (f. TVA)', 'right', '120px') . $th('Total linie', 'right', '110px')
                                 . $wmPriceHeaders
                                 . '</tr></thead>'
                                 . '<tbody>' . $rows . $totalRow . '</tbody>'
