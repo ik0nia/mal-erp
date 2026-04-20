@@ -716,10 +716,12 @@ class PurchaseOrderResource extends Resource
                                     ? '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;' . $qtyStyle . '">'
                                         . ($wmQty !== null ? $fmt($wmQty) : '—') . '</td>'
                                     : '';
-                                $wmPriceCols = $hasWm
+                                $wmPriceCell = $hasWm
                                     ? '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;' . $diffStyle . '">'
                                         . ($wmPrice !== null ? number_format($wmPrice, 4, ',', '.') . ' RON' : '—') . '</td>'
-                                        . '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;' . $diffStyle . '">'
+                                    : '';
+                                $wmDeltaCell = $hasWm
+                                    ? '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;' . $diffStyle . '">'
                                         . ($priceDiff !== null ? ($priceDiff > 0 ? '+' : '') . $priceDiff . '%' : '—') . '</td>'
                                     : '';
 
@@ -732,9 +734,10 @@ class PurchaseOrderResource extends Resource
                                     . $wmQtyCell
                                     . '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;color:#374151;">'
                                     . ($poPrice > 0 ? number_format($poPrice, 4, ',', '.') . ' RON' : '—') . '</td>'
-                                    . $wmPriceCols
+                                    . $wmPriceCell
                                     . '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;font-weight:600;color:#374151;">'
                                     . number_format($lineTotal, 2, ',', '.') . ' RON</td>'
+                                    . $wmDeltaCell
                                     . '</tr>';
                             }
 
@@ -783,10 +786,11 @@ class PurchaseOrderResource extends Resource
                                     $totalDiff > 2       => 'color:#dc2626;font-weight:700',
                                     default              => 'color:#ca8a04;font-weight:700',
                                 };
-                                $wmTotalPriceCols = '<td style="padding:7px 8px;text-align:right;font-size:0.82rem;font-weight:700;">'
-                                    . ($totalWm > 0 ? number_format($totalWm, 2, ',', '.') . ' RON' : '—') . '</td>'
-                                    . '<td style="padding:7px 8px;text-align:right;font-size:0.82rem;' . $tdStyle . '">'
+                                $wmTotalPriceCell = '<td style="padding:7px 8px;text-align:right;font-size:0.82rem;font-weight:700;">'
+                                    . ($totalWm > 0 ? number_format($totalWm, 2, ',', '.') . ' RON' : '—') . '</td>';
+                                $wmTotalDeltaCell = '<td style="padding:7px 8px;text-align:right;font-size:0.82rem;' . $tdStyle . '">'
                                     . ($totalDiff !== null ? ($totalDiff > 0 ? '+' : '') . $totalDiff . '%' : '—') . '</td>';
+                                $wmTotalPriceCols = $wmTotalPriceCell;
                             }
 
                             $totalRow = '<tr style="background:#f9fafb;border-top:2px solid #e5e7eb;">'
@@ -797,13 +801,13 @@ class PurchaseOrderResource extends Resource
                                 . number_format($totalPo, 2, ',', '.') . ' RON</td>'
                                 . $wmTotalPriceCols
                                 . '<td style="padding:7px 8px;"></td>'
+                                . ($hasWm ? $wmTotalDeltaCell : '')
                                 . '</tr>';
 
                             // Header
                             $wmQtyHeader   = $hasWm ? $th('Cant. WM', 'right', '80px') : '';
-                            $wmPriceHeaders = $hasWm
-                                ? $th('Preț WM (f. TVA)', 'right', '120px') . $th('Δ%', 'right', '75px')
-                                : '';
+                            $wmPriceHeader = $hasWm ? $th('Preț WM (f. TVA)', 'right', '120px') : '';
+                            $wmDeltaHeader = $hasWm ? $th('Δ%', 'right', '75px') : '';
 
                             $noMatchBanner = (!$hasWm && in_array($record->status, [PurchaseOrder::STATUS_RECEIVED, PurchaseOrder::STATUS_SENT], true))
                                 ? '<div style="margin-top:10px;padding:0.6rem 1rem;background:#fef3c7;border:1px solid #fcd34d;border-radius:0.5rem;color:#92400e;font-size:0.8rem;">'
@@ -817,8 +821,9 @@ class PurchaseOrderResource extends Resource
                                 . $th('Produs') . $th('PO', 'right', '80px') . $th('Rec. Cant.', 'right', '80px')
                                 . $wmQtyHeader
                                 . $th('Preț PO (f. TVA)', 'right', '120px')
-                                . $wmPriceHeaders
+                                . $wmPriceHeader
                                 . $th('Total linie', 'right', '110px')
+                                . $wmDeltaHeader
                                 . '</tr></thead>'
                                 . '<tbody>' . $rows . $totalRow . '</tbody>'
                                 . '</table></div>'
