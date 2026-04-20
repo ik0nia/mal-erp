@@ -732,9 +732,9 @@ class PurchaseOrderResource extends Resource
                                     . $wmQtyCell
                                     . '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;color:#374151;">'
                                     . ($poPrice > 0 ? number_format($poPrice, 4, ',', '.') . ' RON' : '—') . '</td>'
+                                    . $wmPriceCols
                                     . '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;font-weight:600;color:#374151;">'
                                     . number_format($lineTotal, 2, ',', '.') . ' RON</td>'
-                                    . $wmPriceCols
                                     . '</tr>';
                             }
 
@@ -793,10 +793,10 @@ class PurchaseOrderResource extends Resource
                                 . '<td style="padding:7px 8px;font-size:0.8rem;font-weight:700;color:#374151;">TOTAL (fără TVA)</td>'
                                 . '<td colspan="2" style="padding:7px 8px;"></td>'
                                 . $wmTotalQtyCell
-                                . '<td style="padding:7px 8px;"></td>'
                                 . '<td style="padding:7px 8px;text-align:right;font-size:0.85rem;font-weight:700;">'
                                 . number_format($totalPo, 2, ',', '.') . ' RON</td>'
                                 . $wmTotalPriceCols
+                                . '<td style="padding:7px 8px;"></td>'
                                 . '</tr>';
 
                             // Header
@@ -816,8 +816,9 @@ class PurchaseOrderResource extends Resource
                                 . '<thead><tr style="background:#f9fafb;">'
                                 . $th('Produs') . $th('PO', 'right', '80px') . $th('Rec. Cant.', 'right', '80px')
                                 . $wmQtyHeader
-                                . $th('Preț PO (f. TVA)', 'right', '120px') . $th('Total linie', 'right', '110px')
+                                . $th('Preț PO (f. TVA)', 'right', '120px')
                                 . $wmPriceHeaders
+                                . $th('Total linie', 'right', '110px')
                                 . '</tr></thead>'
                                 . '<tbody>' . $rows . $totalRow . '</tbody>'
                                 . '</table></div>'
