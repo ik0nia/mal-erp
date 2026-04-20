@@ -369,11 +369,14 @@ class PurchaseOrderResource extends Resource
     public static function infolist(Schema $schema): Schema
     {
         return $schema->schema([
-            InfolistSection::make('Informații comandă')
+            // ── 1. Identificare comandă ──────────────────────────────────────
+            InfolistSection::make('Comandă')
                 ->columns(3)
                 ->columnSpanFull()
                 ->schema([
-                    TextEntry::make('number')->label('Număr PO'),
+                    TextEntry::make('number')
+                        ->label('Număr PO')
+                        ->weight(\Filament\Support\Enums\FontWeight::Bold),
                     TextEntry::make('supplier.name')->label('Furnizor'),
                     TextEntry::make('status')
                         ->label('Status')
@@ -382,15 +385,34 @@ class PurchaseOrderResource extends Resource
                         ->formatStateUsing(fn ($state): string => PurchaseOrder::statusOptions()[$state] ?? $state),
                     TextEntry::make('buyer.name')->label('Responsabil achiziții'),
                     TextEntry::make('total_value')
-                        ->label('Valoare totală')
+                        ->label('Valoare totală (fără TVA)')
                         ->formatStateUsing(fn ($state): string => number_format((float) $state, 2, ',', '.').' RON'),
                     TextEntry::make('currency')->label('Monedă'),
-                    TextEntry::make('notes_internal')->label('Notițe interne')->placeholder('—')->columnSpanFull(),
-                    TextEntry::make('notes_supplier')->label('Notițe pentru furnizor')->placeholder('—')->columnSpanFull(),
-                    TextEntry::make('approved_at')->label('Aprobat la')->dateTime('d.m.Y H:i')->placeholder('—'),
-                    TextEntry::make('approvedBy.name')->label('Aprobat de')->placeholder('—'),
-                    TextEntry::make('rejection_reason')->label('Motiv respingere')->placeholder('—')->columnSpanFull(),
-                    TextEntry::make('sent_at')->label('Trimis la')->dateTime('d.m.Y H:i')->placeholder('—'),
+                ]),
+
+            // ── 2. Flux status (cronologie) ──────────────────────────────────
+            InfolistSection::make('Flux comandă')
+                ->columns(4)
+                ->columnSpanFull()
+                ->schema([
+                    TextEntry::make('created_at')
+                        ->label('Creat la')
+                        ->dateTime('d.m.Y H:i'),
+                    TextEntry::make('approved_at')
+                        ->label('Aprobat la')
+                        ->dateTime('d.m.Y H:i')
+                        ->placeholder('—'),
+                    TextEntry::make('sent_at')
+                        ->label('Trimis la')
+                        ->dateTime('d.m.Y H:i')
+                        ->placeholder('—'),
+                    TextEntry::make('received_at')
+                        ->label('Recepționat la')
+                        ->dateTime('d.m.Y H:i')
+                        ->placeholder('—'),
+                    TextEntry::make('approvedBy.name')
+                        ->label('Aprobat de')
+                        ->placeholder('—'),
                     TextEntry::make('sent_via')
                         ->label('Trimis prin')
                         ->placeholder('—')
@@ -407,15 +429,41 @@ class PurchaseOrderResource extends Resource
                             'manual'   => 'gray',
                             default    => 'gray',
                         }),
-                    TextEntry::make('received_at')->label('Recepționat la')->dateTime('d.m.Y H:i')->placeholder('—'),
-                    TextEntry::make('receivedBy.name')->label('Recepționat de')->placeholder('—'),
-                    TextEntry::make('received_notes')->label('Observații recepție')->placeholder('—')->columnSpanFull(),
-                    TextEntry::make('invoice_series')->label('Serie factură')->placeholder('—'),
-                    TextEntry::make('invoice_number')->label('Număr factură')->placeholder('—'),
-                    TextEntry::make('invoice_date')->label('Data factură')->date('d.m.Y')->placeholder('—'),
-                    TextEntry::make('invoice_due_date')->label('Scadență factură')->date('d.m.Y')->placeholder('—'),
+                    TextEntry::make('receivedBy.name')
+                        ->label('Recepționat de')
+                        ->placeholder('—'),
+                    TextEntry::make('rejection_reason')
+                        ->label('Motiv respingere')
+                        ->placeholder('—')
+                        ->columnSpan(4)
+                        ->visible(fn (PurchaseOrder $record): bool => filled($record->rejection_reason)),
                 ]),
 
+            // ── 3. Factură furnizor ──────────────────────────────────────────
+            InfolistSection::make('Factură furnizor')
+                ->columns(4)
+                ->columnSpanFull()
+                ->schema([
+                    TextEntry::make('invoice_series')->label('Serie')->placeholder('—'),
+                    TextEntry::make('invoice_number')->label('Nr. factură')->placeholder('—'),
+                    TextEntry::make('invoice_date')->label('Data facturii')->date('d.m.Y')->placeholder('—'),
+                    TextEntry::make('invoice_due_date')->label('Scadență')->date('d.m.Y')->placeholder('—'),
+                ]),
+
+            // ── 4. Note ─────────────────────────────────────────────────────
+            InfolistSection::make('Note')
+                ->columns(1)
+                ->columnSpanFull()
+                ->visible(fn (PurchaseOrder $record): bool =>
+                    filled($record->notes_internal) || filled($record->notes_supplier) || filled($record->received_notes)
+                )
+                ->schema([
+                    TextEntry::make('notes_internal')->label('Notițe interne')->placeholder('—'),
+                    TextEntry::make('notes_supplier')->label('Notițe pentru furnizor')->placeholder('—'),
+                    TextEntry::make('received_notes')->label('Observații recepție')->placeholder('—'),
+                ]),
+
+            // ── 5. Produse comandate ─────────────────────────────────────────
             InfolistSection::make('Produse comandate')
                 ->columnSpanFull()
                 ->schema([
@@ -446,17 +494,18 @@ class PurchaseOrderResource extends Resource
                                 )
                                 ->badge(),
                             TextEntry::make('unit_price')
-                                ->label('Preț unitar')
+                                ->label('Preț unitar (fără TVA)')
                                 ->formatStateUsing(fn ($state): string => $state
                                     ? number_format((float) $state, 4, ',', '.').' RON'
                                     : '—'),
                             TextEntry::make('line_total')
-                                ->label('Total linie')
+                                ->label('Total linie (fără TVA)')
                                 ->formatStateUsing(fn ($state): string => number_format((float) $state, 2, ',', '.').' RON'),
                             TextEntry::make('notes')->label('Notițe')->placeholder('—'),
                         ]),
                 ]),
 
+            // ── 6. Recepție contabilă WinMentor ─────────────────────────────
             InfolistSection::make('Recepție contabilă WinMentor')
                 ->columnSpanFull()
                 ->visible(fn (PurchaseOrder $record): bool => in_array($record->status, [
@@ -464,11 +513,10 @@ class PurchaseOrderResource extends Resource
                     PurchaseOrder::STATUS_SENT,
                 ], true))
                 ->schema([
-                    // ── Status + date matching ───────────────────────────────
                     \Filament\Schemas\Components\Grid::make(4)
                         ->schema([
                             TextEntry::make('winmentor_receptie_nr')
-                                ->label('Nr. document intrare (NIR)')
+                                ->label('Nr. factură furnizor (WinMentor)')
                                 ->placeholder('Neidentificat încă')
                                 ->weight(\Filament\Support\Enums\FontWeight::Bold),
                             TextEntry::make('winmentor_receptie_date')
@@ -494,18 +542,18 @@ class PurchaseOrderResource extends Resource
                     \Filament\Schemas\Components\Grid::make(2)
                         ->schema([
                             TextEntry::make('lead_time_days')
-                                ->label('Lead time (zile)')
+                                ->label('Lead time (zile de la trimitere la recepție)')
                                 ->formatStateUsing(fn ($state): string => $state !== null ? "{$state} zile" : '—')
                                 ->placeholder('—'),
                             TextEntry::make('receptie_contabila_lag_days')
-                                ->label('Lag recepție contabilă (zile)')
+                                ->label('Lag recepție contabilă (zile de la marfă la factură)')
                                 ->formatStateUsing(fn ($state): string => $state !== null ? "{$state} zile" : '—')
                                 ->placeholder('—'),
                         ]),
 
                     // ── Tabel comparativ PO vs WM ────────────────────────────
                     TextEntry::make('wm_comparison')
-                        ->label('Comparativ linii PO vs WinMentor')
+                        ->label('Comparativ linii PO vs WinMentor (prețuri fără TVA)')
                         ->columnSpanFull()
                         ->visible(fn (PurchaseOrder $record): bool => $record->winmentor_receptie_nr !== null)
                         ->html()
@@ -516,8 +564,10 @@ class PurchaseOrderResource extends Resource
                                 ->get(['sku', 'den_articol', 'cantitate', 'pret', 'uom'])
                                 ->keyBy('sku');
 
-                            $items = $record->items()->get();
-                            $rows  = '';
+                            $items     = $record->items()->get();
+                            $rows      = '';
+                            $totalErp  = 0.0;
+                            $totalWm   = 0.0;
 
                             foreach ($items as $item) {
                                 $wm      = $wmLines->get($item->sku ?? '');
@@ -525,6 +575,11 @@ class PurchaseOrderResource extends Resource
                                 $wmPrice = $wm ? (float) $wm->pret : null;
                                 $wmQty   = $wm ? (float) $wm->cantitate : null;
                                 $poQty   = (float) ($item->received_quantity ?? $item->quantity);
+
+                                $lineErp = $poQty * $poPrice;
+                                $lineWm  = ($wmQty !== null && $wmPrice !== null) ? $wmQty * $wmPrice : null;
+                                $totalErp += $lineErp;
+                                if ($lineWm !== null) $totalWm += $lineWm;
 
                                 $priceDiff = ($wmPrice !== null && $poPrice > 0)
                                     ? round(($wmPrice - $poPrice) / $poPrice * 100, 1)
@@ -551,6 +606,23 @@ class PurchaseOrderResource extends Resource
                                     . '</tr>';
                             }
 
+                            $totalDiff = $totalErp > 0
+                                ? round(($totalWm - $totalErp) / $totalErp * 100, 1)
+                                : null;
+                            $totalDiffStyle = match(true) {
+                                $totalDiff === null  => 'color:#6b7280',
+                                abs($totalDiff) <= 2 => 'color:#16a34a;font-weight:700',
+                                $totalDiff > 2       => 'color:#dc2626;font-weight:700',
+                                default              => 'color:#ca8a04;font-weight:700',
+                            };
+                            $totalRow = '<tr style="background:#f9fafb;border-top:2px solid #e5e7eb;">'
+                                . '<td colspan="2" style="padding:8px 10px;font-size:0.8rem;font-weight:700;color:#374151;">TOTAL (fără TVA)</td>'
+                                . '<td colspan="2" style="padding:8px 10px;"></td>'
+                                . '<td style="padding:8px 10px;text-align:right;font-size:0.85rem;font-weight:700;">' . number_format($totalErp, 2, ',', '.') . ' RON</td>'
+                                . '<td style="padding:8px 10px;text-align:right;font-size:0.85rem;font-weight:700;">' . ($totalWm > 0 ? number_format($totalWm, 2, ',', '.') . ' RON' : '—') . '</td>'
+                                . '<td style="padding:8px 10px;text-align:right;font-size:0.85rem;' . $totalDiffStyle . '">' . ($totalDiff !== null ? ($totalDiff > 0 ? '+' : '') . $totalDiff . '%' : '—') . '</td>'
+                                . '</tr>';
+
                             return '<div style="overflow-x:auto;margin-top:0.5rem;">'
                                 . '<table style="width:100%;border-collapse:collapse;font-family:inherit;">'
                                 . '<thead><tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">'
@@ -558,11 +630,11 @@ class PurchaseOrderResource extends Resource
                                 . '<th style="padding:6px 10px;text-align:left;font-size:0.75rem;color:#6b7280;font-weight:600;">Produs</th>'
                                 . '<th style="padding:6px 10px;text-align:right;font-size:0.75rem;color:#6b7280;font-weight:600;">Cant. ERP</th>'
                                 . '<th style="padding:6px 10px;text-align:right;font-size:0.75rem;color:#6b7280;font-weight:600;">Cant. WM</th>'
-                                . '<th style="padding:6px 10px;text-align:right;font-size:0.75rem;color:#6b7280;font-weight:600;">Preț ERP</th>'
-                                . '<th style="padding:6px 10px;text-align:right;font-size:0.75rem;color:#6b7280;font-weight:600;">Preț WM</th>'
+                                . '<th style="padding:6px 10px;text-align:right;font-size:0.75rem;color:#6b7280;font-weight:600;">Preț ERP (fără TVA)</th>'
+                                . '<th style="padding:6px 10px;text-align:right;font-size:0.75rem;color:#6b7280;font-weight:600;">Preț WM (fără TVA)</th>'
                                 . '<th style="padding:6px 10px;text-align:right;font-size:0.75rem;color:#6b7280;font-weight:600;">Δ%</th>'
                                 . '</tr></thead>'
-                                . '<tbody>' . $rows . '</tbody>'
+                                . '<tbody>' . $rows . $totalRow . '</tbody>'
                                 . '</table></div>';
                         }),
 

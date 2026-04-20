@@ -155,6 +155,12 @@ class MatchPoWinmentorReceptieCommand extends Command
                 'winmentor_receptie_matched_at'  => now(),
             ];
 
+            // Auto-completează nr. factură furnizor dacă nu e deja setat manual
+            if (blank($po->invoice_number)) {
+                $updates['invoice_number'] = $best->nr_doc;
+                $updates['invoice_date']   = $best->data_intrare;
+            }
+
             // Dacă PO era în status sent și avem o recepție confirmată → trecem pe received
             if ($po->status === 'sent' && $bestScore >= 80) {
                 $updates['status']      = 'received';
