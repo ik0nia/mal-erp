@@ -539,6 +539,15 @@ class PurchaseOrderResource extends Resource
                                 $html .= '<div style="margin-top:8px;padding:6px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;font-size:0.8rem;color:#6b7280;">Comanda a fost anulată.</div>';
                             }
 
+                            // Lead time calculat live din datele reale ERP
+                            if ($record->sent_at && $record->received_at) {
+                                $leadDays = (int) $record->sent_at->diffInDays($record->received_at);
+                                $html .= '<div style="margin-top:8px;font-size:0.78rem;color:#9ca3af;text-align:center;">'
+                                    . 'Lead time: <strong style="color:#6b7280;">' . $leadDays . ' ' . ($leadDays === 1 ? 'zi' : 'zile') . '</strong>'
+                                    . ' de la trimitere până la recepție'
+                                    . '</div>';
+                            }
+
                             return $html;
                         }),
                 ]),
