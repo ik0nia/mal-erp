@@ -596,7 +596,7 @@ class PurchaseOrderResource extends Resource
                 ->columnSpanFull()
                 ->schema([
                     RepeatableEntry::make('items')
-                        ->label('')
+                        ->hiddenLabel()
                         ->columns(4)
                         ->schema([
                             TextEntry::make('product_name')->label('Produs'),
