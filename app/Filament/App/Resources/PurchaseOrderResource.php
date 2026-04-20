@@ -548,8 +548,12 @@ class PurchaseOrderResource extends Resource
                 ->columns(4)
                 ->columnSpanFull()
                 ->schema([
-                    TextEntry::make('invoice_series')->label('Serie')->placeholder('—'),
-                    TextEntry::make('invoice_number')->label('Nr. factură')->placeholder('—'),
+                    TextEntry::make('invoice_number')
+                        ->label('Serie / Nr. factură')
+                        ->placeholder('—')
+                        ->getStateUsing(fn (PurchaseOrder $record): ?string =>
+                            trim(($record->invoice_series ? $record->invoice_series . ' ' : '') . ($record->invoice_number ?? '')) ?: null
+                        ),
                     TextEntry::make('invoice_date')->label('Data facturii')->date('d.m.Y')->placeholder('—'),
                     TextEntry::make('invoice_due_date')->label('Scadență')->date('d.m.Y')->placeholder('—'),
                 ]),

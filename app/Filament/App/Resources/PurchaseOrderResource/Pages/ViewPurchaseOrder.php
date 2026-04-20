@@ -627,11 +627,13 @@ class ViewPurchaseOrder extends ViewRecord
                     })->values()->all();
 
                     return [
-                        \Filament\Schemas\Components\Grid::make(4)->schema([
-                            TextInput::make('invoice_series')->label('Serie factură')->default($this->record->invoice_series),
-                            TextInput::make('invoice_number')->label('Număr factură')->default($this->record->invoice_number),
+                        \Filament\Schemas\Components\Grid::make(3)->schema([
+                            TextInput::make('invoice_number')
+                                ->label('Serie / Nr. factură')
+                                ->default(trim(($this->record->invoice_series ? $this->record->invoice_series . ' ' : '') . ($this->record->invoice_number ?? '')))
+                                ->placeholder('Ex: FAV-SER-1068895 sau RO 1234'),
                             \Filament\Forms\Components\DatePicker::make('invoice_date')->label('Data factură')->displayFormat('d.m.Y')->default($this->record->invoice_date),
-                            \Filament\Forms\Components\DatePicker::make('invoice_due_date')->label('Scadență factură')->displayFormat('d.m.Y')->default($this->record->invoice_due_date),
+                            \Filament\Forms\Components\DatePicker::make('invoice_due_date')->label('Scadență')->displayFormat('d.m.Y')->default($this->record->invoice_due_date),
                         ]),
 
                         Repeater::make('items')
@@ -834,7 +836,7 @@ class ViewPurchaseOrder extends ViewRecord
 
                     // Date comune indiferent de mod
                     $updateData = [
-                        'invoice_series'   => $data['invoice_series'] ?? null,
+                        'invoice_series'   => null,
                         'invoice_number'   => $data['invoice_number'] ?? null,
                         'invoice_date'     => $data['invoice_date'] ?? null,
                         'invoice_due_date' => $data['invoice_due_date'] ?? null,
