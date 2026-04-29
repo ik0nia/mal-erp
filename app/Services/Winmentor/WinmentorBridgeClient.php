@@ -378,6 +378,7 @@ class WinmentorBridgeClient
         }
 
         $this->selectFirma();
+        $this->setIdPartField('CodIntern');
 
         $url    = "/api/import/{$docType}";
         $params = $validateOnly ? ['validateOnly' => 'true'] : [];
@@ -421,15 +422,21 @@ class WinmentorBridgeClient
             if (isset($articoleMap[$key])) {
                 $umMap[$sku] = $articoleMap[$key]['denUM'] ?? null;
             } else {
-                $toCreate[] = $item;
+                // Bulk map poate rata produse cu codExtern nepopulat → fallback search direct
+                $found = $this->searchArticolBySku($sku);
+                if ($found) {
+                    $umMap[$sku] = $found['denUM'] ?? null;
+                } else {
+                    $toCreate[] = $item;
+                }
             }
         }
 
         foreach ($toCreate as $item) {
             $sku     = $item['sku'];
-            $product = isset($item['woo_product_id'])
+            $product = ! empty($item['woo_product_id'])
                 ? WooProduct::find($item['woo_product_id'])
-                : null;
+                : WooProduct::where('sku', $sku)->first();
 
             if (! $product) {
                 $errors[] = "Produsul cu SKU \"{$sku}\" nu există în WinMentor și nu poate fi creat (produsul ERP nu e găsit).";
@@ -440,7 +447,7 @@ class WinmentorBridgeClient
 
             if ($createResult['success']) {
                 $created[]   = "{$product->name} [{$sku}]";
-                $umMap[$sku] = $product->unit ?? 'Buc'; // UM din ERP — fără re-search
+                $umMap[$sku] = $product->unit ?? 'Buc';
             } else {
                 $errors[] = "Eroare la crearea \"{$product->name}\" [{$sku}]: {$createResult['error']}";
             }
@@ -455,11 +462,49 @@ class WinmentorBridgeClient
     }
 
     /**
+     * Returnează set-ul de SKU-uri (lowercase) ale articolelor din WinMentor
+     * care aparțin clasei date (ex: '1'), indiferent de gestiune.
+     * Folosește /api/stocuri care include câmpul simbolClasa.
+     *
+     * @return array<string, true> — [sku_lowercase => true]
+     */
+    public function getSkusInClasa(string $clasa, int $pageSize = 5000): array
+    {
+        $this->selectFirma();
+
+        $skus = [];
+        $page = 1;
+
+        do {
+            $result     = $this->get('/api/stocuri', ['page' => $page, 'pageSize' => $pageSize], timeout: 120);
+            $data       = $result['data'] ?? [];
+            $items      = $data['items'] ?? [];
+            $hasNext    = $data['hasNextPage'] ?? false;
+            $totalPages = (int) ($data['totalPages'] ?? 1);
+
+            foreach ($items as $item) {
+                if (($item['simbolClasa'] ?? '') !== $clasa) {
+                    continue;
+                }
+
+                $sku = $item['codExtern'] ?? null;
+                if ($sku) {
+                    $skus[strtolower(trim($sku))] = true;
+                }
+            }
+
+            $page++;
+        } while ($hasNext && $page <= $totalPages);
+
+        return $skus;
+    }
+
+    /**
      * Fetch paginat al tuturor articolelor din WinMentor.
      * Returnează [normalizedSku => article] — cheie lowercase pentru lookup rapid.
      * Timeout ridicat (120s) pentru că poate returna mii de articole.
      */
-    private function fetchAllArticoleSkuMap(): array
+    public function fetchAllArticoleSkuMap(): array
     {
         $map      = [];
         $page     = 1;

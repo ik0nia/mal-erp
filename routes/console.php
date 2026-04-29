@@ -49,10 +49,13 @@ Schedule::command('email:parse-supplier-docs --no-report')
 //     ->withoutOverlapping()
 //     ->runInBackground();
 
-// Social Media — publică postările programate la timp.
-Schedule::command('social:publish-scheduled')
-    ->everyMinute()
-    ->withoutOverlapping();
+// Social Media — publică postările programate (v2)
+Schedule::call(function () {
+    \App\Models\SmPost::where('status', \App\Models\SmPost::STATUS_SCHEDULED)
+        ->where('scheduled_at', '<=', now())
+        ->get()
+        ->each(fn ($post) => \App\Jobs\Social\PublishSmPostJob::dispatch($post));
+})->everyMinute()->name('sm:publish-scheduled')->withoutOverlapping();
 
 // Fallback sync comenzi — prinde orice a ratat webhook-ul.
 Schedule::command('woo:sync-orders')
@@ -144,10 +147,10 @@ Schedule::command('toya:sync-prices')
 // Alerte prețuri achiziție — zilnic la 08:30 (Europe/Bucharest).
 // Detectează anomalii nealertate (spike/drop) unde prețul de vânzare nu a fost actualizat
 // și produse cu marjă sub 10%. Trimite notificări la buyers + manageri.
-Schedule::command('erp:alert-price-changes')
-    ->dailyAt('08:30')
-    ->timezone('Europe/Bucharest')
-    ->withoutOverlapping();
+// Schedule::command('erp:alert-price-changes')
+//     ->dailyAt('08:30')
+//     ->timezone('Europe/Bucharest')
+//     ->withoutOverlapping();
 
 // Clasificare ABC/XYZ produse — zilnic la 01:00 (Europe/Bucharest).
 // Calculează consum mediu zilnic, clasificare ABC/XYZ și reorder_qty.

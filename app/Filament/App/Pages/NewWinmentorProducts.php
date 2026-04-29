@@ -5,7 +5,12 @@ use App\Models\RolePermission;
 use App\Filament\App\Concerns\HasDynamicNavSort;
 
 use App\Models\WooProduct;
+use App\Services\Winmentor\WinmentorBridgeClient;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
+use Filament\Actions\BulkActionGroup;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
@@ -13,6 +18,7 @@ use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 
 class NewWinmentorProducts extends Page implements HasTable
 {
@@ -47,6 +53,68 @@ class NewWinmentorProducts extends Page implements HasTable
     public static function getNavigationBadgeColor(): ?string
     {
         return 'warning';
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('sterge_non_clasa1')
+                ->label('Șterge non-clasa 1')
+                ->icon('heroicon-o-trash')
+                ->color('danger')
+                ->requiresConfirmation()
+                ->modalHeading('Șterge produse care nu sunt în clasa 1 WinMentor')
+                ->modalDescription('Va fi interogat WinMentor Bridge pentru a obține lista articolelor din clasa 1. Produsele placeholder din ERP care NU se regăsesc în clasa 1 vor fi șterse definitiv. Continuați?')
+                ->modalSubmitActionLabel('Da, șterge')
+                ->action(function (): void {
+                    try {
+                        $client = new WinmentorBridgeClient();
+                        $skusClasa1 = $client->getSkusInClasa('1');
+                    } catch (\Throwable $e) {
+                        Notification::make()
+                            ->title('Eroare WinMentor Bridge')
+                            ->body($e->getMessage())
+                            ->danger()
+                            ->send();
+                        return;
+                    }
+
+                    if (empty($skusClasa1)) {
+                        Notification::make()
+                            ->title('Niciun articol găsit în clasa 1')
+                            ->body('WinMentor Bridge nu a returnat articole pentru clasa 1. Operațiunea a fost anulată pentru siguranță.')
+                            ->warning()
+                            ->send();
+                        return;
+                    }
+
+                    $placeholders = WooProduct::query()
+                        ->where('is_placeholder', true)
+                        ->whereIn('source', [WooProduct::SOURCE_WINMENTOR_CSV, WooProduct::SOURCE_WINMENTOR_BRIDGE])
+                        ->get(['id', 'sku', 'name']);
+
+                    $deleted = 0;
+                    $skipped = 0;
+
+                    foreach ($placeholders as $product) {
+                        $skuNorm = strtolower(trim($product->sku ?? ''));
+
+                        if ($skuNorm === '' || isset($skusClasa1[$skuNorm])) {
+                            $skipped++;
+                            continue;
+                        }
+
+                        $product->delete();
+                        $deleted++;
+                    }
+
+                    Notification::make()
+                        ->title('Verificare completă')
+                        ->body("Șterse: {$deleted} produse non-clasa 1. Rămase: {$skipped} produse în clasa 1.")
+                        ->success()
+                        ->send();
+                }),
+        ];
     }
 
     public function table(Table $table): Table
@@ -158,8 +226,43 @@ class NewWinmentorProducts extends Page implements HasTable
                         false: fn (Builder $q) => $q->whereDoesntHave('suppliers'),
                     ),
             ])
+            ->actions([
+                Action::make('adauga_la_produse')
+                    ->label('Adaugă la produse')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Adaugă la produse')
+                    ->modalDescription('Produsul va apărea în lista de produse ERP și nu va mai fi în lista "Produse noi". Nu va fi publicat pe WooCommerce.')
+                    ->modalSubmitActionLabel('Confirmă')
+                    ->action(function (WooProduct $record): void {
+                        $record->updateQuietly(['is_placeholder' => false]);
+                    })
+                    ->successNotificationTitle('Produs adăugat la produse ERP'),
+
+                Action::make('view')
+                    ->label('Vezi')
+                    ->icon('heroicon-o-eye')
+                    ->color('gray')
+                    ->url(fn (WooProduct $record): string => \App\Filament\App\Resources\WooProductResource::getUrl('view', ['record' => $record])),
+            ])
+            ->bulkActions([
+                BulkActionGroup::make([
+                    BulkAction::make('adauga_la_produse_bulk')
+                        ->label('Adaugă la produse')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->modalHeading('Adaugă produsele selectate')
+                        ->modalDescription('Produsele selectate vor apărea în lista de produse ERP și nu vor mai fi în această listă.')
+                        ->modalSubmitActionLabel('Confirmă')
+                        ->action(function (Collection $records): void {
+                            $records->each(fn (WooProduct $r) => $r->updateQuietly(['is_placeholder' => false]));
+                        })
+                        ->deselectRecordsAfterCompletion(),
+                ]),
+            ])
             ->deferFilters(false)
-            ->recordUrl(fn (WooProduct $record): string => \App\Filament\App\Resources\WooProductResource::getUrl('view', ['record' => $record]))
             ->defaultSort('created_at', 'desc')
             ->striped()
             ->paginated([25, 50, 100]);

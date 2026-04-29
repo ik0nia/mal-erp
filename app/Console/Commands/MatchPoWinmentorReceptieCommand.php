@@ -23,6 +23,7 @@ class MatchPoWinmentorReceptieCommand extends Command
     protected $signature = 'winmentor:match-po-receptie
                             {--firma=MAL2019 : Firma WinMentor}
                             {--min-score=50 : % minim SKU-uri găsite pentru match}
+                            {--date-tolerance=5 : Zile toleranță înainte de sent_at pentru data_intrare}
                             {--rematch : Rematch și PO-urile deja asociate}
                             {--dry-run : Afișează fără a salva}';
 
@@ -30,10 +31,24 @@ class MatchPoWinmentorReceptieCommand extends Command
 
     public function handle(): int
     {
-        $firma    = $this->option('firma');
-        $minScore = (int) $this->option('min-score');
-        $rematch  = $this->option('rematch');
-        $dryRun   = $this->option('dry-run');
+        $firma         = $this->option('firma');
+        $minScore      = (int) $this->option('min-score');
+        $dateTolerance = (int) $this->option('date-tolerance');
+        $rematch       = $this->option('rematch');
+        $dryRun        = $this->option('dry-run');
+
+        // Resetăm matched_at pentru PO-uri received fără NIR și mai noi de 60 zile
+        // — permite re-matching automat când factura apare luna viitoare în WinMentor
+        if (! $dryRun) {
+            PurchaseOrder::whereIn('status', ['sent', 'received'])
+                ->whereNull('winmentor_receptie_nr')
+                ->whereNotNull('winmentor_receptie_matched_at')
+                ->where(fn ($q) => $q
+                    ->whereNull('received_at')
+                    ->orWhere('received_at', '>=', now()->subDays(60))
+                )
+                ->update(['winmentor_receptie_matched_at' => null]);
+        }
 
         // PO-uri candidate: sent sau received, cu furnizor care are winmentor_id
         $query = PurchaseOrder::with(['items.product', 'supplier'])
@@ -54,11 +69,12 @@ class MatchPoWinmentorReceptieCommand extends Command
         $noMatch  = 0;
 
         foreach ($pos as $po) {
-            $result = $this->matchPo($po, $firma, $minScore, $dryRun);
+            $result = $this->matchPo($po, $firma, $minScore, $dateTolerance, $dryRun);
 
             if ($result) {
                 $matched++;
-                $this->line("  ✓ {$po->number} → nr_doc={$result['nr_doc']} data={$result['date']} scor={$result['score']}%");
+                $allNrsStr = count($result['nrs']) > 1 ? implode(', ', $result['nrs']) : $result['nr_doc'];
+                $this->line("  ✓ {$po->number} → nr_doc={$allNrsStr} data={$result['date']} scor={$result['score']}%");
             } else {
                 $noMatch++;
                 $this->line("  - {$po->number} → nicio potrivire");
@@ -96,10 +112,10 @@ class MatchPoWinmentorReceptieCommand extends Command
         };
     }
 
-    private function updatePricesFromWm(PurchaseOrder $po, string $nrDoc): void
+    private function updatePricesFromWm(PurchaseOrder $po, array $nrDocs): void
     {
         $wmLines = DB::table('winmentor_intrari_raw')
-            ->where('nr_doc', $nrDoc)
+            ->whereIn('nr_doc', $nrDocs)
             ->whereNotNull('pret')
             ->where('pret', '>', 0)
             ->get(['sku', 'pret', 'data_intrare'])
@@ -122,54 +138,93 @@ class MatchPoWinmentorReceptieCommand extends Command
         }
     }
 
-    private function matchPo(PurchaseOrder $po, string $firma, int $minScore, bool $dryRun): ?array
+    private function matchPo(PurchaseOrder $po, string $firma, int $minScore, int $dateTolerance, bool $dryRun): ?array
     {
         $partId = $po->supplier?->winmentor_id;
         if (! $partId) return null;
 
-        // SKU-urile din PO
-        $poSkus = $po->items
+        // Toate SKU-urile din PO (folosite ca numitor principal pentru scor)
+        $allPoSkus = $po->items
             ->filter(fn ($item) => $item->sku)
             ->pluck('sku')
             ->unique()
             ->values()
             ->all();
 
+        // SKU-urile efectiv recepționate — fallback când nicio factură nu trece pragul cu numitorul complet
+        // (ex: furnizor trimite facturi separate per produs)
+        $receivedSkus = $po->items
+            ->filter(fn ($item) => $item->sku && (float) $item->received_quantity > 0)
+            ->pluck('sku')
+            ->unique()
+            ->values()
+            ->all();
+
+        $poSkus = $allPoSkus;
+
         if (empty($poSkus)) return null;
 
-        $sentAt = $po->sent_at?->toDateString() ?? $po->created_at->toDateString();
+        $sentAt = \Carbon\Carbon::parse(
+            $po->sent_at?->toDateString() ?? $po->created_at->toDateString()
+        )->subDays($dateTolerance)->toDateString();
 
-        // Găsește toate documentele (nr_doc) de la același furnizor după data trimiterii
-        $candidates = DB::table('winmentor_intrari_raw')
-            ->where('firma', $firma)
-            ->where('part_id', $partId)
-            ->where('data_intrare', '>=', $sentAt)
-            ->whereIn('sku', $poSkus)
-            ->select('nr_doc', 'data_intrare', DB::raw('COUNT(DISTINCT sku) as sku_count'))
-            ->groupBy('nr_doc', 'data_intrare')
-            ->orderBy('data_intrare')
-            ->get();
+        $getCandidates = function (array $skus) use ($firma, $partId, $sentAt): \Illuminate\Support\Collection {
+            return DB::table('winmentor_intrari_raw')
+                ->where('firma', $firma)
+                ->where('part_id', $partId)
+                ->where('data_intrare', '>=', $sentAt)
+                ->whereIn('sku', $skus)
+                ->select('nr_doc', 'data_intrare', DB::raw('COUNT(DISTINCT sku) as sku_count'))
+                ->groupBy('nr_doc', 'data_intrare')
+                ->orderBy('data_intrare')
+                ->get();
+        };
 
-        if ($candidates->isEmpty()) return null;
+        $getBest = function (\Illuminate\Support\Collection $candidates, int $total): array {
+            $best = null; $bestScore = 0;
+            foreach ($candidates as $c) {
+                $score = (int) round($c->sku_count / $total * 100);
+                if ($score > $bestScore) { $bestScore = $score; $best = $c; }
+            }
+            return [$best, $bestScore];
+        };
 
-        // Calculează scorul pentru fiecare document candidat
-        $totalPoSkus = count($poSkus);
-        $best        = null;
-        $bestScore   = 0;
+        // Trecerea 1: numitor = toate SKU-urile PO
+        $candidates = $getCandidates($allPoSkus);
+        [$best, $bestScore] = $getBest($candidates, count($allPoSkus));
 
-        foreach ($candidates as $c) {
-            $score = (int) round($c->sku_count / $totalPoSkus * 100);
-            if ($score > $bestScore) {
-                $bestScore = $score;
-                $best      = $c;
+        // Trecerea 2 (fallback): numitor = doar SKU-urile recepționate fizic
+        // Folosit când furnizorul trimite facturi separate per produs și scorul din trecerea 1 e sub prag
+        if ((! $best || $bestScore < $minScore) && ! empty($receivedSkus) && $receivedSkus !== $allPoSkus) {
+            $candidates2 = $getCandidates($receivedSkus);
+            [$best2, $bestScore2] = $getBest($candidates2, count($receivedSkus));
+            if ($best2 && $bestScore2 >= $minScore) {
+                $best      = $best2;
+                $bestScore = $bestScore2;
             }
         }
 
         if (! $best || $bestScore < $minScore) return null;
 
+        // Colectează TOATE NIR-urile care conțin SKU-uri din acest PO
+        // (un PO poate fi acoperit de mai multe facturi separate)
+        $allNirs = DB::table('winmentor_intrari_raw')
+            ->where('firma', $firma)
+            ->where('part_id', $partId)
+            ->where('data_intrare', '>=', $sentAt)
+            ->whereIn('sku', $allPoSkus)
+            ->select('nr_doc', 'data_intrare')
+            ->distinct()
+            ->orderBy('data_intrare')
+            ->pluck('nr_doc')
+            ->unique()
+            ->values()
+            ->all();
+
         if (! $dryRun) {
             $updates = [
                 'winmentor_receptie_nr'         => $best->nr_doc,
+                'winmentor_receptie_nrs'         => $allNirs,
                 'winmentor_receptie_date'        => $best->data_intrare,
                 'winmentor_receptie_score'       => $bestScore,
                 'winmentor_receptie_matched_at'  => now(),
@@ -196,27 +251,31 @@ class MatchPoWinmentorReceptieCommand extends Command
                 $updates['received_at'] = $best->data_intrare;
             }
 
-            // Lead time: zile de la sent_at până la received_at real (nu data WM)
+            // Lead time: zile calendaristice de la data trimiterii până la data recepției fizice
             $receivedAt = $po->received_at ?? ($updates['received_at'] ?? null);
             if ($po->sent_at && $receivedAt) {
-                $updates['lead_time_days'] = (int) \Carbon\Carbon::parse($po->sent_at)->diffInDays($receivedAt);
+                $updates['lead_time_days'] = (int) \Carbon\Carbon::parse($po->sent_at)
+                    ->startOfDay()
+                    ->diffInDays(\Carbon\Carbon::parse($receivedAt)->startOfDay());
             }
 
-            // Lag recepție contabilă: zile de la recepția cantitativă până la intrarea în WinMentor
+            // Lag recepție contabilă: zile calendaristice de la recepția fizică până la intrarea în WinMentor
             if ($receivedAt && $best->data_intrare) {
                 $updates['receptie_contabila_lag_days'] = (int) abs(
-                    \Carbon\Carbon::parse($receivedAt)->diffInDays($best->data_intrare)
+                    \Carbon\Carbon::parse($receivedAt)->startOfDay()
+                        ->diffInDays(\Carbon\Carbon::parse($best->data_intrare)->startOfDay())
                 );
             }
 
             $po->update($updates);
 
             // Actualizează last_purchase_price pe product_suppliers cu prețurile reale din WM
-            $this->updatePricesFromWm($po, $best->nr_doc);
+            $this->updatePricesFromWm($po, $allNirs);
         }
 
         return [
             'nr_doc' => $best->nr_doc,
+            'nrs'    => $allNirs,
             'date'   => $best->data_intrare,
             'score'  => $bestScore,
         ];

@@ -50,6 +50,7 @@ class PurchaseOrder extends Model
         'winmentor_order_nr',
         'winmentor_synced_at',
         'winmentor_receptie_nr',
+        'winmentor_receptie_nrs',
         'winmentor_receptie_date',
         'winmentor_receptie_score',
         'winmentor_receptie_matched_at',
@@ -76,6 +77,7 @@ class PurchaseOrder extends Model
             'winmentor_receptie_date'         => 'date',
             'winmentor_receptie_matched_at'   => 'datetime',
             'winmentor_receptie_score'        => 'integer',
+            'winmentor_receptie_nrs'          => 'array',
             'lead_time_days'                  => 'integer',
             'receptie_contabila_lag_days'     => 'integer',
         ];

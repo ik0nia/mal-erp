@@ -67,12 +67,11 @@ class WatchWinmentorVanzariCommand extends Command
             $sku       = trim($row['nrDoc'] ?? '');
             $partId    = trim($row['partID'] ?? '');
             $zi        = is_numeric($row['zi'] ?? '') ? (int) $row['zi'] : null;
+            $cantStr   = trim($row['artID'] ?? '');
+            $pretStr   = trim($row['denUM'] ?? '');
 
             $key = "{$nrFactura}|{$sku}|{$partId}|{$zi}|{$cantStr}|{$pretStr}";
             if (isset($existing[$key])) continue;
-
-            $cantStr = trim($row['artID'] ?? '');
-            $pretStr = trim($row['denUM'] ?? '');
             $valStr  = trim($row['valAchizitie'] ?? '');
 
             $newRows[] = [

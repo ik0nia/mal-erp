@@ -5,6 +5,7 @@ use App\Filament\App\Concerns\ChecksRolePermissions;
 use App\Filament\App\Concerns\HasDynamicNavSort;
 
 use App\Filament\App\Resources\PurchaseOrderResource\Pages;
+use App\Filament\App\Resources\WooProductResource;
 use App\Models\ProductSupplier;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
@@ -323,7 +324,12 @@ class PurchaseOrderResource extends Resource
                         default       => 'gray',
                     })
                     ->tooltip(fn (PurchaseOrder $record): ?string => $record->winmentor_receptie_nr
-                        ? "NIR: {$record->winmentor_receptie_nr} din {$record->winmentor_receptie_date} (scor {$record->winmentor_receptie_score}%)"
+                        ? (function() use ($record): string {
+                            $nrs = $record->winmentor_receptie_nrs ?? [$record->winmentor_receptie_nr];
+                            $nrs = array_filter($nrs);
+                            $nrsStr = count($nrs) > 1 ? implode(', ', $nrs) : $record->winmentor_receptie_nr;
+                            return "NIR: {$nrsStr} din {$record->winmentor_receptie_date} (scor {$record->winmentor_receptie_score}%)";
+                          })()
                         : null),
 
                 Tables\Columns\TextColumn::make('created_at')
@@ -454,14 +460,24 @@ class PurchaseOrderResource extends Resource
                                     'label'  => 'Contabilitate',
                                     'date'   => $record->winmentor_receptie_nr
                                         ? (function() use ($record): ?string {
-                                            $ts = \Illuminate\Support\Facades\DB::table('winmentor_intrari_raw')
-                                                ->where('nr_doc', $record->winmentor_receptie_nr)
-                                                ->min('created_at');
+                                            $partId = $record->supplier?->winmentor_id;
+                                            $query = \Illuminate\Support\Facades\DB::table('winmentor_intrari_raw')
+                                                ->where('nr_doc', $record->winmentor_receptie_nr);
+                                            if ($partId) {
+                                                $query->where('part_id', $partId);
+                                            }
+                                            $ts = $query->min('created_at');
                                             return $ts ? \Carbon\Carbon::parse($ts)->format('d.m.Y H:i') : null;
                                           })()
                                         : null,
                                     'by'     => $record->winmentor_receptie_nr
-                                        ? 'Fact. ' . $record->winmentor_receptie_nr
+                                        ? (function() use ($record): string {
+                                            $nrs = $record->winmentor_receptie_nrs ?? [$record->winmentor_receptie_nr];
+                                            $nrs = array_filter($nrs);
+                                            return count($nrs) > 1
+                                                ? implode(', ', $nrs)
+                                                : 'Fact. ' . $record->winmentor_receptie_nr;
+                                          })()
                                         : null,
                                     'note'   => $record->winmentor_receptie_date
                                         ? 'Data factură: ' . \Carbon\Carbon::parse($record->winmentor_receptie_date)->format('d.m.Y')
@@ -550,9 +566,9 @@ class PurchaseOrderResource extends Resource
                                 $html .= '<div style="margin-top:8px;padding:6px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;font-size:0.8rem;color:#6b7280;">Comanda a fost anulată.</div>';
                             }
 
-                            // Lead time calculat live din datele reale ERP
+                            // Lead time din DB (calculat calendaristic la matching)
                             if ($record->sent_at && $record->received_at) {
-                                $leadDays = (int) $record->sent_at->diffInDays($record->received_at);
+                                $leadDays = $record->lead_time_days ?? (int) $record->sent_at->startOfDay()->diffInDays($record->received_at->startOfDay());
                                 $html .= '<div style="margin-top:8px;font-size:0.78rem;color:#9ca3af;text-align:center;">'
                                     . 'Lead time: <strong style="color:#6b7280;">' . $leadDays . ' ' . ($leadDays === 1 ? 'zi' : 'zile') . '</strong>'
                                     . ' de la trimitere până la recepție'
@@ -601,16 +617,21 @@ class PurchaseOrderResource extends Resource
                             $hasWm = filled($record->winmentor_receptie_nr);
 
                             $wmLines = $hasWm
-                                ? \Illuminate\Support\Facades\DB::table('winmentor_intrari_raw')
-                                    ->where('nr_doc', $record->winmentor_receptie_nr)
-                                    ->get(['sku', 'cantitate', 'pret'])
-                                    ->keyBy('sku')
+                                ? (function() use ($record): \Illuminate\Support\Collection {
+                                    $nrs = $record->winmentor_receptie_nrs ?? [$record->winmentor_receptie_nr];
+                                    $nrs = array_filter($nrs);
+                                    return \Illuminate\Support\Facades\DB::table('winmentor_intrari_raw')
+                                        ->whereIn('nr_doc', $nrs)
+                                        ->get(['sku', 'cantitate', 'pret', 'den_articol'])
+                                        ->keyBy('sku');
+                                  })()
                                 : collect();
 
-                            $items    = $record->items()->get();
-                            $rows     = '';
-                            $totalPo  = 0.0;
-                            $totalWm  = 0.0;
+                            $items         = $record->items()->get();
+                            $rows          = '';
+                            $totalPo       = 0.0;
+                            $totalWm       = 0.0;
+                            $totalPoMatched = 0.0; // doar liniile cu corespondent WM (pentru Δ% total corect)
 
                             $th = fn(string $label, string $align = 'left', string $width = '') =>
                                 '<th style="padding:5px 8px;text-align:' . $align . ';font-size:0.72rem;color:#6b7280;font-weight:600;white-space:nowrap;border-bottom:2px solid #e5e7eb;' . ($width ? 'width:' . $width . ';' : '') . '">'
@@ -628,15 +649,27 @@ class PurchaseOrderResource extends Resource
                                     : number_format($v, 2, ',', '.');
 
                                 // Received badge + per-item note
+                                $qtyDiffers = $recQty !== null && abs($recQty - $poQty) > 0.001;
                                 if ($recQty === null) {
                                     $recCell = '<span style="color:#9ca3af;">—</span>';
                                 } elseif ($recQty < $poQty) {
-                                    $recCell = '<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-size:0.75rem;font-weight:600;">' . $fmt($recQty) . ' ⚠</span>';
+                                    $recCell = '<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-size:0.75rem;font-weight:600;">' . $fmt($recQty) . '</span>';
                                 } else {
                                     $recCell = '<span style="background:#dcfce7;color:#15803d;padding:1px 6px;border-radius:4px;font-size:0.75rem;font-weight:600;">' . $fmt($recQty) . '</span>';
                                 }
-                                if (filled($item->received_note)) {
-                                    $recCell .= '<div style="font-size:0.68rem;color:#6b7280;margin-top:2px;white-space:normal;">' . e($item->received_note) . '</div>';
+                                if ($qtyDiffers) {
+                                    $uid  = 'dlg-' . $item->id;
+                                    $note = filled($item->received_note)
+                                        ? e($item->received_note)
+                                        : '<span style="color:#9ca3af;font-style:italic;">Nicio explicație înregistrată.</span>';
+                                    $recCell .= ' <span onclick="document.getElementById(\'' . $uid . '\').showModal()" '
+                                        . 'style="cursor:pointer;font-size:1.25rem;color:#d97706;vertical-align:middle;">▲</span>'
+                                        . '<dialog id="' . $uid . '" onclick="this.close()" '
+                                        . 'style="border-radius:10px;padding:20px 24px;border:none;box-shadow:0 8px 32px rgba(0,0,0,0.25);max-width:340px;font-size:0.85rem;color:#1f2937;line-height:1.55;">'
+                                        . '<div style="font-weight:700;margin-bottom:8px;color:#92400e;">Motiv discrepanță</div>'
+                                        . '<div>' . $note . '</div>'
+                                        . '<div style="margin-top:14px;text-align:right;font-size:0.75rem;color:#9ca3af;">Click oriunde pentru a închide</div>'
+                                        . '</dialog>';
                                 }
 
                                 // WM columns
@@ -651,7 +684,10 @@ class PurchaseOrderResource extends Resource
                                     $wmQty   = $wm ? (float) $wm->cantitate : null;
                                     $wmPrice = $wm ? (float) $wm->pret : null;
 
-                                    if ($wmQty !== null && $wmPrice !== null) $totalWm += $wmQty * $wmPrice;
+                                    if ($wmQty !== null && $wmPrice !== null) {
+                                        $totalWm        += $wmQty * $wmPrice;
+                                        $totalPoMatched += $lineTotal;
+                                    }
 
                                     $qtyMatch  = $wmQty !== null && abs($wmQty - $poQty) < 0.01;
                                     $qtyStyle  = $qtyMatch ? 'color:#15803d' : 'color:#dc2626;font-weight:600';
@@ -688,9 +724,16 @@ class PurchaseOrderResource extends Resource
                                         . ($priceDiff !== null ? ($priceDiff > 0 ? '+' : '') . $priceDiff . '%' : '—') . '</td>'
                                     : '';
 
+                                $productUrl = $item->woo_product_id
+                                    ? WooProductResource::getUrl('view', ['record' => $item->woo_product_id])
+                                    : null;
+                                $productNameHtml = $productUrl
+                                    ? '<a href="' . e($productUrl) . '" target="_blank" rel="noopener" style="font-weight:600;color:#111827;text-decoration:none;" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">' . e($item->product_name) . '</a>'
+                                    : '<span style="font-weight:600;color:#111827;">' . e($item->product_name) . '</span>';
+
                                 $rows .= '<tr style="border-bottom:1px solid #f3f4f6;">'
                                     . '<td style="padding:5px 8px;font-size:0.82rem;">'
-                                    . '<div style="font-weight:600;color:#111827;">' . e($item->product_name) . '</div>' . $sub
+                                    . '<div>' . $productNameHtml . '</div>' . $sub
                                     . '</td>'
                                     . '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;color:#374151;">' . $fmt($poQty) . '</td>'
                                     . '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;">' . $recCell . '</td>'
@@ -720,10 +763,11 @@ class PurchaseOrderResource extends Resource
                                         : number_format($v, 2, ',', '.');
 
                                     $colSpanPo = 3; // Produs + PO + Rec.Cant.
+                                    $denArticol = filled($wm->den_articol) ? $wm->den_articol : $sku;
                                     $rows .= '<tr style="border-bottom:1px solid #f3f4f6;background:#fffbeb;">'
                                         . '<td style="padding:5px 8px;font-size:0.82rem;">'
-                                        . '<div style="font-weight:600;color:#92400e;">' . e($sku) . '</div>'
-                                        . '<div style="font-size:0.7rem;color:#b45309;margin-top:1px;">Doar în WinMentor</div>'
+                                        . '<div style="font-weight:600;color:#92400e;">' . e($denArticol) . '</div>'
+                                        . '<div style="font-size:0.7rem;color:#b45309;margin-top:1px;">Doar în WinMentor · ' . e($sku) . '</div>'
                                         . '</td>'
                                         . '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;color:#9ca3af;">—</td>'
                                         . '<td style="padding:5px 8px;text-align:right;font-size:0.8rem;color:#9ca3af;">—</td>'
@@ -740,8 +784,8 @@ class PurchaseOrderResource extends Resource
                             $wmTotalQtyCell = $hasWm ? '<td style="padding:7px 8px;"></td>' : '';
                             $wmTotalPriceCols = '';
                             if ($hasWm) {
-                                $totalDiff = $totalPo > 0
-                                    ? round(($totalWm - $totalPo) / $totalPo * 100, 1)
+                                $totalDiff = $totalPoMatched > 0
+                                    ? round(($totalWm - $totalPoMatched) / $totalPoMatched * 100, 1)
                                     : null;
                                 $tdStyle = match(true) {
                                     $totalDiff === null  => 'color:#9ca3af',
@@ -1036,7 +1080,13 @@ class PurchaseOrderResource extends Resource
                         $supplierSku = $get('supplier_sku') ?? '';
 
                         $thumb = static::productThumbnail($productId ?: null);
-                        $nameHtml = $name ? e(html_entity_decode($name, ENT_QUOTES, 'UTF-8')) : '<span style="color:#9ca3af">—</span>';
+                        $decodedName = $name ? html_entity_decode($name, ENT_QUOTES, 'UTF-8') : '';
+                        if ($decodedName && $productId) {
+                            $productUrl = WooProductResource::getUrl('view', ['record' => $productId]);
+                            $nameHtml = '<a href="'.e($productUrl).'" target="_blank" rel="noopener" style="color:#111827;text-decoration:none;font-weight:500;" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">'.e($decodedName).'</a>';
+                        } else {
+                            $nameHtml = $decodedName ? e($decodedName) : '<span style="color:#9ca3af">—</span>';
+                        }
                         $skuParts = [];
                         if ($sku) $skuParts[] = e($sku);
                         if ($supplierSku) $skuParts[] = 'F: '.e($supplierSku);
@@ -1046,7 +1096,7 @@ class PurchaseOrderResource extends Resource
                             '<div style="display:flex;align-items:center;gap:8px">'
                             .$thumb->toHtml()
                             .'<div style="min-width:0">'
-                            .'<div style="font-size:13px;font-weight:500;color:#111827;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:320px" title="'.e(html_entity_decode($name, ENT_QUOTES, 'UTF-8')).'">'.$nameHtml.'</div>'
+                            .'<div style="font-size:13px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:320px" title="'.e($decodedName).'">'.$nameHtml.'</div>'
                             .$skuHtml
                             .'</div></div>'
                         );
