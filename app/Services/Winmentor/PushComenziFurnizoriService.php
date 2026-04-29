@@ -201,7 +201,9 @@ class PushComenziFurnizoriService
         $luna       = $conn?->bridgeLuna() ?? now()->month;
         $moneda     = strtoupper($po->currency ?? 'RON') === 'EUR' ? 'EUR' : 'LEI';
 
-        $receivedItems = $po->items->filter(fn ($item) => (float) $item->received_quantity > 0);
+        $receivedItems = $po->items
+            ->filter(fn ($item) => (float) $item->received_quantity > 0)
+            ->sortBy(fn ($item) => $item->invoice_position ?? PHP_INT_MAX);
         $totalArticole = $receivedItems->count();
 
         $lines = [
