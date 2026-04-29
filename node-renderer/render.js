@@ -6,7 +6,6 @@
  */
 
 const { createCanvas, loadImage, registerFont } = require('canvas');
-const { StaticCanvas: FabricStaticCanvas, FabricImage } = require('fabric/node');
 const fs   = require('fs');
 const path = require('path');
 
@@ -248,14 +247,20 @@ async function renderMalinco(ctx, W, H, config) {
         };
     }
 
-    // ── 1. Fundal cu gradient spre alb + textură ─────────────────────────────
-    // Gradient liniar: alb sus-stânga → crem ușor jos-dreapta
-    const bg = ctx.createLinearGradient(0, 0, W * 0.7, H - BOTTOM_H - RAINBOW_H);
-    bg.addColorStop(0,    '#FFFFFF');
-    bg.addColorStop(0.45, '#F8F5F2');
-    bg.addColorStop(1,    '#EDE8E2');
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, W, H - BOTTOM_H - RAINBOW_H);
+    // ── 1. Fundal — imagine AI sau gradient default ───────────────────────────
+    if (config.background_image && fs.existsSync(config.background_image)) {
+        try {
+            const bgImg = await loadImage(config.background_image);
+            ctx.drawImage(bgImg, 0, 0, W, H - BOTTOM_H - RAINBOW_H);
+        } catch(e) {}
+    } else {
+        const bg = ctx.createLinearGradient(0, 0, W * 0.7, H - BOTTOM_H - RAINBOW_H);
+        bg.addColorStop(0,    '#FFFFFF');
+        bg.addColorStop(0.45, '#F8F5F2');
+        bg.addColorStop(1,    '#EDE8E2');
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, W, H - BOTTOM_H - RAINBOW_H);
+    }
 
     // Textură: linii diagonale fine semi-transparente
     ctx.save();
@@ -580,117 +585,247 @@ async function renderMalinco(ctx, W, H, config) {
     }
 }
 
-// ── Render din canvas_json (editorul vizual Fabric.js) ───────────────────────
+// ── Render din canvas_json (Claude AI Fabric.js JSON) ────────────────────────
 /**
- * Randează o imagine folosind canvas_json salvat de editorul vizual.
- * Înlocuiește slot-urile dinamice (title, subtitle, label, product_image,
- * brand_logo, malinco_logo) cu conținutul real al postării.
+ * Randează obiectele din canvas_json direct cu canvas npm (fără fabric/node).
+ * Suportă: rect, circle, textbox/text, line, triangle.
+ * Slot-urile dinamice (product_image, brand_logo, malinco_logo, title, subtitle)
+ * sunt înlocuite cu conținutul real al postării.
  */
 async function renderWithFabric(config, outPath) {
     const canvasData = typeof config.canvas_json === 'string'
         ? JSON.parse(config.canvas_json)
         : JSON.parse(JSON.stringify(config.canvas_json));
 
-    // ── Pas 0: fix compatibilitate Fabric.js v5 → v7 ─────────────────────────
-    // Câmpul data.type din editorul vizual ('text', 'image', etc.) e metadata internă;
-    // Fabric.js v7 îl confundă cu tipul unui obiect Fabric și încearcă să-l instanțieze.
-    for (const obj of canvasData.objects || []) {
-        if (obj.data && obj.data.type !== undefined) {
-            delete obj.data.type; // eliminăm câmpul conflictual
+    const W = canvasData.width  || 1080;
+    const H = canvasData.height || 1080;
+
+    const canvas = createCanvas(W, H);
+    const ctx    = canvas.getContext('2d');
+
+    // Fundal AI (background_image) — desenat primul, sub toate obiectele
+    if (config.background_image && fs.existsSync(config.background_image)) {
+        try {
+            const bgImg = await loadImage(config.background_image);
+            // Cover: acoperim tot canvas-ul, centrat
+            const scale = Math.max(W / bgImg.width, H / bgImg.height);
+            const dw = bgImg.width  * scale;
+            const dh = bgImg.height * scale;
+            ctx.drawImage(bgImg, (W - dw) / 2, (H - dh) / 2, dw, dh);
+        } catch(e) {
+            process.stderr.write('WARN background_image: ' + e.message + '\n');
         }
     }
 
-    // ── Pas 1: modificăm JSON înainte de încărcare (text + product_image) ──────
-    for (const obj of canvasData.objects || []) {
-        const sr = obj.data?.slot_role;
-        if (!sr || sr === 'none') continue;
+    for (const obj of (canvasData.objects || [])) {
+        await drawFabricObject(ctx, obj, config);
+    }
 
-        if (obj.type === 'textbox' || obj.type === 'text') {
-            if (sr === 'title'    && config.title)    obj.text = config.title;
-            if (sr === 'subtitle' && config.subtitle) obj.text = config.subtitle;
-            if (sr === 'label'    && config.label)    obj.text = config.label;
-        } else if (obj.type === 'image' && sr === 'product_image' && config.product_image) {
-            // Înlocuim src-ul placeholder cu URL-ul real (HTTP) sau data-URL (cale locală)
-            const pi = config.product_image;
-            if (pi.startsWith('http://') || pi.startsWith('https://') || pi.startsWith('data:')) {
-                obj.src         = pi;
-                obj.crossOrigin = 'anonymous';
-            } else if (fs.existsSync(pi)) {
-                // Cale locală → convertim la data-URL (JSDOM nu suportă căi locale)
-                const ext  = pi.split('.').pop().toLowerCase();
-                const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
-                obj.src = 'data:' + mime + ';base64,' + fs.readFileSync(pi).toString('base64');
+    fs.mkdirSync(path.dirname(outPath), { recursive: true });
+    fs.writeFileSync(outPath, canvas.toBuffer('image/jpeg', { quality: 0.93 }));
+}
+
+/**
+ * Desenează un obiect Fabric.js pe ctx nativ canvas.
+ * Suportă transformări (angle, scaleX/Y), opacity, slot_role-uri.
+ */
+async function drawFabricObject(ctx, obj, config) {
+    const type    = obj.type || 'rect';
+    const left    = obj.left   || 0;
+    const top     = obj.top    || 0;
+    const width   = (obj.width  || 0) * (obj.scaleX || 1);
+    const height  = (obj.height || 0) * (obj.scaleY || 1);
+    const opacity = obj.opacity !== undefined ? obj.opacity : 1;
+    const angle   = obj.angle  || 0;
+    const sr      = obj.data?.slot_role;
+
+    if (opacity <= 0) return;
+
+    ctx.save();
+    ctx.globalAlpha = ctx.globalAlpha * opacity;
+
+    // Transformare: Fabric.js rotește în jurul centrului obiectului
+    if (angle !== 0) {
+        const cx = left + width / 2;
+        const cy = top  + height / 2;
+        ctx.translate(cx, cy);
+        ctx.rotate(angle * Math.PI / 180);
+        ctx.translate(-cx, -cy);
+    }
+
+    // Rezolvăm fill-ul (string hex/rgb sau obiect gradient)
+    function resolveFill(f, x, y, w, h) {
+        if (!f || f === 'transparent') return null;
+        if (typeof f === 'string') return f;
+        // Gradient object din Fabric.js
+        if (f.type === 'linear' && Array.isArray(f.colorStops)) {
+            const x1 = x + (f.coords?.x1 || 0) * w;
+            const y1 = y + (f.coords?.y1 || 0) * h;
+            const x2 = x + (f.coords?.x2 || 1) * w;
+            const y2 = y + (f.coords?.y2 || 0) * h;
+            const g = ctx.createLinearGradient(x1, y1, x2, y2);
+            for (const stop of f.colorStops) {
+                g.addColorStop(stop.offset, stop.color);
+            }
+            return g;
+        }
+        if (f.type === 'radial' && Array.isArray(f.colorStops)) {
+            const r1 = (f.coords?.r1 || 0) * Math.max(w, h);
+            const r2 = (f.coords?.r2 || 1) * Math.max(w, h);
+            const cx2 = x + (f.coords?.x2 || 0.5) * w;
+            const cy2 = y + (f.coords?.y2 || 0.5) * h;
+            const g = ctx.createRadialGradient(cx2, cy2, r1, cx2, cy2, r2);
+            for (const stop of f.colorStops) {
+                g.addColorStop(stop.offset, stop.color);
+            }
+            return g;
+        }
+        return null;
+    }
+
+    if (type === 'rect') {
+        const rx = obj.rx || 0;
+        const ry = obj.ry || rx;
+
+        if (sr === 'product_image' && config.product_image) {
+            // Slot produs — înlocuim cu imaginea reală
+            try {
+                const img = await loadProductImage(config.product_image, config.remove_bg !== false);
+                const sc  = Math.min(width / img.width, height / img.height);
+                const dw  = img.width  * sc;
+                const dh  = img.height * sc;
+                ctx.drawImage(img, left + (width - dw) / 2, top + (height - dh) / 2, dw, dh);
+            } catch(e) {
+                process.stderr.write('WARN product_image slot: ' + e.message + '\n');
+            }
+        } else if (sr === 'brand_logo' && config.brand_logo && fs.existsSync(config.brand_logo)) {
+            try {
+                const raw = await loadImage(config.brand_logo);
+                const tmp = createCanvas(raw.width, raw.height);
+                tmp.getContext('2d').drawImage(raw, 0, 0);
+                const brand = cropToContent(removeWhiteBackground(tmp, 230));
+                const sc    = Math.min(width / brand.width, height / brand.height);
+                const dw    = brand.width  * sc;
+                const dh    = brand.height * sc;
+                ctx.drawImage(brand, left + (width - dw) / 2, top + (height - dh) / 2, dw, dh);
+            } catch(e) {
+                process.stderr.write('WARN brand_logo slot: ' + e.message + '\n');
+            }
+        } else if (sr === 'malinco_logo' && config.malinco_logo && fs.existsSync(config.malinco_logo)) {
+            try {
+                const logo = await loadImage(config.malinco_logo);
+                const sc   = Math.min(width / logo.width, height / logo.height);
+                const dw   = logo.width  * sc;
+                const dh   = logo.height * sc;
+                ctx.drawImage(logo, left + (width - dw) / 2, top + (height - dh) / 2, dw, dh);
+            } catch(e) {
+                process.stderr.write('WARN malinco_logo slot: ' + e.message + '\n');
+            }
+        } else {
+            // Rect normal
+            const fillStyle = resolveFill(obj.fill, left, top, width, height);
+            if (fillStyle) {
+                ctx.fillStyle = fillStyle;
+                if (rx > 0 || ry > 0) {
+                    roundRectPath(ctx, left, top, width, height, Math.max(rx, ry));
+                    ctx.fill();
+                } else {
+                    ctx.fillRect(left, top, width, height);
+                }
+            }
+            // Stroke opțional
+            if (obj.stroke && obj.strokeWidth) {
+                ctx.strokeStyle = obj.stroke;
+                ctx.lineWidth   = obj.strokeWidth;
+                if (rx > 0 || ry > 0) {
+                    roundRectPath(ctx, left, top, width, height, Math.max(rx, ry));
+                    ctx.stroke();
+                } else {
+                    ctx.strokeRect(left, top, width, height);
+                }
             }
         }
-    }
 
-    // ── Pas 2: încărcăm canvas-ul Fabric ──────────────────────────────────────
-    const canvas = new FabricStaticCanvas(null, { width: 1080, height: 1080 });
-    await canvas.loadFromJSON(canvasData);
-
-    // ── Pas 3: înlocuim rect-urile placeholder cu imagini reale ───────────────
-    // (brand_logo și malinco_logo sunt rect-uri de tip bounding-box în editor)
-    // Notă: JSDOM (folosit de fabric/node) nu acceptă căi locale de fișier ca src;
-    // trebuie să convertim imaginile locale în data-URL-uri înainte de FabricImage.fromURL.
-    const rects = canvas.getObjects().filter(o => {
-        const sr = o.data && o.data.slot_role;
-        return o.type === 'rect' && sr && sr !== 'none';
-    });
-
-    function toDataUrl(filePath) {
-        const ext = filePath.split('.').pop().toLowerCase();
-        const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
-        return 'data:' + mime + ';base64,' + fs.readFileSync(filePath).toString('base64');
-    }
-
-    for (const rect of rects) {
-        const sr  = rect.data.slot_role;
-        let imgSrc = null;
-
-        if (sr === 'brand_logo'   && config.brand_logo   && fs.existsSync(config.brand_logo))   imgSrc = toDataUrl(config.brand_logo);
-        if (sr === 'malinco_logo' && config.malinco_logo && fs.existsSync(config.malinco_logo)) imgSrc = toDataUrl(config.malinco_logo);
-
-        if (!imgSrc) {
-            rect.set('opacity', 0); // ascundem placeholder-ul gol
-            continue;
+    } else if (type === 'circle') {
+        const radius = (obj.radius || 0) * (obj.scaleX || 1);
+        const fillStyle = resolveFill(obj.fill, left, top, radius * 2, radius * 2);
+        if (fillStyle) {
+            ctx.fillStyle = fillStyle;
+            ctx.beginPath();
+            ctx.arc(left + radius, top + radius, radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        if (obj.stroke && obj.strokeWidth) {
+            ctx.strokeStyle = obj.stroke;
+            ctx.lineWidth   = obj.strokeWidth;
+            ctx.beginPath();
+            ctx.arc(left + radius, top + radius, radius, 0, Math.PI * 2);
+            ctx.stroke();
         }
 
-        const dW   = rect.getScaledWidth();
-        const dH   = rect.getScaledHeight();
-        const left = rect.left  || 0;
-        const top  = rect.top   || 0;
-        const zIdx = canvas._objects.indexOf(rect);
-
-        try {
-            const img   = await FabricImage.fromURL(imgSrc);
-            const scale = Math.min(dW / img.width, dH / img.height);
-            img.set({
-                left:    left + (dW - img.width  * scale) / 2,
-                top:     top  + (dH - img.height * scale) / 2,
-                scaleX:  scale,
-                scaleY:  scale,
-                originX: 'left',
-                originY: 'top',
-            });
-            canvas.remove(rect);
-            // Re-inserăm la aceeași poziție în stivă (z-index păstrat)
-            canvas._objects.splice(zIdx >= 0 ? zIdx : canvas._objects.length, 0, img);
-            img.canvas = canvas;
-        } catch (e) {
-            process.stderr.write('WARN renderWithFabric slot ' + sr + ': ' + e.message + '\n');
-            rect.set('opacity', 0);
+    } else if (type === 'triangle') {
+        const fillStyle = resolveFill(obj.fill, left, top, width, height);
+        if (fillStyle) {
+            ctx.fillStyle = fillStyle;
+            ctx.beginPath();
+            ctx.moveTo(left + width / 2, top);
+            ctx.lineTo(left + width, top + height);
+            ctx.lineTo(left, top + height);
+            ctx.closePath();
+            ctx.fill();
         }
+        if (obj.stroke && obj.strokeWidth) {
+            ctx.strokeStyle = obj.stroke;
+            ctx.lineWidth   = obj.strokeWidth;
+            ctx.beginPath();
+            ctx.moveTo(left + width / 2, top);
+            ctx.lineTo(left + width, top + height);
+            ctx.lineTo(left, top + height);
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+    } else if (type === 'line') {
+        if (obj.stroke) {
+            ctx.strokeStyle = obj.stroke;
+            ctx.lineWidth   = obj.strokeWidth || 1;
+            // În Fabric.js, line: x1/y1/x2/y2 sunt relative față de centrul obiectului
+            const cx = left + width / 2;
+            const cy = top  + height / 2;
+            ctx.beginPath();
+            ctx.moveTo(cx + (obj.x1 || -width / 2), cy + (obj.y1 || 0));
+            ctx.lineTo(cx + (obj.x2 || width / 2),  cy + (obj.y2 || 0));
+            ctx.stroke();
+        }
+
+    } else if (type === 'textbox' || type === 'text' || type === 'i-text') {
+        // Rezolvăm textul (slot_role suprascrie textul din JSON)
+        let text = obj.text || '';
+        if (sr === 'title'    && config.title)    text = config.title;
+        if (sr === 'subtitle' && config.subtitle) text = config.subtitle;
+        if (sr === 'label'    && config.label)    text = config.label;
+        if (!text) { ctx.restore(); return; }
+
+        const fontSize   = obj.fontSize   || 32;
+        const fontFamily = obj.fontFamily || 'Montserrat';
+        const fontWeight = obj.fontWeight || 'normal';
+        const textFill   = typeof obj.fill === 'string' ? obj.fill : '#000000';
+        const textAlign  = obj.textAlign  || 'left';
+        const lineHeight = obj.lineHeight ? fontSize * obj.lineHeight : fontSize * 1.25;
+
+        ctx.fillStyle = textFill;
+        ctx.font      = `${fontWeight} ${fontSize}px "${fontFamily}"`;
+        ctx.textAlign = textAlign;
+
+        const textX = textAlign === 'center' ? left + width / 2
+                    : textAlign === 'right'  ? left + width
+                    : left;
+
+        wrapText(ctx, text, textX, top + fontSize, width || 500, lineHeight, 10);
+        ctx.textAlign = 'left'; // reset
     }
 
-    canvas.renderAll();
-
-    // ── Export JPEG ───────────────────────────────────────────────────────────
-    const dataUrl = canvas.toDataURL({ format: 'jpeg', quality: 0.93 });
-    const base64  = dataUrl.replace(/^data:image\/jpeg;base64,/, '');
-    fs.mkdirSync(path.dirname(outPath), { recursive: true });
-    fs.writeFileSync(outPath, Buffer.from(base64, 'base64'));
-
-    canvas.dispose();
+    ctx.restore();
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
