@@ -79,7 +79,7 @@ class SyncToyaPricesJob implements ShouldQueue
             ->whereNotNull('ps.supplier_sku')
             ->select('ps.id as ps_id', 'ps.supplier_sku', 'ps.purchase_price',
                      'wp.id as product_id', 'wp.name', 'wp.sku',
-                     'wp.regular_price', 'wp.woo_id', 'wp.status')
+                     'wp.regular_price', 'wp.stock_status', 'wp.woo_id', 'wp.status')
             ->get()
             ->keyBy('supplier_sku'); // Toya feed folosește cod intern (YT-XXXXX) ca cheie
 
@@ -146,7 +146,8 @@ class SyncToyaPricesJob implements ShouldQueue
                 // WooCommerce resetează backorders=no când manage_stock=false, deci trebuie manage_stock=true.
                 // Cu backorders=yes pluginul setează onbackorder (disponibil la furnizor, add to cart activ).
                 // Cu backorders=no pluginul setează outofstock.
-                if ($row->woo_id && $row->status === 'publish') {
+                // Push doar dacă stock_status s-a schimbat față de ce e în DB.
+                if ($row->woo_id && $row->status === 'publish' && $stockStatus !== $row->stock_status) {
                     $wooStockPushRows[] = [
                         'id'             => $row->woo_id,
                         'manage_stock'   => true,
@@ -235,12 +236,12 @@ class SyncToyaPricesJob implements ShouldQueue
         if ($connection) {
             $woo = new WooClient($connection);
 
-            foreach (array_chunk($wooPricePushRows, 10) as $chunk) {
+            foreach (array_chunk($wooPricePushRows, 100) as $chunk) {
                 $this->pushWithRetry(fn () => $woo->updateProductPricesBatch($chunk), '[SyncToyaPrices] prețuri')
                     && ($stats['price_pushed'] += count($chunk));
             }
 
-            foreach (array_chunk($wooStockPushRows, 10) as $chunk) {
+            foreach (array_chunk($wooStockPushRows, 100) as $chunk) {
                 $this->pushWithRetry(fn () => $woo->updateProductsBatch($chunk), '[SyncToyaPrices] stoc');
             }
 
