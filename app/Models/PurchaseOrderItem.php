@@ -21,6 +21,7 @@ class PurchaseOrderItem extends Model
         'sources_json',
         'received_quantity',
         'received_note',
+        'invoice_position',
     ];
 
     protected function casts(): array

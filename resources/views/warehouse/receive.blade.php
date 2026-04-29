@@ -256,7 +256,7 @@
     const DRAFT_KEY  = 'wh_draft_' + ORDER_ID;
 
     const discReasons    = {};   // id → reason string (for pending items)
-    const confirmedItems = {};   // id → {qty, reason|null}
+    const confirmedItems = {};   // id → {qty, reason|null, invoice_position|null}
     let extraItemCounter = 0;
 
     const reasonLabels = {
@@ -296,8 +296,39 @@
             return;
         }
 
-        confirmedItems[id] = { qty, reason: discReasons[id] || null };
+        // Popup poziție factură
+        showPositionModal(id, qty);
+    }
 
+    function showPositionModal(id, qty) {
+        const item = ITEMS.find(i => i.id === id);
+        const existing = confirmedItems[id]?.invoice_position ?? '';
+        document.getElementById('pos-modal-name').textContent = item.name;
+        document.getElementById('pos-modal-input').value = existing;
+        document.getElementById('pos-modal').style.display = 'flex';
+        setTimeout(() => document.getElementById('pos-modal-input').focus(), 100);
+        document.getElementById('pos-modal').dataset.itemId = id;
+        document.getElementById('pos-modal').dataset.qty    = qty;
+    }
+
+    function closePositionModal() {
+        document.getElementById('pos-modal').style.display = 'none';
+    }
+
+    function confirmWithPosition() {
+        const modal = document.getElementById('pos-modal');
+        const id    = parseInt(modal.dataset.itemId);
+        const qty   = parseFloat(modal.dataset.qty);
+        const posVal = document.getElementById('pos-modal-input').value.trim();
+        const pos   = posVal !== '' ? parseInt(posVal) : null;
+
+        if (posVal !== '' && (isNaN(pos) || pos < 1 || pos > 9999)) {
+            document.getElementById('pos-modal-input').style.outline = '2px solid #dc2626';
+            return;
+        }
+
+        closePositionModal();
+        confirmedItems[id] = { qty, reason: discReasons[id] || null, invoice_position: pos };
         document.getElementById('row_' + id).style.display = 'none';
         renderConfirmedList();
         updatePendingCount();
@@ -335,9 +366,10 @@
             const sign    = diff > 0 ? '+' : '';
             const reason  = data.reason ? reasonLabels[data.reason] : '';
 
+            const posLabel = data.invoice_position ? `<span style="background:#f1f5f9; border-radius:6px; padding:1px 6px; font-size:11px; color:#475569; font-weight:600">poz. ${data.invoice_position}</span>` : '';
             return `<div class="confirmed-card" id="conf_${id}">
                 <div style="flex:1; min-width:0">
-                    <div class="c-name">${item.name}</div>
+                    <div class="c-name" style="display:flex; align-items:center; gap:6px">${item.name} ${posLabel}</div>
                     <div class="c-detail">
                         ${item.sku ? `SKU: ${item.sku} &bull; ` : ''}
                         Primit: <strong style="color:#15803d">${data.qty}</strong>
@@ -811,9 +843,11 @@
                     ${reasonTxt ? `<div style="font-size:12px; color:${color}; margin-top:2px">${reasonTxt}</div>` : ''}`;
             }
 
+            const invPos = confirmedItems[item.id]?.invoice_position;
+            const posBadge = invPos ? `<span style="font-size:11px; background:#f1f5f9; color:#475569; border-radius:6px; padding:2px 7px; font-weight:600; margin-left:6px">poz. ${invPos}</span>` : '';
             return `<div class="wh-card" style="margin-bottom:10px; border-left:4px solid ${isOk ? '#16a34a' : (diff < 0 ? '#dc2626' : '#f59e0b')}">
-                <div style="display:flex; align-items:center; margin-bottom:4px">
-                    <span style="font-weight:600; font-size:14px">${item.name}</span>${confBadge}
+                <div style="display:flex; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:4px">
+                    <span style="font-weight:600; font-size:14px">${item.name}</span>${confBadge}${posBadge}
                 </div>
                 ${item.sku ? `<div style="font-size:12px; color:#64748b; margin-bottom:6px">SKU: ${item.sku}</div>` : ''}
                 <div style="display:flex; align-items:baseline; flex-wrap:wrap; gap:4px; font-size:13px; color:#475569">
@@ -867,7 +901,7 @@
         btn.innerHTML = '<span class="spinner"></span> Se trimite...';
 
         const payload = {
-            items:          ITEMS.map(item => ({ id: item.id, qty: getEffectiveQty(item.id), reason: allReasons[item.id] || null })),
+            items:          ITEMS.map(item => ({ id: item.id, qty: getEffectiveQty(item.id), reason: allReasons[item.id] || null, invoice_position: confirmedItems[item.id]?.invoice_position ?? null })),
             extra_items:    collectExtraItems(),
             received_notes: document.getElementById('received_notes').value,
         };
@@ -1078,5 +1112,40 @@
 
     // Init
     loadDraft();
+
+    // Enter pe input poziție factură
+    document.getElementById('pos-modal-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') confirmWithPosition();
+        if (e.key === 'Escape') closePositionModal();
+    });
 </script>
+
+{{-- Modal poziție factură --}}
+<div id="pos-modal" style="display:none; position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; padding:24px">
+    <div style="background:white; border-radius:18px; padding:24px; width:100%; max-width:360px; box-shadow:0 8px 32px rgba(0,0,0,0.2)">
+        <div style="font-weight:700; font-size:16px; color:#1e293b; margin-bottom:4px">Poziție pe factură</div>
+        <div id="pos-modal-name" style="font-size:13px; color:#64748b; margin-bottom:20px; line-height:1.4"></div>
+
+        <label style="font-size:13px; font-weight:600; color:#374151; display:block; margin-bottom:8px">
+            Nr. poziție pe factura furnizorului
+        </label>
+        <input id="pos-modal-input" type="number" min="1" max="9999" inputmode="numeric"
+            placeholder="ex: 1, 2, 3..."
+            style="width:100%; padding:14px 16px; font-size:20px; font-weight:700; text-align:center; border:2px solid #e2e8f0; border-radius:12px; outline:none; box-sizing:border-box; -moz-appearance:textfield">
+        <div style="font-size:12px; color:#94a3b8; margin-top:8px; text-align:center">
+            Lasă gol dacă nu știi poziția
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:20px">
+            <button onclick="closePositionModal()"
+                style="flex:1; padding:14px; border-radius:12px; border:1.5px solid #e2e8f0; background:white; color:#64748b; font-size:15px; font-weight:600; cursor:pointer">
+                Anulează
+            </button>
+            <button onclick="confirmWithPosition()"
+                style="flex:2; padding:14px; border-radius:12px; border:none; background:#b91c1c; color:white; font-size:15px; font-weight:700; cursor:pointer">
+                Confirmă ✓
+            </button>
+        </div>
+    </div>
+</div>
 @endsection

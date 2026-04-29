@@ -184,10 +184,11 @@ class WarehouseController extends Controller
         abort_unless($order->status === PurchaseOrder::STATUS_SENT, 403);
 
         $data = $request->validate([
-            'items'              => ['required', 'array'],
-            'items.*.id'         => ['required', 'integer'],
-            'items.*.qty'        => ['required', 'numeric', 'min:0'],
-            'items.*.reason'     => ['nullable', 'string', 'max:100'],
+            'items'                    => ['required', 'array'],
+            'items.*.id'               => ['required', 'integer'],
+            'items.*.qty'              => ['required', 'numeric', 'min:0'],
+            'items.*.reason'           => ['nullable', 'string', 'max:100'],
+            'items.*.invoice_position' => ['nullable', 'integer', 'min:1', 'max:9999'],
             'extra_items'                  => ['nullable', 'array'],
             'extra_items.*.name'           => ['required', 'string', 'max:255'],
             'extra_items.*.sku'            => ['nullable', 'string', 'max:100'],
@@ -211,6 +212,7 @@ class WarehouseController extends Controller
             $orderItem->update([
                 'received_quantity' => $receivedQty,
                 'received_note'     => $submitted['reason'] ?? null,
+                'invoice_position'  => isset($submitted['invoice_position']) ? (int) $submitted['invoice_position'] : null,
             ]);
 
             if ($shortfall > 0) {
@@ -344,9 +346,10 @@ class WarehouseController extends Controller
             'po_ids'             => ['required', 'array'],
             'po_ids.*'           => ['required', 'integer'],
             'items'              => ['required', 'array'],
-            'items.*.id'         => ['required', 'integer'],
-            'items.*.qty'        => ['required', 'numeric', 'min:0'],
-            'items.*.reason'     => ['nullable', 'string', 'max:100'],
+            'items.*.id'               => ['required', 'integer'],
+            'items.*.qty'              => ['required', 'numeric', 'min:0'],
+            'items.*.reason'           => ['nullable', 'string', 'max:100'],
+            'items.*.invoice_position' => ['nullable', 'integer', 'min:1', 'max:9999'],
             'extra_items'                  => ['nullable', 'array'],
             'extra_items.*.name'           => ['required', 'string', 'max:255'],
             'extra_items.*.sku'            => ['nullable', 'string', 'max:100'],
@@ -379,6 +382,7 @@ class WarehouseController extends Controller
                 $orderItem->update([
                     'received_quantity' => $receivedQty,
                     'received_note'     => $submitted['reason'] ?? null,
+                    'invoice_position'  => isset($submitted['invoice_position']) ? (int) $submitted['invoice_position'] : null,
                 ]);
 
                 if ($shortfall > 0) {
