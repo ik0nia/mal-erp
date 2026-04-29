@@ -3,9 +3,11 @@
 namespace App\Filament\App\Search;
 
 use App\Filament\App\Resources\CustomerResource;
+use App\Filament\App\Resources\PurchaseOrderResource;
 use App\Filament\App\Resources\SupplierResource;
 use App\Filament\App\Resources\WooProductResource;
 use App\Models\Customer;
+use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use App\Models\SupplierContact;
 use App\Models\WooProduct;
@@ -21,6 +23,7 @@ class AppGlobalSearchProvider implements GlobalSearchProvider
     private const SUPPLIER_KEYWORDS = ['furnizor', 'furnizori', 'supplier', 'brand', 'brands'];
     private const CUSTOMER_KEYWORDS = ['client', 'clienti', 'clienți', 'cumparator', 'cumpărător'];
     private const PRODUCT_KEYWORDS  = ['produs', 'produse', 'sku', 'articol', 'articole'];
+    private const PO_KEYWORDS        = ['comanda', 'comandă', 'comenzi', 'po', 'order'];
 
     public function getResults(string $query): ?GlobalSearchResults
     {
@@ -46,6 +49,10 @@ class AppGlobalSearchProvider implements GlobalSearchProvider
             $this->addSuppliers($builder, $searchTerm);
         }
 
+        if ($category === null || $category === 'orders') {
+            $this->addPurchaseOrders($builder, $searchTerm);
+        }
+
         return $builder;
     }
 
@@ -69,6 +76,15 @@ class AppGlobalSearchProvider implements GlobalSearchProvider
 
         if (in_array($first, self::PRODUCT_KEYWORDS, true)) {
             return ['products', $rest !== '' ? $rest : $first];
+        }
+
+        if (in_array($first, self::PO_KEYWORDS, true)) {
+            return ['orders', $rest !== '' ? $rest : $first];
+        }
+
+        // Detectare automată prefix PO- (ex: "PO-100028" sau "100028")
+        if (preg_match('/^po-?\d+/i', $query)) {
+            return ['orders', $query];
         }
 
         return [null, $query];
@@ -279,5 +295,77 @@ class AppGlobalSearchProvider implements GlobalSearchProvider
         });
 
         $builder->category('Furnizori', $results);
+    }
+
+    private function addPurchaseOrders(GlobalSearchResults $builder, string $query): void
+    {
+        if ($query === '') {
+            return;
+        }
+
+        $normalized = strtoupper(trim($query));
+        // Acceptă "PO-100028", "po100028", "100028"
+        $numberSearch = preg_replace('/^PO-?/i', '', $normalized);
+
+        $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $numberSearch) . '%';
+
+        $orders = PurchaseOrder::query()
+            ->select(['id', 'number', 'status', 'supplier_id', 'total_value', 'created_at'])
+            ->with('supplier:id,name')
+            ->where(function (Builder $sub) use ($like, $normalized): void {
+                $sub->where('number', 'like', '%' . str_replace(['%', '_'], ['\\%', '\\_'], $normalized) . '%')
+                    ->orWhere('number', 'like', $like);
+            })
+            ->orderByDesc('created_at')
+            ->limit(6)
+            ->get();
+
+        if ($orders->isEmpty()) {
+            return;
+        }
+
+        $statusLabels = [
+            'draft'            => 'Ciornă',
+            'pending_approval' => 'Aprobare',
+            'approved'         => 'Aprobat',
+            'rejected'         => 'Respins',
+            'sent'             => 'Trimis',
+            'received'         => 'Recepționat',
+            'cancelled'        => 'Anulat',
+        ];
+
+        $statusColors = [
+            'draft'            => '#9ca3af',
+            'pending_approval' => '#f59e0b',
+            'approved'         => '#3b82f6',
+            'rejected'         => '#ef4444',
+            'sent'             => '#8b5cf6',
+            'received'         => '#10b981',
+            'cancelled'        => '#6b7280',
+        ];
+
+        $results = $orders->map(function (PurchaseOrder $order) use ($statusLabels, $statusColors): GlobalSearchResult {
+            $statusLabel = $statusLabels[$order->status] ?? $order->status;
+            $statusColor = $statusColors[$order->status] ?? '#9ca3af';
+
+            $details = [
+                'Furnizor' => $order->supplier?->name ?? '—',
+                'Status'   => new \Illuminate\Support\HtmlString(
+                    '<span style="color:' . $statusColor . ';font-weight:600;">' . e($statusLabel) . '</span>'
+                ),
+            ];
+
+            if ($order->total_value) {
+                $details['Total'] = number_format((float) $order->total_value, 2, ',', '.') . ' RON';
+            }
+
+            return new GlobalSearchResult(
+                title: $order->number,
+                url: PurchaseOrderResource::getUrl('view', ['record' => $order->id]),
+                details: $details,
+            );
+        });
+
+        $builder->category('Comenzi furnizori', $results);
     }
 }

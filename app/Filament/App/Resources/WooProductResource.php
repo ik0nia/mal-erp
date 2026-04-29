@@ -86,6 +86,13 @@ class WooProductResource extends Resource
             return true;
         }
 
+        // Oricine e responsabil pe cel puțin un furnizor poate edita orice produs
+        $isResponsible = \App\Models\Supplier::where('buyer_id', $user->id)->exists()
+            || \Illuminate\Support\Facades\DB::table('supplier_buyers')->where('user_id', $user->id)->exists();
+        if ($isResponsible) {
+            return true;
+        }
+
         return \App\Models\RolePermission::check(static::permissionKey(), 'can_edit');
     }
 
@@ -767,7 +774,7 @@ class WooProductResource extends Resource
             'categories',
             'suppliers',
             'stocks',
-        ]);
+        ])->where('is_placeholder', false);
 
         $user = static::currentUser();
 

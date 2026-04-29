@@ -57,6 +57,7 @@ class WooClient
         return $this->get('products', [
             'page'     => $page,
             'per_page' => max(1, min(100, $perPage)),
+            'status'   => 'any',
             'orderby'  => 'id',
             'order'    => 'asc',
         ]);

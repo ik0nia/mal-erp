@@ -12,11 +12,19 @@ use App\Services\WooCommerce\WooClient;
 use Filament\Actions;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
+use Illuminate\Database\Eloquent\Model;
 use Throwable;
 
 class ViewWooProduct extends ViewRecord
 {
     protected static string $resource = WooProductResource::class;
+
+    // getEloquentQuery() filtrează is_placeholder=false, deci placeholder-urile
+    // (ex. produse WinMentor/Temad nepublicate) ar genera 404. Interogăm direct.
+    protected function resolveRecord(int|string $key): Model
+    {
+        return WooProduct::findOrFail($key);
+    }
 
     public function mount(int|string $record): void
     {
@@ -56,6 +64,129 @@ class ViewWooProduct extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            // ── Creează în WooCommerce (produse fără woo_id valid) ─────────
+            Actions\Action::make('create_in_woo')
+                ->label('Creează în WooCommerce')
+                ->icon('heroicon-o-cloud-arrow-up')
+                ->color('primary')
+                ->visible(function (): bool {
+                    /** @var WooProduct $product */
+                    $product = $this->record;
+                    // ID valid WooCommerce = număr mic; ID-urile false importate sunt > 1 miliard
+                    return ! $product->woo_id || $product->woo_id > 1_000_000_000;
+                })
+                ->requiresConfirmation()
+                ->modalHeading('Creează produsul în WooCommerce')
+                ->modalDescription('Produsul va fi creat și publicat pe site cu datele disponibile (nume, SKU, preț, categorie, imagine).')
+                ->modalSubmitActionLabel('Creează și publică')
+                ->action(function (): void {
+                    /** @var WooProduct $product */
+                    $product = $this->record;
+
+                    if (! $product->connection_id) {
+                        Notification::make()->danger()->title('Nicio conexiune WooCommerce configurată')->send();
+                        return;
+                    }
+
+                    $client = new WooClient($product->connection);
+
+                    // Categorii WooCommerce
+                    $catIds = $product->categories()
+                        ->whereNotNull('woo_id')
+                        ->pluck('woo_id')
+                        ->map(fn ($id) => ['id' => (int) $id])
+                        ->values()
+                        ->all();
+
+                    $payload = [
+                        'name'          => $product->name,
+                        'sku'           => $product->sku,
+                        'status'        => 'publish',
+                        'regular_price' => (string) ($product->regular_price ?? ''),
+                        'stock_status'  => $product->stock_status ?? 'instock',
+                        'manage_stock'  => false,
+                        'type'          => 'simple',
+                    ];
+
+                    if ($catIds) {
+                        $payload['categories'] = $catIds;
+                    }
+
+                    if ($product->main_image_url) {
+                        $payload['images'] = [['src' => $product->main_image_url]];
+                    }
+
+                    try {
+                        $result  = $client->createProductsBatch([$payload]);
+                        $created = $result['created'][0] ?? null;
+                        $errors  = $result['errors'] ?? [];
+
+                        // Dacă a eșuat din cauza imaginii, reîncercăm fără imagine
+                        if (! $created && $errors) {
+                            $errCode = data_get($errors, '0.error.code', '');
+                            if (str_contains($errCode, 'image')) {
+                                unset($payload['images']);
+                                $result2  = $client->createProductsBatch([$payload]);
+                                $created  = $result2['created'][0] ?? null;
+                                $errors   = $result2['errors'] ?? [];
+                            }
+                        }
+
+                        if ($created) {
+                            $product->update(['woo_id' => $created['id'], 'status' => 'publish']);
+                            Notification::make()->success()
+                                ->title('Produs creat în WooCommerce')
+                                ->body('woo_id: ' . $created['id'] . ($payload['images'] ?? null ? '' : ' (fără imagine — URL incompatibil)'))
+                                ->send();
+                        } else {
+                            $msg = data_get($errors, '0.error.message', 'Eroare necunoscută');
+                            Notification::make()->danger()->title('Eroare la creare')->body($msg)->send();
+                            return;
+                        }
+                    } catch (Throwable $e) {
+                        Notification::make()->danger()->title('Eroare WooCommerce')->body($e->getMessage())->send();
+                        return;
+                    }
+
+                    $this->redirect($this->getResource()::getUrl('view', ['record' => $product->getRouteKey()]));
+                }),
+
+            // ── Toggle publish/unpublish ──────────────────────────────────
+            Actions\Action::make('toggle_publish')
+                ->label(fn () => $this->record->status === 'publish' ? 'Retrage de pe site' : 'Publică pe site')
+                ->icon(fn () => $this->record->status === 'publish' ? 'heroicon-o-eye-slash' : 'heroicon-o-eye')
+                ->color(fn () => $this->record->status === 'publish' ? 'danger' : 'success')
+                ->visible(fn () => (bool) $this->record->woo_id && (bool) $this->record->connection_id)
+                ->requiresConfirmation()
+                ->modalHeading(fn () => $this->record->status === 'publish' ? 'Retrage produsul de pe site?' : 'Publică produsul pe site?')
+                ->modalDescription(fn () => $this->record->status === 'publish'
+                    ? 'Produsul va deveni draft și nu va mai fi vizibil pe site.'
+                    : 'Produsul va fi publicat și va deveni vizibil pe site.')
+                ->modalSubmitActionLabel(fn () => $this->record->status === 'publish' ? 'Retrage' : 'Publică')
+                ->action(function (): void {
+                    /** @var WooProduct $product */
+                    $product   = $this->record;
+                    $newStatus = $product->status === 'publish' ? 'draft' : 'publish';
+
+                    try {
+                        $client   = new WooClient($product->connection);
+                        $response = $client->updateProductStatus((int) $product->woo_id, $newStatus);
+                        $confirmed = $response['status'] ?? $newStatus;
+                        $product->update(['status' => $confirmed]);
+
+                        Notification::make()
+                            ->success()
+                            ->title($confirmed === 'publish' ? 'Produs publicat pe site' : 'Produs retras de pe site')
+                            ->send();
+                    } catch (Throwable $e) {
+                        Notification::make()->danger()->title('Eroare WooCommerce')->body($e->getMessage())->send();
+
+                        return;
+                    }
+
+                    $this->redirect($this->getResource()::getUrl('view', ['record' => $product->getRouteKey()]));
+                }),
+
             Actions\Action::make('resync_from_woo')
                 ->label('Resync WooCommerce')
                 ->icon('heroicon-o-arrow-path')
