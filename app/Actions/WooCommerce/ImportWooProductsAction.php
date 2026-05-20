@@ -90,26 +90,26 @@ class ImportWooProductsAction
 
                     $sku = $this->nullableString($productPayload['sku'] ?? null);
 
+                    // Caută mai întâi după woo_id indiferent de sursă (previne duplicate cu toya_api etc.)
                     $product = WooProduct::query()
-                        ->where('connection_id', $connection->id)
                         ->where('woo_id', $wooId)
                         ->first();
 
                     if ($product) {
                         $stats['updated']++;
                     } else {
-                        $placeholder = null;
+                        // Caută după SKU — reutilizează orice produs existent cu același SKU
+                        // (placeholder din WinMentor, Toya, manual, etc.) pentru a preveni duplicate
+                        $existing = null;
 
                         if ($sku !== null) {
-                            $placeholder = WooProduct::query()
-                                ->where('connection_id', $connection->id)
+                            $existing = WooProduct::query()
                                 ->where('sku', $sku)
-                                ->where('is_placeholder', true)
                                 ->first();
                         }
 
-                        if ($placeholder) {
-                            $product = $placeholder;
+                        if ($existing) {
+                            $product = $existing;
                             $product->woo_id = $wooId;
                             $stats['updated']++;
                         } else {

@@ -51,6 +51,22 @@ class WooCategory extends Model
         return $this->hasMany(self::class, 'parent_id');
     }
 
+    /**
+     * Calea ierarhică de la root la această categorie: [Root, Părinte, ..., Self]
+     */
+    public function getAncestorsPath(): \Illuminate\Support\Collection
+    {
+        $path = collect([$this]);
+        $current = $this;
+        $seen = [$this->id]; // protecție cicluri
+        while ($current->parent_id && ($current = $current->parent)) {
+            if (in_array($current->id, $seen)) break;
+            $seen[] = $current->id;
+            $path->prepend($current);
+        }
+        return $path;
+    }
+
     public function products(): BelongsToMany
     {
         return $this->belongsToMany(

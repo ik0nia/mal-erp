@@ -19,6 +19,40 @@ class ViewWooProduct extends ViewRecord
 {
     protected static string $resource = WooProductResource::class;
 
+    public function getHeading(): string
+    {
+        return '';
+    }
+
+    public function getBreadcrumbs(): array
+    {
+        /** @var WooProduct $product */
+        $product = $this->record;
+        $product->loadMissing('categories.parent');
+
+        $breadcrumbs = [
+            WooProductResource::getUrl() => 'Produse',
+        ];
+
+        // Ia categoria cea mai specifică (cea cu cel mai mic count sau cu parent_id setat)
+        $category = $product->categories
+            ->sortByDesc(fn ($c) => $c->parent_id ? 1 : 0)
+            ->first();
+
+        if ($category) {
+            foreach ($category->getAncestorsPath() as $ancestor) {
+                $url = WooProductResource::getUrl('index', [
+                    'tableFilters' => ['category_id' => ['value' => (string) $ancestor->id]],
+                ]);
+                $breadcrumbs[$url] = $ancestor->name;
+            }
+        }
+
+        $breadcrumbs[] = $product->decoded_name ?? $product->name;
+
+        return $breadcrumbs;
+    }
+
     // getEloquentQuery() filtrează is_placeholder=false, deci placeholder-urile
     // (ex. produse WinMentor/Temad nepublicate) ar genera 404. Interogăm direct.
     protected function resolveRecord(int|string $key): Model
@@ -191,7 +225,7 @@ class ViewWooProduct extends ViewRecord
                 ->label('Resync WooCommerce')
                 ->icon('heroicon-o-arrow-path')
                 ->color('gray')
-                ->extraAttributes(['class' => 'hidden'])
+                ->hidden()
                 ->visible(function (): bool {
                     if (! $this->record->woo_id || ! $this->record->connection_id) {
                         return false;
@@ -307,7 +341,7 @@ class ViewWooProduct extends ViewRecord
             // ── Gallery: setează poza principală ─────────────────────────
             Actions\Action::make('gallery_set_primary')
                 ->label('Setează ca principală')
-                ->extraAttributes(['class' => 'hidden'])
+                ->hidden()
                 ->action(function (array $arguments): void {
                     $imageId = (int) ($arguments['image_id'] ?? 0);
                     if (! $imageId) {
@@ -335,7 +369,7 @@ class ViewWooProduct extends ViewRecord
             // ── Gallery: șterge o imagine ─────────────────────────────────
             Actions\Action::make('gallery_delete_image')
                 ->label('Șterge imaginea')
-                ->extraAttributes(['class' => 'hidden'])
+                ->hidden()
                 ->requiresConfirmation()
                 ->modalHeading('Șterge imaginea?')
                 ->modalDescription('Această acțiune nu poate fi anulată.')
@@ -377,7 +411,7 @@ class ViewWooProduct extends ViewRecord
             // ── Gallery: adaugă URL manual ────────────────────────────────
             Actions\Action::make('gallery_add_url')
                 ->label('Adaugă URL imagine')
-                ->extraAttributes(['class' => 'hidden'])
+                ->hidden()
                 ->modalHeading('Adaugă imagine')
                 ->modalSubmitActionLabel('Adaugă')
                 ->form([
@@ -426,7 +460,7 @@ class ViewWooProduct extends ViewRecord
             // ── Gallery: mută imaginea mai în față (swap sort_order cu precedenta) ──
             Actions\Action::make('gallery_move_before')
                 ->label('Mută mai în față')
-                ->extraAttributes(['class' => 'hidden'])
+                ->hidden()
                 ->action(function (array $arguments): void {
                     $imageId = (int) ($arguments['image_id'] ?? 0);
                     if (! $imageId) {
@@ -458,7 +492,7 @@ class ViewWooProduct extends ViewRecord
             // ── Gallery: mută imaginea mai în spate (swap sort_order cu următoarea) ──
             Actions\Action::make('gallery_move_after')
                 ->label('Mută mai în spate')
-                ->extraAttributes(['class' => 'hidden'])
+                ->hidden()
                 ->action(function (array $arguments): void {
                     $imageId = (int) ($arguments['image_id'] ?? 0);
                     if (! $imageId) {
@@ -490,7 +524,7 @@ class ViewWooProduct extends ViewRecord
             // ── Gallery: import poze din Toya ─────────────────────────────
             Actions\Action::make('gallery_import_toya')
                 ->label('Import poze Toya')
-                ->extraAttributes(['class' => 'hidden'])
+                ->hidden()
                 ->modalHeading('Import imagini din Toya')
                 ->modalDescription('Se vor importa toate imaginile suplimentare din feedul Toya. Imaginile deja existente nu vor fi duplicate.')
                 ->modalSubmitActionLabel('Importă')

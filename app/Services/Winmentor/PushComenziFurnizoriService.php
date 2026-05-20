@@ -436,6 +436,26 @@ class PushComenziFurnizoriService
         foreach ($items as $item) {
             $originalSku = $item->sku ?? '';
 
+            // Fallback: dacă SKU-ul e gol dar product_name arată a fi un EAN (doar cifre, 8-14 caractere),
+            // îl folosim ca SKU — frecvent la items adăugate manual cu EAN-ul în câmpul greșit
+            if ($originalSku === '' && preg_match('/^\d{8,14}$/', trim($item->product_name ?? ''))) {
+                $eanFromName = trim($item->product_name);
+                $wooByEan    = WooProduct::where('sku', $eanFromName)->first();
+                if ($wooByEan) {
+                    $this->log('info', "SKU rezolvat din product_name (EAN): [{$eanFromName}] → [{$wooByEan->sku}] ({$wooByEan->name})");
+                    $skuMap[$originalSku] = $wooByEan->sku;
+                    $resolved[] = [
+                        'sku'            => $wooByEan->sku,
+                        'product_name'   => $wooByEan->name,
+                        'woo_product_id' => $wooByEan->id,
+                        'supplier_sku'   => $item->supplier_sku ?? null,
+                    ];
+                    continue;
+                }
+            }
+
+            $itemSupplierSku = $item->supplier_sku ?? null;
+
             // 1. woo_product_id direct
             if ($item->woo_product_id && isset($wooIdMap[$item->woo_product_id])) {
                 $wooProduct  = $wooIdMap[$item->woo_product_id];
@@ -445,6 +465,7 @@ class PushComenziFurnizoriService
                     'sku'            => $resolvedSku,
                     'product_name'   => $item->product_name,
                     'woo_product_id' => $wooProduct->id,
+                    'supplier_sku'   => $itemSupplierSku,
                 ];
                 continue;
             }
@@ -459,6 +480,7 @@ class PushComenziFurnizoriService
                     'sku'            => $resolvedSku,
                     'product_name'   => $item->product_name,
                     'woo_product_id' => $wooProduct->id,
+                    'supplier_sku'   => $itemSupplierSku,
                 ];
                 continue;
             }
@@ -469,6 +491,7 @@ class PushComenziFurnizoriService
                 'sku'            => $originalSku,
                 'product_name'   => $item->product_name,
                 'woo_product_id' => null,
+                'supplier_sku'   => $itemSupplierSku,
             ];
         }
 

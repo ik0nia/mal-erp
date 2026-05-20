@@ -1408,7 +1408,12 @@ class WooProductResource extends Resource
         $stock      = $record->stock_status ?? '-';
         $stockClr   = $stock === 'instock' ? '#16a34a' : '#dc2626';
         $stockLbl   = match ($stock) { 'instock' => 'În stoc', 'outofstock' => 'Fără stoc', 'onbackorder' => 'Precomandă', default => $stock };
-        $cats       = $record->categories->pluck('name')->implode(', ');
+        $catBadges  = $record->categories->map(function ($cat) {
+            $url = WooProductResource::getUrl('index', [
+                'tableFilters' => ['category_id' => ['value' => (string) $cat->id]],
+            ]);
+            return '<a href="' . e($url) . '" style="background:#f3f4f6;color:#374151;border-radius:6px;padding:2px 8px;font-size:0.78rem;text-decoration:none;" onmouseover="this.style.background=\'#e5e7eb\'" onmouseout="this.style.background=\'#f3f4f6\'">' . e($cat->name) . '</a>';
+        })->implode('');
         $location   = e($record->connection?->location?->name ?? '-');
 
         // Brand logo sau badge text
@@ -1456,6 +1461,122 @@ class WooProductResource extends Resource
         // Cod de bare
         $barcodeHtml = static::renderBarcodeHtml($record->sku ?? '');
 
+
+        // ── Card Furnizor ────────────────────────────────────────────────
+        $record->loadMissing('suppliers');
+        $supplierCardHtml = '';
+        if ($record->suppliers->isNotEmpty()) {
+            $rows = '';
+            foreach ($record->suppliers as $sup) {
+                $supName = e($sup->name);
+                $supSku  = e($sup->pivot->supplier_sku ?? '');
+                $pPrice  = $sup->pivot->purchase_price ? (float) $sup->pivot->purchase_price : null;
+                $curr    = $sup->pivot->currency ?? 'RON';
+                $leadD   = $sup->pivot->lead_days ?? null;
+                $moq     = $sup->pivot->min_order_qty ?? null;
+                $isPref  = $sup->pivot->is_preferred ?? false;
+
+                $priceHtml = $pPrice
+                    ? number_format($pPrice, 2, ',', '.') . ' ' . $curr
+                      . ' <span style="color:#9ca3af;font-size:0.75rem;">(' . number_format($pPrice * 1.19, 2, ',', '.') . ' cu TVA)</span>'
+                    : '<span style="color:#9ca3af;">-</span>';
+
+                $prefBadge = $isPref ? ' <span style="background:#f0fdf4;color:#16a34a;border-radius:4px;padding:0 5px;font-size:0.65rem;font-weight:600;">preferat</span>' : '';
+
+                $rows .= '<div style="' . ($rows ? 'border-top:1px solid #f3f4f6;padding-top:6px;margin-top:6px;' : '') . '">'
+                    . '<div style="display:flex;align-items:center;gap:6px;">'
+                    . '<span style="font-weight:600;font-size:0.82rem;color:#111827;">' . $supName . '</span>'
+                    . $prefBadge
+                    . ($supSku ? '<span style="font-size:0.75rem;color:#9ca3af;">· ' . $supSku . '</span>' : '')
+                    . ($leadD ? '<span style="font-size:0.75rem;color:#9ca3af;">· ' . $leadD . 'z</span>' : '')
+                    . ($moq ? '<span style="font-size:0.75rem;color:#9ca3af;">· MOQ ' . $moq . '</span>' : '')
+                    . '</div>'
+                    . '</div>';
+            }
+
+            // Prețurile sunt ascunse — se arată doar la click (x-data toggle)
+            $priceRows = '';
+            foreach ($record->suppliers as $sup) {
+                $pPrice = $sup->pivot->purchase_price ? (float) $sup->pivot->purchase_price : null;
+                $curr   = $sup->pivot->currency ?? 'RON';
+                if (! $pPrice) continue;
+                $priceRows .= '<div style="display:flex;gap:8px;align-items:baseline;font-size:0.78rem;padding:2px 0;">'
+                    . '<span style="color:#6b7280;">' . e($sup->name) . ':</span>'
+                    . '<strong style="color:#374151;">' . number_format($pPrice, 2, ',', '.') . ' ' . $curr . '</strong>'
+                    . '<span style="color:#9ca3af;font-size:0.72rem;">(' . number_format($pPrice * 1.19, 2, ',', '.') . ' cu TVA)</span>'
+                    . '</div>';
+            }
+
+            $supplierCardHtml = '<div x-data="{ showPrices: false }" style="background:#fafafa;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;margin-top:4px;">'
+                . '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">'
+                . '<span style="font-size:0.7rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Furnizori</span>'
+                . ($priceRows ? '<button type="button" x-on:click="showPrices = !showPrices"'
+                    . ' style="background:none;border:none;cursor:pointer;font-size:0.7rem;color:#2563eb;font-weight:500;padding:0;"'
+                    . ' x-text="showPrices ? \'Ascunde prețuri\' : \'Arată prețuri\'"></button>' : '')
+                . '</div>'
+                . $rows
+                . ($priceRows ? '<div x-show="showPrices" x-collapse style="margin-top:6px;padding-top:6px;border-top:1px solid #e5e7eb;">' . $priceRows . '</div>' : '')
+                . '</div>';
+        }
+
+        // ── Card Specificații fizice ──────────────────────────────────────
+        $specsItems = [];
+        if (filled($record->weight)) {
+            $specsItems[] = '<span>Greutate: <strong>' . e($record->weight) . ' kg</strong></span>';
+        }
+        if (filled($record->dim_length) || filled($record->dim_width) || filled($record->dim_height)) {
+            $dims = collect([$record->dim_length, $record->dim_width, $record->dim_height])
+                ->filter(fn ($v) => filled($v))
+                ->implode(' × ');
+            $specsItems[] = '<span>Dim: <strong>' . e($dims) . ' cm</strong></span>';
+        }
+        if (filled($record->unit)) {
+            $specsItems[] = '<span>Unitate: <strong>' . e($record->unit) . '</strong></span>';
+        }
+        if (filled($record->country_of_origin)) {
+            $specsItems[] = '<span>Origine: <strong>' . e($record->country_of_origin) . '</strong></span>';
+        }
+        if (filled($record->warranty_months)) {
+            $specsItems[] = '<span>Garanție: <strong>' . $record->warranty_months . ' luni</strong></span>';
+        }
+
+        $specsCardHtml = '';
+        if (! empty($specsItems)) {
+            $specsCardHtml = '<div style="background:#fafafa;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;margin-top:4px;">'
+                . '<div style="font-size:0.7rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Specificații</div>'
+                . '<div style="display:flex;gap:12px;flex-wrap:wrap;font-size:0.8rem;color:#6b7280;">'
+                . implode('', $specsItems)
+                . '</div>'
+                . '</div>';
+        }
+
+        // ── Card Aprovizionare ───────────────────────────────────────────
+        $procItems = [];
+        if ($record->procurement_type === WooProduct::PROCUREMENT_ON_DEMAND) {
+            $procItems[] = '<span style="background:#fef3c7;color:#92400e;border-radius:4px;padding:1px 6px;font-size:0.72rem;font-weight:600;">La comandă</span>';
+        }
+        if ($record->is_discontinued) {
+            $procItems[] = '<span style="background:#fef2f2;color:#991b1b;border-radius:4px;padding:1px 6px;font-size:0.72rem;font-weight:600;">Fără reaprovizionare</span>';
+        }
+        if (filled($record->min_stock_qty)) {
+            $procItems[] = '<span>Min stoc: <strong>' . (int) $record->min_stock_qty . '</strong></span>';
+        }
+        if (filled($record->max_stock_qty)) {
+            $procItems[] = '<span>Max stoc: <strong>' . (int) $record->max_stock_qty . '</strong></span>';
+        }
+        if (filled($record->abc_classification)) {
+            $procItems[] = '<span>ABC: <strong>' . e($record->abc_classification) . '</strong></span>';
+        }
+
+        $procCardHtml = '';
+        if (! empty($procItems)) {
+            $procCardHtml = '<div style="background:#fafafa;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;margin-top:4px;">'
+                . '<div style="font-size:0.7rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Aprovizionare</div>'
+                . '<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:0.8rem;color:#6b7280;align-items:center;">'
+                . implode('', $procItems)
+                . '</div>'
+                . '</div>';
+        }
 
         // Descriere scurtă
         $shortDesc = filled($record->short_description)
@@ -1547,45 +1668,11 @@ class WooProductResource extends Resource
             . '<button x-show="current < images.length - 1" x-on:click="current++" type="button"'
             . ' style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.4);color:white;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:1.3rem;line-height:1;display:flex;align-items:center;justify-content:center;z-index:2;">&#8250;</button>'
 
-            // Bar overlay jos: contor + acțiuni
-            . '<div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.55));border-radius:0 0 12px 12px;padding:10px 8px 8px;display:flex;align-items:center;justify-content:space-between;gap:4px;z-index:2;">'
-
-            // Contor + badge Primary
-            . '<div style="display:flex;align-items:center;gap:5px;flex-shrink:0;">'
-            . '<span x-show="images.length > 1" x-text="(current+1) + \'/\' + images.length" style="color:white;font-size:0.7rem;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.5);"></span>'
-            . '<span x-show="images[current]?.is_primary" style="background:#2563eb;color:white;border-radius:4px;padding:1px 6px;font-size:0.65rem;font-weight:700;">★ Principal</span>'
+            // Badge Primary + contor — discret pe imagine
+            . '<div style="position:absolute;bottom:8px;left:8px;display:flex;align-items:center;gap:5px;z-index:2;">'
+            . '<span x-show="images.length > 1" x-text="(current+1) + \'/\' + images.length" style="background:rgba(0,0,0,0.5);color:white;border-radius:4px;padding:1px 7px;font-size:0.7rem;font-weight:700;"></span>'
+            . '<span x-show="images[current]?.is_primary" style="background:#2563eb;color:white;border-radius:4px;padding:1px 6px;font-size:0.65rem;font-weight:700;">★</span>'
             . '</div>'
-
-            // Butoane acțiuni (canManage)
-            . '<div x-show="canManage" style="display:flex;gap:3px;align-items:center;">'
-
-            // Setează ca principal
-            . '<button x-show="!images[current]?.is_primary && images[current]?.id" type="button" title="Setează ca imagine principală"'
-            . ' x-on:click="$wire.mountAction(\'gallery_set_primary\', {image_id: images[current].id})"'
-            . ' style="background:rgba(37,99,235,0.85);color:white;border:none;border-radius:5px;padding:3px 7px;font-size:0.72rem;cursor:pointer;white-space:nowrap;">★ Principal</button>'
-
-            // Mută mai în față (sort_order -)
-            . '<button x-show="current > 0 && images[current]?.id" type="button" title="Mută mai în față"'
-            . ' x-on:click="$wire.mountAction(\'gallery_move_before\', {image_id: images[current].id})"'
-            . ' style="background:rgba(107,114,128,0.8);color:white;border:none;border-radius:5px;padding:3px 7px;font-size:0.8rem;cursor:pointer;">←</button>'
-
-            // Mută mai în spate (sort_order +)
-            . '<button x-show="current < images.length - 1 && images[current]?.id" type="button" title="Mută mai în spate"'
-            . ' x-on:click="$wire.mountAction(\'gallery_move_after\', {image_id: images[current].id})"'
-            . ' style="background:rgba(107,114,128,0.8);color:white;border:none;border-radius:5px;padding:3px 7px;font-size:0.8rem;cursor:pointer;">→</button>'
-
-            // Șterge
-            . '<button x-show="images[current]?.id" type="button" title="Șterge imaginea"'
-            . ' x-on:click="$wire.mountAction(\'gallery_delete_image\', {image_id: images[current].id})"'
-            . ' style="background:rgba(220,38,38,0.85);color:white;border:none;border-radius:5px;padding:3px 7px;font-size:0.75rem;cursor:pointer;">✕</button>'
-
-            // Adaugă
-            . '<button type="button" title="Adaugă imagine"'
-            . ' x-on:click="$wire.mountAction(\'gallery_add_url\')"'
-            . ' style="background:rgba(22,163,74,0.85);color:white;border:none;border-radius:5px;padding:3px 7px;font-size:0.85rem;cursor:pointer;">+</button>'
-
-            . '</div>'  // end butoane
-            . '</div>'  // end bar overlay
 
             . '</div>'  // end cadru imagine
 
@@ -1598,10 +1685,33 @@ class WooProductResource extends Resource
             . '</template>'
             . '</div>'
 
-            // Import Toya (doar produse Toya, canManage)
-            . '<div x-show="isToya && canManage" style="text-align:center;margin-top:6px;">'
-            . '<button type="button" x-on:click="$wire.mountAction(\'gallery_import_toya\')"'
-            . ' style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:6px;padding:3px 10px;font-size:0.72rem;cursor:pointer;font-weight:500;">↓ Import poze Toya</button>'
+            // ── Butoane galerie — rând compact sub poză ──────────────────────
+            . '<div x-show="canManage" style="display:flex;justify-content:center;gap:4px;margin-top:6px;flex-wrap:wrap;">'
+
+            . '<button x-show="!images[current]?.is_primary && images[current]?.id" type="button" title="Setează ca principală"'
+            . ' x-on:click="$wire.mountAction(\'gallery_set_primary\', {image_id: images[current].id})"'
+            . ' style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:6px;width:28px;height:28px;font-size:0.8rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;" >★</button>'
+
+            . '<button x-show="current > 0 && images[current]?.id" type="button" title="Mută mai în față"'
+            . ' x-on:click="$wire.mountAction(\'gallery_move_before\', {image_id: images[current].id})"'
+            . ' style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;border-radius:6px;width:28px;height:28px;font-size:0.85rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;">←</button>'
+
+            . '<button x-show="current < images.length - 1 && images[current]?.id" type="button" title="Mută mai în spate"'
+            . ' x-on:click="$wire.mountAction(\'gallery_move_after\', {image_id: images[current].id})"'
+            . ' style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;border-radius:6px;width:28px;height:28px;font-size:0.85rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;">→</button>'
+
+            . '<button type="button" title="Adaugă imagine"'
+            . ' x-on:click="$wire.mountAction(\'gallery_add_url\')"'
+            . ' style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:6px;width:28px;height:28px;font-size:1rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;">+</button>'
+
+            . '<button x-show="images[current]?.id" type="button" title="Șterge imaginea"'
+            . ' x-on:click="$wire.mountAction(\'gallery_delete_image\', {image_id: images[current].id})"'
+            . ' style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;width:28px;height:28px;font-size:0.8rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;">✕</button>'
+
+            . '<button x-show="isToya" type="button" title="Import poze Toya"'
+            . ' x-on:click="$wire.mountAction(\'gallery_import_toya\')"'
+            . ' style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:6px;height:28px;font-size:0.7rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0 8px;font-weight:500;">↓ Toya</button>'
+
             . '</div>'
 
             . '</div>'; // end x-data wrapper
@@ -1632,14 +1742,23 @@ class WooProductResource extends Resource
             . '<span style="background:#f3f4f6;color:' . $sourceClr . ';border-radius:6px;padding:2px 8px;font-size:0.78rem;">' . $source . '</span>'
             . '<span style="background:#f3f4f6;color:' . $stockClr . ';border-radius:6px;padding:2px 8px;font-size:0.78rem;">' . $stockLbl . '</span>'
             . ($location !== '-' ? '<span style="background:#f3f4f6;color:#374151;border-radius:6px;padding:2px 8px;font-size:0.78rem;">' . $location . '</span>' : '')
-            . ($cats ? '<span style="background:#f3f4f6;color:#374151;border-radius:6px;padding:2px 8px;font-size:0.78rem;">' . e($cats) . '</span>' : '')
+            . $catBadges
             . '</div>'
+
+            // Card Furnizor
+            . $supplierCardHtml
 
             // Stoc WinMentor
             . $stockHtml
 
             // Cod de bare
             . $barcodeHtml
+
+            // Card Specificații fizice
+            . $specsCardHtml
+
+            // Card Aprovizionare
+            . $procCardHtml
 
             // Descriere scurtă
             . $shortDesc

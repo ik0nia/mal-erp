@@ -5,7 +5,10 @@
 <div class="wh-header">
     <a href="{{ route('warehouse.orders') }}" class="back-btn">‹</a>
     <img src="/malinco-logo.png" alt="Malinco" class="header-logo">
-    <div style="width:48px"></div>
+    <button id="kbd-toggle" class="scanner-mode" aria-label="Comută mod scanner/tastatură">
+        <span class="kbd-icon">📷</span>
+        <span class="kbd-label">scanner</span>
+    </button>
 </div>
 
 <div class="wh-content">
@@ -306,30 +309,68 @@
         document.getElementById('pos-modal-name').textContent = item.name;
         document.getElementById('pos-modal-input').value = existing;
         document.getElementById('pos-modal').style.display = 'flex';
-        setTimeout(() => document.getElementById('pos-modal-input').focus(), 100);
+        document.getElementById('pos-modal-error').style.display = 'none';
+        document.getElementById('pos-modal-input').style.outline = '';
+        const posInput = document.getElementById('pos-modal-input');
+        // Restaurează inputmode numeric indiferent de modul scanner
+        posInput.setAttribute('inputmode', 'numeric');
+        setTimeout(() => posInput.focus(), 100);
         document.getElementById('pos-modal').dataset.itemId = id;
         document.getElementById('pos-modal').dataset.qty    = qty;
     }
 
     function closePositionModal() {
         document.getElementById('pos-modal').style.display = 'none';
+        document.getElementById('pos-modal-error').style.display = 'none';
+        document.getElementById('pos-modal-input').style.outline = '';
+        // Re-suprimă inputmode după închidere (revenim la mod scanner)
+        const posInput = document.getElementById('pos-modal-input');
+        posInput.setAttribute('inputmode', 'none');
     }
 
     function confirmWithPosition() {
         const modal = document.getElementById('pos-modal');
         const id    = parseInt(modal.dataset.itemId);
         const qty   = parseFloat(modal.dataset.qty);
-        const posVal = document.getElementById('pos-modal-input').value.trim();
-        const pos   = posVal !== '' ? parseInt(posVal) : null;
+        const posInput = document.getElementById('pos-modal-input');
+        const errorEl  = document.getElementById('pos-modal-error');
+        const posVal = posInput.value.trim();
 
-        if (posVal !== '' && (isNaN(pos) || pos < 1 || pos > 9999)) {
-            document.getElementById('pos-modal-input').style.outline = '2px solid #dc2626';
+        // Obligatoriu
+        if (posVal === '') {
+            posInput.style.outline = '2px solid #dc2626';
+            errorEl.textContent = 'Poziția este obligatorie';
+            errorEl.style.display = 'block';
+            posInput.focus();
             return;
         }
 
+        const pos = parseInt(posVal);
+        if (isNaN(pos) || pos < 1 || pos > 9999) {
+            posInput.style.outline = '2px solid #dc2626';
+            errorEl.textContent = 'Introdu un număr valid (1-9999)';
+            errorEl.style.display = 'block';
+            posInput.focus();
+            return;
+        }
+
+        // Verifică duplicat
+        const duplicate = Object.entries(confirmedItems).find(([cid, data]) => parseInt(cid) !== id && data.invoice_position === pos);
+        if (duplicate) {
+            const dupItem = ITEMS.find(i => i.id === parseInt(duplicate[0]));
+            posInput.style.outline = '2px solid #dc2626';
+            errorEl.textContent = `Poziția ${pos} este deja folosită de: ${dupItem ? dupItem.name : 'alt produs'}`;
+            errorEl.style.display = 'block';
+            posInput.focus();
+            return;
+        }
+
+        posInput.style.outline = '';
+        errorEl.style.display = 'none';
         closePositionModal();
         confirmedItems[id] = { qty, reason: discReasons[id] || null, invoice_position: pos };
         document.getElementById('row_' + id).style.display = 'none';
+        clearSearch();
         renderConfirmedList();
         updatePendingCount();
         saveDraft();
@@ -570,7 +611,14 @@
             setTimeout(() => nameInput.style.borderColor = '', 2000);
             return;
         }
-        const sku = document.getElementById('extra_sku_' + idx)?.value.trim() || '';
+        const skuInput = document.getElementById('extra_sku_' + idx);
+        const sku = skuInput?.value.trim() || '';
+        if (!sku) {
+            skuInput.style.borderColor = '#dc2626';
+            skuInput.focus();
+            setTimeout(() => skuInput.style.borderColor = '', 2000);
+            return;
+        }
         const qty = parseFloat(document.getElementById('extra_qty_' + idx)?.value) || 1;
         const row = document.getElementById('extra_row_' + idx);
         const wooProductId = row?.dataset.wooProductId ? parseInt(row.dataset.wooProductId) : null;
@@ -668,9 +716,10 @@
         }
         dd.innerHTML = products.map(p => {
             const displayName = p.supplier_name || p.name;
-            const sku = p.supplier_sku || p.sku || '';
-            const subtitle = sku ? `<div style="font-size:11px;color:#94a3b8;margin-top:2px">${_esc(sku)}</div>` : '';
-            return `<div class="extra-dd-item" data-idx="${idx}" data-name="${_esc(displayName)}" data-sku="${_esc(sku)}" data-woo-product-id="${p.id || ''}" onmousedown="selectExtraProductEl(this)">
+            const eanSku = p.sku || '';
+            const displaySku = p.supplier_sku || p.sku || '';
+            const subtitle = displaySku ? `<div style="font-size:11px;color:#94a3b8;margin-top:2px">${_esc(displaySku)}</div>` : '';
+            return `<div class="extra-dd-item" data-idx="${idx}" data-name="${_esc(displayName)}" data-sku="${_esc(eanSku)}" data-woo-product-id="${p.id || ''}" onmousedown="selectExtraProductEl(this)">
                 <div style="font-size:14px;color:#1e293b;font-weight:500">${_esc(displayName)}</div>
                 ${subtitle}
             </div>`;
@@ -919,6 +968,20 @@
                 headers: { 'Content-Type':'application/json', 'X-CSRF-TOKEN':CSRF },
                 body:    JSON.stringify(payload),
             });
+
+            // Sesiune/CSRF expirat → Laravel returnează HTML (419/302)
+            if (res.status === 419 || res.redirected || res.status === 401) {
+                throw new Error('Sesiunea a expirat. Se reîncarcă pagina...');
+            }
+            if (res.status === 403) {
+                throw new Error('Comanda a fost deja recepționată sau nu mai este disponibilă.');
+            }
+
+            const ct = res.headers.get('content-type') || '';
+            if (!ct.includes('application/json')) {
+                throw new Error('Sesiunea a expirat. Se reîncarcă pagina...');
+            }
+
             const data = await res.json();
 
             if (data.ok) {
@@ -939,6 +1002,13 @@
                 await saveToQueue(ORDER_ID, payload);
                 document.getElementById('offline-saved').style.display = 'block';
                 btn.style.display = 'none';
+            } else if (e.message.includes('Se reîncarcă')) {
+                hideSummary();
+                document.getElementById('error-msg').textContent = e.message;
+                document.getElementById('error-banner').style.display = 'block';
+                sessionStorage.removeItem('wh_pin_ok');
+                sessionStorage.removeItem('wh_pin_ts');
+                setTimeout(() => { window.location.href = '/wh/pin'; }, 2000);
             } else {
                 hideSummary();
                 document.getElementById('error-msg').textContent = e.message;
@@ -1113,15 +1183,63 @@
     // Init
     loadDraft();
 
+    // Scanner input handling pe câmpul search
+    (function() {
+        const search = document.getElementById('item-search');
+        if (!search) return;
+
+        // Detectăm dacă e scanner hardware: caracterele vin foarte repede (<80ms gap)
+        let lastInputAt = 0;
+        let rapidChars = 0;          // câte caractere consecutive cu gap <80ms
+        const SCANNER_SPEED = 80;    // ms — scannerele trimit caractere la <50ms
+        const SCANNER_THRESHOLD = 4; // minim 4 caractere rapide = e scanner
+
+        search.addEventListener('input', function(e) {
+            const now = Date.now();
+            const gap = lastInputAt > 0 ? (now - lastInputAt) : 9999;
+            lastInputAt = now;
+
+            // Detectăm scanner: multe caractere rapid consecutive
+            if (gap < SCANNER_SPEED) {
+                rapidChars++;
+            } else {
+                rapidChars = 0;
+            }
+
+            // Dacă e scanner (multe caractere rapide) și input-ul conține text vechi + cod nou,
+            // extragem doar codul scanat (ultimele N caractere rapide)
+            // Altfel (tastare manuală) lăsăm valoarea neschimbată
+            filterItems(this.value);
+        });
+
+        // Enter / LF de la scanner → scroll la primul produs, curăță contorul
+        search.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                // Dacă scannerul a trimis un cod (caractere rapide), curăță ce era înainte
+                if (rapidChars >= SCANNER_THRESHOLD) {
+                    // Valoarea e deja corectă — scannerul a suprascris prin IME
+                    filterItems(this.value);
+                }
+                rapidChars = 0;
+                lastInputAt = 0;
+                const header = document.querySelector('.wh-header');
+                const searchWrap = document.getElementById('item-search').parentElement;
+                const offset = (header ? header.offsetHeight : 56) + 8;
+                const top = searchWrap.getBoundingClientRect().top + window.scrollY - offset;
+                window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+            }
+        });
+    })();
+
     // Enter pe input poziție factură
     document.getElementById('pos-modal-input').addEventListener('keydown', e => {
         if (e.key === 'Enter') confirmWithPosition();
-        if (e.key === 'Escape') closePositionModal();
     });
 </script>
 
 {{-- Modal poziție factură --}}
-<div id="pos-modal" style="display:none; position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; padding:24px">
+<div id="pos-modal" style="display:none; position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.5); align-items:flex-start; justify-content:center; padding-top:16px; padding-left:16px; padding-right:16px">
     <div style="background:white; border-radius:18px; padding:24px; width:100%; max-width:360px; box-shadow:0 8px 32px rgba(0,0,0,0.2)">
         <div style="font-weight:700; font-size:16px; color:#1e293b; margin-bottom:4px">Poziție pe factură</div>
         <div id="pos-modal-name" style="font-size:13px; color:#64748b; margin-bottom:20px; line-height:1.4"></div>
@@ -1132,17 +1250,11 @@
         <input id="pos-modal-input" type="number" min="1" max="9999" inputmode="numeric"
             placeholder="ex: 1, 2, 3..."
             style="width:100%; padding:14px 16px; font-size:20px; font-weight:700; text-align:center; border:2px solid #e2e8f0; border-radius:12px; outline:none; box-sizing:border-box; -moz-appearance:textfield">
-        <div style="font-size:12px; color:#94a3b8; margin-top:8px; text-align:center">
-            Lasă gol dacă nu știi poziția
-        </div>
+        <div id="pos-modal-error" style="display:none; font-size:13px; color:#dc2626; font-weight:600; margin-top:8px; text-align:center"></div>
 
         <div style="display:flex; gap:10px; margin-top:20px">
-            <button onclick="closePositionModal()"
-                style="flex:1; padding:14px; border-radius:12px; border:1.5px solid #e2e8f0; background:white; color:#64748b; font-size:15px; font-weight:600; cursor:pointer">
-                Anulează
-            </button>
             <button onclick="confirmWithPosition()"
-                style="flex:2; padding:14px; border-radius:12px; border:none; background:#b91c1c; color:white; font-size:15px; font-weight:700; cursor:pointer">
+                style="flex:1; padding:14px; border-radius:12px; border:none; background:#b91c1c; color:white; font-size:15px; font-weight:700; cursor:pointer">
                 Confirmă ✓
             </button>
         </div>

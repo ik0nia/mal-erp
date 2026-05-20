@@ -29,7 +29,7 @@ class DetectWinmentorArticleChangesCommand extends Command
 
     protected $description = 'Detectează modificări SKU/denumire în WinMentor și sincronizează cu ERP + WooCommerce';
 
-    private const NOTIFY_EMAILS = ['office@malinco.ro', 'codrut@ikonia.ro'];
+    private const NOTIFY_EMAILS = ['codrut@ikonia.ro'];
 
     public function handle(WinmentorBridgeClient $bridge): int
     {
@@ -151,13 +151,33 @@ class DetectWinmentorArticleChangesCommand extends Command
                 }
                 // else: neschimbat
             } elseif ($byNameSnap) {
-                // Denumirea găsită în snapshot cu alt SKU → SKU schimbat
+                // Denumirea găsită în snapshot cu alt SKU → posibil SKU schimbat
                 $oldSku = $byNameSnap->cod_extern;
                 if ($oldSku !== $sku) {
-                    $change = $this->applySkuChange($oldSku, $sku, $denumire, $wooConnections, $dryRun);
-                    if ($change) {
-                        $changes[]               = $change;
-                        $toUpdate[$byNameSnap->id] = ['cod_extern' => $sku, 'denumire' => $denumire];
+                    // Dacă SKU-ul vechi ÎNCĂ există în Bridge, nu e o schimbare de SKU
+                    // ci sunt două produse distincte cu aceeași denumire → skip
+                    if (isset($bridgeArticles[$oldSku]) || isset($allWmArticole[strtolower(trim($oldSku))])) {
+                        $this->line("  [SKIP] Două articole cu aceeași denumire \"{$denumire}\": {$oldSku} și {$sku} — nu e schimbare de SKU");
+
+                        // Adăugăm noul SKU în snapshot ca articol separat
+                        $skuKey = strtolower(trim($sku));
+                        if (! isset($toInsert[$skuKey])) {
+                            $toInsert[$skuKey] = [
+                                'cod_extern' => $sku,
+                                'denumire'   => $denumire,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ];
+                        }
+                    } else {
+                        $change = $this->applySkuChange($oldSku, $sku, $denumire, $wooConnections, $dryRun);
+                        if ($change) {
+                            $changes[] = $change;
+                            // Snapshot-ul se actualizează DOAR dacă schimbarea a fost aplicată cu succes
+                            if (empty($change['duplicat'])) {
+                                $toUpdate[$byNameSnap->id] = ['cod_extern' => $sku, 'denumire' => $denumire];
+                            }
+                        }
                     }
                 }
             } else {
@@ -181,7 +201,7 @@ class DetectWinmentorArticleChangesCommand extends Command
             }
 
             foreach (array_chunk(array_values($toInsert), 500) as $chunk) {
-                WinmentorArticleSnapshot::insert($chunk);
+                WinmentorArticleSnapshot::upsert($chunk, ['cod_extern'], ['denumire', 'updated_at']);
             }
         }
 
@@ -260,6 +280,9 @@ class DetectWinmentorArticleChangesCommand extends Command
             return null;
         }
 
+        // Verifică dacă noul SKU există deja pe alt produs — dacă da, e un duplicat
+        $existing = WooProduct::where('sku', $newSku)->where('id', '!=', $product->id)->first();
+
         $change = [
             'tip'       => 'SKU',
             'denumire'  => $denumire,
@@ -267,6 +290,19 @@ class DetectWinmentorArticleChangesCommand extends Command
             'sku_nou'   => $newSku,
             'woo_id'    => $product->woo_id,
         ];
+
+        if ($existing) {
+            $change['duplicat'] = true;
+            $change['duplicat_id'] = $existing->id;
+            $change['duplicat_woo_id'] = $existing->woo_id;
+            $change['duplicat_name'] = $existing->name;
+            $change['woo_error'] = "SKU duplicat — \"{$newSku}\" există deja pe produsul #{$existing->id} ({$existing->name}, woo_id={$existing->woo_id}). Schimbarea de SKU nu a fost aplicată.";
+
+            $this->warn("  [SKU DUPLICAT] \"{$denumire}\": {$oldSku} → {$newSku} — CONFLICT cu #{$existing->id} ({$existing->name})");
+            Log::warning('[DetectArticleChanges] SKU duplicat detectat, schimbare NEALICATĂ', $change);
+
+            return $change;
+        }
 
         $this->line("  [SKU] \"{$denumire}\": {$oldSku} → {$newSku}");
 

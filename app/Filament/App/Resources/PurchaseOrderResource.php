@@ -156,16 +156,34 @@ class PurchaseOrderResource extends Resource
                     Placeholder::make('total_value')
                         ->label('Total comandă')
                         ->hidden($operation === 'create')
-                        ->content(fn (Get $get): HtmlString => new HtmlString(
-                            '<span class="text-xl font-bold">'.
-                            number_format(
-                                collect($get('items') ?? [])
-                                    ->sum(fn ($item): float =>
-                                        (float) ($item['quantity'] ?? 0) * (float) ($item['unit_price'] ?? 0)
-                                    ),
-                                2, ',', '.'
-                            ).' RON</span>'
-                        )),
+                        ->content(function (Get $get): HtmlString {
+                            $items = collect($get('items') ?? []);
+                            $totalOrdered = $items->sum(fn ($item): float =>
+                                (float) ($item['quantity'] ?? 0) * (float) ($item['unit_price'] ?? 0)
+                            );
+                            $hasReception = $items->contains(fn ($item) => (float) ($item['received_quantity'] ?? 0) > 0);
+                            $totalReceived = $items->sum(fn ($item): float =>
+                                (float) ($item['received_quantity'] ?? 0) * (float) ($item['unit_price'] ?? 0)
+                            );
+
+                            $html = '<span style="font-size:0.8rem;color:#6b7280;">Comandat: '
+                                . number_format($totalOrdered, 2, ',', '.') . ' RON'
+                                . ' (cu TVA: ' . number_format($totalOrdered * 1.21, 2, ',', '.') . ' RON)</span>';
+
+                            if ($hasReception) {
+                                $html .= '<br><span class="text-xl font-bold">'
+                                    . number_format($totalReceived, 2, ',', '.') . ' RON</span>'
+                                    . '<br><span style="font-size:0.85rem;color:#6b7280;">recepționat cu TVA: <strong>'
+                                    . number_format($totalReceived * 1.21, 2, ',', '.') . ' RON</strong></span>';
+                            } else {
+                                $html = '<span class="text-xl font-bold">'
+                                    . number_format($totalOrdered, 2, ',', '.') . ' RON</span>'
+                                    . '<br><span style="font-size:0.85rem;color:#6b7280;">cu TVA: <strong>'
+                                    . number_format($totalOrdered * 1.21, 2, ',', '.') . ' RON</strong></span>';
+                            }
+
+                            return new HtmlString($html);
+                        }),
                 ])),
 
             // ── Notes: collapsible section on create ──
@@ -243,7 +261,12 @@ class PurchaseOrderResource extends Resource
 
                 Tables\Columns\TextColumn::make('total_value')
                     ->label('Valoare')
-                    ->formatStateUsing(fn ($state): string => number_format((float) $state, 2, ',', '.').' RON')
+                    ->formatStateUsing(fn ($state): string =>
+                        number_format((float) $state, 2, ',', '.') . ' RON'
+                    )
+                    ->description(fn ($state): string =>
+                        'cu TVA: ' . number_format((float) $state * 1.21, 2, ',', '.') . ' RON'
+                    )
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('buyer.name')
@@ -387,8 +410,11 @@ class PurchaseOrderResource extends Resource
                         ->formatStateUsing(fn ($state): string => PurchaseOrder::statusOptions()[$state] ?? $state),
                     TextEntry::make('buyer.name')->label('Responsabil achiziții'),
                     TextEntry::make('total_value')
-                        ->label('Valoare totală (fără TVA)')
-                        ->formatStateUsing(fn ($state): string => number_format((float) $state, 2, ',', '.').' RON'),
+                        ->label('Valoare totală')
+                        ->formatStateUsing(fn ($state): string =>
+                            number_format((float) $state, 2, ',', '.') . ' RON'
+                            . '  (cu TVA: ' . number_format((float) $state * 1.21, 2, ',', '.') . ' RON)'
+                        ),
                     TextEntry::make('currency')->label('Monedă'),
                 ]),
 
@@ -800,8 +826,14 @@ class PurchaseOrderResource extends Resource
                                 $wmTotalPriceCols = $wmTotalPriceCell;
                             }
 
+                            // Total recepție (din line_total, doar received > 0)
+                            $hasReception = $items->contains(fn ($i) => (float) $i->received_quantity > 0);
+                            $totalReceived = $hasReception
+                                ? $items->filter(fn ($i) => (float) $i->received_quantity > 0)->sum(fn ($i) => (float) $i->line_total)
+                                : $totalPo;
+
                             $totalRow = '<tr style="background:#f9fafb;border-top:2px solid #e5e7eb;">'
-                                . '<td style="padding:7px 8px;font-size:0.8rem;font-weight:700;color:#374151;">TOTAL (fără TVA)</td>'
+                                . '<td style="padding:7px 8px;font-size:0.8rem;font-weight:700;color:#374151;">TOTAL COMANDAT (fără TVA)</td>'
                                 . '<td colspan="2" style="padding:7px 8px;"></td>'
                                 . $wmTotalQtyCell
                                 . '<td style="padding:7px 8px;text-align:right;font-size:0.85rem;font-weight:700;">'
@@ -810,6 +842,19 @@ class PurchaseOrderResource extends Resource
                                 . '<td style="padding:7px 8px;"></td>'
                                 . ($hasWm ? $wmTotalDeltaCell : '')
                                 . '</tr>';
+
+                            if ($hasReception) {
+                                $emptyWmCols = $hasWm ? '<td style="padding:7px 8px;"></td><td style="padding:7px 8px;"></td>' : '';
+                                $totalRow .= '<tr style="background:#065f46;border-top:1px solid #047857;">'
+                                    . '<td style="padding:8px;font-size:0.85rem;font-weight:700;color:#fff;">TOTAL RECEPȚIE (cu TVA 21%)</td>'
+                                    . '<td colspan="2" style="padding:8px;"></td>'
+                                    . ($hasWm ? '<td style="padding:8px;"></td>' : '')
+                                    . '<td style="padding:8px;text-align:right;font-size:1rem;font-weight:900;color:#fff;">'
+                                    . number_format($totalReceived * 1.21, 2, ',', '.') . ' RON</td>'
+                                    . $emptyWmCols
+                                    . '<td style="padding:8px;"></td>'
+                                    . '</tr>';
+                            }
 
                             // Header
                             $wmQtyHeader   = $hasWm ? $th('Cant. WM', 'right', '80px') : '';
@@ -1221,7 +1266,18 @@ class PurchaseOrderResource extends Resource
                     ->extraAttributes(['class' => 'w-12']),
                 $productSelectField,
                 TextInput::make('product_name')->label('Denumire produs')->required(),
-                TextInput::make('sku')->label('SKU intern')->nullable(),
+                TextInput::make('sku')->label('SKU intern')
+                    ->required(fn (Get $get): bool => ! $get('woo_product_id'))
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(function ($state, Set $set, Get $get): void {
+                        if (! $state || $get('woo_product_id')) return;
+                        // Auto-match: dacă SKU-ul introdus corespunde unui WooProduct, linkuiește automat
+                        $product = WooProduct::where('sku', $state)->first();
+                        if ($product) {
+                            $set('woo_product_id', $product->id);
+                            $set('product_name', $product->decoded_name ?? $product->name);
+                        }
+                    }),
                 TextInput::make('supplier_sku')->label('SKU furnizor')->nullable(),
                 TextInput::make('quantity')
                     ->label('Cantitate')->numeric()->minValue(0.001)->required()

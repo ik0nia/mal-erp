@@ -474,7 +474,7 @@
                     style="background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;padding:0 4px;line-height:1">×</button>
             </div>
             <input class="extra-field" type="text" id="extra_name_${idx}" placeholder="Nume produs *" autocomplete="off">
-            <input class="extra-field" type="text" id="extra_sku_${idx}"  placeholder="SKU / Cod (opțional)" autocomplete="off" style="margin-bottom:10px">
+            <input class="extra-field" type="text" id="extra_sku_${idx}"  placeholder="SKU / EAN *" autocomplete="off" style="margin-bottom:10px">
             <div class="qty-control" style="margin-bottom:10px">
                 <button class="qty-btn" type="button" onclick="changeExtraQty(${idx}, -1)">−</button>
                 <input class="qty-input" type="number" min="1" step="1" id="extra_qty_${idx}" value="1" inputmode="numeric">
@@ -634,10 +634,17 @@
         document.querySelectorAll('.extra-item-row').forEach(row => {
             const idx = row.id.replace('extra_row_', '');
             const nameInput = document.getElementById('extra_name_' + idx);
+            const skuInput  = document.getElementById('extra_sku_' + idx);
             if (!nameInput?.value.trim()) {
                 nameInput.style.borderColor = '#dc2626';
                 nameInput.focus();
                 setTimeout(() => nameInput.style.borderColor = '', 2000);
+                missing = true;
+            }
+            if (!skuInput?.value.trim()) {
+                skuInput.style.borderColor = '#dc2626';
+                if (!missing) skuInput.focus();
+                setTimeout(() => skuInput.style.borderColor = '', 2000);
                 missing = true;
             }
         });
