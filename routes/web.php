@@ -15,6 +15,27 @@ use Illuminate\Support\Facades\Route;
 // Pagină publică progres import Toya (fără autentificare)
 Route::get('/toya-import', \App\Http\Controllers\ToyaImportStatusController::class);
 
+// WinMentor Bridge health check (proxy — Bridge-ul e accesibil doar de pe acest server)
+Route::get('/api/bridge-health', function () {
+    try {
+        $conn = \App\Models\IntegrationConnection::find(5);
+        if (! $conn) return response()->json(['status' => 'error', 'message' => 'Conexiune Bridge inexistentă'], 500);
+
+        $r = \Illuminate\Support\Facades\Http::timeout(10)
+            ->withoutVerifying()
+            ->withHeaders(['X-API-Key' => $conn->bridgeApiKey()])
+            ->get(rtrim($conn->bridgeUrl(), '/') . '/api/health');
+
+        return response()->json([
+            'status' => $r->successful() ? 'ok' : 'down',
+            'http'   => $r->status(),
+            'bridge' => $r->json(),
+        ], $r->successful() ? 200 : 502);
+    } catch (\Throwable $e) {
+        return response()->json(['status' => 'down', 'message' => $e->getMessage()], 502);
+    }
+})->middleware('throttle:30,1');
+
 // Category review — pagina + API, toate cu auth (pentru tracking user)
 Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/recategorizare', function () {

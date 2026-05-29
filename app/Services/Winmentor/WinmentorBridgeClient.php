@@ -41,7 +41,8 @@ class WinmentorBridgeClient
     {
         try {
             $result = $this->health();
-            return ($result['success'] ?? false) === true;
+            return ($result['success'] ?? false) === true
+                && ($result['data']['comConnected'] ?? false) === true;
         } catch (\Throwable) {
             return false;
         }
@@ -110,7 +111,7 @@ class WinmentorBridgeClient
      * Poz 0=CodExtern, 1=Denumire, 2=gol, 3=IDProducator, 4=UM, 5=TipSerie,
      * 6=CotaTVA, 7=gol, 8=gol, 9=CodExternAlt, 10-12=gol, 13=Masa, 14-17=gol, 18=Flag
      */
-    public function createArticol(WooProduct $product): array
+    public function createArticol(WooProduct $product, ?string $supplierSku = null): array
     {
         if (! $this->writesEnabled()) {
             $this->bridgeLog('warning', "WRITE BLOCAT (WINMENTOR_BRIDGE_WRITES=false): createArticol [{$product->sku}]");
@@ -130,7 +131,7 @@ class WinmentorBridgeClient
             (string) $this->resolveVatCode($product->vat_rate),     // 6  CotaTVA (doar 0,5,9,19,20 valide)
             '',                                                      // 7  (necunoscut)
             '',                                                      // 8  (necunoscut)
-            $product->sku,                                          // 9  CodExternAlt
+            $supplierSku ?? $product->sku,                          // 9  CodExternAlt (cod furnizor sau EAN)
             '',                                                      // 10 (necunoscut)
             '',                                                      // 11 (necunoscut)
             '',                                                      // 12 (necunoscut)
@@ -164,6 +165,39 @@ class WinmentorBridgeClient
         }
     }
 
+    /**
+     * Actualizează un produs existent în WinMentor (ModiProduct).
+     * Format: 7 câmpuri separate prin ";": CodExtern;Producator;Clasa;Pret;(gol);Denumire;(gol)
+     * Prerequisite: SetIDPartField(CodExtern).
+     * Câmpurile goale nu se modifică.
+     */
+    public function updateArticol(string $sku, string $newName): array
+    {
+        if (! $this->writesEnabled()) {
+            return ['success' => false, 'error' => 'Scrierile în WinMentor sunt dezactivate.'];
+        }
+
+        $this->selectFirma();
+        $this->setIdPartField('CodExtern');
+
+        // ModiProduct: CodExtern;Producator;Clasa;Pret;(gol);Denumire;(gol)
+        $info = "{$sku};;;;;{$newName};";
+
+        try {
+            $result = $this->put('/api/produse/update', ['info' => $info]);
+
+            if ($result['success'] ?? false) {
+                Log::channel('winmentor_bridge')->info('[WinMentor] Produs actualizat', ['sku' => $sku, 'name' => $newName]);
+                return ['success' => true, 'error' => null];
+            }
+
+            $error = implode(', ', $result['errors'] ?? ['Eroare necunoscută']);
+            return ['success' => false, 'error' => $error];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
     // ─── Intrări / Istoric achiziții ─────────────────────────────────────────────
 
     /**
@@ -181,8 +215,29 @@ class WinmentorBridgeClient
 
     /**
      * Returnează toate intrările de marfă din luna de lucru curentă.
-     * Format rând: [partID, data, nrDoc, artID(SKU), cant, denUM, pret, denGest, codInternArt, ...]
+     *
+     * MentorAPI returnează named fields; consumatorii (SyncWinmentorPurchaseHistoryCommand)
+     * așteaptă array pozițional: [0]=partId, [1]=data, [3]=sku, [5]=uom, [6]=pret
      */
+    public function getIntrari(): array
+    {
+        $result = $this->get('/api/intrari');
+        $items  = $result['data'] ?? [];
+
+        return array_map(fn (array $row) => [
+            /* [0] partId */ $row['idPartener'] ?? '',
+            /* [1] data   */ $row['data'] ?? '',
+            /* [2] nrDoc  */ $row['nrDoc'] ?? '',
+            /* [3] sku    */ $row['codArticol'] ?? '',
+            /* [4] cant   */ $row['cant'] ?? '',
+            /* [5] uom    */ $row['denUM'] ?? '',
+            /* [6] pret   */ $row['pret'] ?? '',
+            /* [7] denGest*/ $row['denGest'] ?? '',
+            /* [8] camp8  */ $row['camp8'] ?? '',
+            /* [9] flag   */ $row['flag'] ?? '',
+        ], $items);
+    }
+
     public function getArticolePaginated(int $page = 1, int $pageSize = 500): array
     {
         $result = $this->get('/api/articole', ['page' => $page, 'pageSize' => $pageSize]);
@@ -228,12 +283,6 @@ class WinmentorBridgeClient
         return $all;
     }
 
-    public function getIntrari(): array
-    {
-        $result = $this->get('/api/intrari');
-        return $result['data'] ?? [];
-    }
-
     public function getComenziFurnizori(): array
     {
         $result = $this->get('/api/comenzi/furnizori');
@@ -242,33 +291,108 @@ class WinmentorBridgeClient
 
     /**
      * Returnează toate recepțiile din luna de lucru curentă.
-     * Față de getIntrari(), are câmpuri suplimentare: nr_receptie, den_furnizor,
-     * den_articol, pret_vanzare (cu TVA), id_comanda_wm.
      *
-     * Format rând (22 câmpuri):
-     * [0]=den_gestiune, [1]=simbol_gestiune, [2]=nr_receptie, [3]=data_receptie,
-     * [4]=den_furnizor, [5]=part_id, [6]=nr_factura, [7]=data_factura,
-     * [8]=sku, [9]=den_articol, [10]=valoare_totala, [11]=uom,
-     * [12]=cant_comandata, [13]=cant_receptionata, [14]=pret_intrare,
-     * [15]=pret_vanzare, [16]=tva, [17]=id_comanda_wm, [18-21]=diverse
+     * MentorAPI returnează named fields; consumatorii (FetchWinmentorIntrariCommand,
+     * WatchWinmentorIntrariCommand) așteaptă array pozițional cu 22 câmpuri.
+     * Convertim din named → positional aici ca să nu modificăm toate comenzile.
      */
     public function getReceptii(): array
     {
         $result = $this->get('/api/receptii');
-        return $result['data'] ?? [];
+        $items  = $result['data'] ?? [];
+
+        return array_map(fn (array $row) => [
+            /* [0]  den_gestiune      */ $row['denGestiune'] ?? '',
+            /* [1]  simbol_gestiune   */ $row['simbolGestiune'] ?? '',
+            /* [2]  nr_receptie (NIR) */ $row['nrNIR'] ?? '',
+            /* [3]  data_receptie     */ $row['dataNIR'] ?? '',
+            /* [4]  den_furnizor      */ $row['denFurnizor'] ?? '',
+            /* [5]  part_id           */ $row['idFurnizor'] ?? '',
+            /* [6]  nr_factura        */ $row['nrFactura'] ?? '',
+            /* [7]  data_factura      */ $row['dataFactura'] ?? '',
+            /* [8]  sku               */ $row['codArticol'] ?? '',
+            /* [9]  den_articol       */ $row['denArticol'] ?? '',
+            /* [10] cont              */ $row['cont'] ?? '',
+            /* [11] uom               */ $row['denUM'] ?? '',
+            /* [12] cant_comandata    */ $row['cantitate'] ?? '',
+            /* [13] cant_receptionata */ $row['cantReceptionata'] ?? '',
+            /* [14] pret_intrare      */ $row['pretAchizitie'] ?? '',
+            /* [15] pret_vanzare      */ $row['pretVanzare'] ?? '',
+            /* [16] tva               */ $row['cotaTVA'] ?? '',
+            /* [17] id_comanda_wm     */ $row['nrDoc'] ?? '',
+            /* [18] operat            */ $row['operat'] ?? '',
+            /* [19] operatFact        */ $row['operatFact'] ?? '',
+            /* [20] idIntern          */ $row['idIntern'] ?? '',
+            /* [21] (padding)         */ '',
+        ], $items);
     }
 
     /**
      * Returnează vânzările din luna de lucru curentă (/api/vanzari/ext).
-     * NOTĂ: Bridge-ul mapează câmpurile cu etichete greșite față de doc v1.2.
-     * Mapare reală (dedusă empiric):
-     * prefixDoc=nr_factura, nrDoc=sku, artID=cantitate, cant=uom,
-     * denUM=pret, pret=den_gestiune, adresa=cod_fiscal_client,
-     * codFiscal=adresa_client, valAchizitie=valoare_totala
+     *
+     * MentorAPI returnează câmpuri cu nume corecte. Consumatorii (FetchWinmentorVanzariCommand,
+     * WatchWinmentorVanzariCommand) așteaptă câmpurile cu etichetele "greșite" (shifted)
+     * ale bridge-ului vechi. Remapăm aici ca să nu modificăm comenzile.
+     *
+     * MentorAPI → Bridge vechi (cum așteaptă consumatorii):
+     * nrFactura → prefixDoc, codArticol → nrDoc, cantitate → artID,
+     * denUM → cant, pret → denUM, denGestiune → pret,
+     * codFiscal → adresa, adresa → codFiscal, (lipsă) → valAchizitie
      */
     public function getVanzari(): array
     {
         $result = $this->get('/api/vanzari/ext');
+        $items  = $result['data'] ?? [];
+
+        return array_map(fn (array $row) => [
+            'partID'       => $row['idPartener'] ?? '',
+            'zi'           => $row['zi'] ?? '',
+            'prefixDoc'    => $row['nrFactura'] ?? '',      // consumers read this as nr_factura
+            'nrDoc'        => $row['codArticol'] ?? '',     // consumers read this as sku
+            'artID'        => $row['cantitate'] ?? '',      // consumers read this as cantitate
+            'cant'         => $row['denUM'] ?? '',          // consumers read this as uom
+            'denUM'        => $row['pret'] ?? '',           // consumers read this as pret
+            'pret'         => $row['denGestiune'] ?? '',    // consumers read this as den_gestiune
+            'adresa'       => $row['codFiscal'] ?? '',      // consumers read this as cod_fiscal_client
+            'codFiscal'    => $row['adresa'] ?? '',         // consumers read this as adresa_client
+            'marcaAgent'   => $row['marcaAgent'] ?? '',
+            'valAchizitie' => '0',
+            'clasaArticol' => $row['clasaArticol'] ?? '',
+            // Câmpuri MentorAPI (noi)
+            'tipDocument'         => $row['tipDocument'] ?? '',
+            'denArticol'          => $row['denArticol'] ?? '',
+            'discount'            => $row['discount'] ?? '',
+            'serieDocument'       => $row['serieDocument'] ?? '',
+            'observatiiFactura'   => $row['observatiiFactura'] ?? '',
+            'localitateClient'    => $row['localitateClient'] ?? '',
+            'pozitieDocument'     => $row['pozitieDocument'] ?? '',
+            'prefixCarnet'        => $row['prefixCarnet'] ?? '',
+            'moneda'              => $row['moneda'] ?? '',
+            'locatieClient'       => $row['locatieClient'] ?? '',
+        ], $items);
+    }
+
+    /**
+     * Returnează vânzările din luna de lucru curentă (/api/vanzari/luna).
+     * Format mai bogat decât /ext: include denArticol, discount, tipDocument (AE/F),
+     * dataScadenta, dataEmitere, observatiiFactura, etc.
+     * NU include bonurile de casă (tipDocument S) — doar facturi + avize.
+     */
+    public function getVanzariLuna(): array
+    {
+        $result = $this->get('/api/vanzari/luna');
+        return $result['data'] ?? [];
+    }
+
+    /**
+     * Returnează bonurile de casă din emularea casei de marcat (/api/vanzari/emulare).
+     * Date bogate: idBon, pozitie, denArticol, numeClient, nrComanda (nr. casă),
+     * valoare, pret, cantitate, gestiune.
+     * Nr. bon zilnic = rang idBon în ziua respectivă.
+     */
+    public function getVanzariEmulare(): array
+    {
+        $result = $this->get('/api/vanzari/emulare', timeout: 60);
         return $result['data'] ?? [];
     }
 
@@ -331,6 +455,7 @@ class WinmentorBridgeClient
 
     /**
      * Caută un partener în WinMentor după CUI/CIF (vat_number).
+     * Verifică codFiscal principal, coduriFiscaleSedii și puncteAcumulate.
      * Returnează array-ul partenerului sau null dacă nu există.
      */
     public function searchPartenerByCui(string $cui): ?array
@@ -339,7 +464,10 @@ class WinmentorBridgeClient
 
         $cuiNormalized = preg_replace('/[^0-9]/', '', $cui);
 
-        // Fetch paginat — search-ul text-liber din Bridge nu filtrează după CUI
+        if (strlen($cuiNormalized) < 5) {
+            return null; // CUI prea scurt, risc de false positive
+        }
+
         $page = 1;
         do {
             $result = $this->get('/api/parteneri', ['pageSize' => 500, 'page' => $page]);
@@ -351,8 +479,7 @@ class WinmentorBridgeClient
             $totalPages = (int) ($result['data']['totalPages'] ?? 1);
 
             foreach ($items as $item) {
-                $codFiscal = preg_replace('/[^0-9]/', '', $item['codFiscal'] ?? '');
-                if ($codFiscal === $cuiNormalized) {
+                if ($this->partenerMatchesCui($item, $cuiNormalized)) {
                     return $item;
                 }
             }
@@ -361,6 +488,37 @@ class WinmentorBridgeClient
         } while ($page <= $totalPages);
 
         return null;
+    }
+
+    /**
+     * Verifică dacă un partener WinMentor corespunde unui CUI normalizat.
+     * Compară pe codFiscal principal, coduriFiscaleSedii și puncteAcumulate.
+     */
+    private function partenerMatchesCui(array $item, string $cuiNormalized): bool
+    {
+        // 1. codFiscal principal — doar dacă arată ca un CUI valid (5-13 cifre)
+        $codFiscal = preg_replace('/[^0-9]/', '', $item['codFiscal'] ?? '');
+        if ($codFiscal === $cuiNormalized && strlen($codFiscal) >= 5 && strlen($codFiscal) <= 13) {
+            return true;
+        }
+
+        // 2. codFiscalSedii / coduriFiscaleSedii — CUI-urile sediilor (string "~" separated sau array)
+        $sediiRaw = $item['codFiscalSedii'] ?? $item['coduriFiscaleSedii'] ?? [];
+        $sediiList = is_array($sediiRaw) ? $sediiRaw : array_filter(explode('~', (string) $sediiRaw));
+        foreach ($sediiList as $cuiSediu) {
+            $norm = preg_replace('/[^0-9]/', '', (string) $cuiSediu);
+            if ($norm === $cuiNormalized && strlen($norm) >= 5 && strlen($norm) <= 13) {
+                return true;
+            }
+        }
+
+        // 3. puncteAcumulate — uneori conține CUI-ul urmat de "~"
+        $puncte = preg_replace('/[^0-9]/', '', $item['puncteAcumulate'] ?? '');
+        if ($puncte === $cuiNormalized && strlen($puncte) >= 5 && strlen($puncte) <= 13) {
+            return true;
+        }
+
+        return false;
     }
 
     // ─── Import documente ────────────────────────────────────────────────────────
@@ -401,6 +559,7 @@ class WinmentorBridgeClient
     public function ensureArticoleExist(array $items): array
     {
         $created = [];
+        $updated = [];
         $errors  = [];
         $umMap   = [];
 
@@ -421,6 +580,20 @@ class WinmentorBridgeClient
 
             if (isset($articoleMap[$key])) {
                 $umMap[$sku] = $articoleMap[$key]['denUM'] ?? null;
+
+                // Verifică dacă denumirea s-a schimbat — dacă da, update în WinMentor
+                $wmName  = trim($articoleMap[$key]['denumire'] ?? '');
+                $erpName = trim($item['product_name'] ?? '');
+                $product = ! empty($item['woo_product_id']) ? WooProduct::find($item['woo_product_id']) : null;
+                $expectedName = $product ? trim($product->winmentor_name ?? $product->name) : $erpName;
+
+                if ($wmName !== '' && $expectedName !== '' && $wmName !== $expectedName) {
+                    $updateResult = $this->updateArticol($sku, $expectedName);
+                    if ($updateResult['success']) {
+                        $updated[] = "{$expectedName} [{$sku}]";
+                    }
+                    // Nu e eroare blocantă — continuăm oricum
+                }
             } else {
                 // Bulk map poate rata produse cu codExtern nepopulat → fallback search direct
                 $found = $this->searchArticolBySku($sku);
@@ -443,7 +616,8 @@ class WinmentorBridgeClient
                 continue;
             }
 
-            $createResult = $this->createArticol($product);
+            $supplierSku  = $item['supplier_sku'] ?? null;
+            $createResult = $this->createArticol($product, $supplierSku);
 
             if ($createResult['success']) {
                 $created[]   = "{$product->name} [{$sku}]";
@@ -453,9 +627,14 @@ class WinmentorBridgeClient
             }
         }
 
+        if (! empty($updated)) {
+            Log::channel('winmentor_bridge')->info('[WinMentor] Denumiri actualizate: ' . implode(', ', $updated));
+        }
+
         return [
             'ok'      => empty($errors),
             'created' => $created,
+            'updated' => $updated,
             'errors'  => $errors,
             'umMap'   => $umMap,
         ];
@@ -537,7 +716,8 @@ class WinmentorBridgeClient
      */
     public function ensurePartenerExists(Supplier $supplier): array
     {
-        $this->selectFirma();
+        // Apelantul trebuie să fi setat deja selectFirma() + setIdPartField('CodIntern')
+        // ÎNAINTE de a apela această metodă.
 
         // 1. Avem winmentor_id din sincronizare → lookup direct după ID
         if ($supplier->winmentor_id) {
@@ -545,6 +725,8 @@ class WinmentorBridgeClient
             if ($partener) {
                 return ['ok' => true, 'partener' => $partener, 'error' => null];
             }
+            // ID-ul nu mai e valid — va fi corectat mai jos prin fallback CUI
+            Log::channel('daily')->warning("[WinMentor Bridge] winmentor_id={$supplier->winmentor_id} invalid pentru [{$supplier->name}], fallback pe CUI");
         }
 
         // 2. Fallback: caută paginated după CUI
@@ -564,10 +746,81 @@ class WinmentorBridgeClient
             ];
         }
 
-        // Salvăm winmentor_id pentru viitor
-        $supplier->updateQuietly(['winmentor_id' => $partener['idPartener']]);
+        $foundId   = $partener['idPartener'] ?? '';
+        $foundName = $partener['denumire'] ?? '';
 
-        return ['ok' => true, 'partener' => $partener, 'error' => null];
+        // Verificare de siguranță: numele din WinMentor trebuie să semene cu al nostru
+        if (! $this->partenerNameMatches($supplier->name, $foundName)) {
+            Log::channel('daily')->warning("[WinMentor Bridge] CUI match suspect: [{$supplier->name}] → WM [{$foundName}] (ID: {$foundId}). Nu suprascriu winmentor_id.");
+            return [
+                'ok'       => false,
+                'partener' => null,
+                'error'    => "CUI {$cui} găsit în WinMentor ca \"{$foundName}\" (ID: {$foundId}), dar numele nu corespunde cu \"{$supplier->name}\". Verificați manual.",
+            ];
+        }
+
+        // Verificare finală: ID-ul returnat trebuie să existe efectiv ca partener
+        $verify = $this->searchPartenerById($foundId);
+        if (! $verify) {
+            Log::channel('daily')->error("[WinMentor Bridge] CUI match [{$supplier->name}] → ID {$foundId}, dar searchPartenerById returnează null. Date inconsistente în WinMentor.");
+            return [
+                'ok'       => false,
+                'partener' => null,
+                'error'    => "Partenerul \"{$foundName}\" (ID: {$foundId}) găsit prin CUI dar nu poate fi verificat prin ID. Posibilă inconsistență în WinMentor.",
+            ];
+        }
+
+        // Salvăm winmentor_id verificat pentru viitor
+        $oldId = $supplier->winmentor_id;
+        $supplier->updateQuietly(['winmentor_id' => $foundId]);
+        Log::channel('daily')->info("[WinMentor Bridge] winmentor_id corectat: [{$supplier->name}] {$oldId} → {$foundId} (verificat prin CUI + nume + ID)");
+
+        return ['ok' => true, 'partener' => $verify, 'error' => null];
+    }
+
+    /**
+     * Compară numele furnizorului ERP cu denumirea din WinMentor (fuzzy).
+     * Returnează true dacă primele cuvinte semnificative se potrivesc.
+     */
+    private function partenerNameMatches(string $erpName, string $wmName): bool
+    {
+        $normalize = function (string $name): string {
+            $name = mb_strtolower($name);
+            // Eliminăm sufixe juridice comune
+            $name = preg_replace('/\b(s\.?r\.?l\.?|s\.?a\.?|s\.?r\.?l|s\.?c\.?s\.?|srl|sa|ii|pfa)\b/i', '', $name);
+            // Eliminăm caractere speciale
+            $name = preg_replace('/[^a-z0-9\s]/u', '', $name);
+            return trim(preg_replace('/\s+/', ' ', $name));
+        };
+
+        $a = $normalize($erpName);
+        $b = $normalize($wmName);
+
+        if ($a === '' || $b === '') {
+            return false;
+        }
+
+        // Match exact după normalizare
+        if ($a === $b) {
+            return true;
+        }
+
+        // Unul îl conține pe celălalt
+        if (str_contains($a, $b) || str_contains($b, $a)) {
+            return true;
+        }
+
+        // Primul cuvânt semnificativ (de obicei numele companiei) se potrivește
+        $firstA = explode(' ', $a)[0] ?? '';
+        $firstB = explode(' ', $b)[0] ?? '';
+        if (strlen($firstA) >= 3 && $firstA === $firstB) {
+            return true;
+        }
+
+        // Similar_text — peste 70% e suficient
+        similar_text($a, $b, $percent);
+
+        return $percent >= 70;
     }
 
     // ─── Config helpers ──────────────────────────────────────────────────────────

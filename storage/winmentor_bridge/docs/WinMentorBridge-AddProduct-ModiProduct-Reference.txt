@@ -1,0 +1,153 @@
+WinMentor Bridge
+AddProduct & ModiProduct
+Format campuri descoperit prin reverse engineering
+Aprilie 2026
+
+Prerequisite
+Inainte de a apela AddProduct sau ModiProduct, trebuie:
+1. Selectata firma si luna: POST /api/firme/select
+2. Setat campul de identificare parteneri (pentru producator):
+POST /api/config/id-part-field
+{ "fieldName": "CodIntern" }    // pentru AddProduct
+
+POST /api/config/id-part-field
+{ "fieldName": "CodExtern" }    // pentru ModiProduct
+ATENTIE: AddProduct si ModiProduct folosesc ID-uri de producator DIFERITE!
+AddProduct foloseste MEREU marca CodIntern a partenerului (indiferent de SetIDPartField, dar trebuie setat pe CodIntern).
+ModiProduct respecta SetIDPartField — deci daca setati CodExtern, va folosi CodExtern-ul partenerului.
+
+Cote TVA valide
+Campul Cota TVA accepta doar cotele definite in baza de date WinMentor. Valorile valide sunt procentele reale:
+Alte valori (1, 2, 3, 4, 8, 10, etc.) genereaza eroarea 435: Cota de TVA inexistenta in baza de date.
+
+
+AddProduct (POST /api/produse/add)
+Adauga un produs nou in nomenclatorul WinMentor. Parametrul info este un string cu 19 campuri separate prin ";" (semicolon).
+
+Format campuri InfoProdus (19 pozitii)
+
+Exemplu complet (cu producator)
+// Prerequisite:
+POST /api/config/id-part-field
+{ "fieldName": "CodIntern" }
+
+// AddProduct:
+POST /api/produse/add
+Content-Type: application/json
+
+{
+  "info": "EAN123456;Guma Tatoo 20gr;;728025591;Buc;1;9;;;EAN123456;;;;;0.4;;;;;D"
+}
+Unde:
+- EAN123456 = cod extern articol (pozitia 0 si 9)
+- 728025591 = marca CodIntern a partenerului producator (pozitia 3)
+- Buc = unitate masura (pozitia 4)
+- 1 = tip serie (pozitia 5)
+- 9 = cota TVA 9% (pozitia 6)
+- 0.4 = masa in kg (pozitia 13)
+- D = flag activ (pozitia 18)
+
+Exemplu minim (fara producator)
+POST /api/produse/add
+{
+  "info": "CODTEST;Produs Simplu;;0;Buc;0;20;;;CODTEST;;;;;;;;;;"
+}
+Doar campurile obligatorii: cod, denumire, UM si cota TVA. Producator = 0 (fara).
+
+Raspuns
+{ "success": true, "data": { "result": 1, "message": "Produs adaugat" } }
+Erori frecvente:
+
+ModiProduct (PUT /api/produse/update)
+Modifica un produs existent. Are un format DIFERIT de AddProduct. Campurile goale nu se modifica — doar cele completate se actualizeaza.
+
+Format campuri InfoProdus (ModiProduct)
+ATENTIE: Formatul ModiProduct este DIFERIT de AddProduct! Ordinea campurilor nu este aceeasi.
+
+Exemplu: modifica mai multe campuri
+// Prerequisite:
+POST /api/config/id-part-field
+{ "fieldName": "CodExtern" }
+
+// ModiProduct:
+PUT /api/produse/update
+Content-Type: application/json
+
+{
+  "info": "ART001;43312030;;150;;;Denumire Noua;;;;;;;;;;;;"
+}
+Modifica producatorul (CodExtern 43312030), pretul (150) si denumirea. SimbolClasa ramane neschimbat (gol pe pozitia 2).
+
+Exemplu: modifica doar pretul
+PUT /api/produse/update
+{
+  "info": "ART001;;;99.50;;;;;;;;;;;;;;;;"
+}
+
+Exemplu: modifica doar denumirea
+PUT /api/produse/update
+{
+  "info": "ART001;;;;;;Denumire Actualizata;;;;;;;;;;;;"
+}
+
+Raspuns
+{ "success": true, "data": { "result": 1, "message": "Produs modificat" } }
+
+Diferente AddProduct vs ModiProduct
+
+
+
+WinMentor Bridge | AddProduct & ModiProduct Reference | Aprilie 2026
+Format descoperit prin reverse engineering pe utilitarul 2DocImpCl.exe si testare empirica
+Camp	Tip	Descriere
+0	procent	Scutit TVA / 0%
+5	procent	TVA redus 5% (carti, alimente de baza)
+9	procent	TVA redus 9% (alimentatie, turism)
+19	procent	TVA standard vechi 19%
+20	procent	TVA standard actual 20%
+
+Poz	Camp	Obligatoriu	Descriere
+0	CodExtern	Da	Cod extern articol (identificator unic, ex: EAN/cod bare)
+1	Denumire	Da	Denumirea produsului
+2	(necunoscut)	Nu	Lasati gol
+3	IDProducator	Nu	Marca CodIntern a partenerului producator. 0 = fara producator. ATENTIE: necesita SetIDPartField(CodIntern)
+4	UM	Da	Unitate de masura (ex: Buc, kg, m, l)
+5	TipSerie	Nu	0 = fara serie, 1 = cu serie/lot
+6	CotaTVA	Da	Procentul TVA: 0, 5, 9, 19, 20
+7	(necunoscut)	Nu	Lasati gol
+8	(necunoscut)	Nu	Lasati gol
+9	CodExternAlt	Nu	Cod extern alternativ (de obicei acelasi cu poz 0)
+10	(necunoscut)	Nu	Lasati gol
+11	(necunoscut)	Nu	Lasati gol
+12	(necunoscut)	Nu	Lasati gol
+13	Masa	Nu	Greutate/masa in kg (ex: 0.4)
+14	(necunoscut)	Nu	Lasati gol
+15	(necunoscut)	Nu	Lasati gol
+16	(necunoscut)	Nu	Lasati gol
+17	(necunoscut)	Nu	Lasati gol
+18	Flag	Nu	D = flag activ (semnificatie exacta necunoscuta)
+
+Camp	Tip	Descriere
+414	eroare	Articolul cu ID-ul precizat exista deja in baza de date
+416	eroare	Nu exista producator cu ID-ul precizat (verificati SetIDPartField si marca)
+435	eroare	Cota de TVA inexistenta in baza de date (doar 0, 5, 9, 19, 20)
+
+Poz	Camp	Obligatoriu	Descriere
+0	CodExtern	Da	Cod extern articol — identifica produsul de modificat
+1	IDProducator	Nu	ID producator. Respecta SetIDPartField (CodExtern, CodIntern, CodFiscal). Gol = nu modifica
+2	SimbolClasa	Nu	Simbol clasa articol. Gol = nu modifica
+3	PretVanzare	Nu	Pret vanzare (fara TVA). Recalculeaza automat PretVCuTVA. Gol = nu modifica
+4	(necunoscut)	Nu	Nu are efect vizibil
+5	(necunoscut)	Nu	Nu are efect vizibil
+6	Denumire	Nu	Denumirea produsului. Gol = nu modifica
+7+	(restul)	Nu	Nu au efect vizibil
+
+Aspect	AddProduct	ModiProduct
+Pozitia Denumire	1 (a doua pozitie)	6 (a saptea pozitie)
+Pozitia IDProducator	3 (a patra pozitie)	1 (a doua pozitie)
+Pozitia PretVanzare	Nu exista	3 (a patra pozitie)
+Pozitia CotaTVA	6 (a saptea pozitie)	Nu se poate modifica
+ID Producator	Marca CodIntern (mereu)	Respecta SetIDPartField
+Campuri goale	Se trimit ca valori goale	Nu se modifica (ignorate)
+Numar campuri	19 pozitii	7+ (doar 0-6 au efect)
+

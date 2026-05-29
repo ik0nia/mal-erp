@@ -17,6 +17,28 @@
         <div style="font-size:13px; color:#64748b">{{ $order->items->count() }} produse • {{ $order->created_at?->format('d.m.Y') }}</div>
     </div>
 
+    @if($isPartiallyReceived && count($receptionHistory) > 0)
+    <div class="wh-card" style="margin-bottom:16px; border-left:4px solid #f59e0b; background:#fffbeb">
+        <div style="font-size:13px; font-weight:700; color:#92400e; margin-bottom:8px">
+            ⚠ Recepție parțială — {{ count($receptionHistory) }} {{ count($receptionHistory) === 1 ? 'livrare' : 'livrări' }} anterioare
+        </div>
+        @foreach($receptionHistory as $rh)
+        <div style="font-size:12px; color:#78350f; padding:4px 0; display:flex; align-items:center; gap:8px; flex-wrap:wrap">
+            <strong>#{{ $rh['number'] }}</strong>
+            <span>{{ $rh['date'] }}</span>
+            <span>{{ $rh['items_count'] }} produse</span>
+            <span>{{ number_format($rh['total_qty'], 0) }} buc total</span>
+            @php
+                $wmDot = match($rh['wm_status']) {
+                    'synced' => '#16a34a', 'failed' => '#dc2626', 'pending' => '#f59e0b', default => '#cbd5e1'
+                };
+            @endphp
+            <span style="width:8px; height:8px; border-radius:50%; background:{{ $wmDot }}; flex-shrink:0" title="WinMentor: {{ $rh['wm_status'] }}"></span>
+        </div>
+        @endforeach
+    </div>
+    @endif
+
     <div id="success-banner" class="banner banner-success" style="display:none">
         ✅ <span id="success-msg">Recepție înregistrată cu succes!</span>
     </div>
@@ -108,14 +130,21 @@
                     </button>
                 </div>
                 <div style="margin-top:8px">
-                    <div class="item-ordered">Comandat: <strong>{{ number_format($item['ordered_qty'], 0) }} buc.</strong></div>
+                    <div class="item-ordered">
+                        Comandat: <strong>{{ number_format($item['ordered_qty'], 0) }} buc.</strong>
+                        @if($item['previously_received'] > 0)
+                            <span style="color:#16a34a; font-weight:600; margin-left:8px">
+                                (deja primit: {{ number_format($item['previously_received'], 0) }} — rămân: {{ number_format($item['remaining_qty'], 0) }})
+                            </span>
+                        @endif
+                    </div>
                 </div>
                 <div class="qty-control" style="margin-top:8px">
                     <button class="qty-btn" onclick="changeQty({{ $item['id'] }}, -1)">−</button>
                     <input class="qty-input" type="number" min="0" step="1"
                         id="qty_{{ $item['id'] }}"
                         value="{{ $item['qty'] }}"
-                        oninput="onQtyChange({{ $item['id'] }}, {{ $item['ordered_qty'] }})"
+                        oninput="onQtyChange({{ $item['id'] }}, {{ $item['remaining_qty'] }})"
                         inputmode="numeric">
                     <button class="qty-btn" onclick="changeQty({{ $item['id'] }}, 1)">+</button>
                 </div>
@@ -158,7 +187,7 @@
     {{-- Butoane rapide --}}
     <div style="display:flex; gap:10px; margin-top:8px; margin-bottom:12px">
         <button class="btn btn-gray btn-sm" onclick="setAllQty(true)" style="flex:1">
-            ↺ Reset la comandat
+            ↺ Reset la {{ $isPartiallyReceived ? 'rămas' : 'comandat' }}
         </button>
         <button class="btn btn-gray btn-sm" onclick="setAllQty(false)" style="flex:1">
             ✗ Pune tot 0
@@ -170,9 +199,16 @@
         💾 Salvează draft (continuă mai târziu)
     </button>
 
-    <button id="submit-btn" class="btn btn-success" onclick="handleSubmitClick()" style="margin-bottom:32px">
-        ✅ Confirmă recepția
-    </button>
+    <div style="display:flex; gap:10px; margin-bottom:32px">
+        <button id="submit-partial-btn" class="btn" onclick="handleSubmitClick('partial')"
+            style="flex:1; background:#2563eb; color:white; font-size:15px; font-weight:700; padding:14px; border-radius:12px; border:none; cursor:pointer">
+            📦 Recepție parțială
+        </button>
+        <button id="submit-final-btn" class="btn" onclick="handleSubmitClick('final')"
+            style="flex:1; background:#16a34a; color:white; font-size:15px; font-weight:700; padding:14px; border-radius:12px; border:none; cursor:pointer">
+            ✅ Recepție finală
+        </button>
+    </div>
 </div>
 
 {{-- ── Ecran sumar (pasul 2) ─────────────────────────────────────────── --}}
@@ -185,7 +221,9 @@
 
     <div class="wh-content">
         <div class="wh-card" style="margin-bottom:16px; border-left:4px solid #0ea5e9">
-            <div style="font-size:13px; font-weight:700; color:#0369a1; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px">Sumar recepție</div>
+            <div style="font-size:13px; font-weight:700; color:#0369a1; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px">
+                Sumar recepție <span id="summary-type-badge"></span>
+            </div>
             <div id="summary-supplier" style="font-weight:700; font-size:16px"></div>
         </div>
 
@@ -257,10 +295,15 @@
     const SUPPLIER_PRODUCTS_URL = '{{ route('warehouse.supplier.products', ['supplier' => $order->supplier_id ?? 0]) }}';
     const ITEMS      = @json($items);
     const DRAFT_KEY  = 'wh_draft_' + ORDER_ID;
+    const IS_PARTIALLY_RECEIVED = {{ $isPartiallyReceived ? 'true' : 'false' }};
+    const SERVER_DRAFT_DATA = @json($serverDraftData ? json_decode($serverDraftData, true) : null);
+    const SERVER_DRAFT_META = @json($serverDraftMeta);
 
     const discReasons    = {};   // id → reason string (for pending items)
     const confirmedItems = {};   // id → {qty, reason|null, invoice_position|null}
     let extraItemCounter = 0;
+    let _pendingPositionQueue = [];
+    let _bulkConfirmMode = false;
 
     const reasonLabels = {
         lipsa_stoc:      'Lipsă stoc furnizor',
@@ -288,7 +331,7 @@
     function confirmItem(id) {
         const item    = ITEMS.find(i => i.id === id);
         const qty     = getQty(id);
-        const ordered = item.ordered_qty;
+        const ordered = item.remaining_qty;
 
         // Dacă discrepanță — trebuie motiv selectat
         if (qty !== ordered && !discReasons[id]) {
@@ -296,6 +339,14 @@
             row.style.outline = '2px solid #f59e0b';
             row.scrollIntoView({ behavior:'smooth', block:'center' });
             setTimeout(() => row.style.outline = '', 2000);
+            // Arată mesaj vizibil
+            const errBanner = document.getElementById('error-banner');
+            const errMsg = document.getElementById('error-msg');
+            if (errBanner && errMsg) {
+                errMsg.textContent = 'Selectează motivul discrepanței înainte de a confirma (cantitate ' + qty + ' ≠ ' + ordered + ')';
+                errBanner.style.display = 'block';
+                setTimeout(() => errBanner.style.display = 'none', 4000);
+            }
             return;
         }
 
@@ -319,13 +370,18 @@
         document.getElementById('pos-modal').dataset.qty    = qty;
     }
 
-    function closePositionModal() {
+    function closePositionModal(cancelBulk = true) {
         document.getElementById('pos-modal').style.display = 'none';
         document.getElementById('pos-modal-error').style.display = 'none';
         document.getElementById('pos-modal-input').style.outline = '';
         // Re-suprimă inputmode după închidere (revenim la mod scanner)
         const posInput = document.getElementById('pos-modal-input');
         posInput.setAttribute('inputmode', 'none');
+        // Anulează bulk confirm dacă utilizatorul închide modalul (nu din confirmWithPosition)
+        if (cancelBulk && _bulkConfirmMode) {
+            _bulkConfirmMode = false;
+            _pendingPositionQueue = [];
+        }
     }
 
     function confirmWithPosition() {
@@ -336,44 +392,67 @@
         const errorEl  = document.getElementById('pos-modal-error');
         const posVal = posInput.value.trim();
 
-        // Obligatoriu
-        if (posVal === '') {
-            posInput.style.outline = '2px solid #dc2626';
-            errorEl.textContent = 'Poziția este obligatorie';
-            errorEl.style.display = 'block';
-            posInput.focus();
-            return;
+        // Poziția e opțională — dacă e goală, se salvează fără
+        let pos = null;
+        if (posVal !== '') {
+            pos = parseInt(posVal);
+            if (isNaN(pos) || pos < 1 || pos > 9999) {
+                posInput.style.outline = '2px solid #dc2626';
+                errorEl.textContent = 'Introdu un număr valid (1-9999)';
+                errorEl.style.display = 'block';
+                posInput.focus();
+                return;
+            }
         }
 
-        const pos = parseInt(posVal);
-        if (isNaN(pos) || pos < 1 || pos > 9999) {
-            posInput.style.outline = '2px solid #dc2626';
-            errorEl.textContent = 'Introdu un număr valid (1-9999)';
-            errorEl.style.display = 'block';
-            posInput.focus();
-            return;
-        }
-
-        // Verifică duplicat
-        const duplicate = Object.entries(confirmedItems).find(([cid, data]) => parseInt(cid) !== id && data.invoice_position === pos);
-        if (duplicate) {
-            const dupItem = ITEMS.find(i => i.id === parseInt(duplicate[0]));
-            posInput.style.outline = '2px solid #dc2626';
-            errorEl.textContent = `Poziția ${pos} este deja folosită de: ${dupItem ? dupItem.name : 'alt produs'}`;
-            errorEl.style.display = 'block';
-            posInput.focus();
-            return;
+        // Verifică duplicat (doar dacă s-a introdus o poziție)
+        if (pos !== null) {
+            const duplicate = Object.entries(confirmedItems).find(([cid, data]) => parseInt(cid) !== id && data.invoice_position === pos);
+            if (duplicate) {
+                const dupItem = ITEMS.find(i => i.id === parseInt(duplicate[0]));
+                posInput.style.outline = '2px solid #dc2626';
+                errorEl.textContent = `Poziția ${pos} este deja folosită de: ${dupItem ? dupItem.name : 'alt produs'}`;
+                errorEl.style.display = 'block';
+                posInput.focus();
+                return;
+            }
         }
 
         posInput.style.outline = '';
         errorEl.style.display = 'none';
-        closePositionModal();
+        const wasBulk = _bulkConfirmMode;
+        closePositionModal(false); // nu anula bulk mode
         confirmedItems[id] = { qty, reason: discReasons[id] || null, invoice_position: pos };
         document.getElementById('row_' + id).style.display = 'none';
         clearSearch();
         renderConfirmedList();
         updatePendingCount();
         saveDraft();
+
+        // Dacă suntem în bulk confirm (de la submit), continuă cu următorul
+        if (wasBulk) {
+            _pendingPositionQueue.shift();
+            processNextPendingPosition();
+        }
+    }
+
+    function skipPosition() {
+        const modal = document.getElementById('pos-modal');
+        const id    = parseInt(modal.dataset.itemId);
+        const qty   = parseFloat(modal.dataset.qty);
+        const wasBulk = _bulkConfirmMode;
+        closePositionModal(false);
+        confirmedItems[id] = { qty, reason: discReasons[id] || null, invoice_position: null };
+        document.getElementById('row_' + id).style.display = 'none';
+        clearSearch();
+        renderConfirmedList();
+        updatePendingCount();
+        saveDraft();
+
+        if (wasBulk) {
+            _pendingPositionQueue.shift();
+            processNextPendingPosition();
+        }
     }
 
     function unconfirmItem(id) {
@@ -401,7 +480,7 @@
         list.innerHTML = entries.map(([id, data]) => {
             const item    = ITEMS.find(i => i.id == parseInt(id));
             if (!item) return '';
-            const diff    = data.qty - item.ordered_qty;
+            const diff    = data.qty - item.remaining_qty;
             const isOk    = diff === 0;
             const color   = diff < 0 ? '#dc2626' : (diff > 0 ? '#d97706' : '#15803d');
             const sign    = diff > 0 ? '+' : '';
@@ -431,12 +510,12 @@
     function setItemZero(id) {
         document.getElementById('qty_' + id).value = 0;
         const item = ITEMS.find(i => i.id === id);
-        onQtyChange(id, item.ordered_qty);
+        onQtyChange(id, item.remaining_qty);
     }
 
     // ── Draft ────────────────────────────────────────────────────────────────
 
-    function saveDraft(showFeedback = false) {
+    function buildDraftPayload() {
         const pendingQtys    = {};
         const pendingReasons = {};
         ITEMS.forEach(item => {
@@ -445,7 +524,6 @@
             if (discReasons[item.id]) pendingReasons[item.id] = discReasons[item.id];
         });
 
-        // Extra items în editare (neconfirmate încă)
         const extraRows = [];
         document.querySelectorAll('.extra-item-row').forEach(row => {
             const idx = row.id.replace('extra_row_', '');
@@ -457,7 +535,7 @@
             });
         });
 
-        localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        return {
             pendingQtys,
             pendingReasons,
             confirmedItems: JSON.parse(JSON.stringify(confirmedItems)),
@@ -465,7 +543,27 @@
             confirmedExtraItems: JSON.parse(JSON.stringify(confirmedExtraItems)),
             notes:   document.getElementById('received_notes').value,
             savedAt: new Date().toISOString(),
-        }));
+        };
+    }
+
+    let _draftSaveTimer = null;
+
+    function saveDraft(showFeedback = false) {
+        const payload = buildDraftPayload();
+
+        // Salvare locală (instant)
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
+
+        // Salvare server (debounced 3s — nu la fiecare apăsare)
+        clearTimeout(_draftSaveTimer);
+        _draftSaveTimer = setTimeout(() => {
+            if (!navigator.onLine) return;
+            fetch(`/wh/${ORDER_ID}/draft`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF },
+                body: JSON.stringify({ draft_data: payload }),
+            }).catch(() => {});
+        }, showFeedback ? 0 : 3000);
 
         if (showFeedback) {
             const btn = document.getElementById('save-draft-btn');
@@ -480,20 +578,45 @@
     }
 
     function loadDraft() {
-        const raw = localStorage.getItem(DRAFT_KEY);
-        if (!raw) return;
-        try {
-            const draft = JSON.parse(raw);
-            const age   = Date.now() - new Date(draft.savedAt).getTime();
-            if (age > 24 * 3600 * 1000) { localStorage.removeItem(DRAFT_KEY); return; }
+        let draft = null;
+        let source = null;
 
-            const time = new Date(draft.savedAt).toLocaleTimeString('ro-RO', { hour:'2-digit', minute:'2-digit' });
-            document.getElementById('draft-banner-text').textContent = `📋 Draft salvat la ${time} — dorești să restaurezi progresul?`;
-            document.getElementById('draft-banner').style.display = 'flex';
-            window._pendingDraft = draft;
-        } catch(e) {
-            localStorage.removeItem(DRAFT_KEY);
+        // Preferă draftul server-side (vizibil de pe orice device)
+        if (SERVER_DRAFT_DATA) {
+            draft = SERVER_DRAFT_DATA;
+            source = 'server';
         }
+
+        // Fallback pe localStorage
+        if (!draft) {
+            const raw = localStorage.getItem(DRAFT_KEY);
+            if (!raw) return;
+            try {
+                draft = JSON.parse(raw);
+                source = 'local';
+            } catch(e) {
+                localStorage.removeItem(DRAFT_KEY);
+                return;
+            }
+        }
+
+        const age = Date.now() - new Date(draft.savedAt).getTime();
+        if (age > 24 * 3600 * 1000) {
+            if (source === 'local') localStorage.removeItem(DRAFT_KEY);
+            return;
+        }
+
+        const time = new Date(draft.savedAt).toLocaleTimeString('ro-RO', { hour:'2-digit', minute:'2-digit' });
+        const date = new Date(draft.savedAt).toLocaleDateString('ro-RO', { day:'2-digit', month:'2-digit' });
+        let label;
+        if (source === 'server' && SERVER_DRAFT_META) {
+            label = `📋 Draft salvat de ${SERVER_DRAFT_META.user_name} la ${date} ${time} — dorești să restaurezi progresul?`;
+        } else {
+            label = `📋 Draft salvat la ${time} — dorești să restaurezi progresul?`;
+        }
+        document.getElementById('draft-banner-text').textContent = label;
+        document.getElementById('draft-banner').style.display = 'flex';
+        window._pendingDraft = draft;
     }
 
     function restoreDraft() {
@@ -508,7 +631,7 @@
             if (!item || !input) return;
             input.value = qty;
             if (draft.pendingReasons?.[id]) discReasons[parseInt(id)] = draft.pendingReasons[id];
-            onQtyChange(parseInt(id), item.ordered_qty);
+            onQtyChange(parseInt(id), item.remaining_qty);
         });
 
         // Restore confirmed items
@@ -554,6 +677,8 @@
 
     function discardDraft() {
         localStorage.removeItem(DRAFT_KEY);
+        // Șterge și server-side
+        fetch(`/wh/${ORDER_ID}/draft`, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': CSRF } }).catch(() => {});
         document.getElementById('draft-banner').style.display = 'none';
         window._pendingDraft = null;
     }
@@ -760,14 +885,14 @@
         const item  = ITEMS.find(i => i.id === id);
         const input = document.getElementById('qty_' + id);
         input.value = Math.max(0, (parseFloat(input.value) || 0) + delta);
-        onQtyChange(id, item.ordered_qty);
+        onQtyChange(id, item.remaining_qty);
     }
 
     function setAllQty(useOrdered) {
         ITEMS.forEach(item => {
             if (confirmedItems[item.id] !== undefined) return; // sări peste confirmate
-            document.getElementById('qty_' + item.id).value = useOrdered ? item.ordered_qty : 0;
-            onQtyChange(item.id, item.ordered_qty);
+            document.getElementById('qty_' + item.id).value = useOrdered ? item.remaining_qty : 0;
+            onQtyChange(item.id, item.remaining_qty);
         });
     }
 
@@ -815,8 +940,8 @@
 
         if (value === 'returnez_surplus') {
             const item = ITEMS.find(i => i.id === id);
-            document.getElementById('qty_' + id).value = item.ordered_qty;
-            onQtyChange(id, item.ordered_qty);
+            document.getElementById('qty_' + id).value = item.remaining_qty;
+            onQtyChange(id, item.remaining_qty);
             return;
         }
 
@@ -832,12 +957,17 @@
 
     // ── Validare + Sumar (pasul 1) ───────────────────────────────────────────
 
-    function handleSubmitClick() {
+    let _receptionType = 'final'; // 'partial' sau 'final'
+
+    function handleSubmitClick(type) {
+        _receptionType = type;
+
         // Validare: produsele neconfirmate cu discrepanță trebuie să aibă motiv
         let missing = false;
         ITEMS.forEach(item => {
             if (confirmedItems[item.id] !== undefined) return;
-            if (getQty(item.id) !== item.ordered_qty && !discReasons[item.id]) {
+            const effectiveOrdered = type === 'partial' ? item.remaining_qty : item.remaining_qty;
+            if (getQty(item.id) !== effectiveOrdered && getQty(item.id) > 0 && !discReasons[item.id]) {
                 const row = document.getElementById('row_' + item.id);
                 row.style.outline = '2px solid #f59e0b';
                 row.scrollIntoView({ behavior:'smooth', block:'center' });
@@ -866,16 +996,44 @@
             return;
         }
 
-        showSummary();
+        // Colectează items neconfirmate cu qty > 0 care n-au poziție
+        _pendingPositionQueue = ITEMS
+            .filter(item => confirmedItems[item.id] === undefined && getQty(item.id) > 0)
+            .map(item => item.id);
+
+        if (_pendingPositionQueue.length > 0) {
+            _bulkConfirmMode = true;
+            processNextPendingPosition();
+        } else {
+            showSummary();
+        }
+    }
+
+    function processNextPendingPosition() {
+        if (_pendingPositionQueue.length === 0) {
+            _bulkConfirmMode = false;
+            showSummary();
+            return;
+        }
+        const id = _pendingPositionQueue[0];
+        const qty = getQty(id);
+        showPositionModal(id, qty);
     }
 
     function showSummary() {
         document.getElementById('summary-supplier').textContent =
             document.querySelector('.wh-card div[style*="font-weight:700"]')?.textContent || '';
 
+        const typeBadge = document.getElementById('summary-type-badge');
+        if (_receptionType === 'partial') {
+            typeBadge.innerHTML = '<span style="background:#2563eb; color:white; font-size:11px; padding:2px 8px; border-radius:8px; margin-left:8px">PARȚIALĂ</span>';
+        } else {
+            typeBadge.innerHTML = '<span style="background:#16a34a; color:white; font-size:11px; padding:2px 8px; border-radius:8px; margin-left:8px">FINALĂ</span>';
+        }
+
         const itemsHtml = ITEMS.map(item => {
             const received  = getEffectiveQty(item.id);
-            const ordered   = item.ordered_qty;
+            const ordered   = item.remaining_qty;
             const diff      = received - ordered;
             const isOk      = diff === 0;
             const isConf    = confirmedItems[item.id] !== undefined;
@@ -900,9 +1058,9 @@
                 </div>
                 ${item.sku ? `<div style="font-size:12px; color:#64748b; margin-bottom:6px">SKU: ${item.sku}</div>` : ''}
                 <div style="display:flex; align-items:baseline; flex-wrap:wrap; gap:4px; font-size:13px; color:#475569">
-                    <span>Comandat: <strong>${ordered}</strong></span>
+                    <span>${item.previously_received > 0 ? 'Rămas' : 'Comandat'}: <strong>${ordered}</strong></span>
                     <span style="color:#94a3b8">→</span>
-                    <span>Primit: <strong style="color:#1e293b">${received}</strong></span>
+                    <span>Primit acum: <strong style="color:#1e293b">${received}</strong></span>
                     ${diffBadge}
                 </div>
             </div>`;
@@ -938,18 +1096,20 @@
         document.getElementById('summary-screen').style.display = 'none';
     }
 
-    async function doSubmit() {
+    async function doSubmit(isRetry = false) {
         const allReasons = {};
         Object.entries(discReasons).forEach(([id, r]) => { if (!confirmedItems[parseInt(id)]) allReasons[id] = r; });
         Object.entries(confirmedItems).forEach(([id, d]) => { if (d.reason) allReasons[id] = d.reason; });
 
         const confirmBtn = document.getElementById('confirm-btn');
         if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Se trimite...'; }
-        const btn = document.getElementById('submit-btn');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner"></span> Se trimite...';
+        const partialBtn = document.getElementById('submit-partial-btn');
+        const finalBtn   = document.getElementById('submit-final-btn');
+        if (partialBtn) { partialBtn.disabled = true; }
+        if (finalBtn)   { finalBtn.disabled = true; }
 
         const payload = {
+            reception_type: _receptionType,
             items:          ITEMS.map(item => ({ id: item.id, qty: getEffectiveQty(item.id), reason: allReasons[item.id] || null, invoice_position: confirmedItems[item.id]?.invoice_position ?? null })),
             extra_items:    collectExtraItems(),
             received_notes: document.getElementById('received_notes').value,
@@ -958,7 +1118,8 @@
         if (!navigator.onLine) {
             await saveToQueue(ORDER_ID, payload);
             document.getElementById('offline-saved').style.display = 'block';
-            btn.style.display = 'none';
+            if (partialBtn) partialBtn.style.display = 'none';
+            if (finalBtn) finalBtn.style.display = 'none';
             return;
         }
 
@@ -968,6 +1129,12 @@
                 headers: { 'Content-Type':'application/json', 'X-CSRF-TOKEN':CSRF },
                 body:    JSON.stringify(payload),
             });
+
+            // CSRF expirat → reîmprospătează tokenul și reîncearcă o dată
+            if (res.status === 419 && !isRetry) {
+                await refreshCsrf();
+                return doSubmit(true);
+            }
 
             // Sesiune/CSRF expirat → Laravel returnează HTML (419/302)
             if (res.status === 419 || res.redirected || res.status === 401) {
@@ -979,6 +1146,11 @@
 
             const ct = res.headers.get('content-type') || '';
             if (!ct.includes('application/json')) {
+                // Poate fi sesiune expirată — încearcă refresh CSRF înainte de a renunța
+                if (!isRetry) {
+                    await refreshCsrf();
+                    return doSubmit(true);
+                }
                 throw new Error('Sesiunea a expirat. Se reîncarcă pagina...');
             }
 
@@ -986,13 +1158,17 @@
 
             if (data.ok) {
                 localStorage.removeItem(DRAFT_KEY);
+                // Șterge draftul server-side
+                fetch(`/wh/${ORDER_ID}/draft`, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': CSRF } }).catch(() => {});
                 hideSummary();
                 document.getElementById('success-msg').textContent = data.message;
                 document.getElementById('success-banner').style.display = 'block';
                 document.getElementById('items-list').style.opacity      = '0.5';
                 document.getElementById('items-list').style.pointerEvents= 'none';
-                btn.innerHTML   = '✅ Recepționat';
-                btn.style.background = '#15803d';
+                const partialBtn = document.getElementById('submit-partial-btn');
+                const finalBtn   = document.getElementById('submit-final-btn');
+                if (partialBtn) { partialBtn.disabled = true; partialBtn.style.opacity = '0.5'; }
+                if (finalBtn) { finalBtn.disabled = true; finalBtn.style.opacity = '0.5'; }
                 setTimeout(() => { window.location.href = '/wh/'; }, 2200);
             } else {
                 throw new Error(data.message || 'Eroare necunoscută');
@@ -1001,7 +1177,8 @@
             if (!navigator.onLine || e instanceof TypeError) {
                 await saveToQueue(ORDER_ID, payload);
                 document.getElementById('offline-saved').style.display = 'block';
-                btn.style.display = 'none';
+                if (partialBtn) partialBtn.style.display = 'none';
+                if (finalBtn) finalBtn.style.display = 'none';
             } else if (e.message.includes('Se reîncarcă')) {
                 hideSummary();
                 document.getElementById('error-msg').textContent = e.message;
@@ -1013,8 +1190,8 @@
                 hideSummary();
                 document.getElementById('error-msg').textContent = e.message;
                 document.getElementById('error-banner').style.display = 'block';
-                btn.disabled  = false;
-                btn.innerHTML = '✅ Confirmă recepția';
+                if (partialBtn) { partialBtn.disabled = false; }
+                if (finalBtn) { finalBtn.disabled = false; }
                 if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = '✅ Confirmă'; }
             }
         }
@@ -1253,6 +1430,15 @@
         <div id="pos-modal-error" style="display:none; font-size:13px; color:#dc2626; font-weight:600; margin-top:8px; text-align:center"></div>
 
         <div style="display:flex; gap:10px; margin-top:20px">
+            <button onclick="closePositionModal()"
+                style="flex:1; padding:14px; border-radius:12px; border:2px solid #e2e8f0; background:white; color:#64748b; font-size:15px; font-weight:600; cursor:pointer">
+                Anulează
+            </button>
+            <button onclick="skipPosition()"
+                id="pos-modal-skip-btn"
+                style="flex:1; padding:14px; border-radius:12px; border:2px solid #f59e0b; background:#fffbeb; color:#92400e; font-size:15px; font-weight:600; cursor:pointer">
+                Fără poziție →
+            </button>
             <button onclick="confirmWithPosition()"
                 style="flex:1; padding:14px; border-radius:12px; border:none; background:#b91c1c; color:white; font-size:15px; font-weight:700; cursor:pointer">
                 Confirmă ✓

@@ -1,0 +1,410 @@
+WinMentor Bridge
+Micro-Connector pentru WinMentor Classic
+Ghid de Instalare, Configurare si Utilizare
+Versiunea 1.2 - Martie 2026
+
+Acest document descrie pasii necesari pentru instalarea si configurarea WinMentor Bridge pe serverul unde este instalat WinMentor Classic.
+
+Cuprins
+
+1. Prezentare Generala
+WinMentor Bridge este un micro-connector care face legatura dintre WinMentor Classic (software de contabilitate desktop) si platforma web centrala.
+Ce face:
+Se conecteaza la DocImpServer (componenta COM a WinMentor) direct pe server
+Expune datele din WinMentor prin HTTP/HTTPS API in format JSON
+Functioneaza ca un singur fisier executabil - zero dependente externe
+Poate rula ca aplicatie consola sau ca Windows Service
+Genereaza automat API Key si Instance ID la prima pornire
+Gestioneaza automat conexiunea COM (se conecteaza lazy, se deconecteaza dupa inactivitate)
+Suporta paginare si cautare pe liste mari de date (ex: parteneri)
+Cache in memorie pentru raspunsuri rapide la cereri repetate
+Binding pe IP specific si limita de conexiuni simultane configurabile
+Import documente (facturi, comenzi, incasari, transferuri, etc.)
+CRUD pentru nomenclatoare (parteneri, produse, clase articole, gestiuni)
+Peste 90 de endpoint-uri API care acopera intreaga functionalitate WinMentor COM
+
+2. Cerinte de Sistem
+IMPORTANT: Nu este necesara instalarea .NET pe server. Executabilul este self-contained si include tot ce are nevoie.
+
+3. Instalare
+Pas 1 - Copierea fisierelor
+Copiati urmatoarele 2 fisiere pe server intr-un folder dedicat (ex: C:\WinMentorBridge\):
+Pas 2 - Structura pe server
+Structura recomandata pe server:
+C:\WinMENT\WinMentorBridge\
+    WinMentorBridge.exe
+    appsettings.json
+
+4. Configurare (appsettings.json)
+La prima pornire, aplicatia genereaza automat InstanceId si ApiKey. Totusi, puteti configura manual inainte.
+Structura completa a fisierului:
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "WinMentorBridge": {
+    "Port": 8500,
+    "HttpsPort": 8501,
+    "BindAddress": "0.0.0.0",
+    "MaxConcurrentConnections": null,
+    "InstanceId": null,
+    "ApiKey": "CHANGE-ME-ON-FIRST-RUN",
+    "CentralPlatformUrl": null,
+    "ComProgId": "DocImpServer.DocImpObject",
+    "ComIdleTimeoutSeconds": 300,
+    "CacheDurationMinutes": 5,
+    "Ssl": {
+      "CertificatePath": null,
+      "CertificatePassword": null
+    }
+  }
+}
+Explicatia parametrilor:
+
+5. Prima Pornire
+Pornire din consola
+Deschideti Command Prompt sau PowerShell ca Administrator pe server:
+cd C:\WinMENT\WinMentorBridge
+WinMentorBridge.exe
+La prima pornire, veti vedea in consola:
+WinMentor Bridge starting...
+  Instance ID: a3f7b2c1-4d5e-6f78-9a0b-1c2d3e4f5a6b
+  API Key:     x7kR9mP2vN5qL8wT3jF6hB0cY4eA1dSuI9oK2rM7nQpXz
+  Bind:        0.0.0.0
+  HTTP:  http://0.0.0.0:8500
+  HTTPS: https://0.0.0.0:8501
+  Generated new self-signed certificate (expires 2028-03-07)
+IMPORTANT: Notati API Key-ul din consola! Acesta va fi necesar pentru toate cererile API.
+Nota: API Key-ul contine doar litere (A-Z, a-z) si cifre (0-9), fara caractere speciale, pentru compatibilitate maxima cu URL-uri si headere HTTP.
+Valorile InstanceId si ApiKey sunt salvate automat in appsettings.json si nu se schimba la urmatoarele porniri.
+Pentru oprire, apasati Ctrl+C in consola.
+
+6. Testare cu Postman
+In pachetul de livrare este inclus fisierul WinMentorBridge.postman_collection.json cu toate cele ~90 endpoint-uri pre-configurate. Importati-l in Postman si setati variabilele base_url si api_key.
+Health Check (fara autentificare)
+GET http://localhost:8500/api/health
+Raspuns asteptat:
+{
+  "success": true,
+  "data": {
+    "status": "running",
+    "instanceId": "a3f7b2c1-...",
+    "comConnected": false,
+    "timestamp": "2026-03-07T16:00:00Z"
+  }
+}
+Nota: comConnected este false initial - conexiunea COM se deschide lazy la primul request care o necesita.
+Lista firme (cu autentificare)
+GET http://localhost:8500/api/firme
+Header: X-API-Key: [cheia-voastra]
+Selectare firma si luna contabila
+POST http://localhost:8500/api/firme/select
+Header: X-API-Key: [cheia-voastra]
+Header: Content-Type: application/json
+Body:
+{
+  "firma": "NUMEFIRMA",
+  "an": 2026,
+  "luna": 3
+}
+Lista parteneri (cu paginare)
+GET http://localhost:8500/api/parteneri?page=1&pageSize=50
+Header: X-API-Key: [cheia-voastra]
+IMPORTANT: Inainte de a citi date, trebuie selectata firma si luna contabila cu /api/firme/select.
+
+7. Instalare ca Windows Service
+WinMentor Bridge poate rula ca Windows Service pentru a porni automat la boot-ul serverului.
+Instalare
+Deschideti Command Prompt ca Administrator:
+sc create WinMentorBridge binPath="C:\WinMENT\WinMentorBridge\WinMentorBridge.exe" start=auto
+sc start WinMentorBridge
+Comenzi utile:
+
+
+8. Endpoint-uri API Disponibile
+WinMentor Bridge expune peste 90 de endpoint-uri API organizate in urmatoarele categorii. Toate necesita API Key cu exceptia /api/health.
+Autentificare: Header X-API-Key: [cheia] sau query parameter ?api_key=[cheia]
+
+8.1 Health & Diagnosticare
+
+8.2 Configurare
+
+8.3 Firme
+
+8.4 Parteneri
+
+8.5 Articole & Produse
+
+8.6 Stocuri
+
+8.7 Vanzari & Facturi
+
+8.8 Comenzi
+
+8.9 Solduri & Incasari
+
+8.10 Nomenclatoare
+
+8.11 Discount
+
+8.12 Depozit & Logistica
+
+8.13 Import Documente
+Endpoint-ul de import permite trimiterea datelor pentru validare si/sau import in WinMentor.
+Tipuri de documente suportate (docType):
+Exemplu import factura:
+POST http://localhost:8500/api/import/facturi-iesire
+Header: X-API-Key: [cheia-voastra]
+Header: Content-Type: application/json
+Body:
+{
+  "lines": [
+    "linia1;camp1;camp2;...",
+    "linia2;camp1;camp2;..."
+  ]
+}
+Parametrul validateOnly=true trimite datele doar pentru validare, fara import efectiv.
+
+
+9. Paginare, Cautare si Cache
+Paginare
+Endpoint-urile /api/parteneri, /api/articole si /api/stocuri suporta paginare server-side.
+Parametri:
+Raspunsul include metadate de navigare: page, pageSize, totalItems, totalPages, hasNextPage, hasPreviousPage.
+Cache in memorie
+Prima cerere citeste datele din COM (poate dura cateva secunde). Cererile urmatoare se servesc din cache (instant). Cache-ul expira dupa CacheDurationMinutes (default: 5 minute) si se invalideaza automat la schimbarea firmei/lunii.
+
+10. Securitate (HTTPS)
+Certificat self-signed (implicit)
+La prima pornire se genereaza automat un certificat self-signed valid 2 ani. In Postman, dezactivati verificarea SSL din Settings > SSL certificate verification.
+Certificat propriu (productie)
+"Ssl": {
+  "CertificatePath": "certificate.pfx",
+  "CertificatePassword": "parola-certificat"
+}
+Doar HTTP (dezactivare HTTPS)
+"HttpsPort": null
+Restrictionare acces
+"BindAddress": "127.0.0.1"     // doar local
+"BindAddress": "192.168.1.100"  // doar o interfata
+"MaxConcurrentConnections": 50  // limita conexiuni
+
+11. Depanare (Troubleshooting)
+"API key not configured"
+Cauza: appsettings.json nu a fost gasit sau contine valoarea default. Verificati ca fisierul se afla in acelasi folder cu executabilul.
+
+"DocImpServer is not connected"
+Cauza: ProgID-ul COM nu a fost gasit in Registry. Accesati /api/diagnostics pentru detalii.
+
+"The RPC server is unavailable"
+Cauza: DocImpServer a fost oprit sau a cazut. Aplicatia se reconecteaza automat la urmatorul request.
+
+Conexiunea COM ramane deschisa
+Aplicatia elibereaza automat conexiunea COM dupa ComIdleTimeoutSeconds (default: 300 secunde) de inactivitate.
+
+Raspunsuri lente
+COM-ul nu suporta paginare nativa. Folositi cache-ul si paginarea (?page=1&pageSize=100). Prima cerere dureaza cateva secunde, dar urmatoarele se servesc instant.
+
+Port-ul este ocupat
+Schimbati Port si/sau HttpsPort in appsettings.json cu valori disponibile.
+
+12. Format Raspuns API
+Toate endpoint-urile returneaza acelasi format standard:
+{
+  "success": true,
+  "data": { ... },
+  "errors": [],
+  "timestamp": "2026-03-07T16:00:00Z"
+}
+In caz de eroare:
+{
+  "success": false,
+  "data": null,
+  "errors": ["Mesaj eroare 1", "Mesaj eroare 2"],
+  "timestamp": "2026-03-07T16:00:00Z"
+}
+Endpoint-urile care returneaza date raw (fara model tipizat) returneaza un array de string[]:
+{
+  "success": true,
+  "data": [
+    ["camp1", "camp2", "camp3"],
+    ["camp1", "camp2", "camp3"]
+  ]
+}
+
+WinMentor Bridge v1.2 | Documentatie generata Martie 2026
+Cerinta	Detalii
+Sistem de operare	Windows 10/11 sau Windows Server 2016+
+WinMentor Classic	Instalat si functional pe acelasi server
+DocImpServer	Inregistrat in Windows (se instaleaza cu WinMentor)
+Spatiu pe disc	~100 MB pentru executabil
+RAM	Minim 256 MB disponibil
+Porturi	8500 (HTTP) si 8501 (HTTPS) - configurabile
+.NET Runtime	NU este necesar (inclus in executabil)
+
+Fisier	Descriere
+WinMentorBridge.exe	Aplicatia (92 MB, include .NET Runtime)
+appsettings.json	Fisier de configurare (<1 KB)
+
+Parametru	Descriere
+Port	Portul HTTP (default: 8500)
+HttpsPort	Portul HTTPS (default: 8501, null = dezactivat)
+BindAddress	IP pe care asculta serverul (default: 0.0.0.0 = toate interfetele)
+MaxConcurrentConnections	Nr. maxim de conexiuni simultane (null = nelimitat)
+InstanceId	UUID unic al instalarii (auto-generat la prima pornire)
+ApiKey	Cheia de autentificare API (auto-generata, doar litere si cifre)
+CentralPlatformUrl	URL-ul platformei web centrale (pentru push sync)
+ComProgId	ProgID-ul COM pentru DocImpServer
+ComIdleTimeoutSeconds	Timeout inactivitate COM in secunde (default: 300)
+CacheDurationMinutes	Durata cache in memorie in minute (default: 5, 0 = dezactivat)
+Ssl.CertificatePath	Cale catre certificat PFX (null = self-signed auto)
+Ssl.CertificatePassword	Parola certificatului PFX
+
+Comanda	Descriere
+sc start WinMentorBridge	Porneste serviciul
+sc stop WinMentorBridge	Opreste serviciul
+sc query WinMentorBridge	Verifica starea serviciului
+sc delete WinMentorBridge	Dezinstaleaza serviciul
+
+Metoda	Endpoint	Descriere
+GET	/api/health	Health check (fara autentificare)
+GET	/api/diagnostics	Diagnosticare COM/Registry
+GET	/api/versiuni	Versiuni WinMentor si DocImpServer
+GET	/api/erori	Lista erori din sesiunea COM curenta
+
+Metoda	Endpoint	Descriere
+POST	/api/config/id-part-field	Seteaza campul ID parteneri
+POST	/api/config/id-art-field	Seteaza campul ID articole
+POST	/api/config/descarcare-automata?flag=1	Flag descarcare automata
+GET	/api/config/constanta/{id}/{simbol}	Obtine constanta configurare
+
+Metoda	Endpoint	Descriere
+GET	/api/firme	Lista firmelor din WinMentor
+GET	/api/firme/{nume}/luni	Lunile disponibile pentru o firma
+POST	/api/firme/select	Selecteaza firma + luna contabila
+
+Metoda	Endpoint	Descriere
+GET	/api/parteneri	Lista parteneri (paginat, cautare, cache)
+GET	/api/parteneri/{partId}/info	Info detaliate partener
+POST	/api/parteneri/add	Adauga partener nou
+PUT	/api/parteneri/update	Modifica partener existent
+GET	/api/parteneri/next-id	Urmatorul ID disponibil
+POST	/api/parteneri/gen-cod	Genereaza coduri parteneri
+
+Metoda	Endpoint	Descriere
+GET	/api/articole	Nomenclator articole (paginat)
+GET	/api/clase-articole	Clase articole
+POST	/api/clase-articole/add	Adauga clasa articole
+PUT	/api/clase-articole/set	Modifica clasa articole
+GET	/api/categorii-pret	Categorii pret
+GET	/api/articole/cat-pret	Categorii pret pe articole
+GET	/api/articole/cat-pret-ext	Categorii pret extinse pe articole
+GET	/api/preturi/{artId}/{partId}	Pret vanzare articol + partener
+GET	/api/produse	Produse (sync incremental cu lastSync)
+GET	/api/produse/stergeri	Produse sterse (sync incremental)
+POST	/api/produse/add	Adauga produs
+PUT	/api/produse/update	Modifica produs
+POST	/api/articole/gen-cod	Genereaza coduri externe articole
+
+Metoda	Endpoint	Descriere
+GET	/api/stocuri	Stoc articole (paginat, cautare)
+GET	/api/stocuri/{artId}	Stoc pentru un articol
+GET	/api/stocuri/ext	Stoc cu campuri extinse
+GET	/api/stocuri/ext2	Stoc cu al 2-lea set de campuri
+GET	/api/stocuri/{artId}/detaliat	Detalii stoc articol
+GET	/api/stocuri/pe-gestiuni	Stoc pe gestiuni
+GET	/api/ambalaje/stoc-initial	Stoc initial ambalaje
+GET	/api/ambalaje/miscari	Miscari ambalaje
+
+Metoda	Endpoint	Descriere
+GET	/api/vanzari	Facturi luna curenta
+GET	/api/vanzari/ext	Vanzari cu 18 campuri extinse
+GET	/api/vanzari/articole-vandute	Articole vandute (partId, marcaAgent, an, luna)
+GET	/api/vanzari/ultimele	Ultimele vanzari (artId, partId, marca, cate)
+GET	/api/facturi/{numar}/exists	Verifica existenta factura
+GET	/api/facturi/ext/{prefix}/{numar}/exists	Verifica factura cu prefix
+GET	/api/facturi-intrare/{numar}/exists	Verifica factura intrare (NIR)
+GET	/api/facturi/numar/{simbolCarnet}	Nr. curent factura pentru carnet
+GET	/api/facturi/pot-introduce	Verifica daca se pot introduce documente
+GET	/api/facturi/check	Verifica integritate document curent
+
+Metoda	Endpoint	Descriere
+GET	/api/comenzi/nefacturate	Comenzi nefacturate
+GET	/api/comenzi/info-nefacturate	Info comenzi nefacturate (ext)
+GET	/api/comenzi/sub-nefacturate	Sub-comenzi nefacturate
+GET	/api/comenzi/furnizori	Comenzi furnizori
+
+Metoda	Endpoint	Descriere
+GET	/api/solduri	Solduri toti clienti
+GET	/api/solduri/{partId}	Sold partener
+GET	/api/solduri/{partId}/detaliat	Sold detaliat (facturi + avansuri)
+GET	/api/solduri/agent	Solduri agenti
+GET	/api/solduri/furnizori	Solduri furnizori
+GET	/api/solduri/facturi-neoperate	Facturi neoperate
+GET	/api/incasari	Incasari clienti (cu parametri interval)
+GET	/api/incasari/luna	Incasari luna curenta
+GET	/api/incasari/factura/{nrFactura}	Incasari pentru o factura
+
+Metoda	Endpoint	Descriere
+GET	/api/gestiuni	Lista gestiuni
+POST	/api/gestiuni/add	Adauga gestiune
+GET	/api/personal	Lista personal
+GET	/api/personal/{idPers}/info	Info detaliate personal
+GET	/api/clase-parteneri	Clase parteneri
+GET	/api/banci	Lista banci
+GET	/api/carnete	Carnete facturi
+GET	/api/carnete/ext	Carnete extinse
+GET	/api/oferte	Oferte
+GET	/api/oferte/clienti	Oferte clienti
+GET	/api/localitati	Lista localitati
+GET	/api/localitati/nomenclator	Nomenclator localitati (ext)
+GET	/api/clienti	Lista clienti (anInceput, lunaInceput)
+GET	/api/delegati	Lista delegati
+GET	/api/subunitati	Lista subunitati
+GET	/api/monede	Lista monede
+
+Metoda	Endpoint	Descriere
+GET	/api/discount/pe-articole	Criterii discount pe articole
+GET	/api/discount/pe-clase	Criterii discount pe clase
+GET	/api/discount/pe-parteneri	Criterii discount pe parteneri
+
+Metoda	Endpoint	Descriere
+GET	/api/intrari	Intrari
+GET	/api/receptii	Receptii
+GET	/api/receptii/subunit	Receptii intre subunitati
+GET	/api/transferuri	Transferuri inter-gestiuni
+GET	/api/dispozitii-livrare	Dispozitii de livrare
+GET	/api/delivery-orders	Comenzi livrare
+GET	/api/inventory-orders	Comenzi inventar
+GET	/api/nir/atribute	Atribute NIR
+GET	/api/tranzactii/in-curs	Tranzactii in curs
+GET	/api/iesiri/info	Info iesiri
+GET	/api/iesiri/info-ext	Info iesiri extinse
+
+Metoda	Endpoint	Descriere
+POST	/api/import/{docType}?validateOnly=false	Import document (validare + import)
+GET	/api/import/doc-types	Tipuri de documente disponibile
+
+docType	Descriere
+facturi-iesire	Facturi de vanzare
+facturi-intrare	Facturi de cumparare (NIR)
+comenzi	Comenzi interne
+comenzi-ext	Comenzi extinse
+comenzi-furnizori	Comenzi catre furnizori
+monetare	Monetare (POS / casa de marcat)
+incasari	Incasari
+plati	Plati
+bonuri-consum	Bonuri de consum
+transferuri	Transferuri inter-gestiuni
+note-contabile	Note contabile
+modificari-pret	Modificari de pret
+
+Parametru	Descriere
+page	Numarul paginii (default: 1)
+pageSize	Inregistrari pe pagina (default: 100, max: 5000)
+search	Cautare text in campuri cheie (case-insensitive)
+refresh	true = ignora cache-ul, citeste fresh din COM
+

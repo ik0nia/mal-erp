@@ -24,7 +24,16 @@
     @else
         @foreach($orders as $order)
         @php
-            $wmStatus = $order->winmentor_sync_status;
+            $isPartial = $order->status === \App\Models\PurchaseOrder::STATUS_PARTIALLY_RECEIVED;
+            $receptionCount = $order->receptions->count();
+            $borderColor = $isPartial ? '#f59e0b' : '#16a34a';
+            // WinMentor status: per-reception dacă are recepții, altfel per PO (legacy)
+            if ($receptionCount > 0) {
+                $lastReception = $order->receptions->sortByDesc('reception_number')->first();
+                $wmStatus = $lastReception->winmentor_sync_status ?? 'none';
+            } else {
+                $wmStatus = $order->winmentor_sync_status;
+            }
             $wmDot = match($wmStatus) {
                 'synced'  => ['color' => '#16a34a', 'label' => 'Sincronizat WinMentor'],
                 'failed'  => ['color' => '#dc2626', 'label' => 'Eroare WinMentor'],
@@ -33,10 +42,15 @@
             };
         @endphp
         <a href="{{ route('warehouse.history.detail', $order) }}" style="text-decoration:none; color:inherit; display:block">
-            <div class="wh-card" style="margin-bottom:10px; border-left:4px solid #16a34a; display:flex; align-items:center; justify-content:space-between; gap:12px">
+            <div class="wh-card" style="margin-bottom:10px; border-left:4px solid {{ $borderColor }}; display:flex; align-items:center; justify-content:space-between; gap:12px">
                 <div style="min-width:0; flex:1">
-                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:3px">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:3px; flex-wrap:wrap">
                         <div style="font-weight:700; font-size:15px; color:#b91c1c">{{ $order->number }}</div>
+                        @if($isPartial)
+                            <span style="background:#f59e0b; color:white; font-size:10px; font-weight:700; padding:1px 6px; border-radius:6px">PARȚIAL ({{ $receptionCount }})</span>
+                        @elseif($receptionCount > 1)
+                            <span style="background:#16a34a; color:white; font-size:10px; font-weight:700; padding:1px 6px; border-radius:6px">{{ $receptionCount }} recepții</span>
+                        @endif
                         <span title="{{ $wmDot['label'] }}"
                             style="width:10px; height:10px; border-radius:50%; background:{{ $wmDot['color'] }}; flex-shrink:0; display:inline-block"></span>
                     </div>

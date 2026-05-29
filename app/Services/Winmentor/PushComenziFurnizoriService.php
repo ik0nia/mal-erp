@@ -4,6 +4,7 @@ namespace App\Services\Winmentor;
 
 use App\Models\ProductSupplier;
 use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderReception;
 use App\Models\Supplier;
 use App\Models\WooProduct;
 use Illuminate\Support\Facades\Log;
@@ -40,8 +41,6 @@ class PushComenziFurnizoriService
             return $this->fail($po, 'WinMentor Bridge nu este accesibil.');
         }
 
-        // Setăm modul CodIntern înainte de orice lookup — garantează că
-        // atât searchPartenerById cât și importDocument folosesc același identificator
         $this->bridge->selectFirma();
         $this->bridge->setIdPartField('CodIntern');
 
@@ -215,7 +214,7 @@ class PushComenziFurnizoriService
             'Logon=Master',
             '',
             '[Comanda_1]',
-            'NrDoc=' . ltrim(str_replace('PO-', '', $po->number), '0'),
+            'NrDoc=' . substr(ltrim(str_replace('PO-', '', $po->number), '0'), -8),
             'SimbolCarnet=',
             'Operatie=A',
             "Data={$data}",
@@ -306,6 +305,167 @@ class PushComenziFurnizoriService
         return ['success' => true, 'error' => null, 'orderNr' => $orderNr];
     }
 
+    // ─── Recepție parțială (un singur PurchaseOrderReception → WinMentor) ──────
+
+    public function pushReception(PurchaseOrderReception $reception): array
+    {
+        $reception->loadMissing(['purchaseOrder.supplier', 'purchaseOrder.items.product', 'items']);
+        $po = $reception->purchaseOrder;
+
+        $this->bridge->setLogContext("Recepție::{$po->number}#R{$reception->reception_number}");
+        $this->log('info', "Start import recepție #{$reception->reception_number} din PO [{$po->number}]");
+
+        if (! $this->bridge->isReachable()) {
+            return $this->failReception($reception, 'WinMentor Bridge nu este accesibil.');
+        }
+
+        $this->bridge->selectFirma();
+        $this->bridge->setIdPartField('CodIntern');
+
+        $partenerResult = $this->ensureFurnizorExists($po->supplier);
+        if (! $partenerResult['ok']) {
+            return $this->failReception($reception, $partenerResult['error']);
+        }
+
+        // Construim items din recepția curentă (nu din tot PO-ul)
+        $receptionItems = $reception->items->filter(fn ($ri) => (float) $ri->received_quantity > 0);
+        if ($receptionItems->isEmpty()) {
+            return $this->failReception($reception, 'Niciun produs cu cantitate recepționată > 0.');
+        }
+
+        // Map reception items → PO items pentru SKU resolution
+        $poItemsMap = $po->items->keyBy('id');
+        $fakeItems = $receptionItems->map(function ($ri) use ($poItemsMap) {
+            $poItem = $poItemsMap[$ri->order_item_id] ?? null;
+            if (! $poItem) return null;
+            // Creăm un obiect temporar cu received_quantity din recepție, restul din PO item
+            return (object) [
+                'sku'               => $poItem->sku,
+                'supplier_sku'      => $poItem->supplier_sku,
+                'woo_product_id'    => $poItem->woo_product_id,
+                'product_name'      => $poItem->product_name,
+                'received_quantity'  => $ri->received_quantity,
+                'unit_price'        => $poItem->unit_price,
+                'invoice_position'  => $ri->invoice_position,
+                'product'           => $poItem->product,
+            ];
+        })->filter();
+
+        [$items, $skuMap] = $this->resolveItemsForWinmentor($fakeItems, $po->supplier_id);
+
+        if (empty($items)) {
+            return $this->failReception($reception, 'Niciun produs rezolvat pentru WinMentor.');
+        }
+
+        $articoleResult = $this->bridge->ensureArticoleExist($items);
+        if (! $articoleResult['ok']) {
+            return $this->failReception($reception, implode("\n", $articoleResult['errors']));
+        }
+
+        $conn  = \App\Models\IntegrationConnection::find(5);
+        $lines = $this->buildReceptionLines($reception, $po, $fakeItems, $partenerResult['partener'], $conn, $articoleResult['umMap'] ?? [], $skuMap);
+
+        $this->log('info', "Import recepție #{$reception->reception_number} [{$po->number}]", ['lines' => $lines]);
+
+        $validateResult = $this->bridge->importDocument('comenzi-furnizori', $lines, validateOnly: true);
+        if (! ($validateResult['isValid'] ?? false)) {
+            $errors = implode(', ', $validateResult['errors'] ?? ['Format invalid']);
+            return $this->failReception($reception, "Validare eșuată: {$errors}");
+        }
+
+        $importResult = $this->bridge->importDocument('comenzi-furnizori', $lines, validateOnly: false);
+        $orderNr = $importResult['importedCount'] > 0 ? ($importResult['warnings'][0] ?? null) : null;
+
+        $reception->update([
+            'winmentor_sync_status' => PurchaseOrderReception::WINMENTOR_SYNCED,
+            'winmentor_sync_error'  => null,
+            'winmentor_synced_at'   => now(),
+            'winmentor_order_nr'    => $orderNr,
+        ]);
+
+        $this->log('info', "Recepție #{$reception->reception_number} [{$po->number}] importată cu succes");
+
+        return ['success' => true, 'error' => null, 'orderNr' => $orderNr];
+    }
+
+    private function buildReceptionLines(
+        PurchaseOrderReception $reception,
+        PurchaseOrder $po,
+        \Illuminate\Support\Collection $fakeItems,
+        array $partener,
+        ?\App\Models\IntegrationConnection $conn,
+        array $umMap = [],
+        array $skuMap = [],
+    ): array {
+        $idPartener = $partener['idPartener'] ?? '';
+        $data       = $reception->received_at->format('d.m.Y');
+        $an         = $conn?->bridgeAn() ?? now()->year;
+        $luna       = $conn?->bridgeLuna() ?? now()->month;
+        $moneda     = strtoupper($po->currency ?? 'RON') === 'EUR' ? 'EUR' : 'LEI';
+
+        $receivedItems = $fakeItems->filter(fn ($item) => (float) $item->received_quantity > 0)
+            ->sortBy(fn ($item) => $item->invoice_position ?? PHP_INT_MAX);
+        $totalArticole = $receivedItems->count();
+
+        // NrDoc: max 8 chars (limită WinMentor). Format: ultimele 6 cifre PO + suffix literă (a-z)
+        $poDigits = ltrim(str_replace('PO-', '', $po->number), '0');
+        if (! $reception->is_final || $reception->reception_number > 1) {
+            $suffix = chr(96 + min($reception->reception_number, 26)); // 1→a, 2→b, ..., 26→z
+            $nrDoc  = substr($poDigits, -7) . $suffix; // 7 cifre + 1 literă = 8 max
+        } else {
+            $nrDoc = substr($poDigits, -8); // max 8 cifre
+        }
+
+        $notes = $reception->received_notes ?? '';
+
+        $lines = [
+            '[InfoPachet]',
+            "AnLucru={$an}",
+            "LunaLucru={$luna}",
+            'Tipdocument=COMANDA FURNIZOR',
+            'TotalComenzi=1',
+            'Logon=Master',
+            '',
+            '[Comanda_1]',
+            "NrDoc={$nrDoc}",
+            'SimbolCarnet=',
+            'Operatie=A',
+            "Data={$data}",
+            "DataLivrare={$data}",
+            "CodFurnizor={$idPartener}",
+            'Locatie=',
+            "Moneda={$moneda}",
+            "TotalArticole={$totalArticole}",
+            "Observatii={$notes}",
+            '',
+            '[Items_1]',
+        ];
+
+        $i = 1;
+        foreach ($receivedItems as $item) {
+            $originalSku = $item->sku ?? '';
+            $sku         = $skuMap[$originalSku] ?? $originalSku;
+            $um          = $umMap[$sku] ?? $item->product?->unit ?? 'Buc';
+            $cant        = rtrim(rtrim(number_format((float) $item->received_quantity, 3, '.', ''), '0'), '.');
+            $pret        = rtrim(rtrim(number_format((float) $item->unit_price, 4, '.', ''), '0'), '.');
+
+            $lines[] = "Item_{$i}={$sku};{$um};{$cant};{$pret};0;{$data};";
+            $i++;
+        }
+
+        return $lines;
+    }
+
+    private function failReception(PurchaseOrderReception $reception, string $error): array
+    {
+        $this->log('error', "Eroare import recepție #{$reception->reception_number}: {$error}");
+        $reception->updateQuietly([
+            'winmentor_sync_status' => PurchaseOrderReception::WINMENTOR_FAILED,
+            'winmentor_sync_error'  => $error,
+        ]);
+        return ['success' => false, 'error' => $error, 'orderNr' => null];
+    }
+
     private function buildBatchLines(\Illuminate\Support\Collection $orders, array $partener, ?\App\Models\IntegrationConnection $conn, array $umMap = [], array $skuMap = []): array
     {
         $first      = $orders->first();
@@ -325,8 +485,8 @@ class PushComenziFurnizoriService
         // Observații combinate
         $notes = $orders->pluck('received_notes')->filter()->implode(' | ');
 
-        // NrDoc din primul PO
-        $nrDoc = ltrim(str_replace('PO-', '', $first->number), '0');
+        // NrDoc din primul PO (max 8 chars — limită WinMentor)
+        $nrDoc = substr(ltrim(str_replace('PO-', '', $first->number), '0'), -8);
 
         $lines = [
             '[InfoPachet]',

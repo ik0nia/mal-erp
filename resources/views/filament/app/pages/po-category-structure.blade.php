@@ -81,7 +81,7 @@
                         @php $noRulaj = $p['sales_7d'] == 0 && $p['sales_30d'] == 0; @endphp
                         <tr style="border-bottom: 1px solid #f3f4f6;{{ $noRulaj ? ' opacity: 0.55;' : ' background: #f0fdf4;' }}">
                             <td style="padding: 8px 12px;">
-                                <div style="font-weight: 500; color: #1f2937; line-height: 1.4;">{{ $p['name'] }}</div>
+                                <div style="font-weight: 500; line-height: 1.4;"><a href="{{ route('filament.app.resources.produse.view', $p['woo_product_id']) }}" target="_blank" style="color: #1f2937; text-decoration: none;" onmouseover="this.style.color='#2563eb';this.style.textDecoration='underline'" onmouseout="this.style.color='#1f2937';this.style.textDecoration='none'">{{ $p['name'] }}</a></div>
                                 <div style="color: #9ca3af; font-size: 10px;">
                                     {{ $p['sku'] }}
                                     @if($noRulaj)

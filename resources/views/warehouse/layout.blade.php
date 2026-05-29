@@ -15,6 +15,18 @@
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f1f5f9; color: #1e293b; min-height: 100vh; }
 
+        /* Scanner mode toggle — în navbar receive page */
+        #kbd-toggle {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 2px; padding: 6px 10px; border-radius: 10px; border: none; cursor: pointer;
+            font-size: 11px; font-weight: 700; white-space: nowrap; line-height: 1;
+            transition: background .2s, transform .1s; min-width: 52px;
+        }
+        #kbd-toggle:active { transform: scale(0.93); }
+        #kbd-toggle .kbd-icon { font-size: 20px; line-height: 1; }
+        #kbd-toggle.scanner-mode { background: rgba(255,255,255,0.15); color: white; }
+        #kbd-toggle.keyboard-mode { background: rgba(255,255,255,0.9); color: #b91c1c; }
+
         /* Header */
         .wh-header { background: #b91c1c; color: white; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
         .wh-header h1 { font-size: 18px; font-weight: 700; }
@@ -168,7 +180,7 @@
         }
 
         // CSRF helper
-        const CSRF = document.querySelector('meta[name=csrf-token]')?.content;
+        let CSRF = document.querySelector('meta[name=csrf-token]')?.content;
 
         // IndexedDB queue for offline receptions
         const DB_NAME = 'wh_queue';
@@ -216,6 +228,9 @@
             const queue = await getQueue();
             if (!queue.length || !navigator.onLine) return;
 
+            // Reîmprospătează CSRF înainte de a trimite din coadă
+            await refreshCsrf();
+
             for (const item of queue) {
                 try {
                     const res = await fetch(`/wh/${item.orderId}`, {
@@ -223,7 +238,15 @@
                         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF },
                         body: JSON.stringify(item.payload),
                     });
-                    if (res.ok) {
+                    if (res.status === 419) {
+                        await refreshCsrf();
+                        const retry = await fetch(`/wh/${item.orderId}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF },
+                            body: JSON.stringify(item.payload),
+                        });
+                        if (retry.ok) await removeFromQueue(item.orderId);
+                    } else if (res.ok) {
                         await removeFromQueue(item.orderId);
                     }
                 } catch (e) {}
@@ -262,6 +285,7 @@
         async function doSubscribe(reg) {
             try {
                 const resp = await fetch('/wh/push/vapid-key', { headers: { 'X-CSRF-TOKEN': CSRF } });
+                if (!resp.ok || !(resp.headers.get('content-type') || '').includes('json')) return;
                 const { key } = await resp.json();
 
                 const sub = await reg.pushManager.subscribe({
@@ -312,8 +336,129 @@
         document.addEventListener('DOMContentLoaded', () => {
             if (!sessionStorage.getItem('wh_push_dismissed')) initPush();
         });
+
+        // ── Session keep-alive (previne expirarea sesiunii pe PWA) ────────
+        // Ping la fiecare 10 min cât PWA e deschisă — resetează timeout-ul sesiunii Laravel
+        setInterval(() => {
+            if (!navigator.onLine) return;
+            refreshCsrf();
+        }, 10 * 60 * 1000);
+
+        // Reîmprospătează CSRF-ul din server (GET pe pagina curentă sau /wh/)
+        async function refreshCsrf() {
+            try {
+                const res = await fetch('/wh/', { headers: { 'Accept': 'text/html' }, credentials: 'same-origin' });
+                if (!res.ok) return;
+                const html = await res.text();
+                const match = html.match(/name="csrf-token"\s+content="([^"]+)"/);
+                if (match && match[1]) {
+                    CSRF = match[1];
+                    const meta = document.querySelector('meta[name=csrf-token]');
+                    if (meta) meta.setAttribute('content', CSRF);
+                }
+            } catch(e) {}
+        }
+
+        // Când telefonul/tab-ul revine din background → refresh CSRF imediat
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && navigator.onLine) {
+                refreshCsrf();
+            }
+        });
     </script>
 
     @yield('scripts')
+
+    {{-- ── Scanner / Keyboard mode toggle JS (butonul e în receive.blade.php) --}}
+    <script>
+    (function() {
+        const STORAGE_KEY = 'wh_keyboard_mode';
+        let keyboardMode = localStorage.getItem(STORAGE_KEY) === '1';
+
+        const btn = document.getElementById('kbd-toggle');
+        if (!btn) return; // butonul există doar pe pagina de recepție
+
+        // Suprimă tastatura soft pe un input (orice input EXCEPT #item-search în scanner mode)
+        function suppressKb(el) {
+            if (el.id === 'item-search') return; // search-ul rămâne normal — scannerul injectează prin IME
+            if (el.dataset.origInputmode === undefined) {
+                el.dataset.origInputmode = el.getAttribute('inputmode') || '';
+            }
+            el.setAttribute('inputmode', 'none');
+        }
+
+        function restoreKb(el) {
+            const orig = el.dataset.origInputmode;
+            if (orig === undefined) return;
+            orig ? el.setAttribute('inputmode', orig) : el.removeAttribute('inputmode');
+        }
+
+        function getNonSearchInputs() {
+            return document.querySelectorAll('input:not([type=hidden]):not(#item-search), textarea');
+        }
+
+        // Aplică pe input-urile nou adăugate dinamic
+        const observer = new MutationObserver(mutations => {
+            if (keyboardMode) return;
+            mutations.forEach(m => {
+                m.addedNodes.forEach(node => {
+                    if (node.nodeType !== 1) return;
+                    const els = node.matches('input:not([type=hidden]):not(#item-search), textarea')
+                        ? [node] : [...node.querySelectorAll('input:not([type=hidden]):not(#item-search), textarea')];
+                    els.forEach(suppressKb);
+                });
+            });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        function focusSearch() {
+            const s = document.getElementById('item-search');
+            if (!s) return;
+            // Focusăm cât e readonly → Android nu deschide tastatura
+            // Apoi îl facem editabil → scannerul poate injecta prin IME
+            s.readOnly = true;
+            s.focus();
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                s.readOnly = false;
+            }));
+        }
+
+        function applyMode() {
+            if (keyboardMode) {
+                btn.querySelector('.kbd-icon').textContent  = '⌨';
+                btn.querySelector('.kbd-label').textContent = 'tastatură';
+                btn.className = 'keyboard-mode';
+                document.querySelectorAll('input:not([type=hidden]), textarea').forEach(restoreKb);
+            } else {
+                btn.querySelector('.kbd-icon').textContent  = '📷';
+                btn.querySelector('.kbd-label').textContent = 'scanner';
+                btn.className = 'scanner-mode';
+                getNonSearchInputs().forEach(suppressKb);
+                setTimeout(focusSearch, 200);
+            }
+        }
+
+        btn.addEventListener('click', () => {
+            keyboardMode = !keyboardMode;
+            localStorage.setItem(STORAGE_KEY, keyboardMode ? '1' : '0');
+            applyMode();
+        });
+
+        // Re-focus search după orice tap pe butoane/cards (nu pe alt input, nu când e modal deschis)
+        document.addEventListener('click', function(e) {
+            if (keyboardMode) return;
+            const tag = e.target.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+            // Nu refocusăm dacă un modal e vizibil
+            const modal = document.getElementById('pos-modal');
+            if (modal && modal.style.display !== 'none') return;
+            setTimeout(focusSearch, 120);
+        });
+
+
+        // DOM-ul e deja gata
+        applyMode();
+    })();
+    </script>
 </body>
 </html>

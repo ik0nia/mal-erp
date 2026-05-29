@@ -1,7 +1,16 @@
 <?php
 
 use App\Http\Controllers\Warehouse\WarehouseController;
+use App\Http\Controllers\Inventory\InventoryController;
 use Illuminate\Support\Facades\Route;
+
+// ─── PWA Inventar / Lookup produse ──────────────────────────────────────────
+Route::prefix('inv')->name('inventory.')->middleware('auth')->group(function () {
+    Route::get('/',               [InventoryController::class, 'index'])->name('index');
+    Route::post('scan',           [InventoryController::class, 'scan'])->name('scan');
+    Route::post('ean-request',    [InventoryController::class, 'eanRequest'])->name('ean-request');
+    Route::get('search',          [InventoryController::class, 'searchProducts'])->name('search');
+});
 
 Route::prefix('wh')->name('warehouse.')->group(function () {
 
@@ -31,7 +40,9 @@ Route::prefix('wh')->name('warehouse.')->group(function () {
         Route::post('push/unsubscribe', [WarehouseController::class, 'pushUnsubscribe'])->name('push.unsubscribe');
         Route::get('push/vapid-key',    [WarehouseController::class, 'vapidPublicKey'])->name('push.vapid-key');
         Route::get('supplier/{supplier}/products', [WarehouseController::class, 'supplierProducts'])->name('supplier.products');
-        Route::get('{order}',        [WarehouseController::class, 'receive'])->name('receive');
-        Route::post('{order}',       [WarehouseController::class, 'receiveStore'])->name('receive.store');
+        Route::get('{order}',            [WarehouseController::class, 'receive'])->name('receive');
+        Route::post('{order}',           [WarehouseController::class, 'receiveStore'])->name('receive.store');
+        Route::post('{order}/draft',     [WarehouseController::class, 'draftSave'])->name('receive.draft');
+        Route::delete('{order}/draft',   [WarehouseController::class, 'draftDelete'])->name('receive.draft.delete');
     });
 });

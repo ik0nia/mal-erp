@@ -18,9 +18,10 @@ class PurchaseOrder extends Model
     public const STATUS_PENDING_APPROVAL = 'pending_approval';
     public const STATUS_APPROVED         = 'approved';
     public const STATUS_REJECTED         = 'rejected';
-    public const STATUS_SENT             = 'sent';
-    public const STATUS_RECEIVED         = 'received';
-    public const STATUS_CANCELLED        = 'cancelled';
+    public const STATUS_SENT                = 'sent';
+    public const STATUS_PARTIALLY_RECEIVED = 'partially_received';
+    public const STATUS_RECEIVED           = 'received';
+    public const STATUS_CANCELLED          = 'cancelled';
 
     protected $fillable = [
         'number',
@@ -122,9 +123,10 @@ class PurchaseOrder extends Model
             self::STATUS_PENDING_APPROVAL => 'În așteptare aprobare',
             self::STATUS_APPROVED         => 'Aprobat',
             self::STATUS_REJECTED         => 'Respins',
-            self::STATUS_SENT             => 'Trimis',
-            self::STATUS_RECEIVED         => 'Recepționat',
-            self::STATUS_CANCELLED        => 'Anulat',
+            self::STATUS_SENT                => 'Trimis',
+            self::STATUS_PARTIALLY_RECEIVED => 'Recepție parțială',
+            self::STATUS_RECEIVED           => 'Recepționat',
+            self::STATUS_CANCELLED          => 'Anulat',
         ];
     }
 
@@ -135,9 +137,10 @@ class PurchaseOrder extends Model
             self::STATUS_PENDING_APPROVAL => 'warning',
             self::STATUS_APPROVED         => 'success',
             self::STATUS_REJECTED         => 'danger',
-            self::STATUS_SENT             => 'info',
-            self::STATUS_RECEIVED         => 'success',
-            self::STATUS_CANCELLED        => 'gray',
+            self::STATUS_SENT                => 'info',
+            self::STATUS_PARTIALLY_RECEIVED => 'warning',
+            self::STATUS_RECEIVED           => 'success',
+            self::STATUS_CANCELLED          => 'gray',
         ];
     }
 
@@ -176,9 +179,25 @@ class PurchaseOrder extends Model
         return $this->hasMany(PurchaseOrderItem::class);
     }
 
+    public function receptions(): HasMany
+    {
+        return $this->hasMany(PurchaseOrderReception::class);
+    }
+
     public function recalculateTotals(): void
     {
-        $total = $this->items()->sum('line_total');
+        $items = $this->items()->get();
+
+        $hasReception = $items->contains(fn ($i) => (float) $i->received_quantity > 0);
+
+        if ($hasReception) {
+            // Total = sum(line_total) doar pentru items cu recepție (received_quantity > 0)
+            $total = $items
+                ->filter(fn ($i) => (float) $i->received_quantity > 0)
+                ->sum(fn ($i) => (float) $i->line_total);
+        } else {
+            $total = $items->sum(fn ($i) => (float) $i->line_total);
+        }
 
         $this->forceFill(['total_value' => number_format((float) $total, 2, '.', '')])->saveQuietly();
     }

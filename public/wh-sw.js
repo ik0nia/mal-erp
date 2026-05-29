@@ -1,4 +1,4 @@
-const CACHE = 'wh-v5';
+const CACHE = 'wh-v6';
 
 const STATIC = [
     '/wh-manifest.json',

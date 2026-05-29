@@ -21,16 +21,24 @@
 
     {{-- Ecran furnizori --}}
     <div id="suppliers-screen">
-        <div id="suppliers-list"></div>
-
-        <div style="text-align:center; margin-top:24px; display:flex; flex-direction:column; align-items:center; gap:10px">
-            <button class="btn btn-gray btn-sm" onclick="refreshOrders()">
+        <div style="display:flex; gap:10px; margin-bottom:12px">
+            <button class="btn btn-gray btn-sm" onclick="refreshOrders()" style="flex:1">
                 🔄 Actualizează lista
             </button>
-            <a href="/wh/history" class="btn btn-gray btn-sm" style="text-decoration:none; color:#475569">
-                🕐 Vezi recepții trecute
+            <a href="/wh/history" class="btn btn-gray btn-sm" style="flex:1; text-decoration:none; color:#475569; text-align:center">
+                🕐 Istoric recepții
             </a>
         </div>
+
+        <div style="position:relative; margin-bottom:16px">
+            <input type="text" id="supplier-search" placeholder="Caută furnizor..."
+                autocomplete="off" autocorrect="off" spellcheck="false"
+                style="width:100%; padding:14px 44px 14px 16px; border-radius:12px; border:2px solid #e2e8f0; font-size:16px; color:#1e293b; background:white; box-sizing:border-box; outline:none; transition:border-color .15s"
+                onfocus="this.style.borderColor='#b91c1c'" onblur="this.style.borderColor='#e2e8f0'">
+            <span id="search-clear" onclick="clearSearch()" style="display:none; position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:22px; color:#94a3b8; cursor:pointer; line-height:1">&times;</span>
+        </div>
+
+        <div id="suppliers-list"></div>
     </div>
 
     {{-- Ecran comenzi furnizor selectat --}}
@@ -149,11 +157,18 @@
     function renderOrdersList() {
         document.getElementById('orders-list').innerHTML = currentSupplierOrders.map(o => {
             const isSel = selectedIds.has(o.id);
+            const isPartial = o.status === 'partially_received';
+            const partialBadge = isPartial
+                ? `<span style="background:#f59e0b; color:white; font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; white-space:nowrap">Parțial (${o.receptions_count})</span>`
+                : '';
+            const draftBadge = o.has_draft
+                ? `<span style="background:#3b82f6; color:white; font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; white-space:nowrap">📋 Draft ${o.draft_user || ''}</span>`
+                : '';
             return `
                 <div class="order-card-wrap">
                     <a href="/wh/${o.id}" class="order-card order-card-link${isSel ? ' selected' : ''}"
                         onclick="return handleCardClick(event, ${o.id})">
-                        <div class="number">${o.number}</div>
+                        <div class="number" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap">${o.number} ${partialBadge} ${draftBadge}</div>
                         <div class="meta">
                             <span class="badge">${o.items_count} produse</span>
                             <span>${o.created_at}</span>
@@ -216,6 +231,9 @@
         document.getElementById('batch-bar').style.display = 'none';
         document.getElementById('orders-screen').style.display = 'none';
         document.getElementById('suppliers-screen').style.display = 'block';
+        document.getElementById('supplier-search').value = '';
+        document.getElementById('search-clear').style.display = 'none';
+        renderSuppliers(ALL_ORDERS);
     }
 
     function escHtml(str) {
@@ -228,6 +246,12 @@
         if (!navigator.onLine) { alert('Ești offline. Lista nu poate fi actualizată.'); return; }
         try {
             const res = await fetch('/wh/orders', { headers: { 'X-CSRF-TOKEN': CSRF } });
+            if (!res.ok || !(res.headers.get('content-type') || '').includes('json')) {
+                sessionStorage.removeItem('wh_pin_ok');
+                sessionStorage.removeItem('wh_pin_ts');
+                window.location.href = '/wh/pin';
+                return;
+            }
             ALL_ORDERS = await res.json();
             localStorage.setItem('wh_orders_cache', JSON.stringify({ orders: ALL_ORDERS, ts: Date.now() }));
             renderSuppliers(ALL_ORDERS);
@@ -260,6 +284,7 @@
         if (Date.now() - lastRefresh < REFRESH_COOLDOWN) return;
         try {
             const res = await fetch('/wh/orders', { headers: { 'X-CSRF-TOKEN': CSRF } });
+            if (!res.ok || !(res.headers.get('content-type') || '').includes('json')) return;
             const orders = await res.json();
             lastRefresh = Date.now();
             ALL_ORDERS = orders;
@@ -275,9 +300,35 @@
         if (document.visibilityState === 'visible') silentRefresh();
     });
 
+    // ── Căutare furnizori ──────────────────────────────────────────────────
+    function filterSuppliers(query) {
+        if (!query) {
+            renderSuppliers(ALL_ORDERS);
+            return;
+        }
+        const q = query.toLowerCase();
+        const filtered = ALL_ORDERS.filter(o => o.supplier.toLowerCase().includes(q));
+        renderSuppliers(filtered);
+    }
+
+    function clearSearch() {
+        const input = document.getElementById('supplier-search');
+        input.value = '';
+        document.getElementById('search-clear').style.display = 'none';
+        filterSuppliers('');
+        input.focus();
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         renderSuppliers(ALL_ORDERS);
         showQueueStatus();
+
+        const searchInput = document.getElementById('supplier-search');
+        searchInput.addEventListener('input', function() {
+            const val = this.value.trim();
+            document.getElementById('search-clear').style.display = val ? 'block' : 'none';
+            filterSuppliers(val);
+        });
     });
     window.addEventListener('online', () => { syncQueue(); showQueueStatus(); silentRefresh(); });
 </script>

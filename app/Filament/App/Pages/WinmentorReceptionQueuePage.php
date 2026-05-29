@@ -2,8 +2,9 @@
 
 namespace App\Filament\App\Pages;
 
-use App\Jobs\PushComenziFurnizoriToWinmentorJob;
+use App\Jobs\PushReceptionToWinmentorJob;
 use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderReception;
 use App\Services\Winmentor\PushComenziFurnizoriService;
 use App\Services\Winmentor\WinmentorBridgeClient;
 use Filament\Actions\Action;
@@ -47,32 +48,32 @@ class WinmentorReceptionQueuePage extends Page implements HasTable
     {
         return $table
             ->query(
-                PurchaseOrder::query()
+                PurchaseOrderReception::query()
                     ->whereIn('winmentor_sync_status', [
-                        PurchaseOrder::WINMENTOR_PENDING,
-                        PurchaseOrder::WINMENTOR_FAILED,
+                        PurchaseOrderReception::WINMENTOR_PENDING,
+                        PurchaseOrderReception::WINMENTOR_FAILED,
                     ])
-                    ->orWhere(function (Builder $q) {
-                        // Include și PO-uri received fără sync status setat (receptii cantitative mai vechi)
-                        $q->where('status', PurchaseOrder::STATUS_RECEIVED)
-                          ->whereNull('winmentor_sync_status');
-                    })
-                    ->with(['supplier', 'items'])
+                    ->with(['purchaseOrder.supplier', 'purchaseOrder.items', 'items'])
                     ->latest('received_at')
             )
             ->columns([
-                Tables\Columns\TextColumn::make('number')
+                Tables\Columns\TextColumn::make('purchaseOrder.number')
                     ->label('Nr. comandă')
                     ->searchable()
                     ->weight('bold'),
 
-                Tables\Columns\TextColumn::make('supplier.name')
+                Tables\Columns\TextColumn::make('reception_number')
+                    ->label('Recepție #')
+                    ->badge()
+                    ->color('info'),
+
+                Tables\Columns\TextColumn::make('purchaseOrder.supplier.name')
                     ->label('Furnizor')
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('received_at')
                     ->label('Data recepție')
-                    ->date('d.m.Y')
+                    ->dateTime('d.m.Y H:i')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('items_count')
@@ -85,15 +86,14 @@ class WinmentorReceptionQueuePage extends Page implements HasTable
                     ->label('Status WinMentor')
                     ->badge()
                     ->formatStateUsing(fn ($state) => match($state) {
-                        PurchaseOrder::WINMENTOR_PENDING => 'În așteptare',
-                        PurchaseOrder::WINMENTOR_FAILED  => 'Eroare',
-                        null                             => 'Nesincronizat',
-                        default                          => $state,
+                        PurchaseOrderReception::WINMENTOR_PENDING => 'În așteptare',
+                        PurchaseOrderReception::WINMENTOR_FAILED  => 'Eroare',
+                        default                                   => $state,
                     })
                     ->color(fn ($state) => match($state) {
-                        PurchaseOrder::WINMENTOR_PENDING => 'warning',
-                        PurchaseOrder::WINMENTOR_FAILED  => 'danger',
-                        default                          => 'gray',
+                        PurchaseOrderReception::WINMENTOR_PENDING => 'warning',
+                        PurchaseOrderReception::WINMENTOR_FAILED  => 'danger',
+                        default                                   => 'gray',
                     }),
 
                 Tables\Columns\TextColumn::make('winmentor_synced_at')
@@ -106,18 +106,41 @@ class WinmentorReceptionQueuePage extends Page implements HasTable
                     ->label('Eroare')
                     ->wrap()
                     ->color('danger')
-                    ->visible(fn ($record) => filled($record?->winmentor_sync_error))
                     ->toggleable(isToggledHiddenByDefault: false),
             ])
             ->actions([
-                TableAction::make('verify_and_push')
-                    ->label('Verifică & Trimite')
-                    ->icon('heroicon-o-arrow-up-circle')
+                TableAction::make('retry')
+                    ->label('Reîncearcă')
+                    ->icon('heroicon-o-arrow-path')
                     ->color('primary')
                     ->requiresConfirmation()
-                    ->modalHeading(fn (PurchaseOrder $record) => "Trimite în WinMentor — {$record->number}")
-                    ->modalDescription('Se va verifica dacă furnizorul și toate produsele există în WinMentor. Produsele lipsă vor fi create automat.')
-                    ->action(fn (PurchaseOrder $record) => $this->pushToWinmentor($record)),
+                    ->modalHeading(fn (PurchaseOrderReception $record) => "Reîncearcă sincronizare — {$record->purchaseOrder->number} #{$record->reception_number}")
+                    ->modalDescription('Se va retrimite recepția către WinMentor Bridge.')
+                    ->action(function (PurchaseOrderReception $record): void {
+                        $record->update([
+                            'winmentor_sync_status' => PurchaseOrderReception::WINMENTOR_PENDING,
+                            'winmentor_sync_error'  => null,
+                        ]);
+                        Notification::make()->success()->title('Job dispatched, se reîncearcă sincronizarea.')->send();
+                    }),
+
+                TableAction::make('push_now')
+                    ->label('Trimite acum')
+                    ->icon('heroicon-o-arrow-up-circle')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->modalHeading(fn (PurchaseOrderReception $record) => "Trimite sincron — {$record->purchaseOrder->number} #{$record->reception_number}")
+                    ->modalDescription('Sincronizare directă (fără coadă). Poate dura câteva secunde.')
+                    ->action(function (PurchaseOrderReception $record): void {
+                        $service = new PushComenziFurnizoriService(new WinmentorBridgeClient());
+                        $result  = $service->pushReception($record);
+
+                        if ($result['success']) {
+                            Notification::make()->success()->title('Trimis în WinMentor cu succes.')->send();
+                        } else {
+                            Notification::make()->danger()->title('Eroare WinMentor')->body($result['error'])->send();
+                        }
+                    }),
 
                 TableAction::make('skip')
                     ->label('Ignoră')
@@ -125,66 +148,35 @@ class WinmentorReceptionQueuePage extends Page implements HasTable
                     ->color('gray')
                     ->requiresConfirmation()
                     ->modalHeading('Marchează ca ignorat?')
-                    ->modalDescription('PO-ul nu va mai apărea în această coadă. Poate fi reactivat din pagina comenzii.')
-                    ->action(function (PurchaseOrder $record): void {
+                    ->modalDescription('Recepția nu va mai apărea în coadă.')
+                    ->action(function (PurchaseOrderReception $record): void {
                         $record->update([
-                            'winmentor_sync_status' => PurchaseOrder::WINMENTOR_SYNCED,
+                            'winmentor_sync_status' => PurchaseOrderReception::WINMENTOR_SYNCED,
                             'winmentor_sync_error'  => null,
                         ]);
                         Notification::make()->success()->title('Marcat ca ignorat.')->send();
                     }),
             ])
             ->bulkActions([
-                BulkAction::make('push_all')
-                    ->label('Trimite selectate în WinMentor')
-                    ->icon('heroicon-o-arrow-up-circle')
+                BulkAction::make('retry_all')
+                    ->label('Reîncearcă selectate')
+                    ->icon('heroicon-o-arrow-path')
                     ->requiresConfirmation()
                     ->action(function (\Illuminate\Support\Collection $records): void {
-                        $ok      = 0;
-                        $failed  = 0;
                         foreach ($records as $record) {
-                            $result = $this->pushToWinmentor($record, silent: true);
-                            $result ? $ok++ : $failed++;
+                            $record->update([
+                                'winmentor_sync_status' => PurchaseOrderReception::WINMENTOR_PENDING,
+                                'winmentor_sync_error'  => null,
+                            ]);
                         }
-                        Notification::make()
-                            ->title("{$ok} trimise cu succes" . ($failed > 0 ? ", {$failed} cu erori." : '.'))
-                            ->{$failed > 0 ? 'warning' : 'success'}()
+                        Notification::make()->success()
+                            ->title("{$records->count()} recepții trimise în coadă.")
                             ->send();
                     }),
             ])
             ->emptyStateHeading('Nicio recepție în așteptare')
             ->emptyStateDescription('Recepțiile cantitative vor apărea aici automat după finalizare.')
             ->emptyStateIcon('heroicon-o-check-circle');
-    }
-
-    private function pushToWinmentor(PurchaseOrder $record, bool $silent = false): bool
-    {
-        try {
-            $service = new PushComenziFurnizoriService(new WinmentorBridgeClient());
-            $result  = $service->push($record);
-
-            if ($result['success']) {
-                if (! $silent) {
-                    Notification::make()->success()->title('Trimis în WinMentor cu succes.')->send();
-                }
-                return true;
-            }
-
-            if (! $silent) {
-                Notification::make()->danger()->title('Eroare WinMentor')->body($result['error'])->send();
-            }
-            return false;
-
-        } catch (\Throwable $e) {
-            $record->update([
-                'winmentor_sync_status' => PurchaseOrder::WINMENTOR_FAILED,
-                'winmentor_sync_error'  => $e->getMessage(),
-            ]);
-            if (! $silent) {
-                Notification::make()->danger()->title('Eroare WinMentor')->body($e->getMessage())->send();
-            }
-            return false;
-        }
     }
 
     protected function getHeaderActions(): array

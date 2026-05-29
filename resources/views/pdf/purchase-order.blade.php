@@ -133,7 +133,7 @@
             <div class="muted">{{ $item->notes }}</div>
           @endif
           @if(!empty($item->sources_json))
-            @php $sources = json_decode($item->sources_json, true) ?? [] @endphp
+            @php $sources = is_array($item->sources_json) ? $item->sources_json : (json_decode($item->sources_json, true) ?? []) @endphp
             @if(count($sources) > 0)
               <div class="sources-list">
                 Necesar: {{ collect($sources)->pluck('request_number')->filter()->implode(', ') }}

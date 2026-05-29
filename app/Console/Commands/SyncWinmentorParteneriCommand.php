@@ -1,0 +1,198 @@
+<?php
+
+namespace App\Console\Commands;
+
+use App\Models\IntegrationConnection;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+
+class SyncWinmentorParteneriCommand extends Command
+{
+    protected $signature = 'winmentor:sync-parteneri';
+    protected $description = 'Sincronizează partenerii din WinMentor Bridge în tabela locală winmentor_parteneri';
+
+    public function handle(): int
+    {
+        $conn = IntegrationConnection::find(5);
+        if (! $conn) {
+            $this->error('Conexiunea WinMentor Bridge (ID=5) nu există.');
+            return self::FAILURE;
+        }
+
+        $baseUrl = rtrim($conn->bridgeUrl(), '/');
+        $apiKey  = $conn->bridgeApiKey();
+
+        $this->info('Descărc parteneri din WinMentor Bridge...');
+
+        // Selectăm firma + setăm IdPartField pe CodIntern (nu cod sediu)
+        Http::timeout(30)
+            ->withHeaders(['X-API-Key' => $apiKey])
+            ->post($baseUrl . '/api/firme/select', [
+                'firma' => $conn->bridgeFirma(),
+                'an'    => $conn->bridgeAn(),
+                'luna'  => $conn->bridgeLuna(),
+            ]);
+
+        Http::timeout(10)->withoutVerifying()
+            ->withHeaders(['X-API-Key' => $apiKey])
+            ->post($baseUrl . '/api/config/id-part-field', [
+                'fieldName' => 'CodIntern',
+            ]);
+
+        $all = [];
+        $page = 1;
+        do {
+            $r = Http::timeout(30)->withoutVerifying()
+                ->withHeaders(['X-API-Key' => $apiKey])
+                ->get($baseUrl . '/api/parteneri', ['page' => $page, 'pageSize' => 5000]);
+
+            $data = $r->json()['data'] ?? [];
+            $items = $data['items'] ?? [];
+            $all = array_merge($all, $items);
+
+            $hasNext = $data['hasNextPage'] ?? false;
+            $this->output->write('.');
+            $page++;
+        } while ($hasNext && $page <= 20);
+
+        $this->newLine();
+        $this->info('Descărcați: ' . count($all) . ' parteneri');
+
+        if (empty($all)) {
+            $this->warn('Niciun partener returnat — opresc.');
+            return self::SUCCESS;
+        }
+
+        $now = now()->toDateTimeString();
+        $upserted = 0;
+
+        foreach (array_chunk($all, 500) as $chunk) {
+            $rows = [];
+            foreach ($chunk as $p) {
+                $wmId = $p['idPartener'] ?? null;
+                if (! $wmId) continue;
+
+                $agent = trim(($p['numeAgent'] ?? '') . ' ' . ($p['prenumeAgent'] ?? ''));
+
+                $rows[] = [
+                    'wm_id'            => $wmId,
+                    'denumire'         => mb_substr($p['denumire'] ?? '', 0, 255),
+                    'cod_fiscal'       => mb_substr($p['codFiscal'] ?? '', 0, 50),
+                    'localitate'       => mb_substr($p['localitate'] ?? '', 0, 255),
+                    'adresa'           => mb_substr($p['adresa'] ?? '', 0, 500),
+                    'telefon'          => mb_substr($p['telefon'] ?? '', 0, 100),
+                    'persoana_contact' => mb_substr($p['persoanaContact'] ?? '', 0, 255),
+                    'clasa'            => mb_substr($p['simbolClasa'] ?? $p['clasaCaract'] ?? '', 0, 100),
+                    'categ_pret'       => mb_substr($p['denCategPret'] ?? '', 0, 100),
+                    'agent'            => mb_substr($agent, 0, 255),
+                    'discount'         => mb_substr($p['discount'] ?? '', 0, 50),
+                    'cod_extern'       => mb_substr($p['codExtern'] ?? '', 0, 50),
+                    'blocat'           => in_array($p['partenerBlocat'] ?? '', ['1', 'DA'], true),
+                    'moneda'           => mb_substr($p['monedaImplicita'] ?? 'Lei', 0, 10),
+                    'tara'             => mb_substr($p['tara'] ?? '', 0, 50),
+                    'observatii'       => $p['observatii'] ?? null,
+                    'pj_pf'            => mb_substr($p['pfSauPj'] ?? $p['telPersoaneContact'] ?? '', 0, 10),
+                    'updated_at'       => $now,
+                    'created_at'       => $now,
+                ];
+            }
+
+            DB::table('winmentor_parteneri')->upsert($rows, ['wm_id'], [
+                'denumire', 'cod_fiscal', 'localitate', 'adresa', 'telefon',
+                'persoana_contact', 'clasa', 'categ_pret', 'agent', 'discount',
+                'cod_extern', 'blocat', 'moneda', 'tara', 'observatii', 'pj_pf', 'updated_at',
+            ]);
+
+            $upserted += count($rows);
+        }
+
+        $this->info("Sincronizat: {$upserted} parteneri.");
+
+        // Invalidăm cache-ul vechi
+        \Illuminate\Support\Facades\Cache::forget('wm_parteneri_map');
+
+        // ── Reconciliere winmentor_id pe furnizori ERP ──────────────────────────
+        $this->reconcileSupplierWinmentorIds();
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * Verifică toți furnizorii cu winmentor_id setat și corectează ID-urile
+     * care nu mai există în Bridge (ex. după reindexare WinMentor).
+     * Potrivirea se face prin CUI/CIF normalizat, apoi prin denumire exactă.
+     */
+    private function reconcileSupplierWinmentorIds(): void
+    {
+        $suppliers = \App\Models\Supplier::whereNotNull('winmentor_id')
+            ->where('winmentor_id', '!=', '')
+            ->get();
+
+        if ($suppliers->isEmpty()) {
+            return;
+        }
+
+        $parteneri = DB::table('winmentor_parteneri')->get();
+        $byWmId   = $parteneri->keyBy('wm_id');
+
+        // Index CUI normalizat → parteneri (fără prefix RO, fără spații)
+        $byCuiNorm = [];
+        foreach ($parteneri as $p) {
+            $cuiNorm = preg_replace('/[^0-9]/', '', $p->cod_fiscal ?? '');
+            if ($cuiNorm !== '') {
+                $byCuiNorm[$cuiNorm][] = $p;
+            }
+        }
+
+        // Index denumire lowercase → parteneri
+        $byName = [];
+        foreach ($parteneri as $p) {
+            $nameLow = mb_strtolower(trim($p->denumire ?? ''));
+            if ($nameLow !== '' && ! str_starts_with($nameLow, 'x')) {
+                $byName[$nameLow][] = $p;
+            }
+        }
+
+        $fixed = 0;
+
+        foreach ($suppliers as $s) {
+            // ID-ul curent este valid în Bridge → skip
+            if ($byWmId->has($s->winmentor_id)) {
+                continue;
+            }
+
+            // Căutare prin CUI normalizat
+            $cuiNorm   = preg_replace('/[^0-9]/', '', $s->vat_number ?? '');
+            $candidates = collect($byCuiNorm[$cuiNorm] ?? []);
+
+            // Căutare suplimentară prin denumire exactă
+            $nameLow     = mb_strtolower(trim($s->name));
+            $nameMatches = collect($byName[$nameLow] ?? []);
+            $candidates  = $candidates->merge($nameMatches)
+                ->unique('wm_id')
+                ->reject(fn ($p) => str_starts_with(mb_strtolower($p->denumire ?? ''), 'x'));
+
+            if ($candidates->isEmpty()) {
+                continue;
+            }
+
+            // Preferă potrivire exactă pe denumire
+            $best = $candidates->first(fn ($p) =>
+                mb_strtolower(trim($p->denumire)) === $nameLow
+            ) ?? $candidates->first();
+
+            $oldId = $s->winmentor_id;
+            $s->updateQuietly(['winmentor_id' => $best->wm_id]);
+            $fixed++;
+
+            $this->line("  ↻ {$s->name}: {$oldId} → {$best->wm_id}");
+        }
+
+        if ($fixed > 0) {
+            $this->info("Reconciliere: {$fixed} furnizori cu winmentor_id corectat.");
+        } else {
+            $this->info('Reconciliere: toate ID-urile sunt la zi.');
+        }
+    }
+}

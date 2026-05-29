@@ -49,6 +49,16 @@ class WooWebhookController extends Controller
 
         $data = $request->json()->all();
 
+        if ($topic === 'product.deleted') {
+            $wooId = (int) ($data['id'] ?? 0);
+            if ($wooId > 0) {
+                WooProduct::where('connection_id', $connection->id)
+                    ->where('woo_id', $wooId)
+                    ->update(['status' => 'trash', 'woo_id' => null]);
+            }
+            return response('OK', 200);
+        }
+
         if (in_array($topic, ['product.updated', 'product.created'], true)) {
             try {
                 return $this->syncProduct($connection, $data);
@@ -116,8 +126,11 @@ class WooWebhookController extends Controller
             }
         }
 
+        // Evităm loop: observer-ul nu trebuie să împingă prețul înapoi pe WooCommerce
+        WooProduct::$skipPricePush = true;
+
         $product->update([
-            'name'              => $data['name'] ?? $product->name,
+            // name: NU suprascris din Woo — ERP-ul e sursa de adevăr; se actualizează doar manual
             'slug'              => filled($data['slug'] ?? '') ? $data['slug'] : $product->slug,
             'type'              => $data['type'] ?? $product->type,
             'status'            => $data['status'] ?? $product->status,
@@ -208,6 +221,8 @@ class WooWebhookController extends Controller
 
             $product->categories()->sync($categoryIds);
         }
+
+        WooProduct::$skipPricePush = false;
 
         // Sincronizare furnizor din meta_data
         $metaData     = collect($data['meta_data'] ?? []);

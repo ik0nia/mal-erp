@@ -107,7 +107,8 @@
             if (data.ok) {
                 sessionStorage.setItem('wh_pin_ok', '1');
                 sessionStorage.setItem('wh_pin_ts', String(Date.now()));
-                window.location.href = '/wh/';
+                const params = new URLSearchParams(window.location.search);
+                window.location.href = params.get('next') || '/wh/';
             } else {
                 updateDots('#dc2626');
                 setTimeout(() => {

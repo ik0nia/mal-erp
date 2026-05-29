@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raport Achizitii 30 Zile - Malinco ERP</title>
+<style>
+@page { size: A4; margin: 12mm; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 10px; color: #333; line-height: 1.35; background: #f5f5f5; }
+@media print {
+  body { font-size: 9px; background: #fff; }
+  .no-print { display: none !important; }
+  .page-break { page-break-before: always; }
+  .section { break-inside: avoid; }
+}
+.container { max-width: 210mm; margin: 0 auto; background: #fff; padding: 12mm; }
+/* Header */
+.header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #8B1A1A; padding-bottom: 8px; margin-bottom: 12px; }
+.header-left { display: flex; align-items: center; gap: 12px; }
+.header h1 { font-size: 16px; color: #8B1A1A; font-weight: 700; }
+.header .subtitle { font-size: 10px; color: #666; }
+/* Section titles */
+h2 { font-size: 13px; color: #8B1A1A; border-bottom: 2px solid #8B1A1A; padding-bottom: 3px; margin: 14px 0 8px 0; }
+h3 { font-size: 11px; color: #555; margin: 8px 0 4px 0; }
+/* Stat cards */
+.stat-row { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.stat-card { flex: 1; min-width: 90px; background: #f8f5f0; border: 1px solid #e0d8cc; border-radius: 4px; padding: 6px 8px; text-align: center; }
+.stat-card .val { font-size: 18px; font-weight: 700; color: #8B1A1A; }
+.stat-card .label { font-size: 8px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+/* Tables */
+table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 8px; }
+th { background: #8B1A1A; color: #fff; font-weight: 600; padding: 3px 4px; text-align: left; font-size: 8px; text-transform: uppercase; }
+td { padding: 2px 4px; border-bottom: 1px solid #eee; }
+tr:nth-child(even) { background: #fafafa; }
+tr:hover { background: #f5f0e8; }
+.right { text-align: right; }
+.center { text-align: center; }
+/* Badges */
+.badge { display: inline-block; padding: 1px 5px; border-radius: 8px; font-size: 8px; font-weight: 600; }
+.badge-green { background: #d4edda; color: #155724; }
+.badge-yellow { background: #fff3cd; color: #856404; }
+.badge-red { background: #f8d7da; color: #721c24; }
+.badge-blue { background: #d1ecf1; color: #0c5460; }
+.badge-gray { background: #e9ecef; color: #495057; }
+/* Score */
+.score-badge { display: inline-block; width: 36px; height: 36px; line-height: 36px; border-radius: 50%; color: #fff; font-weight: 700; font-size: 13px; text-align: center; }
+.score-excellent { background: #28a745; }
+.score-good { background: #17a2b8; }
+.score-fair { background: #ffc107; color: #333; }
+.score-poor { background: #dc3545; }
+/* Buyer card */
+.buyer-card { border: 1px solid #ddd; border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; background: #fff; break-inside: avoid; }
+.buyer-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.buyer-name { font-size: 13px; font-weight: 700; color: #333; }
+.metric-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 4px; }
+.metric-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 8px; background: #f0f0f0; border: 1px solid #ddd; }
+.stockout-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px; }
+.stockout-badge { padding: 2px 6px; border-radius: 3px; font-size: 8px; font-weight: 600; }
+.sb-products { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
+.sb-days { background: #f8d7da; color: #721c24; border: 1px solid #dc3545; }
+.sb-lost { background: #f5c6cb; color: #721c24; border: 1px solid #dc3545; }
+/* Analysis columns */
+.analysis-cols { display: flex; gap: 10px; margin-top: 6px; }
+.analysis-col { flex: 1; }
+.analysis-col h4 { font-size: 9px; font-weight: 700; margin-bottom: 3px; text-transform: uppercase; color: #555; }
+.analysis-col ul { padding-left: 12px; font-size: 9px; }
+.analysis-col li { margin-bottom: 2px; }
+.strength { color: #155724; }
+.risk { color: #721c24; }
+.action { color: #0c5460; }
+/* Green box */
+.green-box { background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; padding: 8px 10px; margin: 8px 0; font-size: 9px; }
+.green-box .formula { font-family: monospace; font-size: 9px; background: #fff; padding: 3px 6px; border-radius: 3px; display: inline-block; margin: 2px 0; }
+/* Volumetrie */
+.vol-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.vol-box { background: #f8f5f0; border: 1px solid #e0d8cc; border-radius: 4px; padding: 6px 8px; }
+.vol-box .big { font-size: 20px; font-weight: 700; color: #8B1A1A; }
+.vol-box .label { font-size: 8px; color: #888; }
+/* Anomaly */
+.anomaly-section { margin-bottom: 6px; }
+.anomaly-title { font-size: 10px; font-weight: 600; color: #856404; margin-bottom: 3px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <img src="data:image/png;base64,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" style="height:28px" alt="Malinco">
+    <div>
+      <h1>Raport Achizitii - 30 Zile</h1>
+      <div class="subtitle">Generat: 20.05.2026 | Perioada: 20.04.2026 - 20.05.2026 | Exclus buyer_id = 1 (sistem)</div>
+    </div>
+  </div>
+</div>
+
+<!-- 1. SUMAR -->
+<h2>1. Sumar General</h2>
+<div class="stat-row">
+  <div class="stat-card">
+    <div class="val">120</div>
+    <div class="label">Comenzi (PO)</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">1.159</div>
+    <div class="label">Linii comanda</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">238.222</div>
+    <div class="label">Valoare RON</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">603 / 3.520</div>
+    <div class="label">Produse stoc 0 / total</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">17,1%</div>
+    <div class="label">Rata ruptura stoc</div>
+  </div>
+</div>
+
+<div class="stat-row">
+  <div class="stat-card">
+    <div class="val" style="font-size:14px">
+      <span class="badge badge-green">Received: 101</span>
+      <span class="badge badge-blue">Sent: 17</span>
+      <span class="badge badge-gray">Cancelled: 1</span>
+      <span class="badge badge-yellow">Approved: 1</span>
+    </div>
+    <div class="label">Distributie Status PO</div>
+  </div>
+</div>
+
+<!-- 2. VOLUMETRIE -->
+<h2>2. Volumetrie: WinMentor vs PO</h2>
+<div class="vol-grid">
+  <div class="vol-box">
+    <div class="big">236</div>
+    <div class="label">Facturi intrare WinMentor (30z)</div>
+    <div style="font-size:9px; margin-top:3px">3.398 linii | 61 furnizori | 3.311.044 RON</div>
+  </div>
+  <div class="vol-box">
+    <div class="big">93 <span style="font-size:11px; color:#28a745">(39,4%)</span></div>
+    <div class="label">Facturi cu PO asociat</div>
+    <div style="font-size:9px; margin-top:3px">2.559 linii acoperite prin modul achizitii</div>
+  </div>
+</div>
+<div class="vol-grid">
+  <div class="vol-box">
+    <div class="big" style="color:#dc3545">143</div>
+    <div class="label">Facturi FARA PO</div>
+    <div style="font-size:9px; margin-top:3px">839 linii neacoperite - oportunitate automatizare</div>
+  </div>
+  <div class="vol-box">
+    <div class="big" style="color:#28a745">75,3%</div>
+    <div class="label">Rata acoperire linii</div>
+    <div style="font-size:9px; margin-top:3px">2.559 din 3.398 linii procesate prin ERP</div>
+  </div>
+</div>
+
+<div class="green-box">
+  <strong>Calcul timp economisit (per linie PO):</strong><br>
+  <div class="formula">1 min selectie produs + 0.5 min cantitate/pret + 1 min comunicare furnizor + 0.5 min verificare receptie + 0.5 min potrivire factura = 3.5 min/linie</div><br>
+  <strong>Linii procesate prin ERP:</strong> 2.559 linii x 3.5 min = <strong>149,3 ore</strong> economisit<br>
+  <strong>Sync automat WinMentor:</strong> 120 PO-uri x 3 min (import + validare + match) = <strong>6 ore</strong> extra<br>
+  <strong>Total economie lună:</strong> <span style="font-size:13px; font-weight:700; color:#155724">155,3 ore (~19,4 zile-om)</span>
+</div>
+
+<!-- 3. TOP FURNIZORI FARA PO -->
+<h2>3. Top Furnizori fara PO (oportunitate)</h2>
+<table>
+  <tr><th>#</th><th>Furnizor</th><th class="center">Facturi</th><th class="center">Linii</th><th class="right">Valoare RON</th></tr>
+  <tr><td>1</td><td>BAUMIT ROMANIA COM SRL</td><td class="center">27</td><td class="center">215</td><td class="right">937.942</td></tr>
+  <tr><td>2</td><td>CEMACON - S.A.</td><td class="center">32</td><td class="center">122</td><td class="right">414.455</td></tr>
+  <tr><td>3</td><td>AUSTROTHERM COM SRL</td><td class="center">10</td><td class="center">45</td><td class="right">337.495</td></tr>
+  <tr><td>4</td><td>CEMIX ROMANIA S.R.L.</td><td class="center">19</td><td class="center">107</td><td class="right">302.992</td></tr>
+  <tr><td>5</td><td>HOLCIM (ROMANIA) SA</td><td class="center">6</td><td class="center">36</td><td class="right">217.527</td></tr>
+  <tr><td>6</td><td>INTERTRANSCOM IMPEX SRL</td><td class="center">2</td><td class="center">32</td><td class="right">169.129</td></tr>
+  <tr><td>7</td><td>IMCOP SRL</td><td class="center">4</td><td class="center">48</td><td class="right">118.294</td></tr>
+  <tr><td>8</td><td>DEPOZIT CALIN</td><td class="center">7</td><td class="center">17</td><td class="right">105.940</td></tr>
+  <tr><td>9</td><td>MAX BAU MATERIALE S.R.L.</td><td class="center">2</td><td class="center">6</td><td class="right">59.589</td></tr>
+  <tr><td>10</td><td>FORMATT BUILDING PRODUCTS LTD</td><td class="center">2</td><td class="center">43</td><td class="right">45.014</td></tr>
+  <tr><td>11</td><td>ROMCIM S.A.</td><td class="center">1</td><td class="center">4</td><td class="right">32.724</td></tr>
+  <tr><td>12</td><td>TRANSYLVANIAN BROKERAGE SALES SRL</td><td class="center">1</td><td class="center">2</td><td class="right">17.460</td></tr>
+</table>
+
+<!-- 4. PERFORMANTA FURNIZORI -->
+<h2 class="page-break">4. Performanta Furnizori (received, 30z)</h2>
+<table>
+  <tr><th>Furnizor</th><th>Buyer(s)</th><th class="center">POs</th><th class="center">Lead (z)</th><th class="center">Ciclu (z)</th><th class="center">Fill %</th><th class="right">Valoare RON</th></tr>
+  <tr><td>SOLA Messwerkzeuge GMBH</td><td>Teo</td><td class="center">1</td><td class="center"><span class="badge badge-red">14,0</span></td><td class="center">14,0</td><td class="center">134,7</td><td class="right">118.972</td></tr>
+  <tr><td>VOX PROFILE SRL</td><td>Teo</td><td class="center">1</td><td class="center"><span class="badge badge-red">10,0</span></td><td class="center">10,0</td><td class="center">100,0</td><td class="right">701</td></tr>
+  <tr><td>ELWINSAN TRADE SRL</td><td>Cristian</td><td class="center">1</td><td class="center"><span class="badge badge-yellow">9,0</span></td><td class="center">9,0</td><td class="center">66,7</td><td class="right">790</td></tr>
+  <tr><td>LUMY TOOLS TRANS SRL</td><td>Tavi</td><td class="center">2</td><td class="center"><span class="badge badge-yellow">9,0</span></td><td class="center">9,0</td><td class="center">87,2</td><td class="right">11.948</td></tr>
+  <tr><td>ADIDAC COMIMPEX S.R.L.</td><td>Teo</td><td class="center">1</td><td class="center"><span class="badge badge-yellow">8,0</span></td><td class="center">8,0</td><td class="center">100,0</td><td class="right">771</td></tr>
+  <tr><td>SCHULLER EH KLAR</td><td>Tavi</td><td class="center">2</td><td class="center"><span class="badge badge-yellow">7,7</span></td><td class="center">7,7</td><td class="center">82,1</td><td class="right">67.519</td></tr>
+  <tr><td>VEST BATERY SRL</td><td>Teo</td><td class="center">1</td><td class="center"><span class="badge badge-yellow">7,0</span></td><td class="center">7,0</td><td class="center">115,7</td><td class="right">927</td></tr>
+  <tr><td>GODMAN S.R.L.</td><td>Teo</td><td class="center">2</td><td class="center">6,0</td><td class="center">6,0</td><td class="center">100,0</td><td class="right">2.160</td></tr>
+  <tr><td>ROMPROFIX SRL</td><td>Teo</td><td class="center">5</td><td class="center">5,1</td><td class="center">5,1</td><td class="center">104,7</td><td class="right">403.595</td></tr>
+  <tr><td>MELINDA-IMPEX INSTAL S.A.</td><td>Madalin</td><td class="center">6</td><td class="center">4,3</td><td class="center">4,3</td><td class="center">101,9</td><td class="right">42.608</td></tr>
+  <tr><td>CORAMET IMPORT-EXPORT SRL</td><td>Cristian</td><td class="center">2</td><td class="center">4,3</td><td class="center">4,3</td><td class="center">96,3</td><td class="right">13.815</td></tr>
+  <tr><td>STUDENTII MUNCITORI S.R.L.</td><td>Cristian</td><td class="center">2</td><td class="center">4,2</td><td class="center">4,2</td><td class="center">88,5</td><td class="right">6.391</td></tr>
+  <tr><td>HARDEX PRODUCTS</td><td>Tavi</td><td class="center">4</td><td class="center">4,2</td><td class="center">4,2</td><td class="center">99,1</td><td class="right">359.603</td></tr>
+  <tr><td>AGRO PATAKI SRL</td><td>Teo</td><td class="center">1</td><td class="center">4,0</td><td class="center">4,0</td><td class="center">92,4</td><td class="right">18.898</td></tr>
+  <tr><td>SENTOSA IMPEX S.R.L.</td><td>Cristian</td><td class="center">2</td><td class="center">4,0</td><td class="center">4,0</td><td class="center">96,8</td><td class="right">7.061</td></tr>
+  <tr><td>FISCHER FIXINGS ROMANIA S.R.L.</td><td>Razvan</td><td class="center">4</td><td class="center">3,5</td><td class="center">3,5</td><td class="center">99,3</td><td class="right">71.156</td></tr>
+  <tr><td>ENDLES SRL</td><td>Cristian</td><td class="center">4</td><td class="center">3,1</td><td class="center">3,1</td><td class="center">92,5</td><td class="right">113.876</td></tr>
+  <tr><td>SOUDAL SRL</td><td>Tavi</td><td class="center">3</td><td class="center">3,1</td><td class="center">3,1</td><td class="center">106,7</td><td class="right">117.468</td></tr>
+  <tr><td>PROFILUX SA</td><td>Madalin</td><td class="center">1</td><td class="center">3,0</td><td class="center">3,0</td><td class="center">86,3</td><td class="right">125.243</td></tr>
+  <tr><td>IMCOP S.R.L.</td><td>Eli</td><td class="center">1</td><td class="center">3,0</td><td class="center">3,0</td><td class="center">100,0</td><td class="right">3.444</td></tr>
+  <tr><td>EURO NARCIS S.R.L.</td><td>Razvan</td><td class="center">1</td><td class="center">3,0</td><td class="center">3,0</td><td class="center">94,1</td><td class="right">5.799</td></tr>
+  <tr><td>INTTECH INDUSTRY SRL</td><td>Teo</td><td class="center">6</td><td class="center">2,9</td><td class="center">2,9</td><td class="center">96,3</td><td class="right">316.633</td></tr>
+  <tr><td>GUNNEX S.R.L.</td><td>Cristian</td><td class="center">2</td><td class="center">2,7</td><td class="center">2,7</td><td class="center">91,5</td><td class="right">60.918</td></tr>
+  <tr><td>UNIPREST INSTAL SRL</td><td>Madalin</td><td class="center">3</td><td class="center">2,6</td><td class="center">2,6</td><td class="center">81,5</td><td class="right">64.236</td></tr>
+  <tr><td>KOBER SRL</td><td>Cristian</td><td class="center">3</td><td class="center">2,6</td><td class="center">2,6</td><td class="center">103,2</td><td class="right">68.132</td></tr>
+  <tr><td>DECORLAND SRL</td><td>Teo</td><td class="center">3</td><td class="center">2,2</td><td class="center">2,2</td><td class="center">98,5</td><td class="right">9.845</td></tr>
+  <tr><td>LEVIROM PRODCOM SRL</td><td>Madalin</td><td class="center">7</td><td class="center">2,1</td><td class="center">2,1</td><td class="center">103,5</td><td class="right">118.826</td></tr>
+  <tr><td>OBERHAUSER INVEST SRL</td><td>Teo</td><td class="center">1</td><td class="center">2,0</td><td class="center">2,0</td><td class="center">100,0</td><td class="right">20.055</td></tr>
+  <tr><td>LECHPOL ELECTRONIC SRL</td><td>Madalin</td><td class="center">1</td><td class="center">2,0</td><td class="center">2,0</td><td class="center"><span class="badge badge-red">43,0</span></td><td class="right">3.201</td></tr>
+  <tr><td>DAFERO SRL</td><td>Razvan</td><td class="center">3</td><td class="center">1,0</td><td class="center">1,0</td><td class="center">90,6</td><td class="right">32.062</td></tr>
+  <tr><td>ALVEROSAL SRL</td><td>Teo</td><td class="center">2</td><td class="center">1,0</td><td class="center">1,0</td><td class="center">100,0</td><td class="right">2.975</td></tr>
+  <tr><td>HASINTO S.R.L.</td><td>Teo</td><td class="center">2</td><td class="center">1,0</td><td class="center">1,0</td><td class="center">99,1</td><td class="right">23.724</td></tr>
+  <tr><td>ELETERM SRL</td><td>Madalin</td><td class="center">1</td><td class="center">1,0</td><td class="center">1,0</td><td class="center">70,2</td><td class="right">7.057</td></tr>
+  <tr><td>ROMDANIEL IMPEX SRL</td><td>Teo</td><td class="center">2</td><td class="center">1,0</td><td class="center">1,0</td><td class="center">100,0</td><td class="right">13.190</td></tr>
+  <tr><td>MIL TRADE S.R.L.</td><td>Cristian</td><td class="center">1</td><td class="center">1,0</td><td class="center">1,0</td><td class="center">100,0</td><td class="right">2.557</td></tr>
+  <tr><td>SEDA-INVEST SRL</td><td>Razvan</td><td class="center">8</td><td class="center"><span class="badge badge-green">1,0</span></td><td class="center">1,0</td><td class="center">97,5</td><td class="right">330.202</td></tr>
+  <tr><td>TREND IMPEX SRL</td><td>Cristian</td><td class="center">1</td><td class="center">1,0</td><td class="center">1,0</td><td class="center">77,4</td><td class="right">315</td></tr>
+  <tr><td>TEMAD CO SRL</td><td>Cristian, Teo</td><td class="center">8</td><td class="center"><span class="badge badge-green">0,9</span></td><td class="center">0,9</td><td class="center">92,7</td><td class="right">256.664</td></tr>
+  <tr><td>SURUBEX TRADE SRL</td><td>Razvan</td><td class="center">5</td><td class="center"><span class="badge badge-green">0,7</span></td><td class="center">0,7</td><td class="center">99,7</td><td class="right">77.472</td></tr>
+  <tr><td>TOBIMAR S.R.L.</td><td>Madalin</td><td class="center">3</td><td class="center"><span class="badge badge-green">0,6</span></td><td class="center">0,6</td><td class="center">90,6</td><td class="right">56.513</td></tr>
+</table>
+
+<!-- 5. RESPONSABILI ACHIZITII -->
+<h2 class="page-break">5. Responsabili Achizitii</h2>
+<p style="font-size:8px; color:#888; margin-bottom:6px;">
+  <strong>Formula scor:</strong> scor = fulfillment * 0.40 + lead_time_score * 0.25 + volume_score * 0.20 + no_shorts_score * 0.15 |
+  lead_time_score = max(0, 100 - avg_lead * 8) | volume_score = (po_count / max_po_count) * 100
+</p>
+
+<!-- TEO: score = 98.9*0.40 + max(0,100-4.8*8)*0.25 + (29/29)*100*0.20 + (1-32/283)*100*0.15 -->
+<!-- = 39.56 + 15.90 + 20.00 + 13.31 = 88.8 -->
+<div class="buyer-card">
+  <div class="buyer-header">
+    <div class="score-badge score-excellent">89</div>
+    <div>
+      <div class="buyer-name">Teo</div>
+      <div class="metric-tags">
+        <span class="metric-tag">29 PO-uri</span>
+        <span class="metric-tag">14 furnizori</span>
+        <span class="metric-tag">Lead: 4,8z</span>
+        <span class="metric-tag">Fill: 98,9%</span>
+        <span class="metric-tag">932.444 RON</span>
+        <span class="metric-tag">32/283 items short (88,7%)</span>
+      </div>
+    </div>
+  </div>
+  <div class="stockout-badges">
+    <span class="stockout-badge sb-products">74 produse la stoc 0</span>
+    <span class="stockout-badge sb-days">561 zile cumulate la 0</span>
+    <span class="stockout-badge sb-lost">31.600 RON/luna pierdut</span>
+  </div>
+  <table>
+    <tr><th>Produs</th><th>Furnizor</th><th class="center">Zile 0</th><th class="center">Stoc max</th><th class="center">Cerere/luna</th><th class="right">Pierdere RON</th></tr>
+    <tr><td>Ciment Romcim Ultra 20 Kg</td><td>ROMPROFIX SRL</td><td class="center">1</td><td class="center">66</td><td class="center">662</td><td class="right">12.446</td></tr>
+    <tr><td>Roaba Cuva Mare</td><td>ALVEROSAL SRL</td><td class="center">1</td><td class="center">1</td><td class="center">10</td><td class="right">1.810</td></tr>
+    <tr><td>Duza Hunter Mp2000 90/210 4-6.4 M</td><td>INTTECH INDUSTRY SRL</td><td class="center">1</td><td class="center">7</td><td class="center">39</td><td class="right">1.673</td></tr>
+    <tr><td>Emulsie Hermes Bituminoasa 18KG</td><td>TEMAD CO SRL</td><td class="center">1</td><td class="center">6</td><td class="center">14</td><td class="right">1.666</td></tr>
+    <tr><td>Vopsea Acrilica Vito Acrilic 8,820l Baza Alba</td><td>TEMAD CO SRL</td><td class="center">1</td><td class="center">2</td><td class="center">6</td><td class="right">1.243</td></tr>
+    <tr><td>Matura 4 Cusaturi</td><td>ADIDAC COMIMPEX S.R.L.</td><td class="center">2</td><td class="center">0</td><td class="center">46</td><td class="right">1.058</td></tr>
+    <tr><td>Vopsea Acrilica Acrylan 9,050l Baza Transparenta</td><td>TEMAD CO SRL</td><td class="center">3</td><td class="center">2</td><td class="center">4</td><td class="right">980</td></tr>
+    <tr><td>Legatura Swing Joint 1/2 Ext Hunter</td><td>INTTECH INDUSTRY SRL</td><td class="center">4</td><td class="center">45</td><td class="center">67</td><td class="right">925</td></tr>
+    <tr><td>Vopsea email anticoroziva VITEX Direct 3 in 1</td><td>TEMAD CO SRL</td><td class="center">1</td><td class="center">6</td><td class="center">18</td><td class="right">839</td></tr>
+    <tr><td>Programator Hunter 2 Zone Bluetooth 9v</td><td>INTTECH INDUSTRY SRL</td><td class="center">2</td><td class="center">1</td><td class="center">1</td><td class="right">765</td></tr>
+  </table>
+  <div class="analysis-cols">
+    <div class="analysis-col">
+      <h4 class="strength">Puncte forte</h4>
+      <ul>
+        <li>Cel mai mare volum: 29 PO, 932K RON</li>
+        <li>Fill rate excelent: 98,9%</li>
+        <li>Diversitate: 14 furnizori gestionati</li>
+      </ul>
+      <h4 class="risk" style="margin-top:4px">Riscuri</h4>
+      <ul>
+        <li>Lead time mediu cel mai mare: 4,8 zile</li>
+        <li>74 produse cu ruptura stoc (31.600 RON pierdut)</li>
+        <li><strong>Nota:</strong> Toya = on_demand (comenzi la cerere, nu stocabil)</li>
+      </ul>
+    </div>
+    <div class="analysis-col">
+      <h4 class="action">Actiuni recomandate</h4>
+      <ul>
+        <li>Negociere termene SOLA (14z) si VOX PROFILE (10z)</li>
+        <li>Monitorizare stoc Ciment Romcim (cerere 662/luna, pierdere 12K)</li>
+        <li>Verificare stocuri INTTECH - 3 produse cu ruptura</li>
+        <li>Renegociere frecventa livrare cu TEMAD CO (4 produse afectate)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- CRISTIAN: score = 89.7*0.40 + max(0,100-2.5*8)*0.25 + (25/29)*100*0.20 + (1-23/154)*100*0.15 -->
+<!-- = 35.88 + 20.00 + 17.24 + 12.74 = 85.9 -->
+<div class="buyer-card">
+  <div class="buyer-header">
+    <div class="score-badge score-excellent">86</div>
+    <div>
+      <div class="buyer-name">Cristian</div>
+      <div class="metric-tags">
+        <span class="metric-tag">25 PO-uri</span>
+        <span class="metric-tag">10 furnizori</span>
+        <span class="metric-tag">Lead: 2,5z</span>
+        <span class="metric-tag">Fill: 89,7%</span>
+        <span class="metric-tag">530.520 RON</span>
+        <span class="metric-tag">23/154 items short (85,1%)</span>
+      </div>
+    </div>
+  </div>
+  <div class="stockout-badges">
+    <span class="stockout-badge sb-products">42 produse la stoc 0</span>
+    <span class="stockout-badge sb-days">245 zile cumulate la 0</span>
+    <span class="stockout-badge sb-lost">38.992 RON/luna pierdut</span>
+  </div>
+  <table>
+    <tr><th>Produs</th><th>Furnizor</th><th class="center">Zile 0</th><th class="center">Stoc max</th><th class="center">Cerere/luna</th><th class="right">Pierdere RON</th></tr>
+    <tr><td>Tencuiala manuala pe baza de ipsos Goldband Knauf 25 Kg</td><td>ENDLES SRL</td><td class="center">1</td><td class="center">11</td><td class="center">251</td><td class="right">13.027</td></tr>
+    <tr><td>Panou bordurat zincat 2000x2000 mm</td><td>ENDLES SRL</td><td class="center">1</td><td class="center">0</td><td class="center">155</td><td class="right">9.068</td></tr>
+    <tr><td>Adeziv Poliuretanic Ct 84</td><td>ENDLES SRL</td><td class="center">1</td><td class="center">1</td><td class="center">72</td><td class="right">3.182</td></tr>
+    <tr><td>Folie Industriala 0.15 4x25ml-100mp</td><td>GUNNEX S.R.L.</td><td class="center">17</td><td class="center">2</td><td class="center">21</td><td class="right">2.058</td></tr>
+    <tr><td>Emulsie Hermes Bituminoasa 18KG</td><td>TEMAD CO SRL</td><td class="center">1</td><td class="center">6</td><td class="center">14</td><td class="right">1.666</td></tr>
+    <tr><td>Vopsea Acrilica Vito Acrilic 8,820l Baza Alba</td><td>TEMAD CO SRL</td><td class="center">1</td><td class="center">2</td><td class="center">6</td><td class="right">1.243</td></tr>
+    <tr><td>Vopsea Acrilica Acrylan 9,050l Baza Transparenta</td><td>TEMAD CO SRL</td><td class="center">3</td><td class="center">2</td><td class="center">4</td><td class="right">980</td></tr>
+    <tr><td>Vopsea email anticoroziva VITEX Direct 3 in 1, 48 verde</td><td>TEMAD CO SRL</td><td class="center">1</td><td class="center">6</td><td class="center">18</td><td class="right">839</td></tr>
+    <tr><td>Lazur Milesi Mahon 1 Kg Xgt 618</td><td>MIL TRADE S.R.L.</td><td class="center">5</td><td class="center">4</td><td class="center">9</td><td class="right">597</td></tr>
+    <tr><td>Vopsea Casa Bella Ext 15 L</td><td>ENDLES SRL</td><td class="center">11</td><td class="center">1</td><td class="center">3</td><td class="right">595</td></tr>
+  </table>
+  <div class="analysis-cols">
+    <div class="analysis-col">
+      <h4 class="strength">Puncte forte</h4>
+      <ul>
+        <li>Lead time bun: 2,5 zile medie</li>
+        <li>Volum solid: 25 PO, 530K RON</li>
+        <li>Relatie buna TEMAD CO (0,9z lead)</li>
+      </ul>
+      <h4 class="risk" style="margin-top:4px">Riscuri</h4>
+      <ul>
+        <li>Fill rate cel mai scazut: 89,7% (sub target 95%)</li>
+        <li>38.992 RON/luna pierdut - cel mai mare din echipa</li>
+        <li>4 PO anomalii (creare-receptie sub 10 min)</li>
+      </ul>
+    </div>
+    <div class="analysis-col">
+      <h4 class="action">Actiuni recomandate</h4>
+      <ul>
+        <li>Urgenta: stoc Goldband Knauf (cerere 251/luna, pierdere 13K)</li>
+        <li>Investigare fill rate scazut ENDLES (92,5%) si ELWINSAN (66,7%)</li>
+        <li>Folie Industriala GUNNEX: 17 zile la 0 - contract stoc minim</li>
+        <li>Clarificare PO-uri cu valoare 0 (Masterplast, TEMAD)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- MADALIN: score = 93.7*0.40 + max(0,100-2.4*8)*0.25 + (22/29)*100*0.20 + (1-24/266)*100*0.15 -->
+<!-- = 37.48 + 20.20 + 15.17 + 13.65 = 86.5 -->
+<div class="buyer-card">
+  <div class="buyer-header">
+    <div class="score-badge score-excellent">87</div>
+    <div>
+      <div class="buyer-name">Madalin</div>
+      <div class="metric-tags">
+        <span class="metric-tag">22 PO-uri</span>
+        <span class="metric-tag">7 furnizori</span>
+        <span class="metric-tag">Lead: 2,4z</span>
+        <span class="metric-tag">Fill: 93,7%</span>
+        <span class="metric-tag">417.684 RON</span>
+        <span class="metric-tag">24/266 items short (91,0%)</span>
+      </div>
+    </div>
+  </div>
+  <div class="stockout-badges">
+    <span class="stockout-badge sb-products">31 produse la stoc 0</span>
+    <span class="stockout-badge sb-days">159 zile cumulate la 0</span>
+    <span class="stockout-badge sb-lost">6.247 RON/luna pierdut</span>
+  </div>
+  <table>
+    <tr><th>Produs</th><th>Furnizor</th><th class="center">Zile 0</th><th class="center">Stoc max</th><th class="center">Cerere/luna</th><th class="right">Pierdere RON</th></tr>
+    <tr><td>Cabluri Myym 3x1.5</td><td>TOBIMAR S.R.L.</td><td class="center">2</td><td class="center">35</td><td class="center">197</td><td class="right">985</td></tr>
+    <tr><td>Cot PVC 110x45 Cu Inel</td><td>LEVIROM PRODCOM SRL</td><td class="center">3</td><td class="center">23</td><td class="center">108</td><td class="right">724</td></tr>
+    <tr><td>Teava PVC 110/2m Cu Inel</td><td>LEVIROM PRODCOM SRL</td><td class="center">2</td><td class="center">10</td><td class="center">28</td><td class="right">722</td></tr>
+    <tr><td>Cot Polietilena 25x25</td><td>MELINDA-IMPEX INSTAL S.A.</td><td class="center">2</td><td class="center">3</td><td class="center">79</td><td class="right">632</td></tr>
+    <tr><td>Teu Cuplare Polietilena 25x25x25</td><td>MELINDA-IMPEX INSTAL S.A.</td><td class="center">2</td><td class="center">8</td><td class="center">34</td><td class="right">405</td></tr>
+    <tr><td>Teu Cuplare Polietilena 25x3/4 Int</td><td>MELINDA-IMPEX INSTAL S.A.</td><td class="center">6</td><td class="center">13</td><td class="center">27</td><td class="right">300</td></tr>
+    <tr><td>Prelungitor STARKE 50M 3x1.5</td><td>TOBIMAR S.R.L.</td><td class="center">2</td><td class="center">1</td><td class="center">1</td><td class="right">298</td></tr>
+    <tr><td>Niplu Alama 1"</td><td>UNIPREST INSTAL SRL</td><td class="center">4</td><td class="center">1</td><td class="center">20</td><td class="right">284</td></tr>
+    <tr><td>Cupla Dubla Polietilena 25x25 (mufa)</td><td>MELINDA-IMPEX INSTAL S.A.</td><td class="center">3</td><td class="center">3</td><td class="center">29</td><td class="right">238</td></tr>
+    <tr><td>Cot Polietilena 32x3/4 Int</td><td>MELINDA-IMPEX INSTAL S.A.</td><td class="center">2</td><td class="center">8</td><td class="center">27</td><td class="right">227</td></tr>
+  </table>
+  <div class="analysis-cols">
+    <div class="analysis-col">
+      <h4 class="strength">Puncte forte</h4>
+      <ul>
+        <li>Lead time excelent: 2,4 zile</li>
+        <li>Foarte activ: 22 PO cu 266 items</li>
+        <li>LEVIROM (2,1z), TOBIMAR (0,6z) - livrari rapide</li>
+      </ul>
+      <h4 class="risk" style="margin-top:4px">Riscuri</h4>
+      <ul>
+        <li>Fill rate sub target: 93,7%</li>
+        <li>LECHPOL ELECTRONIC: fill 43% - problematic</li>
+        <li>UNIPREST: PO-100015 trimis de 36 zile fara receptie</li>
+      </ul>
+    </div>
+    <div class="analysis-col">
+      <h4 class="action">Actiuni recomandate</h4>
+      <ul>
+        <li>Urgenta follow-up PO-100015 UNIPREST (36 zile!)</li>
+        <li>MELINDA-IMPEX: 5 produse polietilena cu ruptura - marire stoc siguranta</li>
+        <li>Investigare LECHPOL fill 43% - renegociere sau furnizor alternativ</li>
+        <li>PROFILUX fill 86,3% - monitorizare</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- RAZVAN: score = 98.0*0.40 + max(0,100-1.4*8)*0.25 + (21/29)*100*0.20 + (1-37/242)*100*0.15 -->
+<!-- = 39.20 + 22.20 + 14.48 + 12.71 = 88.6 -->
+<div class="buyer-card">
+  <div class="buyer-header">
+    <div class="score-badge score-excellent">89</div>
+    <div>
+      <div class="buyer-name">Razvan</div>
+      <div class="metric-tags">
+        <span class="metric-tag">21 PO-uri</span>
+        <span class="metric-tag">5 furnizori</span>
+        <span class="metric-tag">Lead: 1,4z</span>
+        <span class="metric-tag">Fill: 98,0%</span>
+        <span class="metric-tag">516.691 RON</span>
+        <span class="metric-tag">37/242 items short (84,7%)</span>
+      </div>
+    </div>
+  </div>
+  <div class="stockout-badges">
+    <span class="stockout-badge sb-products">10 produse la stoc 0</span>
+    <span class="stockout-badge sb-days">57 zile cumulate la 0</span>
+    <span class="stockout-badge sb-lost">1.678 RON/luna pierdut</span>
+  </div>
+  <table>
+    <tr><th>Produs</th><th>Furnizor</th><th class="center">Zile 0</th><th class="center">Stoc max</th><th class="center">Cerere/luna</th><th class="right">Pierdere RON</th></tr>
+    <tr><td>Surub Lemn Torx Cu Saiba 8x200</td><td>DAFERO SRL</td><td class="center">1</td><td class="center">50</td><td class="center">176</td><td class="right">616</td></tr>
+    <tr><td>Surub Autoforant Beton Cap Tors 7.5x92</td><td>SEDA-INVEST SRL</td><td class="center">2</td><td class="center">90</td><td class="center">296</td><td class="right">207</td></tr>
+    <tr><td>Surub Lemn Torx Cu Saiba 8x260</td><td>DAFERO SRL</td><td class="center">1</td><td class="center">0</td><td class="center">40</td><td class="right">168</td></tr>
+    <tr><td>Surub Metric M12x100</td><td>SEDA-INVEST SRL</td><td class="center">8</td><td class="center">36</td><td class="center">40</td><td class="right">144</td></tr>
+    <tr><td>Disc taiere diamantat KLINGSPOR DT 300 UT 230mm</td><td>SEDA-INVEST SRL</td><td class="center">5</td><td class="center">1</td><td class="center">1</td><td class="right">118</td></tr>
+    <tr><td>Surub Metric M8x30</td><td>SEDA-INVEST SRL</td><td class="center">5</td><td class="center">132</td><td class="center">146</td><td class="right">117</td></tr>
+    <tr><td>Burghiu Metal HSS-R 338 20.0MM</td><td>FISCHER FIXINGS ROMANIA S.R.L.</td><td class="center">4</td><td class="center">1</td><td class="center">2</td><td class="right">113</td></tr>
+    <tr><td>Burghiu Metal 13 Mm</td><td>SURUBEX TRADE SRL</td><td class="center">17</td><td class="center">1</td><td class="center">3</td><td class="right">92</td></tr>
+    <tr><td>Legatura Colt 100x100x80 Fn</td><td>EURO NARCIS S.R.L.</td><td class="center">6</td><td class="center">9</td><td class="center">9</td><td class="right">88</td></tr>
+    <tr><td>Burghiu Metal 6 Mm</td><td>SURUBEX TRADE SRL</td><td class="center">8</td><td class="center">1</td><td class="center">2</td><td class="right">15</td></tr>
+  </table>
+  <div class="analysis-cols">
+    <div class="analysis-col">
+      <h4 class="strength">Puncte forte</h4>
+      <ul>
+        <li>Cel mai bun lead time: 1,4 zile</li>
+        <li>Fill rate excelent: 98,0%</li>
+        <li>Impact stoc minim: doar 1.678 RON pierdere/luna</li>
+        <li>SEDA-INVEST (8 PO, 1,0z) si SURUBEX (5 PO, 0,7z) - relatii foarte bune</li>
+      </ul>
+      <h4 class="risk" style="margin-top:4px">Riscuri</h4>
+      <ul>
+        <li>Diversificare scazuta: doar 5 furnizori</li>
+        <li>Burghiu Metal 13mm: 17 zile la stoc 0</li>
+        <li><strong>Nota:</strong> Fischer on_demand - unele produse sunt comandate la cerere</li>
+      </ul>
+    </div>
+    <div class="analysis-col">
+      <h4 class="action">Actiuni recomandate</h4>
+      <ul>
+        <li>Marire stoc siguranta burghie metal (17z la 0 este prea mult)</li>
+        <li>Surub Metric M12x100: 8 zile la 0, verifica stoc minim SEDA-INVEST</li>
+        <li>Potential diversificare furnizori (concentrare mare pe SEDA+SURUBEX = 63%)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- TAVI: score = 96.1*0.40 + max(0,100-5.4*8)*0.25 + (11/29)*100*0.20 + (1-15/154)*100*0.15 -->
+<!-- = 38.44 + 14.20 + 7.59 + 13.54 = 73.8 -->
+<div class="buyer-card">
+  <div class="buyer-header">
+    <div class="score-badge score-fair">74</div>
+    <div>
+      <div class="buyer-name">Tavi</div>
+      <div class="metric-tags">
+        <span class="metric-tag">11 PO-uri</span>
+        <span class="metric-tag">4 furnizori</span>
+        <span class="metric-tag">Lead: 5,4z</span>
+        <span class="metric-tag">Fill: 96,1%</span>
+        <span class="metric-tag">556.537 RON</span>
+        <span class="metric-tag">15/154 items short (90,3%)</span>
+      </div>
+    </div>
+  </div>
+  <div class="stockout-badges">
+    <span class="stockout-badge sb-products">30 produse la stoc 0</span>
+    <span class="stockout-badge sb-days">195 zile cumulate la 0</span>
+    <span class="stockout-badge sb-lost">3.978 RON/luna pierdut</span>
+  </div>
+  <table>
+    <tr><th>Produs</th><th>Furnizor</th><th class="center">Zile 0</th><th class="center">Stoc max</th><th class="center">Cerere/luna</th><th class="right">Pierdere RON</th></tr>
+    <tr><td>Ancora Chimica 280 Ml Soudafix P300 Sf</td><td>SOUDAL SRL</td><td class="center">4</td><td class="center">3</td><td class="center">17</td><td class="right">906</td></tr>
+    <tr><td>Dreptar Cu Nivela 200 Cm</td><td>HARDEX PRODUCTS</td><td class="center">6</td><td class="center">1</td><td class="center">3</td><td class="right">324</td></tr>
+    <tr><td>Banda Adeziva Protectie 50 Mm Pvc Mask Q Yellow</td><td>SCHULLER EH KLAR</td><td class="center">5</td><td class="center">2</td><td class="center">14</td><td class="right">308</td></tr>
+    <tr><td>Spaclu Elastic Racleta 60 Cm</td><td>HARDEX PRODUCTS</td><td class="center">2</td><td class="center">1</td><td class="center">5</td><td class="right">285</td></tr>
+    <tr><td>Pensula Mercato M 80 Mm</td><td>SCHULLER EH KLAR</td><td class="center">5</td><td class="center">1</td><td class="center">20</td><td class="right">216</td></tr>
+    <tr><td>Rezerva Cutter Set 10 Lame</td><td>SCHULLER EH KLAR</td><td class="center">14</td><td class="center">5</td><td class="center">35</td><td class="right">203</td></tr>
+    <tr><td>Spuma Poliuretanica 300 Ml Soudal</td><td>SOUDAL SRL</td><td class="center">1</td><td class="center">1</td><td class="center">8</td><td class="right">170</td></tr>
+    <tr><td>Drisca Plastic 280x140 Stan Plano Synt</td><td>SCHULLER EH KLAR</td><td class="center">11</td><td class="center">1</td><td class="center">9</td><td class="right">151</td></tr>
+    <tr><td>Gletiera Zimtata 8 X 8 Hardy Cu Maner Ergonomic</td><td>HARDEX PRODUCTS</td><td class="center">10</td><td class="center">1</td><td class="center">5</td><td class="right">129</td></tr>
+    <tr><td>Vinclu 450 Mm Hardy</td><td>HARDEX PRODUCTS</td><td class="center">8</td><td class="center">1</td><td class="center">3</td><td class="right">109</td></tr>
+  </table>
+  <div class="analysis-cols">
+    <div class="analysis-col">
+      <h4 class="strength">Puncte forte</h4>
+      <ul>
+        <li>Valoare mare pe PO: ~50K RON/comanda</li>
+        <li>Fill rate bun: 96,1%</li>
+        <li>HARDEX si SOUDAL - furnizori stabili de volum</li>
+      </ul>
+      <h4 class="risk" style="margin-top:4px">Riscuri</h4>
+      <ul>
+        <li>Lead time cel mai mare din echipa: 5,4 zile</li>
+        <li>Volum scazut: doar 11 PO (cel mai putin activ)</li>
+        <li>SCHULLER EH KLAR: 7,7z lead, 82% fill - problematic</li>
+        <li>Rezerva Cutter 14 zile la 0, Drisca 11 zile la 0</li>
+      </ul>
+    </div>
+    <div class="analysis-col">
+      <h4 class="action">Actiuni recomandate</h4>
+      <ul>
+        <li>Negociere termene SCHULLER (7,7z) si LUMY TOOLS (9z)</li>
+        <li>Crestere frecventa comenzi (11 PO in 30z e sub medie)</li>
+        <li>Stoc siguranta SCHULLER: 4 produse cu zile lungi la 0</li>
+        <li>Ancora Chimica Soudal: 4z la 0 cu cerere 17/luna - prioritar</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ELI: score = 100*0.40 + max(0,100-3*8)*0.25 + (1/29)*100*0.20 + 100*0.15 -->
+<!-- = 40.00 + 19.00 + 0.69 + 15.00 = 74.7 -->
+<div class="buyer-card">
+  <div class="buyer-header">
+    <div class="score-badge score-fair">75</div>
+    <div>
+      <div class="buyer-name">Eli</div>
+      <div class="metric-tags">
+        <span class="metric-tag">1 PO</span>
+        <span class="metric-tag">1 furnizor</span>
+        <span class="metric-tag">Lead: 3,0z</span>
+        <span class="metric-tag">Fill: 100%</span>
+        <span class="metric-tag">3.444 RON</span>
+        <span class="metric-tag">0/1 items short (100%)</span>
+      </div>
+    </div>
+  </div>
+  <div class="stockout-badges">
+    <span class="stockout-badge sb-products" style="background:#d4edda;color:#155724;border-color:#28a745">0 produse la stoc 0</span>
+  </div>
+  <div class="analysis-cols">
+    <div class="analysis-col">
+      <h4 class="strength">Puncte forte</h4>
+      <ul>
+        <li>Fill rate perfect: 100%</li>
+        <li>Zero rupturi de stoc</li>
+      </ul>
+    </div>
+    <div class="analysis-col">
+      <h4 class="action">Actiuni recomandate</h4>
+      <ul>
+        <li>Volum foarte scazut - verificare daca are furnizori activi neasignati</li>
+        <li>Potential preluare furnizori din lista "fara PO" (IMCOP S.R.L.)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 6. COMENZI NERECEPTIONATE -->
+<h2 class="page-break">6. Comenzi Nereceptionate (status: sent)</h2>
+<table>
+  <tr><th>PO</th><th>Furnizor</th><th>Buyer</th><th>Trimis la</th><th class="center">Zile asteptare</th><th class="right">Valoare RON</th></tr>
+  <tr style="background:#f8d7da"><td>PO-100015</td><td>UNIPREST INSTAL SRL</td><td>Madalin</td><td>14.04.2026</td><td class="center"><strong>36</strong></td><td class="right">976,72</td></tr>
+  <tr style="background:#fff3cd"><td>PO-100064</td><td>Masterplast Romania</td><td>Cristian</td><td>28.04.2026</td><td class="center">22</td><td class="right">0,00</td></tr>
+  <tr><td>PO-100091</td><td>Toya Romania</td><td>Teo</td><td>05.05.2026</td><td class="center">15</td><td class="right">26,51</td></tr>
+  <tr style="background:#fff3cd"><td>PO-100097</td><td>TEMAD CO SRL</td><td>Cristian</td><td>06.05.2026</td><td class="center">14</td><td class="right">0,00</td></tr>
+  <tr><td>PO-100130</td><td>Toya Romania</td><td>Teo</td><td>15.05.2026</td><td class="center">5</td><td class="right">8.173,24</td></tr>
+  <tr><td>PO-100131</td><td>Toya Romania</td><td>Teo</td><td>15.05.2026</td><td class="center">5</td><td class="right">440,08</td></tr>
+  <tr><td>PO-100141</td><td>OBERHAUSER INVEST SRL</td><td>Teo</td><td>18.05.2026</td><td class="center">2</td><td class="right">2.785,00</td></tr>
+  <tr><td>PO-100140</td><td>SERSTILL SRL</td><td>Madalin</td><td>18.05.2026</td><td class="center">2</td><td class="right">737,56</td></tr>
+  <tr><td>PO-100137</td><td>Toya Romania</td><td>Teo</td><td>18.05.2026</td><td class="center">2</td><td class="right">791,83</td></tr>
+  <tr><td>PO-100135</td><td>Toya Romania</td><td>Teo</td><td>18.05.2026</td><td class="center">2</td><td class="right">670,55</td></tr>
+  <tr><td>PO-100142</td><td>EURO NARCIS S.R.L.</td><td>Razvan</td><td>19.05.2026</td><td class="center">1</td><td class="right">803,10</td></tr>
+  <tr><td>PO-100144</td><td>SOUDAL SRL</td><td>Tavi</td><td>19.05.2026</td><td class="center">1</td><td class="right">4.907,19</td></tr>
+  <tr><td>PO-100146</td><td>ENDLES SRL</td><td>Cristian</td><td>19.05.2026</td><td class="center">1</td><td class="right">9.341,39</td></tr>
+  <tr><td>PO-100147</td><td>TEMAD CO SRL</td><td>Cristian</td><td>19.05.2026</td><td class="center">1</td><td class="right">2.793,19</td></tr>
+  <tr><td>PO-100148</td><td>GUNNEX S.R.L.</td><td>Cristian</td><td>19.05.2026</td><td class="center">1</td><td class="right">3.737,50</td></tr>
+  <tr><td>PO-100150</td><td>DAFERO SRL</td><td>Razvan</td><td>20.05.2026</td><td class="center">0</td><td class="right">1.398,40</td></tr>
+  <tr><td>PO-100151</td><td>TEMAD CO SRL</td><td>Cristian</td><td>20.05.2026</td><td class="center">0</td><td class="right">775,24</td></tr>
+  <tr><td>PO-100152</td><td>TEMAD CO SRL</td><td>Cristian</td><td>20.05.2026</td><td class="center">0</td><td class="right">0,00</td></tr>
+</table>
+<p style="font-size:9px; color:#666; margin-top:2px">Total: 18 comenzi nereceptionate | Valoare totala: 37.357 RON | <span style="color:#dc3545">Atentie: PO-100015 (36 zile!), PO-100064 si PO-100097 cu valoare 0</span></p>
+
+<!-- 7. ANOMALII -->
+<h2>7. Anomalii Detectate</h2>
+
+<div class="anomaly-section">
+  <div class="anomaly-title">PO-uri cu valoare = 0 RON (ultimele 30 zile)</div>
+  <table>
+    <tr><th>PO</th><th>Furnizor</th><th>Buyer</th><th>Data creare</th><th>Status</th></tr>
+    <tr><td>PO-100064</td><td>Masterplast Romania</td><td>Cristian</td><td>28.04.2026</td><td><span class="badge badge-blue">sent</span></td></tr>
+    <tr><td>PO-100090</td><td>TEMAD CO SRL</td><td>Teo</td><td>05.05.2026</td><td><span class="badge badge-green">received</span></td></tr>
+    <tr><td>PO-100097</td><td>TEMAD CO SRL</td><td>Cristian</td><td>06.05.2026</td><td><span class="badge badge-blue">sent</span></td></tr>
+    <tr><td>PO-100116</td><td>DECORLAND SRL</td><td>Teo</td><td>12.05.2026</td><td><span class="badge badge-green">received</span></td></tr>
+    <tr><td>PO-100152</td><td>TEMAD CO SRL</td><td>Cristian</td><td>20.05.2026</td><td><span class="badge badge-blue">sent</span></td></tr>
+  </table>
+</div>
+
+<div class="anomaly-section">
+  <div class="anomaly-title">PO-uri creare &rarr; receptie sub 10 minute (posibil retroactive)</div>
+  <table>
+    <tr><th>PO</th><th>Furnizor</th><th>Buyer</th><th>Creare</th><th>Receptie</th><th class="center">Minute</th></tr>
+    <tr><td>PO-100037</td><td>TEMAD CO SRL</td><td>Cristian</td><td>21.04 11:15</td><td>21.04 11:16</td><td class="center"><span class="badge badge-red">1</span></td></tr>
+    <tr><td>PO-100045</td><td>TEMAD CO SRL</td><td>Cristian</td><td>22.04 12:47</td><td>22.04 12:49</td><td class="center"><span class="badge badge-red">2</span></td></tr>
+    <tr><td>PO-100094</td><td>GUNNEX S.R.L.</td><td>Cristian</td><td>05.05 15:01</td><td>05.05 15:03</td><td class="center"><span class="badge badge-red">2</span></td></tr>
+    <tr><td>PO-100122</td><td>ROMPROFIX SRL</td><td>Teo</td><td>14.05 09:43</td><td>14.05 09:51</td><td class="center"><span class="badge badge-yellow">7</span></td></tr>
+  </table>
+  <p style="font-size:8px; color:#888">Aceste PO-uri pot fi comenzi introduse retroactiv dupa receptia reala a marfii.</p>
+</div>
+
+<div class="anomaly-section">
+  <div class="anomaly-title">PO-uri cu fulfillment sub 50%</div>
+  <table>
+    <tr><th>PO</th><th>Furnizor</th><th>Buyer</th><th class="center">Fill %</th><th class="right">Valoare RON</th></tr>
+    <tr><td>PO-100040</td><td>TEMAD CO SRL</td><td>Cristian</td><td class="center"><span class="badge badge-red">39,2%</span></td><td class="right">2.529,72</td></tr>
+    <tr><td>PO-100043</td><td>LECHPOL ELECTRONIC SRL</td><td>Madalin</td><td class="center"><span class="badge badge-red">43,0%</span></td><td class="right">800,24</td></tr>
+  </table>
+</div>
+
+<!-- FOOTER -->
+<div style="margin-top:16px; padding-top:8px; border-top:2px solid #8B1A1A; font-size:8px; color:#888; display:flex; justify-content:space-between;">
+  <div>Malinco ERP | Raport generat automat | 20.05.2026</div>
+  <div>Date: erp_malinco | Perioada: 30 zile | Exclus buyer_id=1 (sistem)</div>
+</div>
+
+</div>
+</body>
+</html>

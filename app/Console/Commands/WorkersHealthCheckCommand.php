@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\SyncRun;
+use App\Services\Winmentor\WinmentorBridgeClient;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -115,7 +116,55 @@ class WorkersHealthCheckCommand extends Command
             }
         }
 
-        // ── 3. Trimitere alertă ──────────────────────────────────────────────────
+        // ── 3. MentorAPI / COM health ────────────────────────────────────────────
+        $isWorkDay  = in_array($nowBuch->dayOfWeek, [1, 2, 3, 4, 5, 6]);
+        $isWorkHour = $nowBuch->between(
+            $nowBuch->copy()->setTimeFromTimeString('08:00'),
+            $nowBuch->copy()->setTimeFromTimeString('17:30')
+        );
+
+        if ($isWorkDay && $isWorkHour) {
+            try {
+                $bridge = new WinmentorBridgeClient();
+                $health = $bridge->health();
+
+                if (! ($health['data']['comConnected'] ?? false)) {
+                    // COM neconectat — poate fi lazy, forțăm un apel real
+                    try {
+                        $bridge->getArticolePaginated(1, 1);
+                        // Re-check health după apelul real
+                        $health = $bridge->health();
+                        if (! ($health['data']['comConnected'] ?? false)) {
+                            $issues[] = [
+                                'tip'     => 'MENTORAPI_COM',
+                                'label'   => 'MentorAPI — COM deconectat',
+                                'detaliu' => 'API-ul răspunde dar COM (DocImpServer) nu este conectat.',
+                                'la'      => $nowBuch->format('Y-m-d H:i'),
+                            ];
+                            $this->warn('  [COM] MentorAPI up dar COM deconectat');
+                        }
+                    } catch (\Throwable $e) {
+                        $issues[] = [
+                            'tip'     => 'MENTORAPI_COM',
+                            'label'   => 'MentorAPI — COM eșuat',
+                            'detaliu' => 'API-ul răspunde dar apelul COM a eșuat: ' . substr($e->getMessage(), 0, 150),
+                            'la'      => $nowBuch->format('Y-m-d H:i'),
+                        ];
+                        $this->warn('  [COM] Apel COM eșuat: ' . $e->getMessage());
+                    }
+                }
+            } catch (\Throwable $e) {
+                $issues[] = [
+                    'tip'     => 'MENTORAPI_DOWN',
+                    'label'   => 'MentorAPI — inaccesibil',
+                    'detaliu' => substr($e->getMessage(), 0, 200),
+                    'la'      => $nowBuch->format('Y-m-d H:i'),
+                ];
+                $this->warn('  [DOWN] MentorAPI inaccesibil: ' . $e->getMessage());
+            }
+        }
+
+        // ── 4. Trimitere alertă ──────────────────────────────────────────────────
         if (empty($issues)) {
             $this->info('Toți workerii sunt OK.');
             return self::SUCCESS;
@@ -131,6 +180,7 @@ class WorkersHealthCheckCommand extends Command
     {
         $jobsFailed   = count(array_filter($issues, fn ($i) => $i['tip'] === 'JOB_EȘUAT'));
         $workersStale = count(array_filter($issues, fn ($i) => $i['tip'] === 'WORKER_STALE'));
+        $mentorIssues = count(array_filter($issues, fn ($i) => str_starts_with($i['tip'], 'MENTORAPI')));
 
         $parts = [];
         if ($jobsFailed) {
@@ -138,6 +188,9 @@ class WorkersHealthCheckCommand extends Command
         }
         if ($workersStale) {
             $parts[] = "{$workersStale} worker(i) înghețat(i)";
+        }
+        if ($mentorIssues) {
+            $parts[] = "MentorAPI problemă";
         }
 
         $subject = '[ERP Malinco] Alertă workeri — ' . implode(', ', $parts);

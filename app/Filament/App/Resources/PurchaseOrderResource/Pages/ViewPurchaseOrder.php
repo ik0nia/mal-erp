@@ -388,7 +388,7 @@ class ViewPurchaseOrder extends ViewRecord
                 ->label('Recepție cantitativă')
                 ->icon('heroicon-o-clipboard-document-list')
                 ->color('warning')
-                ->visible(fn (): bool => $this->record->status === PurchaseOrder::STATUS_SENT)
+                ->visible(fn (): bool => in_array($this->record->status, [PurchaseOrder::STATUS_SENT, PurchaseOrder::STATUS_PARTIALLY_RECEIVED]))
                 ->modalHeading('Recepție cantitativă — ' . $this->record->number)
                 ->modalDescription('Introduceți cantitățile recepționate. Produsele șterse sau cu cantitate 0 vor fi returnate în coada de cumpărare.')
                 ->modalWidth('5xl')
@@ -1060,7 +1060,7 @@ class ViewPurchaseOrder extends ViewRecord
             $sourceItemIds = [];
 
             if (filled($orderItem->sources_json)) {
-                $sources = json_decode($orderItem->sources_json, true);
+                $sources = $orderItem->sources_json;
                 if (is_array($sources)) {
                     foreach ($sources as $source) {
                         $id = $source['request_item_id'] ?? null;
@@ -1111,7 +1111,7 @@ class ViewPurchaseOrder extends ViewRecord
             return;
         }
 
-        $sources = json_decode($orderItem->sources_json, true);
+        $sources = $orderItem->sources_json;
         if (! is_array($sources)) {
             return;
         }
@@ -1169,7 +1169,7 @@ class ViewPurchaseOrder extends ViewRecord
                 continue;
             }
 
-            $sources = json_decode($orderItem->sources_json, true);
+            $sources = $orderItem->sources_json;
             if (! is_array($sources)) {
                 continue;
             }

@@ -67,6 +67,13 @@ Schedule::command('woo:sync-categories')
     ->everySixHours()
     ->withoutOverlapping();
 
+// Sync parteneri WinMentor + reconciliere winmentor_id furnizori — zilnic la 00:05.
+Schedule::command('winmentor:sync-parteneri')
+    ->dailyAt('00:05')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping()
+    ->runInBackground();
+
 // Curățare sync_runs mai vechi de 30 de zile — zilnic la 00:15.
 Schedule::call(function () {
     \DB::table('sync_runs')
@@ -210,14 +217,32 @@ Schedule::command('winmentor:watch-intrari --firma=MAL2019')
     ->withoutOverlapping()
     ->runInBackground();
 
-// WinMentor — detectare vânzări noi (la fiecare 15 minute).
-// Același program ca intrările — luni–sâmbătă 08:00–17:30.
+// WinMentor — detectare vânzări noi (la fiecare 5 minute).
+// Luni–sâmbătă 08:00–17:30. Include facturi, avize și bonuri casă (emulare).
 // Nu rulează concurent cu fetch-ul de backfill (blocat prin Cache lock).
 Schedule::command('winmentor:watch-vanzari --firma=MAL2019')
-    ->everyFifteenMinutes()
+    ->everyFiveMinutes()
     ->timezone('Europe/Bucharest')
     ->days([1, 2, 3, 4, 5, 6])
     ->between('08:00', '17:30')
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// WinMentor — sync livrări CM cu istoric (la fiecare 15 minute, luni–sâmbătă 08:00–18:00).
+Schedule::command('sync:winmentor-livrari')
+    ->everyFiveMinutes()
+    ->timezone('Europe/Bucharest')
+    ->days([1, 2, 3, 4, 5, 6])
+    ->between('08:00', '18:00')
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// WinMentor — sincronizare parteneri local (la fiecare oră, luni–sâmbătă 08:00–18:00).
+Schedule::command('winmentor:sync-parteneri')
+    ->hourly()
+    ->timezone('Europe/Bucharest')
+    ->days([1, 2, 3, 4, 5, 6])
+    ->between('08:00', '18:00')
     ->withoutOverlapping()
     ->runInBackground();
 

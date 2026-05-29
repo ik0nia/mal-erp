@@ -4,7 +4,7 @@ namespace App\Jobs;
 
 use App\Models\IntegrationConnection;
 use App\Models\SyncRun;
-use App\Services\WooCommerce\WooClient;
+use App\Services\WooCommerce\WooDirectSqlService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Carbon;
@@ -16,9 +16,11 @@ class PushWinmentorPricesToWooJob implements ShouldQueue
 {
     use Queueable;
 
-    public int $timeout = 1200;
+    public int $timeout = 120;
 
     public int $tries = 3;
+
+    public int $backoff = 30;
 
     /**
      * @param  array<int, array{row:int, sku:string, woo_id:int, regular_price:string}>  $updates
@@ -47,37 +49,17 @@ class PushWinmentorPricesToWooJob implements ShouldQueue
             return;
         }
 
-        Log::info('Deferred Woo price push job started', [
+        Log::info('Deferred Woo price push job started (direct SQL)', [
             'sync_run_id' => $this->syncRunId,
             'woo_connection_id' => $this->wooConnectionId,
             'updates' => count($this->updates),
         ]);
 
-        $wooConnection = IntegrationConnection::query()->find($this->wooConnectionId);
-
-        if (! $wooConnection instanceof IntegrationConnection || ! $wooConnection->isWooCommerce() || ! $wooConnection->is_active) {
-            $this->recordProgress(0, count($this->updates), [
-                [
-                    'message' => 'WooCommerce connection unavailable for deferred price push.',
-                ],
-            ]);
-
-            Log::warning('Deferred Woo price push failed: invalid connection', [
-                'sync_run_id' => $this->syncRunId,
-                'woo_connection_id' => $this->wooConnectionId,
-                'updates' => count($this->updates),
-            ]);
-
-            return;
-        }
-
-        $client = new WooClient($wooConnection);
         $successCount = 0;
         $failureCount = 0;
         $newErrors = [];
 
         $batchPayload = [];
-        $batchSource = [];
 
         foreach ($this->updates as $update) {
             $wooId = (int) ($update['woo_id'] ?? 0);
@@ -98,35 +80,31 @@ class PushWinmentorPricesToWooJob implements ShouldQueue
                 'id' => $wooId,
                 'regular_price' => $regularPrice,
             ];
-            $batchSource[] = $update;
         }
 
         if ($batchPayload !== []) {
             try {
-                $client->updateProductPricesBatch($batchPayload);
-                $successCount += count($batchPayload);
-            } catch (Throwable $batchException) {
-                Log::warning('Deferred Woo batch push failed, falling back to single updates', [
+                $directSql = new WooDirectSqlService;
+                $result = $directSql->updatePrices($batchPayload);
+                $successCount = $result['updated'];
+                $failureCount += $result['failed'];
+
+                if ($result['failed'] > 0) {
+                    $newErrors[] = [
+                        'message' => "Direct SQL price push: {$result['failed']} failed",
+                    ];
+                }
+            } catch (Throwable $e) {
+                $failureCount += count($batchPayload);
+                $newErrors[] = [
+                    'message' => 'Direct SQL price push failed: '.$e->getMessage(),
+                ];
+
+                Log::error('Direct SQL price push failed', [
                     'sync_run_id' => $this->syncRunId,
-                    'woo_connection_id' => $this->wooConnectionId,
-                    'error' => $batchException->getMessage(),
+                    'error' => $e->getMessage(),
                     'batch_size' => count($batchPayload),
                 ]);
-
-                foreach ($batchPayload as $index => $payload) {
-                    try {
-                        $client->updateProductPrice((int) $payload['id'], (string) $payload['regular_price']);
-                        $successCount++;
-                    } catch (Throwable $singleException) {
-                        $failureCount++;
-                        $sourceUpdate = $batchSource[$index] ?? [];
-                        $newErrors[] = [
-                            'row' => $sourceUpdate['row'] ?? null,
-                            'sku' => $sourceUpdate['sku'] ?? null,
-                            'message' => 'Failed deferred Woo price push: '.$singleException->getMessage(),
-                        ];
-                    }
-                }
             }
         }
 

@@ -1,0 +1,15 @@
+{
+    "inter": {
+        "300": "\/var\/www\/erp\/storage\/fonts\/inter_300_07dabb19b170e3852ebdf10a85924e18",
+        "normal": "\/var\/www\/erp\/storage\/fonts\/inter_normal_5a66f8ceb794f00a7f54c797a21283b3",
+        "500": "\/var\/www\/erp\/storage\/fonts\/inter_500_efef4d9d61ac26570557ad601dea222a",
+        "600": "\/var\/www\/erp\/storage\/fonts\/inter_600_3604d9d49b61fc3b7c29c4259c86ff89",
+        "bold": "\/var\/www\/erp\/storage\/fonts\/inter_bold_02384cdf43e3d24b76c57c66dfd114bf",
+        "800": "\/var\/www\/erp\/storage\/fonts\/inter_800_43e268268a3801a5ec2cf116ab01b114",
+        "900": "inter_900_5e896423ef3d43fa02b13f3a20da7b92"
+    },
+    "playfair display": {
+        "bold": "\/var\/www\/erp\/storage\/fonts\/playfair_display_bold_1e531eb7e3e1e9744697b9dd01c254b4",
+        "900": "playfair_display_900_50fdbe4bbbec819ad655c1852fc26931"
+    }
+}

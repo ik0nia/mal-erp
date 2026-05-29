@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\WooProduct;
+use App\Observers\WooProductObserver;
 use Filament\Support\Facades\FilamentView;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -24,6 +26,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Observer: push preț automat pe WooCommerce când regular_price se schimbă în ERP
+        WooProduct::observe(WooProductObserver::class);
+
         // Override SMTP config from DB (fallback pe .env)
         $this->overrideMailConfig();
 

@@ -15,8 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
                 \Illuminate\Routing\Middleware\SubstituteBindings::class,
             ])->group(base_path('routes/webhooks.php'));
 
-            // Warehouse PWA routes
-            \Illuminate\Support\Facades\Route::middleware('web')
+            // Warehouse PWA routes — sesiune extinsă (30 zile) pentru PWA
+            \Illuminate\Support\Facades\Route::middleware(['web', \App\Http\Middleware\WarehouseLongSession::class])
                 ->group(base_path('routes/warehouse.php'));
         },
     )

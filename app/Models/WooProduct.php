@@ -11,6 +11,12 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class WooProduct extends Model
 {
+    /**
+     * Setați pe true înainte de update-uri care vin din WooCommerce (webhook/sync),
+     * ca să nu creăm un loop de push prețuri.
+     */
+    public static bool $skipPricePush = false;
+
     public const SOURCE_WOOCOMMERCE      = 'woocommerce';
     public const SOURCE_WINMENTOR_CSV    = 'winmentor_csv';
     public const SOURCE_WINMENTOR_BRIDGE = 'winmentor_bridge';

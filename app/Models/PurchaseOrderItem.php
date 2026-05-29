@@ -34,6 +34,7 @@ class PurchaseOrderItem extends Model
             'line_total'               => 'decimal:4',
             'purchase_request_item_id' => 'integer',
             'received_quantity'        => 'decimal:3',
+            'sources_json'             => 'array',
         ];
     }
 

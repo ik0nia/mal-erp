@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Warehouse;
 
 use App\Http\Controllers\Controller;
 use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderReception;
+use App\Models\PurchaseOrderReceptionItem;
 use App\Models\PurchaseRequest;
 use App\Models\PurchaseRequestItem;
 use App\Models\Supplier;
@@ -116,19 +118,35 @@ class WarehouseController extends Controller
 
     private function getPendingOrders(): array
     {
-        return PurchaseOrder::with(['supplier', 'items'])
-            ->where('status', PurchaseOrder::STATUS_SENT)
+        $orders = PurchaseOrder::with(['supplier', 'items', 'receptions'])
+            ->whereIn('status', [PurchaseOrder::STATUS_SENT, PurchaseOrder::STATUS_PARTIALLY_RECEIVED])
             ->latest('updated_at')
+            ->get();
+
+        // Preîncărcăm drafturi existente
+        $drafts = \DB::table('purchase_order_reception_drafts')
+            ->whereIn('purchase_order_id', $orders->pluck('id'))
             ->get()
-            ->map(fn ($o) => [
-                'id'          => $o->id,
-                'number'      => $o->number,
-                'supplier'    => $o->supplier?->name ?? '—',
-                'items_count' => $o->items->count(),
-                'total'       => number_format($o->items->sum('line_total'), 2, ',', '.'),
-                'created_at'  => $o->created_at?->format('d.m.Y'),
-            ])
-            ->all();
+            ->keyBy('purchase_order_id');
+
+        return $orders->map(function ($o) use ($drafts) {
+            $draft = $drafts[$o->id] ?? null;
+            $draftUser = $draft ? \App\Models\User::find($draft->user_id) : null;
+
+            return [
+                'id'               => $o->id,
+                'number'           => $o->number,
+                'supplier'         => $o->supplier?->name ?? '—',
+                'items_count'      => $o->items->count(),
+                'total'            => number_format($o->items->sum('line_total'), 2, ',', '.'),
+                'created_at'       => $o->created_at?->format('d.m.Y'),
+                'status'           => $o->status,
+                'receptions_count' => $o->receptions->count(),
+                'has_draft'        => $draft !== null,
+                'draft_user'       => $draftUser?->name,
+                'draft_at'         => $draft ? \Carbon\Carbon::parse($draft->updated_at)->format('d.m H:i') : null,
+            ];
+        })->all();
     }
 
     public function supplierProducts(Request $request, Supplier $supplier)
@@ -163,32 +181,111 @@ class WarehouseController extends Controller
 
     public function receive(PurchaseOrder $order)
     {
-        abort_unless($order->status === PurchaseOrder::STATUS_SENT, 403);
+        abort_unless(in_array($order->status, [
+            PurchaseOrder::STATUS_SENT,
+            PurchaseOrder::STATUS_PARTIALLY_RECEIVED,
+        ]), 403);
 
-        $order->loadMissing(['supplier', 'items']);
+        $order->loadMissing(['supplier', 'items', 'receptions.items']);
+
+        // Calculăm cantitățile deja recepționate per item (din recepțiile anterioare)
+        $previouslyReceived = [];
+        foreach ($order->receptions as $reception) {
+            foreach ($reception->items as $ri) {
+                $previouslyReceived[$ri->order_item_id] = ($previouslyReceived[$ri->order_item_id] ?? 0) + (float) $ri->received_quantity;
+            }
+        }
+
+        $isPartiallyReceived = $order->status === PurchaseOrder::STATUS_PARTIALLY_RECEIVED;
 
         $items = $order->items->map(fn ($item) => [
-            'id'           => $item->id,
-            'name'         => $item->product_name,
-            'sku'          => $item->sku ?? null,
-            'supplier_sku' => $item->supplier_sku ?? null,
-            'ordered_qty'  => (float) $item->quantity,
-            'qty'          => (float) $item->quantity,
+            'id'                    => $item->id,
+            'name'                  => $item->product_name,
+            'sku'                   => $item->sku ?? null,
+            'supplier_sku'          => $item->supplier_sku ?? null,
+            'ordered_qty'           => (float) $item->quantity,
+            'previously_received'   => $previouslyReceived[$item->id] ?? 0,
+            'remaining_qty'         => max(0, (float) $item->quantity - ($previouslyReceived[$item->id] ?? 0)),
+            'qty'                   => $isPartiallyReceived ? 0 : max(0, (float) $item->quantity - ($previouslyReceived[$item->id] ?? 0)),
         ])->values()->all();
 
-        return view('warehouse.receive', compact('order', 'items'));
+        // Istoric recepții pentru afișare
+        $receptionHistory = $order->receptions->sortBy('reception_number')->map(fn ($r) => [
+            'number'     => $r->reception_number,
+            'date'       => $r->received_at->format('d.m.Y H:i'),
+            'items_count' => $r->items->count(),
+            'total_qty'  => $r->items->sum(fn ($ri) => (float) $ri->received_quantity),
+            'wm_status'  => $r->winmentor_sync_status,
+            'is_final'   => $r->is_final,
+        ])->values()->all();
+
+        // Draft server-side (orice user)
+        $serverDraft = \DB::table('purchase_order_reception_drafts')
+            ->where('purchase_order_id', $order->id)
+            ->orderByDesc('updated_at')
+            ->first();
+
+        $serverDraftData = null;
+        $serverDraftMeta = null;
+        if ($serverDraft) {
+            $serverDraftData = $serverDraft->draft_data;
+            $draftUser = \App\Models\User::find($serverDraft->user_id);
+            $serverDraftMeta = [
+                'user_name' => $draftUser?->name ?? 'Necunoscut',
+                'user_id'   => $serverDraft->user_id,
+                'saved_at'  => $serverDraft->updated_at,
+            ];
+        }
+
+        return view('warehouse.receive', compact('order', 'items', 'isPartiallyReceived', 'receptionHistory', 'serverDraftData', 'serverDraftMeta'));
+    }
+
+    public function draftSave(Request $request, PurchaseOrder $order)
+    {
+        abort_unless(in_array($order->status, [
+            PurchaseOrder::STATUS_SENT,
+            PurchaseOrder::STATUS_PARTIALLY_RECEIVED,
+        ]), 403);
+
+        $data = $request->validate([
+            'draft_data' => ['required', 'array'],
+        ]);
+
+        \DB::table('purchase_order_reception_drafts')->updateOrInsert(
+            ['purchase_order_id' => $order->id, 'user_id' => Auth::id()],
+            [
+                'draft_data'  => json_encode($data['draft_data']),
+                'updated_at'  => now(),
+                'created_at'  => now(),
+            ],
+        );
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function draftDelete(PurchaseOrder $order)
+    {
+        \DB::table('purchase_order_reception_drafts')
+            ->where('purchase_order_id', $order->id)
+            ->delete();
+
+        return response()->json(['ok' => true]);
     }
 
     public function receiveStore(Request $request, PurchaseOrder $order)
     {
-        abort_unless($order->status === PurchaseOrder::STATUS_SENT, 403);
+        abort_unless(in_array($order->status, [
+            PurchaseOrder::STATUS_SENT,
+            PurchaseOrder::STATUS_PARTIALLY_RECEIVED,
+        ]), 403);
 
         $data = $request->validate([
-            'items'                    => ['required', 'array'],
-            'items.*.id'               => ['required', 'integer'],
-            'items.*.qty'              => ['required', 'numeric', 'min:0'],
-            'items.*.reason'           => ['nullable', 'string', 'max:100'],
-            'items.*.invoice_position' => ['nullable', 'integer', 'min:1', 'max:9999'],
+            'reception_type'               => ['required', 'in:partial,final'],
+            'items'                        => ['required', 'array'],
+            'items.*.id'                   => ['required', 'integer'],
+            'items.*.qty'                  => ['required', 'numeric', 'min:0'],
+            'items.*.reason'               => ['nullable', 'string', 'max:100'],
+            'items.*.invoice_position'     => ['nullable', 'integer', 'min:1', 'max:9999'],
             'extra_items'                  => ['nullable', 'array'],
             'extra_items.*.name'           => ['required', 'string', 'max:255'],
             'extra_items.*.sku'            => ['required', 'string', 'max:100'],
@@ -197,47 +294,92 @@ class WarehouseController extends Controller
             'received_notes'               => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $order->loadMissing('items');
+        $isFinal = $data['reception_type'] === 'final';
 
+        // Verifică dacă există cel puțin o cantitate > 0 (items normale sau extra)
+        $hasAnyQty = collect($data['items'])->contains(fn ($i) => (float) ($i['qty'] ?? 0) > 0)
+            || ! empty($data['extra_items']);
+
+        if (! $hasAnyQty) {
+            return response()->json([
+                'ok'      => false,
+                'message' => 'Nu ai introdus nicio cantitate. Completează cel puțin un produs.',
+            ], 422);
+        }
+
+        $order->loadMissing(['items', 'receptions']);
+
+        // Următorul număr de recepție
+        $nextReceptionNr = ($order->receptions->max('reception_number') ?? 0) + 1;
+
+        // Creăm recepția (fără PENDING — dispatch manual după ce items sunt salvate)
+        $reception = PurchaseOrderReception::create([
+            'purchase_order_id'     => $order->id,
+            'reception_number'      => $nextReceptionNr,
+            'is_final'              => $isFinal,
+            'received_at'           => now(),
+            'received_by'           => Auth::id(),
+            'received_notes'        => $data['received_notes'] ?? null,
+            'winmentor_sync_status' => 'pending',
+        ]);
+
+        $submittedById = collect($data['items'])->keyBy('id');
         $affectedRequestIds = [];
         $hasShortfall       = false;
-        $submittedById      = collect($data['items'])->keyBy('id');
 
         foreach ($order->items as $orderItem) {
             $submitted   = $submittedById[$orderItem->id] ?? [];
-            $receivedQty = (float) ($submitted['qty'] ?? 0);
-            $orderedQty  = (float) $orderItem->quantity;
-            $shortfall   = max(0, $orderedQty - $receivedQty);
+            $thisQty     = (float) ($submitted['qty'] ?? 0);
+
+            // Creăm item de recepție (chiar dacă qty=0, pentru evidență completă)
+            if ($thisQty > 0) {
+                PurchaseOrderReceptionItem::create([
+                    'reception_id'      => $reception->id,
+                    'order_item_id'     => $orderItem->id,
+                    'received_quantity'  => $thisQty,
+                    'received_note'     => $submitted['reason'] ?? null,
+                    'invoice_position'  => isset($submitted['invoice_position']) ? (int) $submitted['invoice_position'] : null,
+                ]);
+            }
+
+            // Actualizăm cantitatea cumulativă pe PO item
+            $previousTotal = (float) ($orderItem->received_quantity ?? 0);
+            $newTotal      = $previousTotal + $thisQty;
 
             $orderItem->update([
-                'received_quantity' => $receivedQty,
-                'received_note'     => $submitted['reason'] ?? null,
-                'invoice_position'  => isset($submitted['invoice_position']) ? (int) $submitted['invoice_position'] : null,
+                'received_quantity' => $newTotal,
+                'received_note'     => $submitted['reason'] ?? $orderItem->received_note,
+                'invoice_position'  => isset($submitted['invoice_position']) ? (int) $submitted['invoice_position'] : $orderItem->invoice_position,
             ]);
 
-            if ($shortfall > 0) {
-                $hasShortfall = true;
-                $this->revertShortfall($orderItem, $shortfall, $affectedRequestIds);
+            // Revert shortfall doar la recepția finală
+            if ($isFinal) {
+                $orderedQty = (float) $orderItem->quantity;
+                $shortfall  = max(0, $orderedQty - $newTotal);
+                if ($shortfall > 0) {
+                    $hasShortfall = true;
+                    $this->revertShortfall($orderItem, $shortfall, $affectedRequestIds);
+                }
             }
         }
 
-        foreach (array_unique($affectedRequestIds) as $requestId) {
-            PurchaseRequest::find($requestId)?->recalculateStatus();
+        if ($isFinal) {
+            foreach (array_unique($affectedRequestIds) as $requestId) {
+                PurchaseRequest::find($requestId)?->recalculateStatus();
+            }
         }
 
-        // Produse neplanificate — adăugate la recepție
+        // Produse neplanificate
         foreach ($data['extra_items'] ?? [] as $extra) {
             $qty          = (float) $extra['qty'];
             $wooProductId = $extra['woo_product_id'] ? (int) $extra['woo_product_id'] : null;
-
-            // Dacă avem woo_product_id, folosim SKU-ul ERP (EAN), nu codul furnizorului
             $sku = $extra['sku'] ?: null;
             if ($wooProductId) {
                 $wooSku = \App\Models\WooProduct::find($wooProductId)?->sku;
                 if ($wooSku) $sku = $wooSku;
             }
 
-            $order->items()->create([
+            $newItem = $order->items()->create([
                 'product_name'      => $extra['name'],
                 'sku'               => $sku,
                 'woo_product_id'    => $wooProductId,
@@ -247,22 +389,41 @@ class WarehouseController extends Controller
                 'line_total'        => 0,
                 'notes'             => 'Adăugat la recepție (neplanificat)',
             ]);
+
+            PurchaseOrderReceptionItem::create([
+                'reception_id'      => $reception->id,
+                'order_item_id'     => $newItem->id,
+                'received_quantity'  => $qty,
+            ]);
         }
 
+        // Actualizăm PO status
+        $newStatus = $isFinal ? PurchaseOrder::STATUS_RECEIVED : PurchaseOrder::STATUS_PARTIALLY_RECEIVED;
+
         $order->update([
-            'status'                => PurchaseOrder::STATUS_RECEIVED,
-            'received_at'           => now(),
-            'received_by'           => Auth::id(),
-            'received_notes'        => $data['received_notes'] ?? null,
-            'winmentor_sync_status' => PurchaseOrder::WINMENTOR_PENDING,
-            'winmentor_sync_error'  => null,
+            'status'                => $newStatus,
+            'received_at'           => $isFinal ? now() : ($order->received_at ?? now()),
+            'received_by'           => $isFinal ? Auth::id() : ($order->received_by ?? Auth::id()),
+            'received_notes'        => $data['received_notes'] ?? $order->received_notes,
         ]);
+
+        // Șterge draftul server-side (recepția e finalizată)
+        \DB::table('purchase_order_reception_drafts')
+            ->where('purchase_order_id', $order->id)
+            ->delete();
+
+        // Dispatch WinMentor sync job acum (după ce toate items sunt salvate)
+        \App\Jobs\PushReceptionToWinmentorJob::dispatch($reception->id)->afterCommit();
+
+        $message = $isFinal
+            ? ($hasShortfall
+                ? 'Recepție finală înregistrată. Lipsurile returnate în coada de cumpărare.'
+                : 'Recepție finală înregistrată cu succes.')
+            : "Recepție parțială #{$nextReceptionNr} înregistrată. Comanda rămâne deschisă.";
 
         return response()->json([
             'ok'      => true,
-            'message' => $hasShortfall
-                ? 'Recepție înregistrată. Lipsurile returnate în coada de cumpărare.'
-                : 'Recepție înregistrată cu succes.',
+            'message' => $message,
         ]);
     }
 
@@ -305,8 +466,8 @@ class WarehouseController extends Controller
 
     public function history()
     {
-        $orders = PurchaseOrder::with(['supplier', 'receivedBy'])
-            ->where('status', PurchaseOrder::STATUS_RECEIVED)
+        $orders = PurchaseOrder::with(['supplier', 'receivedBy', 'receptions'])
+            ->whereIn('status', [PurchaseOrder::STATUS_RECEIVED, PurchaseOrder::STATUS_PARTIALLY_RECEIVED])
             ->latest('received_at')
             ->paginate(30);
 
@@ -315,8 +476,11 @@ class WarehouseController extends Controller
 
     public function historyDetail(PurchaseOrder $order)
     {
-        abort_unless($order->status === PurchaseOrder::STATUS_RECEIVED, 404);
-        $order->loadMissing(['supplier', 'items', 'receivedBy']);
+        abort_unless(in_array($order->status, [
+            PurchaseOrder::STATUS_RECEIVED,
+            PurchaseOrder::STATUS_PARTIALLY_RECEIVED,
+        ]), 404);
+        $order->loadMissing(['supplier', 'items', 'receivedBy', 'receptions.items', 'receptions.receivedByUser']);
         return view('warehouse.history-detail', compact('order'));
     }
 

@@ -3,11 +3,9 @@
 namespace App\Jobs;
 
 use App\Models\AppSetting;
-use App\Models\IntegrationConnection;
 use App\Models\SupplierFeed;
 use App\Models\User;
 use App\Notifications\PriceChangeAlertNotification;
-use App\Services\WooCommerce\WooClient;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -85,6 +83,13 @@ class SyncToyaPricesJob implements ShouldQueue
 
         $now = now()->toDateTimeString();
 
+        // Produse cu stoc WinMentor — nu le actualizăm preț/stoc (vine din Bridge)
+        $wmStockProductIds = DB::table('product_stocks')
+            ->where('quantity', '>', 0)
+            ->groupBy('woo_product_id')
+            ->pluck('woo_product_id')
+            ->flip();
+
         // 3. Calcule în memorie — colectare bulk updates
         $psUpdates        = []; // product_suppliers: purchase_price
         $wpPriceUpdates   = []; // woo_products cu preț nou
@@ -128,6 +133,9 @@ class SyncToyaPricesJob implements ShouldQueue
                 'updated_at'     => $now,
             ];
 
+            // Produse cu stoc WinMentor — nu modificăm preț/stoc (gestionat de Bridge sync)
+            $hasWmStock = isset($wmStockProductIds[$row->product_id]);
+
             // stoc
             $stockFlag   = $stocks[$code]['stock'] ?? null;
             $stockStatus = match ($stockFlag) {
@@ -136,17 +144,13 @@ class SyncToyaPricesJob implements ShouldQueue
                 default        => null,
             };
 
-            if ($stockStatus !== null) {
+            if ($stockStatus !== null && ! $hasWmStock) {
                 $wpStockUpdates[] = [
                     'id'           => $row->product_id,
                     'stock_status' => $stockStatus,
                     'updated_at'   => $now,
                 ];
 
-                // WooCommerce resetează backorders=no când manage_stock=false, deci trebuie manage_stock=true.
-                // Cu backorders=yes pluginul setează onbackorder (disponibil la furnizor, add to cart activ).
-                // Cu backorders=no pluginul setează outofstock.
-                // Push doar dacă stock_status s-a schimbat față de ce e în DB.
                 if ($row->woo_id && $row->status === 'publish' && $stockStatus !== $row->stock_status) {
                     $wooStockPushRows[] = [
                         'id'             => $row->woo_id,
@@ -157,8 +161,8 @@ class SyncToyaPricesJob implements ShouldQueue
                 }
             }
 
-            // preț vânzare
-            if (abs($newSellPrice - $oldSellPrice) >= 0.01) {
+            // preț vânzare — skip produse cu stoc WinMentor (prețul vine din Bridge)
+            if (abs($newSellPrice - $oldSellPrice) >= 0.01 && ! $hasWmStock) {
                 $wpPriceUpdates[] = [
                     'id'            => $row->product_id,
                     'regular_price' => $newSellPrice,
@@ -231,23 +235,30 @@ class SyncToyaPricesJob implements ShouldQueue
 
         Log::info("[SyncToyaPrices] DB scris — ps: " . count($psUpdates) . ", wp_price: " . count($wpPriceUpdates) . ", wp_stock: " . count($wpStockUpdates));
 
-        // 5. Push la WooCommerce — merge până termină tot, erori individuale nu opresc procesul
-        $connection = IntegrationConnection::where('provider', 'woocommerce')->first();
-        if ($connection) {
-            $woo = new WooClient($connection);
+        // 5. Push la WooCommerce via SQL direct (fără API — instant, fără timeout)
+        $directSql = new \App\Services\WooCommerce\WooDirectSqlService;
 
-            foreach (array_chunk($wooPricePushRows, 100) as $chunk) {
-                $this->pushWithRetry(fn () => $woo->updateProductPricesBatch($chunk), '[SyncToyaPrices] prețuri')
-                    && ($stats['price_pushed'] += count($chunk));
-            }
+        if (! empty($wooPricePushRows)) {
+            $result = $directSql->updatePrices($wooPricePushRows);
+            $stats['price_pushed'] = $result['updated'];
+            Log::info('[SyncToyaPrices] Push prețuri direct SQL: ' . $result['updated'] . ' updated, ' . $result['failed'] . ' failed');
+        }
 
-            foreach (array_chunk($wooStockPushRows, 100) as $chunk) {
-                $this->pushWithRetry(fn () => $woo->updateProductsBatch($chunk), '[SyncToyaPrices] stoc');
-            }
+        if (! empty($wooStockPushRows)) {
+            $stockBatch = array_map(fn ($row) => [
+                'id' => $row['id'],
+                'stock_quantity' => $row['stock_quantity'] ?? 0,
+                'stock_status' => ($row['backorders'] ?? 'no') === 'yes' ? 'onbackorder' : 'outofstock',
+                'manage_stock' => $row['manage_stock'] ?? true,
+                'backorders' => $row['backorders'] ?? 'no',
+            ], $wooStockPushRows);
 
-            if (! empty($wooPricePushRows) || ! empty($wooStockPushRows)) {
-                Log::info('[SyncToyaPrices] Push WooCommerce — prețuri: ' . count($wooPricePushRows) . ', stocuri: ' . count($wooStockPushRows));
-            }
+            $result = $directSql->updateStock($stockBatch);
+            Log::info('[SyncToyaPrices] Push stoc direct SQL: ' . $result['updated'] . ' updated, ' . $result['failed'] . ' failed');
+        }
+
+        if (! empty($wooPricePushRows) || ! empty($wooStockPushRows)) {
+            $directSql->afterSync();
         }
 
         // 6. Notificare produse noi Toya (SKU-uri EAN inexistente în ERP)

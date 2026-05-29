@@ -174,6 +174,12 @@ class SyncStockFromBridgeCommand extends Command
 
                 $stats['matched']++;
 
+                // Populăm winmentor_name dacă lipsește (pentru match viitor la schimbare EAN)
+                $bridgeName = trim($item['denumire'] ?? '');
+                if (! $dryRun && $bridgeName && ! $product->winmentor_name) {
+                    $product->updateQuietly(['winmentor_name' => $bridgeName]);
+                }
+
                 $newQty   = (float) str_replace(',', '.', $item['stoc'] ?? '0');
                 $newPrice = (float) str_replace(',', '.', $item['pretCuTVA'] ?? '0'); // preț cu TVA = regular_price
 
@@ -334,16 +340,16 @@ class SyncStockFromBridgeCommand extends Command
                     }
                 }
 
-                // Push prețuri spre WooCommerce
+                // Push prețuri spre WooCommerce (direct SQL, batch 100)
                 foreach ($sitePrices as $wooConnId => $priceMap) {
-                    foreach (array_chunk($priceMap, 50, true) as $chunk) {
+                    foreach (array_chunk($priceMap, 100, true) as $chunk) {
                         PushWinmentorPricesToWooJob::dispatch((int) $run->id, $wooConnId, $chunk);
                     }
                 }
 
-                // Push stoc/backorders spre WooCommerce
+                // Push stoc/backorders spre WooCommerce (direct SQL, batch 100)
                 foreach ($siteStocks as $wooConnId => $stockMap) {
-                    foreach (array_chunk($stockMap, 50, true) as $chunk) {
+                    foreach (array_chunk($stockMap, 100, true) as $chunk) {
                         \App\Jobs\PushWinmentorStockToWooJob::dispatch((int) $run->id, $wooConnId, $chunk);
                     }
                 }
@@ -405,6 +411,13 @@ class SyncStockFromBridgeCommand extends Command
                     'finished_at' => now(),
                     'stats'       => json_encode($stats),
                 ]);
+
+                // Post-sync: flush WooCommerce cache + rebuild FiboSearch index
+                try {
+                    (new \App\Services\WooCommerce\WooDirectSqlService)->afterSync();
+                } catch (\Throwable $e) {
+                    Log::channel('winmentor_sync')->warning('[BridgeStockSync] afterSync failed: '.$e->getMessage());
+                }
             }
 
             Log::channel('winmentor_sync')->info('[BridgeStockSync] Finalizat', array_merge($stats, compact('firma', 'gestiune')));
@@ -437,6 +450,23 @@ class SyncStockFromBridgeCommand extends Command
             return $existing;
         }
 
+        // Verifică dacă există un produs cu exact aceeași denumire WinMentor — posibil schimbare de EAN
+        // Comparăm DOAR cu winmentor_name (denumirea exactă din WinMentor), nu cu name (editabilă pe site)
+        if ($name) {
+            $trimmedName = trim($name);
+            $byName = WooProduct::where('connection_id', $wooConnection->id)
+                ->where('winmentor_name', $trimmedName)
+                ->first();
+
+            if ($byName) {
+                $oldSku = $byName->sku;
+                $byName->update(['sku' => $sku]);
+                Log::channel('winmentor_sync')->info("[BridgeStockSync] SKU actualizat (schimbare EAN): [{$oldSku}] → [{$sku}] — \"{$trimmedName}\"");
+                $this->line("  [SKU UPDATE] \"{$trimmedName}\": {$oldSku} → {$sku}");
+                return $byName;
+            }
+        }
+
         $wooId = $this->generatePlaceholderWooId($wooConnection->id, $sku);
         while (WooProduct::where('connection_id', $wooConnection->id)->where('woo_id', $wooId)->exists()) {
             $wooId++;
@@ -455,6 +485,7 @@ class SyncStockFromBridgeCommand extends Command
             'status'         => 'draft',
             'sku'            => $sku,
             'name'           => $safeName,
+            'winmentor_name' => $name ? mb_substr(trim($name), 0, 255) : null,
             'slug'           => null,
             'regular_price'  => $formattedPrice,
             'price'          => $formattedPrice,

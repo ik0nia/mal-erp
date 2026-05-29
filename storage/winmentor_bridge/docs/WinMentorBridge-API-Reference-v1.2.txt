@@ -1,0 +1,1235 @@
+WinMentor Bridge
+API Reference - Documentatie Tehnica Detaliata
+Versiunea 1.2 - Martie 2026
+Referinta completa pentru toate endpoint-urile API: parametri, tipuri de date, exemple cereri/raspunsuri.
+
+Cuprins
+
+1. Format General
+Toate endpoint-urile returneaza acelasi format JSON standard:
+{
+  "success": true | false,
+  "data": { ... } | null,
+  "errors": ["msg1", "msg2"],
+  "timestamp": "2026-03-08T12:00:00Z"
+}
+Campuri standard:
+
+Autentificare:
+Toate endpoint-urile (exceptie: /api/health) necesita API Key transmis in unul din urmatoarele moduri:
+Header:  X-API-Key: cheia-voastra
+Query:   ?api_key=cheia-voastra
+
+Prerequisite: Firma si luna de lucru:
+Majoritatea endpoint-urilor de date necesita selectarea prealabila a firmei si lunii contabile prin POST /api/firme/select. Daca conexiunea COM se reconecteaza (idle timeout, crash), Bridge-ul reaplica automat ultima firma/luna selectata.
+
+2. Health & Diagnosticare
+GET  /api/health
+Verifica starea serviciului. Nu necesita autentificare.
+Fara parametri.
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+GET http://localhost:8500/api/health
+
+Exemplu raspuns:
+{ "success": true, "data": {
+    "status": "running",
+    "instanceId": "a3f7b2c1-4d5e-...",
+    "comConnected": true,
+    "timestamp": "2026-03-08T12:00:00Z"
+  }
+}
+Nota: comConnected este false pana la primul call care necesita COM.
+
+GET  /api/diagnostics
+Diagnosticare COM — verifica daca ProgID-ul este inregistrat in Windows Registry. Nu necesita autentificare.
+Fara parametri.
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+GET http://localhost:8500/api/diagnostics
+
+GET  /api/versiuni
+Returneaza versiunile WinMentor si DocImpServer. Necesita firma selectata prealabil.
+Fara parametri.
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+GET http://localhost:8500/api/versiuni
+
+Exemplu raspuns:
+{ "success": true, "data": {
+    "verMentor": 16.43,
+    "verServer": 1.87
+  }
+}
+Returneaza 0 pentru ambele daca nu e selectata firma.
+
+GET  /api/erori
+Returneaza lista erorilor din sesiunea COM curenta (buffer-ul intern GetListaErori).
+Fara parametri.
+
+Exemplu cerere:
+GET http://localhost:8500/api/erori
+
+Exemplu raspuns:
+{ "success": true, "data": ["Eroare 1", "Eroare 2"] }
+Util dupa un import esuat pentru a vedea detaliile erorilor.
+
+
+3. Configurare
+POST  /api/config/id-part-field
+Seteaza campul folosit ca identificator unic al partenerilor in operatiunile de import/export. Afecteaza modul in care WinMentor identifica un partener la import.
+Parametri:
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+POST http://localhost:8500/api/config/id-part-field
+Content-Type: application/json
+
+{ "fieldName": "CodExtern" }
+
+Exemplu raspuns:
+{ "success": true, "data": { "field": "CodExtern", "applied": true } }
+Implicit WinMentor foloseste CodIntern. Setati CodExtern daca sistemul extern are propriile coduri.
+
+POST  /api/config/id-art-field
+Seteaza campul folosit ca identificator unic al articolelor in operatiunile de import/export.
+Parametri:
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+POST http://localhost:8500/api/config/id-art-field
+Content-Type: application/json
+
+{ "fieldName": "CodExtern" }
+
+POST  /api/config/descarcare-automata
+Seteaza flag-ul de descarcare automata a stocului la vanzare.
+Parametri:
+
+Exemplu cerere:
+POST http://localhost:8500/api/config/descarcare-automata?flag=1
+
+Exemplu raspuns:
+{ "success": true, "data": { "flag": 1, "applied": true } }
+
+GET  /api/config/constanta/{id}/{simbol}
+Obtine o constanta de configurare din WinMentor dupa ID numeric si simbol.
+Parametri:
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+GET http://localhost:8500/api/config/constanta/1/CURS_EUR
+Constantele disponibile depind de configuratia WinMentor.
+
+
+4. Firme
+GET  /api/firme
+Returneaza lista tuturor firmelor definite in WinMentor. Nu necesita firma selectata prealabil.
+Fara parametri.
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+GET http://localhost:8500/api/firme
+
+Exemplu raspuns:
+{ "success": true, "data": [
+    { "nume": "FIRMA DEMO SRL" },
+    { "nume": "SC EXEMPLU SA" }
+  ]
+}
+
+GET  /api/firme/{numeFirma}/luni
+Returneaza lunile contabile disponibile pentru o firma. Nu necesita firma selectata prealabil.
+Parametri:
+
+Exemplu cerere:
+GET http://localhost:8500/api/firme/FIRMA%20DEMO%20SRL/luni
+
+Exemplu raspuns:
+{ "success": true, "data": ["2025_01", "2025_02", ..., "2026_03"] }
+Numele firmei trebuie URL-encoded daca contine spatii.
+
+POST  /api/firme/select
+Selecteaza firma si luna de lucru. OBLIGATORIU inainte de orice operatiune pe date. Invalideaza automat cache-ul de parteneri si articole. Starea este persistata in memorie si reaplicata automat la reconectare COM.
+Parametri:
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+POST http://localhost:8500/api/firme/select
+Content-Type: application/json
+
+{ "firma": "FIRMA DEMO SRL", "an": 2026, "luna": 3 }
+
+Exemplu raspuns:
+{ "success": true, "data": {
+    "firma": "FIRMA DEMO SRL",
+    "an": 2026, "luna": 3
+  }
+}
+Dupa selectare, toate endpoint-urile de date opereaza pe aceasta firma/luna.
+La reconectare COM (dupa idle timeout sau crash), Bridge-ul reaplica automat ultima firma/luna.
+
+
+5. Parteneri
+GET  /api/parteneri
+Returneaza lista partenerilor cu suport de paginare, cautare si cache. Datele sunt incarcate o singura data din COM si servite paginat din memorie.
+Parametri:
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+GET http://localhost:8500/api/parteneri?page=1&pageSize=50&search=SRL
+
+Exemplu raspuns:
+{ "success": true, "data": {
+    "items": [{ "idPartener": "1", "denumire": "DEMO SRL", ... }],
+    "page": 1, "pageSize": 50,
+    "totalItems": 342, "totalPages": 7,
+    "hasNextPage": true, "hasPreviousPage": false
+  }
+}
+Campurile string[] (sedii) sunt multi-valori din campuri COM separate cu "~".
+Cache-ul se invalideaza automat la POST /api/firme/select.
+
+GET  /api/parteneri/{partId}/info
+Returneaza informatiile complete ale unui singur partener dupa ID. Raspunsul este un string cu campuri separate de ";".
+Parametri:
+
+Exemplu cerere:
+GET http://localhost:8500/api/parteneri/P001/info
+
+Exemplu raspuns:
+{ "success": true, "data": "P001;DEMO SRL;RO12345678;..." }
+Campurile din string depind de configurarea WinMentor.
+
+POST  /api/parteneri/add
+Adauga un partener nou in nomenclatorul WinMentor. Informatiile se trimit ca string cu campuri separate de ";" (35 campuri).
+Parametri:
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+POST http://localhost:8500/api/parteneri/add
+Content-Type: application/json
+
+{ "info": "P999;FIRMA NOUA SRL;RO99999999;Bucuresti;Str X nr 1;0212345678;Ion Popescu;...restul campurilor..." }
+Invalideaza automat cache-ul de parteneri.
+Campurile exacte si ordinea lor sunt documentate in proiectul Delphi sample al WinMentor.
+
+PUT  /api/parteneri/update
+Modifica un partener existent. Partenerul este identificat dupa campul configurat cu SetIDPartField.
+Parametri:
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+PUT http://localhost:8500/api/parteneri/update
+Content-Type: application/json
+
+{ "info": "P001;FIRMA ACTUALIZATA SRL;RO12345678;..." }
+
+GET  /api/parteneri/next-id
+Returneaza urmatorul ID disponibil pentru un partener nou.
+Fara parametri.
+
+Exemplu cerere:
+GET http://localhost:8500/api/parteneri/next-id
+
+Exemplu raspuns:
+{ "success": true, "data": "1543" }
+
+POST  /api/parteneri/gen-cod
+Genereaza coduri interne/externe/fiscale pentru parteneri care nu au.
+Fara parametri.
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+POST http://localhost:8500/api/parteneri/gen-cod
+
+
+6. Articole & Produse
+GET  /api/articole
+Returneaza nomenclatorul de articole cu suport de paginare, cautare si cache.
+Parametri:
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+GET http://localhost:8500/api/articole?page=1&pageSize=50&search=cafea
+
+GET  /api/clase-articole
+Returneaza clasele de articole (nomenclator).
+Fara parametri.
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+GET http://localhost:8500/api/clase-articole
+
+POST  /api/clase-articole/add
+Adauga o noua clasa de articole.
+Parametri:
+
+Exemplu cerere:
+POST http://localhost:8500/api/clase-articole/add
+Content-Type: application/json
+
+{ "info": "CL01;Clasa Test" }
+
+PUT  /api/clase-articole/set
+Modifica o clasa de articole existenta.
+Parametri:
+
+GET  /api/categorii-pret
+Returneaza categoriile de pret definite in WinMentor.
+Fara parametri.
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+GET http://localhost:8500/api/categorii-pret
+
+GET  /api/articole/cat-pret
+Returneaza categoriile de pret asociate articolelor (raw data).
+Fara parametri.
+
+Exemplu cerere:
+GET http://localhost:8500/api/articole/cat-pret
+
+Exemplu raspuns:
+{ "success": true, "data": [["camp1", "camp2", ...], ...] }
+Returneaza raw string[][] — campurile depind de configuratia WinMentor.
+
+GET  /api/articole/cat-pret-ext
+Returneaza categoriile de pret extinse ale articolelor (raw data cu mai multe campuri).
+Fara parametri.
+Format raw string[][] — mai multe campuri decat versiunea non-ext.
+
+GET  /api/preturi/{artId}/{partId}
+Returneaza pretul de vanzare al unui articol pentru un anumit partener.
+Parametri:
+
+Exemplu cerere:
+GET http://localhost:8500/api/preturi/ART001/P001
+
+Exemplu raspuns:
+{ "success": true, "data": "125.50" }
+Pretul returnat tine cont de ofertele si discounturile active.
+
+GET  /api/produse
+Returneaza lista produselor, cu suport de sincronizare incrementala. Daca se specifica lastSync, returneaza doar produsele adaugate/modificate de la acel moment.
+Parametri:
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+GET http://localhost:8500/api/produse?lastSync=01.03.2026+00:00:00
+Formatul lastSync este specific WinMentor: dd.mm.yyyy hh:mm:ss
+
+GET  /api/produse/stergeri
+Returneaza lista produselor sterse de la ultimul sync (raw data).
+Parametri:
+
+Exemplu cerere:
+GET http://localhost:8500/api/produse/stergeri?lastSync=01.03.2026+00:00:00
+
+POST  /api/produse/add
+Adauga un produs nou.
+Parametri:
+Invalideaza cache-ul de articole/stocuri.
+
+PUT  /api/produse/update
+Modifica un produs existent.
+Parametri:
+
+POST  /api/articole/gen-cod
+Genereaza coduri externe pentru articolele care nu au.
+Fara parametri.
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+POST http://localhost:8500/api/articole/gen-cod
+
+
+7. Stocuri
+GET  /api/stocuri
+Returneaza stocul articolelor cu suport de paginare, cautare si cache.
+Parametri:
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+GET http://localhost:8500/api/stocuri?search=cafea&page=1&pageSize=20
+
+GET  /api/stocuri/{artId}
+Returneaza informatii stoc pentru un singur articol (string ;-separat).
+Parametri:
+
+Exemplu cerere:
+GET http://localhost:8500/api/stocuri/ART001
+
+Exemplu raspuns:
+{ "success": true, "data": "ART001;Cafea;buc;12.50;100;..." }
+
+GET  /api/stocuri/ext
+Returneaza stoc cu campuri extinse (raw data).
+Fara parametri.
+Format raw string[][].
+
+GET  /api/stocuri/ext2
+Returneaza stoc cu al doilea set de campuri extinse (raw data).
+Fara parametri.
+
+GET  /api/stocuri/{artId}/detaliat
+Returneaza detalii stoc pe loturi/serii pentru un articol (raw data).
+Parametri:
+
+Exemplu cerere:
+GET http://localhost:8500/api/stocuri/ART001/detaliat
+
+GET  /api/stocuri/pe-gestiuni
+Returneaza stocul detaliat pe gestiuni (raw data).
+Fara parametri.
+
+GET  /api/ambalaje/stoc-initial
+Returneaza stocul initial de ambalaje (raw data).
+Fara parametri.
+
+GET  /api/ambalaje/miscari
+Returneaza miscarile de ambalaje (raw data).
+Fara parametri.
+
+
+8. Vanzari & Facturi
+GET  /api/vanzari
+Returneaza facturile de vanzare din luna de lucru curenta.
+Fara parametri.
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+GET http://localhost:8500/api/vanzari
+
+GET  /api/vanzari/ext
+Returneaza vanzarile cu 18 campuri extinse.
+Fara parametri.
+
+Campuri raspuns (data):
+
+GET  /api/vanzari/articole-vandute
+Returneaza articolele vandute unui partener intr-o perioada (raw data).
+Parametri:
+
+Exemplu cerere:
+GET http://localhost:8500/api/vanzari/articole-vandute?partId=P001&marcaAgent=0&anInceput=2025&lunaInceput=1
+Returneaza toate articolele vandute de la anInceput/lunaInceput pana la luna de lucru curenta.
+
+GET  /api/vanzari/ultimele
+Returneaza ultimele N vanzari ale unui articol catre un partener (raw data).
+Parametri:
+
+Exemplu cerere:
+GET http://localhost:8500/api/vanzari/ultimele?artId=ART001&partId=P001&marcaAgent=0&cate=10
+
+GET  /api/facturi/{numar}/exists
+Verifica daca o factura de vanzare exista (folosind simbolul de carnet implicit).
+Parametri:
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+GET http://localhost:8500/api/facturi/12345/exists
+
+Exemplu raspuns:
+{ "success": true, "data": { "numar": 12345, "status": "posted", "code": 1 } }
+
+GET  /api/facturi/ext/{prefixDoc}/{numar}/exists
+Verifica daca o factura cu un anumit prefix de document exista.
+Parametri:
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+GET http://localhost:8500/api/facturi/ext/FV/12345/exists
+
+GET  /api/facturi-intrare/{numar}/exists
+Verifica daca o factura de intrare (NIR) exista.
+Parametri:
+
+Campuri raspuns (data):
+
+GET  /api/facturi/numar/{simbolCarnet}
+Returneaza numarul curent (urmatorul disponibil) al facturii pentru un carnet.
+Parametri:
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+GET http://localhost:8500/api/facturi/numar/FC1
+
+GET  /api/facturi/pot-introduce
+Verifica daca se pot introduce documente noi in luna de lucru curenta.
+Fara parametri.
+
+Campuri raspuns (data):
+
+GET  /api/facturi/check
+Verifica integritatea documentului curent din buffer-ul COM.
+Fara parametri.
+
+Campuri raspuns (data):
+
+
+9. Comenzi
+GET  /api/comenzi/nefacturate
+Returneaza comenzile nefacturate din luna de lucru curenta.
+Fara parametri.
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+GET http://localhost:8500/api/comenzi/nefacturate
+
+GET  /api/comenzi/info-nefacturate
+Returneaza informatii detaliate despre comenzile nefacturate (raw data).
+Fara parametri.
+
+GET  /api/comenzi/sub-nefacturate
+Returneaza sub-comenzile nefacturate (raw data).
+Fara parametri.
+
+GET  /api/comenzi/furnizori
+Returneaza comenzile catre furnizori (raw data).
+Fara parametri.
+
+
+10. Solduri & Incasari
+GET  /api/solduri
+Returneaza soldurile tuturor clientilor (facturi + avansuri) din luna de lucru.
+Fara parametri.
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+GET http://localhost:8500/api/solduri
+Raspunsul mixeaza linii de tip Factura si Avans — verificati campul tipLinie.
+
+GET  /api/solduri/{partId}
+Returneaza soldul unui singur partener (string ;-separat).
+Parametri:
+
+Exemplu cerere:
+GET http://localhost:8500/api/solduri/P001
+
+GET  /api/solduri/{partId}/detaliat
+Returneaza sold detaliat (facturi + avansuri) pentru un partener.
+Parametri:
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+GET http://localhost:8500/api/solduri/P001/detaliat
+
+GET  /api/solduri/agent
+Returneaza soldurile pe agenti (raw data).
+Fara parametri.
+
+GET  /api/solduri/furnizori
+Returneaza soldurile furnizorilor (raw data).
+Fara parametri.
+
+GET  /api/solduri/facturi-neoperate
+Returneaza facturile neoperate (raw data).
+Fara parametri.
+
+GET  /api/incasari
+Returneaza incasarile clientilor intr-un interval de timp.
+Parametri:
+
+Exemplu cerere:
+GET http://localhost:8500/api/incasari?an1=2025&luna1=1&an2=2026&luna2=3&partId=P001
+Toate cele 5 parametri sunt obligatorii.
+
+GET  /api/incasari/luna
+Returneaza incasarile din luna de lucru curenta (raw data).
+Fara parametri.
+
+GET  /api/incasari/factura/{nrFactura}
+Returneaza incasarile asociate unei facturi specifice (raw data).
+Parametri:
+
+Exemplu cerere:
+GET http://localhost:8500/api/incasari/factura/12345
+
+
+11. Nomenclatoare
+GET  /api/gestiuni
+Returneaza lista gestiunilor.
+Fara parametri.
+
+Campuri raspuns (data):
+
+POST  /api/gestiuni/add
+Adauga o gestiune noua.
+Parametri:
+
+GET  /api/personal
+Returneaza lista personalului.
+Fara parametri.
+
+Campuri raspuns (data):
+
+GET  /api/personal/{idPers}/info
+Returneaza informatii detaliate despre o persoana (string ;-separat).
+Parametri:
+
+Exemplu cerere:
+GET http://localhost:8500/api/personal/15/info
+
+GET  /api/clase-parteneri
+Returneaza clasele de parteneri.
+Fara parametri.
+
+Campuri raspuns (data):
+
+GET  /api/banci
+Returneaza lista bancilor.
+Fara parametri.
+
+Campuri raspuns (data):
+
+GET  /api/carnete
+Returneaza carnetele de facturi.
+Fara parametri.
+
+Campuri raspuns (data):
+
+GET  /api/carnete/ext
+Returneaza carnetele de facturi cu date extinse (raw data).
+Fara parametri.
+
+GET  /api/oferte
+Returneaza lista ofertelor.
+Fara parametri.
+
+Campuri raspuns (data):
+
+GET  /api/oferte/clienti
+Returneaza ofertele specifice clientilor (raw data).
+Fara parametri.
+
+GET  /api/localitati
+Returneaza lista localitatilor.
+Fara parametri.
+
+Campuri raspuns (data):
+
+GET  /api/localitati/nomenclator
+Returneaza nomenclatorul extins de localitati (raw data cu judet, cod postal etc.).
+Fara parametri.
+
+GET  /api/clienti
+Returneaza lista clientilor cu date de facturare incepand de la o anumita perioada.
+Parametri:
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+GET http://localhost:8500/api/clienti?anInceput=2025&lunaInceput=1
+
+GET  /api/delegati
+Returneaza lista delegatilor (raw data).
+Fara parametri.
+
+GET  /api/subunitati
+Returneaza lista subunitatilor (raw data).
+Fara parametri.
+
+GET  /api/monede
+Returneaza lista monedelor (raw data).
+Fara parametri.
+
+
+12. Discount
+GET  /api/discount/pe-articole
+Returneaza criteriile de discount pe articole (raw data).
+Fara parametri.
+
+GET  /api/discount/pe-clase
+Returneaza criteriile de discount pe clase de articole (raw data).
+Fara parametri.
+
+GET  /api/discount/pe-parteneri
+Returneaza criteriile de discount pe parteneri (raw data).
+Fara parametri.
+
+13. Depozit & Logistica
+GET  /api/intrari
+Returneaza intrarile de marfa (raw data).
+Fara parametri.
+
+GET  /api/receptii
+Returneaza receptiile (raw data).
+Fara parametri.
+
+GET  /api/receptii/subunit
+Returneaza receptiile intre subunitati (raw data).
+Fara parametri.
+
+GET  /api/transferuri
+Returneaza transferurile inter-gestiuni (raw data).
+Fara parametri.
+
+GET  /api/dispozitii-livrare
+Returneaza dispozitiile de livrare (raw data).
+Fara parametri.
+
+GET  /api/delivery-orders
+Returneaza comenzile de livrare (raw data).
+Fara parametri.
+
+GET  /api/inventory-orders
+Returneaza comenzile de inventar (raw data).
+Fara parametri.
+
+GET  /api/nir/atribute
+Returneaza atributele NIR (raw data).
+Fara parametri.
+
+GET  /api/tranzactii/in-curs
+Returneaza tranzactiile in curs (raw data).
+Fara parametri.
+
+GET  /api/iesiri/info
+Returneaza informatii despre iesiri (raw data).
+Fara parametri.
+
+GET  /api/iesiri/info-ext
+Returneaza informatii extinse despre iesiri (raw data).
+Fara parametri.
+
+
+14. Import Documente
+Pipeline-ul de import este: SetDocsData(linii) > *Valide() > Importa*(). Endpoint-ul /api/import/{docType} executa toti pasii automat.
+
+POST  /api/import/{docType}
+Importa documente in WinMentor. Trimite liniile de date, le valideaza si optional le importeaza.
+Parametri:
+
+Campuri raspuns (data):
+
+Exemplu cerere:
+POST http://localhost:8500/api/import/facturi-iesire
+Content-Type: application/json
+
+{
+  "lines": [
+    "linia1;camp1;camp2;camp3;...",
+    "linia2;camp1;camp2;camp3;..."
+  ]
+}
+
+Exemplu raspuns:
+{ "success": true, "data": {
+    "isValid": true,
+    "importedCount": 2,
+    "errors": [],
+    "warnings": ["Avertisment optional"]
+  }
+}
+Formatul exact al liniilor (campuri, ordine) depinde de tipul documentului si este documentat in proiectul Delphi sample al WinMentor.
+Daca validateOnly=true, se returneaza doar validarea fara import efectiv. Util pentru pre-verificare.
+
+Tipuri de documente disponibile (docType):
+
+GET  /api/import/doc-types
+Returneaza lista tipurilor de documente disponibile pentru import.
+Fara parametri.
+
+Exemplu cerere:
+GET http://localhost:8500/api/import/doc-types
+
+Exemplu raspuns:
+{ "success": true, "data": {
+    "facturi-iesire": "Facturi iesire (vanzare)",
+    "facturi-intrare": "Facturi intrare (NIR)",
+    "comenzi": "Comenzi interne",
+    ...
+  }
+}
+
+
+WinMentor Bridge v1.2 | API Reference | Martie 2026
+Camp	Tip	Descriere
+success	boolean	true daca operatiunea a reusit, false daca a esuat
+data	object|null	Datele returnate (null in caz de eroare)
+errors	string[]	Lista mesajelor de eroare (array gol daca success=true)
+timestamp	string	Data/ora raspunsului in format ISO 8601 UTC
+
+Camp	Tip	Descriere
+status	string	Mereu "running"
+instanceId	string	UUID unic al instalarii
+comConnected	boolean	true daca COM-ul este conectat activ
+timestamp	string	Data/ora curenta (UTC)
+
+Camp	Tip	Descriere
+targetProgId	string	ProgID-ul cautat
+progIdFound	boolean	true daca a fost gasit in Registry
+clsid	string	CLSID-ul COM din Registry
+registryMatches	string[]	Alte intrari Registry gasite pentru WinMentor
+processArchitecture	string	Arhitectura procesului (x64/x86)
+osArchitecture	string	Arhitectura OS
+
+Camp	Tip	Descriere
+verMentor	double	Versiunea WinMentor
+verServer	double	Versiunea DocImpServer
+
+Parametru	Tip	Obligatoriu	Descriere
+fieldName	string	Da	Campul de identificare. Valori posibile: "CodExtern", "CodFiscal", "CodIntern"
+
+Camp	Tip	Descriere
+field	string	Campul setat
+applied	boolean	true daca a fost aplicat
+
+Parametru	Tip	Obligatoriu	Descriere
+fieldName	string	Da	Campul de identificare. Valori posibile: "CodExtern", "CodIntern"
+
+Camp	Tip	Descriere
+field	string	Campul setat
+applied	boolean	true
+
+Parametru	Tip	Obligatoriu	Descriere
+flag	int (query)	Da	1 = activare descarcare automata, 0 = dezactivare
+
+Parametru	Tip	Obligatoriu	Descriere
+id	int (path)	Da	ID-ul constantei (numeric)
+simbol	string (path)	Da	Simbolul constantei (ex: "CURS_EUR")
+
+Camp	Tip	Descriere
+id	int	ID-ul cerut
+simbol	string	Simbolul cerut
+value	string	Valoarea constantei
+
+Camp	Tip	Descriere
+nume	string	Numele firmei (exact cum apare in WinMentor)
+
+Parametru	Tip	Obligatoriu	Descriere
+numeFirma	string (path)	Da	Numele firmei exact cum a fost returnat de /api/firme
+
+Parametru	Tip	Obligatoriu	Descriere
+firma	string (body)	Da	Numele firmei (exact din /api/firme)
+an	int (body)	Da	Anul contabil (ex: 2026)
+luna	int (body)	Da	Luna contabila (1-12)
+
+Camp	Tip	Descriere
+firma	string	Firma selectata
+an	int	Anul selectat
+luna	int	Luna selectata
+
+Parametru	Tip	Obligatoriu	Descriere
+page	int (query)	Nu	Numarul paginii (default: 1)
+pageSize	int (query)	Nu	Inregistrari per pagina (default: 100, min: 1, max: 5000)
+search	string (query)	Nu	Text cautat case-insensitive in: Denumire, CodFiscal, CodFiscal2, Localitate, CodExtern, Telefon, PersoanaContact
+refresh	bool (query)	Nu	true = ignora cache, citeste fresh din COM (default: false)
+
+Camp	Tip	Descriere
+idPartener	string	ID intern partener WinMentor
+denumire	string	Numele partenerului
+codFiscal	string	Cod fiscal (CUI/CIF)
+codFiscal2	string	Cod fiscal secundar (cod CAEN etc.)
+localitate	string	Localitatea
+adresa	string	Adresa completa
+telefon	string	Numar telefon
+persoanaContact	string	Persoana de contact
+simbolClasaCaract	string	Simbol clasa caracterizare
+clasaCaract	string	Denumire clasa caracterizare
+simbolCategPret	string	Simbol categorie pret
+denCategPret	string	Denumire categorie pret
+marcaAgent	string	Marca agentului comercial
+numeAgent	string	Numele agentului
+prenumeAgent	string	Prenumele agentului
+scadenta	string	Termen scadenta (zile)
+discount	string	Procent discount
+denCriteriuDiscount	string	Denumire criteriu discount
+denumiriSedii	string[]	Lista denumiri sedii/puncte lucru
+codExtern	string	Cod extern (din sistemul extern)
+partenerBlocat	string	Flag blocare (0/1)
+creditLaVanzare	string	Limita credit la vanzare
+contBanca	string	Cont IBAN/banca
+localitatiSedii	string[]	Localitati sedii
+tara	string	Tara
+marciAgentiSedii	string[]	Marca agent pe fiecare sediu
+observatii	string	Observatii
+flagSediuSocial	string[]	Indicator sediu social (1=social)
+coduriPostaleSedii	string[]	Coduri postale sedii
+emailSedii	string[]	Email-uri sedii
+telPersoaneContact	string	Telefon persoane contact
+pjPfFlag	string	PJ/PF (persoana juridica/fizica)
+monedaImplicita	string	Moneda implicita
+dataAdaugarii	string	Data adaugarii in WinMentor
+trasee	string	Trasee
+puncteAcumulate	string	Puncte acumulate (fidelitate)
+coduriFiscaleSedii	string[]	Coduri fiscale sedii
+infoTipSediu	string[]	Info tip sediu
+
+Parametru	Tip	Obligatoriu	Descriere
+partId	string (path)	Da	ID-ul partenerului (CodIntern, CodExtern sau CodFiscal, in functie de SetIDPartField)
+
+Parametru	Tip	Obligatoriu	Descriere
+info	string (body)	Da	String cu 35 campuri ;-separate. Ordinea conform documentatia COM WinMentor.
+
+Camp	Tip	Descriere
+result	int	Cod rezultat din COM (1=success)
+message	string	Mesaj confirmare
+
+Parametru	Tip	Obligatoriu	Descriere
+info	string (body)	Da	String cu campuri ;-separate (acelasi format ca la add)
+
+Camp	Tip	Descriere
+result	int	Cod rezultat din COM
+message	string	Mesaj confirmare
+
+Camp	Tip	Descriere
+result	int	Numarul de parteneri actualizati sau -1 la eroare
+
+Parametru	Tip	Obligatoriu	Descriere
+page	int (query)	Nu	Numarul paginii (default: 1)
+pageSize	int (query)	Nu	Inregistrari per pagina (default: 100, max: 5000)
+search	string (query)	Nu	Cautare in: Denumire, CodExtern, SimbolClasa
+refresh	bool (query)	Nu	true = ignora cache (default: false)
+
+Camp	Tip	Descriere
+codExtern	string	Cod extern articol
+denumire	string	Denumirea articolului
+denUM	string	Unitate de masura
+pretVanzare	string	Pret vanzare (fara TVA)
+simbolClasa	string	Simbol clasa articol
+denClasa	string	Denumire clasa
+codExternProducator	string	Cod extern producator
+denProducator	string	Denumire producator
+gestImplicita	string	Gestiunea implicita
+codExternAlt	string	Cod extern alternativ
+cotaTVA	string	Cota TVA (ex: 19)
+denUMSecundara	string	UM secundara
+paritateUMSecundara	string	Paritate UM secundara
+masa	string	Masa/greutate
+serviciu	string	Flag serviciu (0/1)
+codVamal	string	Cod vamal
+pretMinim	string	Pret minim
+cantImplicita	string	Cantitate implicita
+pretValuta	string	Pret in valuta
+dataAdaug	string	Data adaugarii
+masa2	string	Masa secundara
+pretVCuTVA	string	Pret vanzare cu TVA
+locatie	string	Locatie depozit
+pretReferinta	string	Pret de referinta
+
+Camp	Tip	Descriere
+simbol	string	Simbol clasa
+denumire	string	Denumire clasa
+
+Parametru	Tip	Obligatoriu	Descriere
+info	string (body)	Da	Info clasa ;-separate
+
+Parametru	Tip	Obligatoriu	Descriere
+info	string (body)	Da	Info clasa ;-separate
+
+Camp	Tip	Descriere
+simbol	string	Simbol categorie
+denumire	string	Denumire categorie
+
+Parametru	Tip	Obligatoriu	Descriere
+artId	string (path)	Da	ID articol (CodExtern sau CodIntern)
+partId	string (path)	Da	ID partener (CodExtern, CodFiscal sau CodIntern)
+
+Parametru	Tip	Obligatoriu	Descriere
+lastSync	string (query)	Nu	Timestamp sincronizare in format "dd.mm.yyyy hh:mm:ss" (URL: + inlocuit cu spatiu). Omiterea returneaza TOATE produsele.
+
+Camp	Tip	Descriere
+idArticol	string	ID articol WinMentor
+denumire	string	Denumire produs
+denUM	string	Unitate de masura
+idProducator	string	ID producator
+denProducator	string	Denumire producator
+tipSerie	string	Tip serie (serie/lot)
+dataAdaugarii	string	Data adaugarii
+dataUltimeiModificari	string	Data ultimei modificari
+tipUM	string	Tip UM
+codIntern	string	Cod intern WinMentor
+simbolClasa	string	Simbol clasa articol
+
+Parametru	Tip	Obligatoriu	Descriere
+lastSync	string (query)	Nu	Timestamp sync in format "dd.mm.yyyy hh:mm:ss"
+
+Parametru	Tip	Obligatoriu	Descriere
+info	string (body)	Da	Informatii produs ;-separate
+
+Parametru	Tip	Obligatoriu	Descriere
+info	string (body)	Da	Informatii produs ;-separate
+
+Camp	Tip	Descriere
+articlesUpdated	int	Numarul de articole actualizate (-1 la eroare)
+
+Parametru	Tip	Obligatoriu	Descriere
+page	int (query)	Nu	Pagina (default: 1)
+pageSize	int (query)	Nu	Per pagina (default: 100, max: 5000)
+search	string (query)	Nu	Cautare in Denumire, CodExtern
+refresh	bool (query)	Nu	true = ignora cache
+
+Camp	Tip	Descriere
+codExtern	string	Cod extern articol
+denumire	string	Denumire articol
+um	string	Unitate de masura
+pretVanzare	string	Pret vanzare
+stoc	string	Cantitate in stoc
+simbolClasa	string	Simbol clasa
+denClasa	string	Denumire clasa
+idProducator	string	ID producator
+denProducator	string	Denumire producator
+idFurnizor	string	ID furnizor
+denFurnizor	string	Denumire furnizor
+simbolGestiune	string	Simbol gestiune
+denGestiune	string	Denumire gestiune
+cotaTVA	string	Cota TVA
+flagTVAInclus	string	Flag TVA inclus in pret (0/1)
+pretCuTVA	string	Pret cu TVA
+stocRezervat	string	Stoc rezervat (din comenzi)
+
+Parametru	Tip	Obligatoriu	Descriere
+artId	string (path)	Da	ID articol
+
+Parametru	Tip	Obligatoriu	Descriere
+artId	string (path)	Da	ID articol
+
+Camp	Tip	Descriere
+idPartener	string	ID partener
+zi	string	Ziua facturii
+nrFactura	string	Numar factura
+idArticol	string	ID articol
+numarComanda	string	Nr. comanda asociata
+cant	string	Cantitate
+denUM	string	UM
+pret	string	Pret unitar
+marcaAgent	string	Marca agent
+valoareFactura	string	Valoare totala factura
+
+Camp	Tip	Descriere
+partID	string	ID partener
+zi	string	Ziua
+prefixDoc	string	Prefix document
+nrDoc	string	Numar document
+artID	string	ID articol
+cant	string	Cantitate
+denUM	string	UM
+pret	string	Pret
+denGest	string	Gestiune
+codInternArt	string	Cod intern articol
+locatieClient	string	Locatie client
+adresa	string	Adresa
+comision	string	Comision
+codFiscal	string	Cod fiscal
+marcaAgent	string	Marca agent
+valAchizitie	string	Valoare achizitie
+codPostal	string	Cod postal
+clasaArticol	string	Clasa articol
+
+Parametru	Tip	Obligatoriu	Descriere
+partId	string (query)	Da	ID partener
+marcaAgent	int (query)	Da	Marca agent (0 = toti agentii)
+anInceput	int (query)	Da	Anul de inceput
+lunaInceput	int (query)	Da	Luna de inceput
+
+Parametru	Tip	Obligatoriu	Descriere
+artId	string (query)	Da	ID articol
+partId	string (query)	Da	ID partener
+marcaAgent	int (query)	Da	Marca agent (0 = toti)
+cate	int (query)	Da	Numarul de inregistrari de returnat
+
+Parametru	Tip	Obligatoriu	Descriere
+numar	int (path)	Da	Numarul facturii
+
+Camp	Tip	Descriere
+numar	int	Numarul cerut
+status	string	"posted", "not_posted", "not_found" sau "error"
+code	int	-1=eroare, 0=nu exista, 1=operata, 2=neoperata
+
+Parametru	Tip	Obligatoriu	Descriere
+prefixDoc	string (path)	Da	Prefix document (ex: "FV")
+numar	int (path)	Da	Numarul facturii
+
+Camp	Tip	Descriere
+prefixDoc	string	Prefix-ul cerut
+numar	int	Numarul cerut
+status	string	Status-ul facturii
+code	int	Cod numeric
+
+Parametru	Tip	Obligatoriu	Descriere
+numar	int (path)	Da	Numarul facturii de intrare
+
+Camp	Tip	Descriere
+numar	int	Numarul cerut
+status	string	Status
+code	int	Cod numeric
+
+Parametru	Tip	Obligatoriu	Descriere
+simbolCarnet	string (path)	Da	Simbolul carnetului de facturi
+
+Camp	Tip	Descriere
+simbolCarnet	string	Simbolul cerut
+numar	string	Numarul curent
+
+Camp	Tip	Descriere
+result	int	1 = se pot introduce, 0 = nu
+
+Camp	Tip	Descriere
+result	int	Cod verificare
+
+Camp	Tip	Descriere
+idArticol	string	ID articol comandat
+numarComanda	string	Numar comanda
+cant	string	Cantitate ramasa
+denArticol	string	Denumire articol
+
+Camp	Tip	Descriere
+idPartener	string	ID partener
+tipLinie	string	"Factura" sau "Avans"
+nrFactura	string	Nr factura (cand tipLinie=Factura)
+dataFactura	string	Data facturii
+restDePlata	string	Suma ramasa de plata
+termenDePlata	string	Termen scadenta
+locatiePartener	string	Locatie
+marcaAgent	string	Marca agent
+valoareFactura	string	Valoare originala
+observatiiFactura	string	Observatii
+tipDocumentAvans	string	Tip doc avans (cand tipLinie=Avans)
+nrDocumentAvans	string	Nr doc avans
+dataDocumentAvans	string	Data doc avans
+restAvans	string	Rest avans neutilizat
+marcaAgentIncasator	string	Agent incasator
+valoareInitialaAvans	string	Valoare initiala avans
+
+Parametru	Tip	Obligatoriu	Descriere
+partId	string (path)	Da	ID partener
+
+Parametru	Tip	Obligatoriu	Descriere
+partId	string (path)	Da	ID partener
+
+Camp	Tip	Descriere
+tipLinie	string	"Factura" sau "Avans"
+nrDocument	string	Nr document
+dataDocument	string	Data document
+suma	string	Suma (pozitiva=factura, negativa=avans)
+
+Parametru	Tip	Obligatoriu	Descriere
+an1	int (query)	Da	An inceput
+luna1	int (query)	Da	Luna inceput
+an2	int (query)	Da	An sfarsit
+luna2	int (query)	Da	Luna sfarsit
+partId	string (query)	Da	ID partener
+
+Parametru	Tip	Obligatoriu	Descriere
+nrFactura	string (path)	Da	Numarul facturii
+
+Camp	Tip	Descriere
+simbol	string	Simbol gestiune
+denumire	string	Denumire gestiune
+
+Parametru	Tip	Obligatoriu	Descriere
+info	string (body)	Da	Info gestiune ;-separate
+
+Camp	Tip	Descriere
+nume	string	Nume
+prenume	string	Prenume
+marca	string	Marca
+cnp	string	CNP
+esteActiv	string	Activ (0/1)
+esteAgent	string	Agent comercial (0/1)
+serieBuletin	string	Serie CI
+numarBuletin	string	Numar CI
+codPostal	string	Cod postal
+
+Parametru	Tip	Obligatoriu	Descriere
+idPers	int (path)	Da	Marca persoanei (ID numeric)
+
+Camp	Tip	Descriere
+simbol	string	Simbol clasa
+denumire	string	Denumire clasa
+
+Camp	Tip	Descriere
+simbol	string	Simbol/cod banca
+denumire	string	Denumire banca
+
+Camp	Tip	Descriere
+simbol	string	Simbol carnet
+denumire	string	Denumire carnet
+
+Camp	Tip	Descriere
+partID	string	ID partener
+artID	string	ID articol
+dataInceput	string	Data inceput
+dataSfarsit	string	Data sfarsit
+pret	string	Pret oferta
+cantitate	string	Cantitate minima
+
+Camp	Tip	Descriere
+simbol	string	Simbol/cod localitate
+denumire	string	Denumire localitate
+
+Parametru	Tip	Obligatoriu	Descriere
+anInceput	int (query)	Da	Anul de inceput
+lunaInceput	int (query)	Da	Luna de inceput
+
+Camp	Tip	Descriere
+codIntern	string	Cod intern
+codExtern	string	Cod extern
+denumire	string	Denumire
+codFiscal	string	Cod fiscal
+localitate	string	Localitate
+judet	string	Judet
+adresa	string	Adresa
+telefon	string	Telefon
+marcaAgent	string	Marca agent
+dataFactura	string	Data ultima factura
+sediiPartener	string	Sedii
+simbolClasa	string	Simbol clasa
+denumireClasa	string	Denumire clasa
+localitatiSedii	string	Localitati sedii
+
+Parametru	Tip	Obligatoriu	Descriere
+docType	string (path)	Da	Tipul documentului (vezi tabelul de mai jos)
+validateOnly	bool (query)	Nu	true = doar validare fara import (default: false)
+lines	string[] (body)	Da	Array de linii text in formatul WinMentor. Fiecare linie = o inregistrare cu campuri ;-separate.
+
+Camp	Tip	Descriere
+isValid	boolean	true daca datele au trecut validarea
+importedCount	int	Numarul de documente importate (0 daca validateOnly=true)
+errors	string[]	Erori de validare (daca isValid=false)
+warnings	string[]	Avertismente post-import
+
+docType	Descriere
+facturi-iesire	Facturi de vanzare (iesire)
+facturi-intrare	Facturi de cumparare / NIR (intrare)
+comenzi	Comenzi interne
+comenzi-ext	Comenzi extinse (cu campuri aditionale)
+comenzi-furnizori	Comenzi catre furnizori
+monetare	Monetare (POS / casa de marcat)
+incasari	Incasari
+plati	Plati
+bonuri-consum	Bonuri de consum intern
+transferuri	Transferuri inter-gestiuni
+note-contabile	Note contabile
+modificari-pret	Modificari de pret
+
