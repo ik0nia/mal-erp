@@ -34,8 +34,5 @@ Thumbs.db
 # Node renderer
 node-renderer/node_modules/
 
-# MentorAPI (proiect Go separat)
-mentorapi/
-
 # Claude Code
 .claude/
