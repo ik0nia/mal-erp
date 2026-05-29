@@ -1,0 +1,58 @@
+<!-- ==================== STOCURI ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Stocuri — GET /api/stocuri</h2>
+<span class="badge badge-ok">TESTAT + MAPAT</span>
+</div>
+<div class="section-body">
+<p>Returnează stocurile articolelor. Paginat, cu search. <strong>21 câmpuri</strong> (documentat 17, 4 extra).</p>
+<div class="note note-info">Testat: 5.891 înregistrări stoc pe firma ERP. Toate au exact 21 câmpuri (consistent).</div>
+
+<h3>Câmpuri output — 21 câmpuri per stoc (separator ";")</h3>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>CodExtern</strong></td><td>string</td><td class="status-ok">✅ Doc + test</td><td><span class="mono">8011564016392</span></td></tr>
+<tr><td>1</td><td><strong>Denumire</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">Articol exemplu</span></td></tr>
+<tr><td>2</td><td><strong>UM</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">Buc</span></td></tr>
+<tr><td>3</td><td><strong>PretVanzare</strong></td><td>decimal</td><td class="status-ok">✅ Doc</td><td><span class="mono">11,57</span></td></tr>
+<tr><td>4</td><td><strong>Stoc</strong></td><td>decimal</td><td class="status-ok">✅ Doc</td><td><span class="mono">69</span></td></tr>
+<tr><td>5</td><td><strong>SimbolClasa</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">1</span></td></tr>
+<tr><td>6</td><td><strong>DenClasa</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">Clasa 1</span></td></tr>
+<tr><td>7</td><td><strong>IDProducator</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">0000000004770</span></td></tr>
+<tr><td>8</td><td><strong>DenProducator</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">Producator X</span></td></tr>
+<tr><td>9</td><td><strong>IDFurnizor</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">0000000024280</span></td></tr>
+<tr><td>10</td><td><strong>DenFurnizor</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">Furnizor Y SRL</span></td></tr>
+<tr><td>11</td><td><strong>SimbolGestiune</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">MP</span></td></tr>
+<tr><td>12</td><td><strong>DenGestiune</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">Magazin Principal</span></td></tr>
+<tr><td>13</td><td><strong>CotaTVA</strong></td><td>integer</td><td class="status-ok">✅ Doc</td><td><span class="mono">21</span></td></tr>
+<tr><td>14</td><td><strong>Flag TVA inclus</strong></td><td>DA/NU</td><td class="status-ok">✅ Doc</td><td><span class="mono">DA</span></td></tr>
+<tr><td>15</td><td><strong>PretCuTVA</strong></td><td>decimal</td><td class="status-ok">✅ Doc</td><td><span class="mono">14</span></td></tr>
+<tr><td>16</td><td><strong>StocRezervat</strong></td><td>decimal</td><td class="status-ok">✅ Doc</td><td><span class="mono">0</span></td></tr>
+<tr><td colspan="5" style="background:#fff3cd; font-weight:600">--- Câmpuri nedocumentate ---</td></tr>
+<tr><td>17</td><td><strong>CantitateMinimVanzare</strong></td><td>integer</td><td class="status-ok">✅ Analiză 5.891 (151 valori distincte)</td><td><span class="mono">0</span>, <span class="mono">5</span>, <span class="mono">10</span></td></tr>
+<tr><td>18</td><td><strong>CodExternAlt / SKU</strong></td><td>string</td><td class="status-ok">✅ 188/200 completat</td><td><span class="mono">SKU-232</span></td></tr>
+<tr><td>19</td><td><strong>Observatii</strong></td><td>string</td><td class="status-ok">✅ Rar completat</td><td><span class="mono">30 SACI/PALET</span></td></tr>
+<tr><td>20</td><td>(nefolosit)</td><td>-</td><td class="status-ok">✅ Mereu gol</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+<div class="note">Stoc disponibil = Stoc[4] - StocRezervat[16]</div>
+
+<h3>GET /api/stocuri/pe-gestiuni — 10 câmpuri</h3>
+<p>Stocuri detaliate per gestiune/depozit. Mapare confirmată vs proiect GitHub.</p>
+<div class="note note-info">Testat: 7.896 înregistrări.</div>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>DenGestiune</strong></td><td>string</td><td class="status-ok">✅ GitHub + test</td><td><span class="mono">Magazin Principal</span></td></tr>
+<tr><td>1</td><td><strong>SimbolGestiune</strong></td><td>string</td><td class="status-ok">✅ GitHub + test</td><td><span class="mono">MP</span></td></tr>
+<tr><td>2</td><td><strong>Denumire</strong></td><td>string</td><td class="status-ok">✅ GitHub + test</td><td><span class="mono">Articol exemplu</span></td></tr>
+<tr><td>3</td><td><strong>CodExtern</strong></td><td>string</td><td class="status-ok">✅ GitHub + test</td><td><span class="mono">9007912539582</span></td></tr>
+<tr><td>4</td><td><strong>ContContabil</strong></td><td>string</td><td class="status-ok">✅ GitHub + test</td><td><span class="mono">371.02</span></td></tr>
+<tr><td>5</td><td><strong>UM</strong></td><td>string</td><td class="status-ok">✅ GitHub + test</td><td><span class="mono">Buc</span></td></tr>
+<tr><td>6</td><td><strong>Stoc</strong></td><td>decimal</td><td class="status-ok">✅ GitHub + test</td><td><span class="mono">69</span></td></tr>
+<tr><td>7</td><td><strong>ValoareStoc</strong></td><td>decimal</td><td class="status-ok">✅ GitHub (rotunjit)</td><td><span class="mono">0,85</span></td></tr>
+<tr><td>8</td><td><strong>ValoareStocPrecisa</strong></td><td>decimal</td><td class="status-ok">✅ GitHub (precis)</td><td><span class="mono">2,6</span></td></tr>
+<tr><td>9</td><td><strong>CotaTVA</strong></td><td>integer</td><td class="status-ok">✅ GitHub + test</td><td><span class="mono">21</span></td></tr>
+</table>
+
+</div>
+</div>
+

@@ -1,0 +1,128 @@
+<!-- ==================== IMPORT COMENZI FURNIZORI ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Import Comenzi Furnizori — POST /api/import/comenzi-furnizori</h2>
+<span class="badge badge-ok">TESTAT + MAPAT</span>
+</div>
+<div class="section-body">
+
+<p>Importă comenzi furnizor în WinMentor. Flow: <span class="mono">SetDocsData</span> &rarr; <span class="mono">ComenziFurnValide</span> &rarr; <span class="mono">ImportaComenziFurn</span>.</p>
+
+<div class="note note-info">✅ Testat 14 mai 2026 pe firma ERP, luna 5/2026 — 3 comenzi importate (99999, 99998, 99997). Validate + import OK. Mapare câmpuri verificată complet. CodFurnizor testat cu CodExtern, CodFiscal și CodIntern.</div>
+
+<div class="note"><strong>Fix critic:</strong> SetDocsData necesită SAFEARRAY(BSTR) construit manual via Win32 syscall și pasat prin vtable by-value (16 bytes). IDispatch nu funcționează. ComenziFurnValide/ImportaComenziFurn trecute de la RawQuery (IDispatch) la callMethodInt (vtable).</div>
+
+<h3>Parametri query</h3>
+<table>
+<tr><th>Parametru</th><th>Tip</th><th>Descriere</th></tr>
+<tr><td><span class="mono">validateOnly=1</span></td><td>bool</td><td>Doar validează fără import. Returnează <span class="mono">isValid: true/false</span></td></tr>
+</table>
+
+<h3>Request body</h3>
+<pre style="background:#f5f0e8; padding:12px; border-radius:6px; font-size:13px">POST /api/import/comenzi-furnizori
+{
+  "lines": [
+    "[InfoPachet]",
+    "AnLucru=2026",
+    "LunaLucru=5",
+    "Tipdocument=COMANDA FURNIZOR",
+    "TotalComenzi=1",
+    "Logon=Master",
+    "",
+    "[Comanda_1]",
+    "NrDoc=99999",
+    "SimbolCarnet=",
+    "Operatie=A",
+    "Data=14.05.2026",
+    "DataLivrare=20.05.2026",
+    "CodFurnizor=TESTAPI001",
+    "Locatie=",
+    "Moneda=LEI",
+    "TotalArticole=2",
+    "Observatii=Text observatii",
+    "Scadenta=13.06.2026",
+    "",
+    "[Items_1]",
+    "Item_1=8711500354624;Buc;5;10.50;0;14.05.2026;",
+    "Item_2=5994100164210;Buc;3;25.00;0;14.05.2026;"
+  ]
+}</pre>
+
+<h3>Secțiunea [InfoPachet] — header global</h3>
+<table>
+<tr><th>Câmp</th><th>Obligatoriu</th><th>Format</th><th>Descriere</th></tr>
+<tr><td><span class="mono">AnLucru</span></td><td>DA</td><td>integer</td><td>Anul de lucru (trebuie să coincidă cu firma selectată)</td></tr>
+<tr><td><span class="mono">LunaLucru</span></td><td>DA</td><td>integer</td><td>Luna de lucru</td></tr>
+<tr><td><span class="mono">Tipdocument</span></td><td>DA</td><td>string</td><td>Fix: <span class="mono">COMANDA FURNIZOR</span></td></tr>
+<tr><td><span class="mono">TotalComenzi</span></td><td>DA</td><td>integer</td><td>Numărul de comenzi din pachet</td></tr>
+<tr><td><span class="mono">Logon</span></td><td>DA</td><td>string</td><td>Fix: <span class="mono">Master</span></td></tr>
+</table>
+
+<h3>Secțiunea [Comanda_N] — header comandă</h3>
+<table>
+<tr><th>Câmp</th><th>Obligatoriu</th><th>Format</th><th>Verificat</th><th>Descriere</th></tr>
+<tr><td><span class="mono">NrDoc</span></td><td>DA</td><td>integer</td><td class="status-ok">✅ → [0]</td><td>Număr document</td></tr>
+<tr><td><span class="mono">SimbolCarnet</span></td><td>NU</td><td>string</td><td class="status-ok">✅</td><td>Carnet documente (gol = auto)</td></tr>
+<tr><td><span class="mono">Operatie</span></td><td>DA</td><td>string</td><td class="status-ok">✅</td><td><span class="mono">A</span> = adăugare</td></tr>
+<tr><td><span class="mono">Data</span></td><td>DA</td><td>dd.mm.yyyy</td><td class="status-ok">✅ → [3]</td><td>Data documentului</td></tr>
+<tr><td><span class="mono">DataLivrare</span></td><td>NU</td><td>dd.mm.yyyy</td><td class="status-ok">✅ ignorat</td><td>Setat automat de WinMentor la recepție (nu la import)</td></tr>
+<tr><td><span class="mono">CodFurnizor</span></td><td>DA</td><td>string</td><td class="status-ok">✅ → [1],[2]</td><td>Depinde de <span class="mono">SetIDPartField</span>: CodExtern, CodFiscal sau CodIntern</td></tr>
+<tr><td><span class="mono">Locatie</span></td><td>NU</td><td>string</td><td class="status-ok">✅</td><td>Locație/sediu</td></tr>
+<tr><td><span class="mono">Moneda</span></td><td>DA</td><td>string</td><td class="status-ok">✅</td><td><span class="mono">LEI</span> sau <span class="mono">EUR</span></td></tr>
+<tr><td><span class="mono">TotalArticole</span></td><td>DA</td><td>integer</td><td class="status-ok">✅</td><td>Nr. linii items</td></tr>
+<tr><td><span class="mono">Observatii</span></td><td>NU</td><td>string</td><td class="status-ok">✅ salvat intern</td><td>Nu apare în GET dar se salvează</td></tr>
+<tr><td><span class="mono">Scadenta</span></td><td>NU</td><td>dd.mm.yyyy</td><td class="status-ok">✅ salvat intern</td><td>Data scadență (NU zile! — eroare 209 dacă e integer)</td></tr>
+<tr><td><span class="mono">Agent</span></td><td>NU</td><td>integer</td><td class="status-ok">✅ salvat intern</td><td>Marca agent (NU "MarcaAgent"!). Salvat dar nu apare în GetSuppliersOrders</td></tr>
+</table>
+
+<h3>Secțiunea [Items_N] — linii articole</h3>
+<p>Format per linie: <span class="mono">Item_N=CodArticol;UM;Cantitate;Pret;Discount;Data;</span></p>
+<table>
+<tr><th>Câmp</th><th>Poz</th><th>Obligatoriu</th><th>Format</th><th>Verificat</th><th>Descriere</th></tr>
+<tr><td><span class="mono">CodArticol</span></td><td>1</td><td>DA</td><td>string</td><td class="status-ok">✅ → [5]</td><td>SKU/EAN (depinde de <span class="mono">SetIDArtField</span>)</td></tr>
+<tr><td><span class="mono">UM</span></td><td>2</td><td>DA</td><td>string</td><td class="status-ok">✅ → [7]</td><td>Unitate măsură (Buc, Kg, etc.)</td></tr>
+<tr><td><span class="mono">Cantitate</span></td><td>3</td><td>DA</td><td>decimal</td><td class="status-ok">✅ → [6]</td><td>Cantitate comandată</td></tr>
+<tr><td><span class="mono">Pret</span></td><td>4</td><td>DA</td><td>decimal</td><td class="status-ok">✅ → [8]</td><td>Preț unitar (fără TVA)</td></tr>
+<tr><td><span class="mono">Discount</span></td><td>5</td><td>NU</td><td>decimal</td><td class="status-ok">✅</td><td>Discount % (0 = fără)</td></tr>
+<tr><td><span class="mono">Data</span></td><td>6</td><td>NU</td><td>dd.mm.yyyy</td><td class="status-ok">✅</td><td>Dată per linie</td></tr>
+</table>
+
+<h3>CodFurnizor — depinde de SetIDPartField</h3>
+<table>
+<tr><th>SetIDPartField</th><th>CodFurnizor</th><th>Exemplu</th><th>Testat</th></tr>
+<tr><td><span class="mono">CodExtern</span></td><td>Codul extern al partenerului</td><td><span class="mono">TESTAPI001</span></td><td class="status-ok">✅</td></tr>
+<tr><td><span class="mono">CodFiscal</span></td><td>CUI-ul partenerului</td><td><span class="mono">RO99999999</span></td><td class="status-ok">✅</td></tr>
+<tr><td><span class="mono">CodIntern</span></td><td>Codul intern WinMentor</td><td><span class="mono">0000000018401</span></td><td class="status-ok">✅</td></tr>
+</table>
+
+<h3>Răspuns validate</h3>
+<pre style="background:#f5f0e8; padding:12px; border-radius:6px; font-size:13px">{"success": true, "data": {"isValid": true, "docType": "comenzi-furnizori"}}</pre>
+
+<h3>Răspuns import</h3>
+<pre style="background:#f5f0e8; padding:12px; border-radius:6px; font-size:13px">{"success": true, "data": {"isValid": true, "importedCount": 1, "docType": "comenzi-furnizori", "errors": null}}</pre>
+
+<h3>Output GET /api/comenzi/furnizori — 10 câmpuri per linie</h3>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>NrDoc</strong></td><td><span class="mono">99999</span></td></tr>
+<tr><td>1</td><td><strong>CodFurnizor</strong></td><td><span class="mono">TESTAPI001</span></td></tr>
+<tr><td>2</td><td><strong>DenumireFurnizor</strong> (auto)</td><td><span class="mono">TEST API PARTENER SRL</span></td></tr>
+<tr><td>3</td><td><strong>DataDocument</strong></td><td><span class="mono">2026-05-14 00:00:00</span></td></tr>
+<tr><td>4</td><td><strong>DataLivrare</strong></td><td><span class="mono">1899-12-30</span> (null = nesetat)</td></tr>
+<tr><td>5</td><td><strong>CodArticol</strong></td><td><span class="mono">8711500354624</span></td></tr>
+<tr><td>6</td><td><strong>Cantitate</strong></td><td><span class="mono">2</span></td></tr>
+<tr><td>7</td><td><strong>UM</strong></td><td><span class="mono">Buc</span></td></tr>
+<tr><td>8</td><td><strong>Pret</strong></td><td><span class="mono">10,5</span></td></tr>
+<tr><td>9</td><td>(gol)</td><td></td></tr>
+</table>
+
+<h4>Erori posibile la validare</h4>
+<table>
+<tr><th>Cod</th><th>Mesaj</th><th>Cauză</th></tr>
+<tr><td>209</td><td>Data scadenta eronata</td><td>Scadenta nu e în format dd.mm.yyyy (ex: ai pus zile în loc de dată)</td></tr>
+<tr><td>-</td><td>Furnizor necunoscut</td><td>CodFurnizor nu corespunde cu SetIDPartField</td></tr>
+<tr><td>-</td><td>Articol necunoscut</td><td>CodArticol nu corespunde cu SetIDArtField</td></tr>
+</table>
+
+</div>
+</div>

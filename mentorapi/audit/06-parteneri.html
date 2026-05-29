@@ -1,0 +1,181 @@
+<!-- ==================== PARTENERI ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Parteneri — GET /api/parteneri</h2>
+<span class="badge badge-ok">TESTAT + MAPAT</span>
+</div>
+<div class="section-body">
+<p>Returnează lista partenerilor. Paginat, cu search. <strong>49 câmpuri</strong> per partener (documentația zice 38 — 11 câmpuri extra adăugate în versiuni noi DocImpServer). Toți partenerii au exact 49 câmpuri (consistent).</p>
+<div class="note note-info">Testat: 11.447 parteneri pe firma ERP. Câmpuri cu "~" conțin valori multiple separate prin tildă (sedii multiple).</div>
+
+<h3>Parametri input (query string)</h3>
+<table>
+<tr><th>Parametru</th><th>Tip</th><th>Default</th><th>Descriere</th></tr>
+<tr><td>page</td><td>integer</td><td>1</td><td>Pagina curentă</td></tr>
+<tr><td>pageSize</td><td>integer</td><td>100 (max 10000)</td><td>Parteneri per pagină</td></tr>
+<tr><td>search</td><td>string</td><td>-</td><td>Caută în denumire, cod, CUI</td></tr>
+</table>
+
+<h3>Câmpuri output — 49 câmpuri per partener (separator ";")</h3>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Confirmat</th><th>Exemplu real</th></tr>
+<tr><td>0</td><td><strong>IDPartener</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">0000000099999</span></td></tr>
+<tr><td>1</td><td><strong>Denumire</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">FIRMA EXEMPLU SRL</span></td></tr>
+<tr><td>2</td><td><strong>CodFiscal</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">RO12345678</span></td></tr>
+<tr><td>3</td><td><strong>Localitate</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">ORASUL MEU</span></td></tr>
+<tr><td>4</td><td><strong>Adresa</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">Str. Exemplu, Nr. 1</span></td></tr>
+<tr><td>5</td><td><strong>Telefon</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>6</td><td><strong>PersoanaContact</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>7</td><td><strong>SimbolClasa</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">*SC</span></td></tr>
+<tr><td>8</td><td><strong>DenClasa</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">SOCIETATI COMERCIALE</span></td></tr>
+<tr><td>9</td><td><strong>SimbolCategPret</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>10</td><td><strong>DenCategPret</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">---- nedefinit ----</span></td></tr>
+<tr><td>11</td><td><strong>MarcaAgent</strong></td><td>integer</td><td class="status-ok">✅ Doc</td><td><span class="mono">1</span></td></tr>
+<tr><td>12</td><td><strong>NumeAgent</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">AGENT EXEMPLU</span></td></tr>
+<tr><td>13</td><td><strong>PrenumeAgent</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>14</td><td><strong>Scadenta</strong></td><td>integer</td><td class="status-ok">✅ Doc</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>15</td><td><strong>Discount</strong></td><td>decimal</td><td class="status-ok">✅ Doc</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td colspan="5" style="background:#f8f4ef; font-weight:600">--- De aici câmpurile sunt deplasate față de documentație ---</td></tr>
+<tr><td>16</td><td><strong>DenumiriSedii~</strong></td><td>string</td><td class="status-ok">✅ Analiză</td><td><span class="mono">Sediu Secundar</span>, <span class="mono">SEDIU SOCIAL</span></td></tr>
+<tr><td>17</td><td><strong>CodExtern</strong></td><td>string</td><td class="status-ok">✅ Analiză</td><td><span class="mono">0000000099999</span></td></tr>
+<tr><td>18</td><td><strong>PartenerBlocat</strong></td><td>DA/NU</td><td class="status-ok">✅ Analiză</td><td><span class="mono">NU</span></td></tr>
+<tr><td>19</td><td><strong>CreditLaVanzare</strong></td><td>decimal</td><td class="status-ok">✅ Analiză</td><td><span class="mono">0</span></td></tr>
+<tr><td>20</td><td><strong>NrRegistrulComertului</strong></td><td>string</td><td class="status-ok">✅ Analiză (nedocumentat în output, dar e în AdaugaPartener)</td><td><span class="mono">J00/1234/2020</span></td></tr>
+<tr><td>21</td><td><strong>ContBanca</strong></td><td>string</td><td class="status-ok">✅ Analiză 5000 (IBAN-uri)</td><td><span class="mono">TRA-RO82BTRL...</span></td></tr>
+<tr><td>22</td><td><strong>LocalitatiSedii~</strong></td><td>string</td><td class="status-ok">✅ Analiză</td><td><span class="mono">LOCALITATE JUD</span></td></tr>
+<tr><td>23</td><td><strong>JudetSediu</strong></td><td>string</td><td class="status-ok">✅ Analiză</td><td><span class="mono">BH</span></td></tr>
+<tr><td>24</td><td><strong>MarcaAgentiSedii~</strong></td><td>integer</td><td class="status-ok">✅ Analiză</td><td><span class="mono">1</span></td></tr>
+<tr><td>25</td><td><strong>Observatii</strong></td><td>string</td><td class="status-ok">✅ Analiză 5.000 (mix: nume persoane, telefoane, observatii)</td><td><span class="mono">Persoana contact, 0700000000</span></td></tr>
+<tr><td>26</td><td><strong>FlagSediuSocial~</strong></td><td>D/gol</td><td class="status-ok">✅ Analiză</td><td><span class="mono">D</span></td></tr>
+<tr><td>27</td><td><strong>CoduriPostaleSedii~</strong></td><td>string</td><td class="status-ok">✅ Analiză</td><td><span class="mono">410000</span></td></tr>
+<tr><td>28</td><td><strong>EmailSedii~</strong></td><td>string</td><td class="status-ok">✅ Analiză</td><td><span class="mono">exemplu@email.com</span></td></tr>
+<tr><td>29</td><td><strong>TelefoanePersoaneContact~</strong></td><td>string</td><td class="status-ok">✅ Analiză 10.000 (nr telefon reale)</td><td><span class="mono">0700000000~0700000001</span></td></tr>
+<tr><td>30</td><td><strong>PJPFFlag</strong></td><td>PJ/PF</td><td class="status-ok">✅ Analiză</td><td><span class="mono">PJ</span></td></tr>
+<tr><td>31</td><td><strong>MonedaImplicita</strong></td><td>string</td><td class="status-ok">✅ Analiză</td><td><span class="mono">Lei</span></td></tr>
+<tr><td>32</td><td><strong>DataAdaugarii</strong></td><td>date</td><td class="status-ok">✅ Analiză</td><td><span class="mono">01.01.2024</span></td></tr>
+<tr><td>33</td><td><strong>Trasee~</strong></td><td>string</td><td class="status-ok">✅ Analiză 10.000 (~ separator sedii)</td><td><span class="mono">~</span> sau data</td></tr>
+<tr><td>34</td><td><strong>PuncteAcumulate</strong></td><td>decimal</td><td class="status-ok">✅ Analiză</td><td><span class="mono">0</span></td></tr>
+<tr><td>35</td><td><strong>CoduriFiscaleSedii~</strong></td><td>string</td><td class="status-ok">✅ Analiză</td><td><span class="mono">12345678~</span></td></tr>
+<tr><td>36</td><td><strong>InfoTipSediu~</strong></td><td>string</td><td class="status-ok">✅ Analiză</td><td><span class="mono">~</span></td></tr>
+<tr><td colspan="5" style="background:#fff3cd; font-weight:600">--- Câmpuri nedocumentate (adăugate în versiuni noi DocImpServer) ---</td></tr>
+<tr><td>37</td><td><strong>TVAIncasare</strong></td><td>DA/NU</td><td class="status-ok">✅ Analiză 10.000 (7x DA)</td><td><span class="mono">NU</span></td></tr>
+<tr><td>38</td><td><strong>FlagProducator</strong></td><td>DA/NU</td><td class="status-ok">✅ Analiză 10.000 (3x DA)</td><td><span class="mono">NU</span></td></tr>
+<tr><td>39</td><td><strong>EmailSediiDelivrare~</strong></td><td>string</td><td class="status-ok">✅ Analiză 10.000 (~ separator sedii)</td><td><span class="mono">~</span></td></tr>
+<tr><td>40</td><td><strong>SimbolAutoJudetSediu</strong></td><td>string</td><td class="status-ok">✅ Analiză 10.000 (XH, ZH, SM, CJ)</td><td><span class="mono">XH</span></td></tr>
+<tr><td>41</td><td><strong>CodPostalSediu</strong></td><td>string</td><td class="status-ok">✅ Analiză 10.000 (3139 valori unice, 6 cifre)</td><td><span class="mono">410000</span></td></tr>
+<tr><td>42</td><td><strong>Tara (cod ISO)</strong></td><td>string</td><td class="status-ok">✅ Analiză (mereu RO)</td><td><span class="mono">RO</span></td></tr>
+<tr><td>43</td><td><strong>SimbolAutoTaraSedii~</strong></td><td>string</td><td class="status-ok">✅ Analiză 10.000 (RO + ~ sedii)</td><td><span class="mono">RO</span> sau <span class="mono">~</span></td></tr>
+<tr><td>44</td><td><strong>FlagEFactura</strong></td><td>DA/NU</td><td class="status-ok">✅ Analiză 10.000 (9997x NU, 1x RO)</td><td><span class="mono">NU</span></td></tr>
+<tr><td>45</td><td><strong>SerAI</strong></td><td>integer</td><td class="status-ok">✅ Analiză 10.000 (seria auto-invoicing)</td><td><span class="mono">0</span></td></tr>
+<tr><td>46</td><td><strong>NrAI</strong></td><td>integer</td><td class="status-ok">✅ Analiză 10.000 (nr auto-invoicing)</td><td><span class="mono">0</span></td></tr>
+<tr><td>47</td><td>(nefolosit)</td><td>integer</td><td class="status-ok">✅ Analiză 10.000 — mereu 0/gol</td><td><span class="mono">0</span></td></tr>
+<tr><td>48</td><td>(nefolosit)</td><td>-</td><td class="status-ok">✅ Analiză 10.000 — mereu gol</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+
+<div class="note note-danger">
+<strong>Important:</strong> Câmpurile 16-36 sunt deplasate față de documentația oficială! Documentația omite câmpul <strong>DenCriteriuDiscount</strong> (poz 16 doc) și include <strong>NrRegistrulComertului</strong> care nu era documentat în output. Câmpurile cu "~" conțin valori multiple separate prin tildă corespunzător sediilor enumerate.
+</div>
+
+
+<h3>POST /api/parteneri/add — AdaugaPartener</h3>
+<p>Adaugă un partener nou în WinMentor. Acceptă JSON structurat cu 35 câmpuri. Returnează <span class="mono">result: 1</span> la succes.</p>
+<div class="note note-info">✅ Testat 14 mai 2026 pe firma ERP — partener TESTAPI001 creat cu succes. Mapare câmpuri verificată complet: id, denumire, codFiscal, localitate, adresa, telefon, persoaneContact, simbolClasa (→ DenClasa auto), idAgent (→ NumeAgent auto), nrRegCom, observatii, simbolBanca+contBanca (→ TRA-IBAN), scadentaImplicita, flagPF, emailSediu, codExtern, tvaIncasare, flagProducator.</div>
+<div class="note"><strong>Prerequisite:</strong> <span class="mono">POST /api/config/id-part-field</span> cu <span class="mono">fieldName=CodExtern</span> pentru a folosi cod extern ca identificator.</div>
+
+<h4>Câmpuri input (JSON body)</h4>
+<table>
+<tr><th>Câmp JSON</th><th>Poz input</th><th>Poz output</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">id</span></td><td>0</td><td>[0] ID</td><td>string</td><td><strong>DA</strong> (eroare 403)</td><td>Cod identificare (depinde de SetIDPartField)</td></tr>
+<tr><td><span class="mono">denumire</span></td><td>1</td><td>[1] Denumire</td><td>string</td><td><strong>DA</strong> (eroare 408)</td><td>Numele partenerului</td></tr>
+<tr><td><span class="mono">codFiscal</span></td><td>2</td><td>[2] CodFiscal</td><td>string</td><td>NU</td><td>CUI/CNP (RO prefix = PJ automat)</td></tr>
+<tr><td><span class="mono">localitate</span></td><td>3</td><td>[3] Localitate</td><td>string</td><td>-</td><td>Localitatea sediului social</td></tr>
+<tr><td><span class="mono">adresa</span></td><td>4</td><td>[4] Adresa</td><td>string</td><td>-</td><td>Adresa sediului social</td></tr>
+<tr><td><span class="mono">telefon</span></td><td>5</td><td>[5] Telefon</td><td>string</td><td>-</td><td>Telefon sediu social</td></tr>
+<tr><td><span class="mono">persoaneContact</span></td><td>6</td><td>[6] PersContact</td><td>string</td><td>-</td><td>Persoane contact (~ separator pentru multiple)</td></tr>
+<tr><td><span class="mono">simbolClasa</span></td><td>7</td><td>[7] SimbolClasa</td><td>string</td><td>-</td><td>Simbol clasă partener</td></tr>
+<tr><td><span class="mono">simbolCategoriePret</span></td><td>8</td><td>[9] SimbolCatPret</td><td>string</td><td>-</td><td>Categorie preț implicită</td></tr>
+<tr><td><span class="mono">idAgent</span></td><td>9</td><td>[11] MarcaAgent</td><td>string</td><td>-</td><td>Marca agentului implicit</td></tr>
+<tr><td><span class="mono">nrRegCom</span></td><td>10</td><td>[20] NrRegCom</td><td>string</td><td>-</td><td>Nr. Registrul Comerțului</td></tr>
+<tr><td><span class="mono">observatii</span></td><td>11</td><td>[25] Observatii</td><td>string</td><td>-</td><td>Observații</td></tr>
+<tr><td><span class="mono">simbolBanca</span></td><td>12</td><td>-</td><td>string</td><td>-</td><td>Simbol bancă (~ separator)</td></tr>
+<tr><td><span class="mono">numeBanca</span></td><td>13</td><td>-</td><td>string</td><td>-</td><td>Nume bancă (~ separator)</td></tr>
+<tr><td><span class="mono">localitateBanca</span></td><td>14</td><td>-</td><td>string</td><td>-</td><td>Localitate bancă (~ separator)</td></tr>
+<tr><td><span class="mono">contBanca</span></td><td>15</td><td>[21] ContBanca</td><td>string</td><td>-</td><td>IBAN/cont (~ separator)</td></tr>
+<tr><td><span class="mono">ziImplicitaPlata</span></td><td>16</td><td>-</td><td>string</td><td>-</td><td>Zi implicită plată</td></tr>
+<tr><td><span class="mono">numeSediuSecundar</span></td><td>17</td><td>[16] DenumiriSedii</td><td>string</td><td>-</td><td>Sedii secundare (~ separator)</td></tr>
+<tr><td><span class="mono">adresaSediuSecundar</span></td><td>18</td><td>-</td><td>string</td><td>-</td><td>Adrese sedii (~ separator)</td></tr>
+<tr><td><span class="mono">telefonSediuSecundar</span></td><td>19</td><td>-</td><td>string</td><td>-</td><td>Telefoane sedii (~ separator)</td></tr>
+<tr><td><span class="mono">localitateSediuSec</span></td><td>20</td><td>[22] LocalitatiSedii</td><td>string</td><td>-</td><td>Localități sedii (~ separator)</td></tr>
+<tr><td><span class="mono">idAgentSediuSec</span></td><td>21</td><td>[24] MarcaAgentiSedii</td><td>string</td><td>-</td><td>Agenți sedii (~ separator)</td></tr>
+<tr><td><span class="mono">codExtern</span></td><td>22</td><td>[17] CodExtern</td><td>string</td><td>-</td><td>Cod extern (recomandat = id)</td></tr>
+<tr><td><span class="mono">judetLivrare</span></td><td>23</td><td>-</td><td>string</td><td>-</td><td>Simbol auto județ livrare</td></tr>
+<tr><td><span class="mono">judetSediu</span></td><td>24</td><td>[23] Judet</td><td>string</td><td>-</td><td>Simbol auto județ sediu (completat automat din localitate)</td></tr>
+<tr><td><span class="mono">flagPF</span></td><td>25</td><td>[30] PFsauPJ</td><td>string</td><td>-</td><td>PF/PJ (autodetectat din CodFiscal)</td></tr>
+<tr><td><span class="mono">scadentaImplicita</span></td><td>26</td><td>[14] Scadenta</td><td>string</td><td>-</td><td>Scadența implicită (zile)</td></tr>
+<tr><td><span class="mono">simbolTipContabil</span></td><td>27</td><td>-</td><td>string</td><td>-</td><td>Simbol tip contabil</td></tr>
+<tr><td><span class="mono">flagProducator</span></td><td>28</td><td>[38] FlagProducator</td><td>string</td><td>-</td><td>"P" = producător</td></tr>
+<tr><td><span class="mono">emailSediu</span></td><td>29</td><td>[28] EmailSedii</td><td>string</td><td>-</td><td>Email sediu social</td></tr>
+<tr><td><span class="mono">emailSediiLivrare</span></td><td>30</td><td>[39] EmailSediiDelivrare</td><td>string</td><td>-</td><td>Emailuri sedii livrare (~ separator)</td></tr>
+<tr><td><span class="mono">tvaIncasare</span></td><td>31</td><td>[37] TVAIncasare</td><td>string</td><td>-</td><td>"D" = TVA la încasare</td></tr>
+<tr><td><span class="mono">serAI</span></td><td>32</td><td>[45] SerAI</td><td>string</td><td>-</td><td>Serie auto-invoicing</td></tr>
+<tr><td><span class="mono">nrAI</span></td><td>33</td><td>[46] NrAI</td><td>string</td><td>-</td><td>Număr auto-invoicing</td></tr>
+<tr><td><span class="mono">taraSediu</span></td><td>34</td><td>[42] Tara</td><td>string</td><td>-</td><td>Cod țară ISO (autodetectat)</td></tr>
+</table>
+
+<h4>Exemplu request</h4>
+<pre style="background:#f5f0e8; padding:12px; border-radius:6px; font-size:13px">POST /api/parteneri/add
+{
+  "id": "TESTAPI001",
+  "denumire": "TEST API PARTENER SRL",
+  "codFiscal": "RO99999999",
+  "localitate": "BUCURESTI",
+  "adresa": "Str. Test nr. 1",
+  "telefon": "0700000000",
+  "codExtern": "TESTAPI001"
+}</pre>
+
+<h4>Răspuns</h4>
+<pre style="background:#f5f0e8; padding:12px; border-radius:6px; font-size:13px">{"success": true, "data": {"method": "AdaugaPartener", "result": 1}}</pre>
+
+<h4>Erori posibile</h4>
+<table>
+<tr><th>Cod</th><th>Mesaj</th><th>Cauză</th></tr>
+<tr><td>403</td><td>Nu ai precizat Cod identificare Partener</td><td>Câmpul <span class="mono">id</span> e gol</td></tr>
+<tr><td>413</td><td>Partenerul cu ID-ul precizat exista deja</td><td>ID duplicat</td></tr>
+</table>
+
+<h3>PUT /api/parteneri/update — ModificaPartener</h3>
+<p>Modifică un partener existent. Aceleași câmpuri ca AdaugaPartener. <span class="mono">id</span> identifică partenerul de modificat.</p>
+<div class="note note-info">✅ Testat 14 mai 2026 — 2 runde de modificări: (1) localitate, adresă, telefon, email, observații, nrRegCom, persoaneContact; (2) simbolClasa=*SC, idAgent=3, simbolBanca=TRA+contBanca=IBAN, scadentaImplicita=30, flagPF=PJ, tvaIncasare=NU, flagProducator=NU. Toate reflectate corect în GetListaParteneri.</div>
+
+<h4>Exemplu request</h4>
+<pre style="background:#f5f0e8; padding:12px; border-radius:6px; font-size:13px">PUT /api/parteneri/update
+{
+  "id": "TESTAPI001",
+  "denumire": "TEST API PARTENER SRL",
+  "codFiscal": "RO99999999",
+  "localitate": "ORADEA",
+  "adresa": "Str. Modificata nr. 99",
+  "telefon": "0711111111",
+  "codExtern": "TESTAPI001",
+  "emailSediu": "test@testapi.ro",
+  "observatii": "Partener de test API",
+  "nrRegCom": "J05/999/2026",
+  "persoaneContact": "Ion Popescu"
+}</pre>
+
+<h4>Răspuns</h4>
+<pre style="background:#f5f0e8; padding:12px; border-radius:6px; font-size:13px">{"success": true, "data": {"method": "ModificaPartener", "result": 1}}</pre>
+
+<h4>Câmpuri auto-completate de WinMentor</h4>
+<table>
+<tr><th>Câmp</th><th>Comportament</th></tr>
+<tr><td>[23] Judet</td><td>Dedus automat din localitate (ORADEA → BH)</td></tr>
+<tr><td>[30] PFsauPJ</td><td>Dedus din CodFiscal (prefix RO → PJ)</td></tr>
+<tr><td>[32] DataAdaugarii</td><td>Setat automat la data creării</td></tr>
+<tr><td>[42] Tara</td><td>Setat automat (RO)</td></tr>
+</table>
+
+</div>
+</div>
+

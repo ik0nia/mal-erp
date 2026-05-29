@@ -1,0 +1,63 @@
+{
+    "success": true,
+    "data": [
+        {
+            "simbol": "",
+            "denumire": "---- nedefinit ----"
+        },
+        {
+            "simbol": "MP",
+            "denumire": "Magazin Practic"
+        },
+        {
+            "simbol": "",
+            "denumire": "DEPOZIT"
+        },
+        {
+            "simbol": "",
+            "denumire": "MIMAVA"
+        },
+        {
+            "simbol": "",
+            "denumire": "STERS"
+        },
+        {
+            "simbol": "",
+            "denumire": "PARC AUTO"
+        },
+        {
+            "simbol": "",
+            "denumire": "ONDULINE"
+        },
+        {
+            "simbol": "HALA",
+            "denumire": " HALA"
+        },
+        {
+            "simbol": "RAPID",
+            "denumire": "CASA RAPIDA"
+        },
+        {
+            "simbol": "",
+            "denumire": "CUSTODIE FURNIZOR"
+        },
+        {
+            "simbol": "",
+            "denumire": "CUSTODIE CLIENTI"
+        },
+        {
+            "simbol": "",
+            "denumire": "MALINCO"
+        },
+        {
+            "simbol": "CNC",
+            "denumire": "PRODUCTIE CNC"
+        },
+        {
+            "simbol": "TAPI",
+            "denumire": "TEST API GESTIUNE"
+        }
+    ],
+    "errors": [],
+    "timestamp": "2026-05-18T10:16:38Z"
+}

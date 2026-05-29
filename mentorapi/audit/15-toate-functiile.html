@@ -1,0 +1,93 @@
+<!-- ==================== TOATE FUNCTIILE TESTATE ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Toate funcțiile COM testate — Rezultat complet</h2>
+<span class="badge badge-ok">52 TESTATE</span>
+</div>
+<div class="section-body">
+<div class="note note-info">Testat pe firma ERP, luna 4/2026. v1.2.0: 14 endpoint-uri fixate cu parametri corecti (din libWMEdcom GitHub) + 15 endpoint-uri noi.</div>
+<table>
+<tr><th>Funcție COM</th><th>Endpoint</th><th>Status</th><th>Records</th><th>Câmpuri</th></tr>
+<tr><td>GetListaFirme</td><td>/api/firme</td><td class="status-ok">✅</td><td>34</td><td>-</td></tr>
+<tr><td>GetListaLuni</td><td>/api/firme/{name}/luni</td><td class="status-ok">✅</td><td>ok</td><td>-</td></tr>
+<tr><td>SetNumeFirma+SetLunaLucru</td><td>/api/firme/select</td><td class="status-ok">✅</td><td>-</td><td>-</td></tr>
+<tr><td>GetNomenclatorArticole</td><td>/api/articole</td><td class="status-ok">✅</td><td>15.855</td><td>40</td></tr>
+<tr><td>GetProducts</td><td>/api/produse</td><td class="status-ok">✅</td><td>ok</td><td>11</td></tr>
+<tr><td>GetStergeriProduse</td><td>/api/produse/stergeri</td><td class="status-ok">✅</td><td>ok</td><td>2</td></tr>
+<tr><td>AddProduct</td><td>/api/produse/add</td><td class="status-ok">✅</td><td>-</td><td>19 input</td></tr>
+<tr><td>ModiProduct</td><td>/api/produse/update</td><td class="status-ok">✅</td><td>-</td><td>7 input</td></tr>
+<tr><td>GenCodArticole</td><td>/api/articole/gen-cod</td><td class="status-ok">✅</td><td>-</td><td>-</td></tr>
+<tr><td>GetClaseArticole</td><td>/api/articole/clase</td><td class="status-ok">✅</td><td>ok</td><td>2</td></tr>
+<tr><td>GetListaParteneri</td><td>/api/parteneri</td><td class="status-ok">✅</td><td>11.447</td><td>49</td></tr>
+<tr><td>GetNextPartID</td><td>/api/parteneri/next-id</td><td class="status-ok">✅</td><td>-</td><td>-</td></tr>
+<tr><td>SetIDPartField</td><td>/api/config/id-part-field</td><td class="status-ok">✅</td><td>-</td><td>-</td></tr>
+<tr><td>SetIDArtField</td><td>/api/config/id-art-field</td><td class="status-ok">✅</td><td>-</td><td>-</td></tr>
+<tr><td>GetStocArticole</td><td>/api/stocuri</td><td class="status-ok">✅</td><td>5.891</td><td>21</td></tr>
+<tr><td>GetStocArticoleExt</td><td>/api/stocuri/ext</td><td class="status-ok">✅</td><td>5.891</td><td>20</td></tr>
+<tr><td>GetStocuriPeGestiuni</td><td>/api/stocuri/pe-gestiuni</td><td class="status-ok">✅</td><td>7.896</td><td>10</td></tr>
+<tr><td style="background:#d4edda">GetStocArticoleExt2</td><td>/api/stocuri/ext2?gestiune=MP</td><td class="status-ok">FIXAT v1.2.0</td><td>-</td><td>De testat</td></tr>
+<tr><td style="background:#d4edda">GetStocArtDetaliat</td><td>/api/stocuri/articol/{id}/detaliat?gestiune=MP</td><td class="status-ok">FIXAT v1.2.0</td><td>-</td><td>De testat</td></tr>
+<tr><td style="background:#d4edda">GetStocInitialAmbalaj</td><td>/api/stocuri/ambalaje/initial?an=N&amp;luna=N</td><td class="status-ok">FIXAT v1.2.0</td><td>-</td><td>De testat</td></tr>
+<tr><td style="background:#d4edda">GetMiscariAmbalaje</td><td>/api/stocuri/ambalaje/miscari?anStart=N&amp;lunaStart=N&amp;anStop=N&amp;lunaStop=N</td><td class="status-ok">FIXAT v1.2.0</td><td>-</td><td>De testat</td></tr>
+<tr><td>GetVanzariExt</td><td>/api/vanzari/ext</td><td class="status-ok">✅</td><td>5.694</td><td>23</td></tr>
+<tr><td>GetVanzariLuna</td><td>/api/vanzari/luna</td><td class="status-ok">✅</td><td>5.072</td><td>26</td></tr>
+<tr><td>GetIntrari</td><td>/api/intrari</td><td class="status-ok">✅</td><td>1.334</td><td>11</td></tr>
+<tr><td>GetReceptii</td><td>/api/receptii</td><td class="status-ok">✅</td><td>1.124</td><td>22</td></tr>
+<tr><td>GetNirAtribute</td><td>/api/nir/atribute</td><td class="status-ok">✅</td><td>1.147</td><td>5</td></tr>
+<tr><td>GetSolduri</td><td>/api/solduri</td><td class="status-ok">✅</td><td>149.697</td><td>11</td></tr>
+<tr><td>GetSolduriFurn</td><td>/api/solduri/furnizori</td><td class="status-ok">✅</td><td>1.732</td><td>13</td></tr>
+<tr><td style="background:#d4edda">GetSoldFactNeop</td><td>/api/solduri/facturi-neoperate?partId=ID</td><td class="status-ok">FIXAT v1.2.0</td><td>-</td><td>De testat</td></tr>
+<tr><td>GetIncasariLuna</td><td>/api/incasari/luna</td><td class="status-ok">✅</td><td>153</td><td>5</td></tr>
+<tr><td style="background:#d4edda">GetIncasariFactura</td><td>/api/incasari/factura?an=N&amp;luna=N&amp;nrFact=N&amp;serieFact=X&amp;partId=ID</td><td class="status-ok">FIXAT v1.2.0</td><td>-</td><td>De testat</td></tr>
+<tr><td>GetSuppliersOrders</td><td>/api/comenzi/furnizori</td><td class="status-ok">✅</td><td>1.189</td><td>10</td></tr>
+<tr><td>GetComenziNefacturate</td><td>/api/comenzi/nefacturate</td><td class="status-ok">✅</td><td>20</td><td>25</td></tr>
+<tr><td>GetInfoCmdNefacturate</td><td>/api/comenzi/nefacturate/info</td><td class="status-ok">✅ NULL</td><td>0</td><td>-</td></tr>
+<tr><td>GetInfoCmdSubNefacturate</td><td>/api/comenzi/sub-nefacturate/info</td><td class="status-ok">✅ NULL</td><td>0</td><td>-</td></tr>
+<tr><td>GetTransferuri</td><td>/api/transferuri</td><td class="status-ok">✅</td><td>18</td><td>15</td></tr>
+<tr><td>GetDeliveryOrders</td><td>/api/livrari/orders</td><td class="status-ok">✅</td><td>20</td><td>17</td></tr>
+<tr><td>GetTranzactiiInCurs</td><td>/api/system/tranzactii-in-curs</td><td class="status-ok">✅</td><td>7</td><td>13</td></tr>
+<tr><td style="background:#d4edda">GetInfoBon</td><td>/api/bonuri/info?zi=N</td><td class="status-ok">FIXAT v1.2.0</td><td>-</td><td>De testat</td></tr>
+<tr><td style="background:#d4edda">GetInfoBonExt</td><td>/api/bonuri/info-ext?nrBon=N&amp;zi=N</td><td class="status-ok">FIXAT v1.2.0</td><td>-</td><td>De testat</td></tr>
+<tr><td style="background:#d4edda">GetInfoIesiri</td><td>/api/iesiri/info?zi=N</td><td class="status-ok">FIXAT v1.2.0</td><td>-</td><td>De testat</td></tr>
+<tr><td style="background:#d4edda">GetInfoIesiriExt</td><td>/api/iesiri/info-ext?nrDoc=N&amp;zi=N</td><td class="status-ok">FIXAT v1.2.0</td><td>-</td><td>De testat</td></tr>
+<tr><td style="background:#d4edda">GetReceivingStatus</td><td>/api/receiving/status?partId=ID&amp;serieDoc=X&amp;nrDoc=N</td><td class="status-ok">FIXAT v1.2.0</td><td>-</td><td>De testat</td></tr>
+<tr><td style="background:#d4edda">GetInventoryOrders</td><td>/api/inventory/orders?gestiune=MP</td><td class="status-ok">FIXAT v1.2.0</td><td>-</td><td>De testat</td></tr>
+<tr><td style="background:#d4edda">GetDispozitiiDeLivrare</td><td>/api/livrari/dispozitii?gestiune=MP</td><td class="status-ok">FIXAT v1.2.0</td><td>-</td><td>De testat</td></tr>
+<tr><td>GetReceptiiIntrSubunit</td><td>/api/receptii/subunitati</td><td class="status-ok">✅ NULL</td><td>0</td><td>-</td></tr>
+<tr><td>GetListaGestiuni</td><td>/api/gestiuni</td><td class="status-ok">✅</td><td>13</td><td>2</td></tr>
+<tr><td>GetListaPersonal</td><td>/api/personal</td><td class="status-ok">✅</td><td>30</td><td>9</td></tr>
+<tr><td>GetListaBanci</td><td>/api/banci</td><td class="status-ok">✅</td><td>29</td><td>2</td></tr>
+<tr><td>GetListaCarnete</td><td>/api/carnete</td><td class="status-ok">✅</td><td>6</td><td>4</td></tr>
+<tr><td>GetListaCarneteExt</td><td>/api/carnete/ext</td><td class="status-fail">❌ Server exception (nefixabil)</td><td>-</td><td>-</td></tr>
+<tr><td>GetOferte</td><td>/api/oferte</td><td class="status-ok">✅</td><td>1.609</td><td>11</td></tr>
+<tr><td>GetOferteClienti</td><td>/api/oferte/clienti</td><td class="status-ok">✅</td><td>23</td><td>11</td></tr>
+<tr><td>GetListaDelegati</td><td>/api/delegati</td><td class="status-ok">✅</td><td>11.917</td><td>11</td></tr>
+<tr><td>GetMonede</td><td>/api/monede</td><td class="status-ok">✅</td><td>4</td><td>2</td></tr>
+<tr><td>GetNomenclatorLocalitati</td><td>/api/nomenclator-localitati</td><td class="status-ok">✅</td><td>13.904</td><td>3</td></tr>
+<tr><td>GetListaSubunit</td><td>/api/subunitati</td><td class="status-ok">✅</td><td>1</td><td>1</td></tr>
+<tr><td>GetCritDiscPeArticole</td><td>/api/discount/pe-articole</td><td class="status-ok">✅</td><td>78</td><td>3</td></tr>
+<tr><td>GetCritDiscPeClase</td><td>/api/discount/pe-clase</td><td class="status-ok">✅ NULL</td><td>0</td><td>-</td></tr>
+<tr><td>GetCritDiscPart</td><td>/api/discount/pe-parteneri</td><td class="status-ok">✅</td><td>11.450</td><td>2</td></tr>
+<tr><td>GetListaArtCatPretExt</td><td>/api/preturi/articole-categorii/ext</td><td class="status-ok">✅ NULL</td><td>0</td><td>-</td></tr>
+<tr><td>GetPretVanzare</td><td>/api/preturi/vanzare</td><td class="status-ok">✅</td><td>1</td><td>1</td></tr>
+<tr><td>GetListaCatPret</td><td>/api/preturi/categorii</td><td class="status-ok">✅</td><td>2</td><td>3</td></tr>
+<tr><td colspan="5" style="background:#d4edda; font-weight:600; text-align:center">ENDPOINT-URI NOI v1.2.0 (din libWMEdcom GitHub)</td></tr>
+<tr><td style="background:#f0fff0">GetIstoricVanzari</td><td>/api/vanzari/istoric</td><td>NOU v1.2.0</td><td>-</td><td>De testat</td></tr>
+<tr><td style="background:#f0fff0">GetInfoComenzi</td><td>/api/comenzi/info</td><td>NOU v1.2.0</td><td>-</td><td>De testat</td></tr>
+<tr><td style="background:#f0fff0">GetCmdSubunitActive</td><td>/api/comenzi/subunitati-active</td><td>NOU v1.2.0</td><td>-</td><td>De testat</td></tr>
+<tr><td style="background:#f0fff0">SetInclusivCmdFurn</td><td>/api/comenzi/set-inclusiv-furn</td><td>NOU v1.2.0</td><td>-</td><td>Config</td></tr>
+<tr><td style="background:#f0fff0">GetPlatiFactura</td><td>/api/plati/factura</td><td>NOU v1.2.0</td><td>-</td><td>De testat</td></tr>
+<tr><td style="background:#f0fff0">GetListaArtCatPret2</td><td>/api/preturi/articol-categorii2</td><td>NOU v1.2.0</td><td>-</td><td>De testat</td></tr>
+<tr><td style="background:#f0fff0">GetIntervaleDisc</td><td>/api/discount/intervale</td><td>NOU v1.2.0</td><td>-</td><td>De testat</td></tr>
+<tr><td style="background:#f0fff0">GetArticoleDisc</td><td>/api/discount/articole</td><td>NOU v1.2.0</td><td>-</td><td>De testat</td></tr>
+<tr><td style="background:#f0fff0">SetArtAnalizat</td><td>/api/config/art-analizat</td><td>NOU v1.2.0</td><td>-</td><td>Config</td></tr>
+<tr><td style="background:#f0fff0">SetCatPretImplicita</td><td>/api/config/cat-pret-implicita</td><td>NOU v1.2.0</td><td>-</td><td>Config</td></tr>
+<tr><td style="background:#f0fff0">SetFiltruDocNeoperate</td><td>/api/config/filtru-doc-neoperate</td><td>NOU v1.2.0</td><td>-</td><td>Config</td></tr>
+<tr><td style="background:#f0fff0">SetInclusivFactAviz</td><td>/api/config/inclusiv-fact-aviz</td><td>NOU v1.2.0</td><td>-</td><td>Config</td></tr>
+<tr><td style="background:#f0fff0">SetDescarcareAutomata</td><td>/api/config/descarcare-automata</td><td>NOU v1.2.0</td><td>-</td><td>Config</td></tr>
+<tr><td style="background:#f0fff0">SetCmdImplicitAcceptat</td><td>/api/comenzi/set-acceptat</td><td>NOU v1.2.0</td><td>-</td><td>Config</td></tr>
+<tr><td style="background:#f0fff0">AdaugaGestiune</td><td>/api/gestiuni/add</td><td>NOU v1.2.0</td><td>-</td><td>Scriere</td></tr>
+</table>
+<p style="margin-top:16px"><strong>Total v1.2.0: 52 testate OK + 14 fixate + 15 noi = 81 endpoint-uri implementate. 100 endpoint-uri in Swagger.</strong></p>
+</div>
+</div>

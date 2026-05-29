@@ -1,0 +1,43 @@
+{
+  "success": true,
+  "data": [
+    {
+      "idPartener": "0",
+      "marca": "1",
+      "numeComplet": "RADU",
+      "nrAuto": "",
+      "tipActIdent": "",
+      "nrActIdent": "",
+      "serieActIdent": "",
+      "emitentActIdent": "",
+      "tipTransport": "",
+      "cnp": ""
+    },
+    {
+      "idPartener": "0",
+      "marca": "2",
+      "numeComplet": "POPA MAGDALENA",
+      "nrAuto": "BH08YAK",
+      "tipActIdent": "",
+      "nrActIdent": "210059",
+      "serieActIdent": "XH",
+      "emitentActIdent": "",
+      "tipTransport": "AUTO",
+      "cnp": ""
+    },
+    {
+      "idPartener": "0",
+      "marca": "3",
+      "numeComplet": "HULE GHITA",
+      "nrAuto": "BH06YAK",
+      "tipActIdent": "CI",
+      "nrActIdent": "331372",
+      "serieActIdent": "XH",
+      "emitentActIdent": "POL.ORADEA.24.05.04",
+      "tipTransport": "AUTO",
+      "cnp": ""
+    }
+  ],
+  "errors": [],
+  "timestamp": "2026-05-18T10:16:38Z"
+}

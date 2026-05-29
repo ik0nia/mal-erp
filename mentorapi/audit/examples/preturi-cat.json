@@ -1,0 +1,17 @@
+{
+    "success": true,
+    "data": [
+        {
+            "simbol": "",
+            "denumire": "---- nedefinit ----",
+            "flag": "0"
+        },
+        {
+            "simbol": "",
+            "denumire": "NOMINAL",
+            "flag": "1"
+        }
+    ],
+    "errors": [],
+    "timestamp": "2026-05-18T10:17:03Z"
+}

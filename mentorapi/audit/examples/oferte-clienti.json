@@ -1,0 +1,43 @@
+{
+  "success": true,
+  "data": [
+    {
+      "idPartener": "0000000001090",
+      "codArticol": "9007767460598",
+      "dataInceput": "",
+      "dataSfarsit": "",
+      "pret": "",
+      "cantitate": "",
+      "discount": "",
+      "cantMinima": "",
+      "moneda": "Lei",
+      "categoriePret": "SEBOG"
+    },
+    {
+      "idPartener": "0000000001090",
+      "codArticol": "5945780800080",
+      "dataInceput": "",
+      "dataSfarsit": "",
+      "pret": "",
+      "cantitate": "",
+      "discount": "",
+      "cantMinima": "",
+      "moneda": "Lei",
+      "categoriePret": "SEBOG"
+    },
+    {
+      "idPartener": "0000000003773",
+      "codArticol": "9007912545699",
+      "dataInceput": "",
+      "dataSfarsit": "",
+      "pret": "",
+      "cantitate": "",
+      "discount": "",
+      "cantMinima": "",
+      "moneda": "Lei",
+      "categoriePret": "2/SAC+TVA"
+    }
+  ],
+  "errors": [],
+  "timestamp": "2026-05-18T10:16:43Z"
+}

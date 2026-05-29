@@ -1,0 +1,41 @@
+<!-- ==================== FIRME ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Firme — Selectare firmă și lună</h2>
+<span class="badge badge-ok">TESTAT OK</span>
+</div>
+<div class="section-body">
+
+<h3>GET /api/firme</h3>
+<p>Returnează lista firmelor din WinMentor. Nu necesită firmă selectată.</p>
+<div class="note note-info">Testat: 34 firme returnate pe server.</div>
+<table>
+<tr><th>Output</th><th>Tip</th><th>Exemplu</th></tr>
+<tr><td>Array de string-uri</td><td>string[]</td><td><span class="mono">["EXEMPLU","MAL","MALINCO","ERP",...]</span></td></tr>
+</table>
+
+<h3>GET /api/firme/{name}/luni</h3>
+<p>Returnează lunile contabile disponibile pentru o firmă.</p>
+<div class="note note-info">Testat: firma ERP are luni 2025_12 → 2026_04.</div>
+<table>
+<tr><th>Input</th><th>Tip</th><th>Obligatoriu</th><th>Exemplu</th></tr>
+<tr><td>name (path)</td><td>string</td><td>Da</td><td><span class="mono">ERP</span></td></tr>
+</table>
+<table>
+<tr><th>Output</th><th>Tip</th><th>Exemplu</th></tr>
+<tr><td>Array de luni</td><td>string[]</td><td><span class="mono">["2025_12","2026_01","2026_02","2026_03","2026_04"]</span></td></tr>
+</table>
+
+<h3>POST /api/firme/select</h3>
+<p>Selectează firma și luna de lucru. <strong>OBLIGATORIU</strong> înainte de orice operațiune pe date.</p>
+<div class="note note-info">Testat: firma ERP, an 2026, luna 4.</div>
+<table>
+<tr><th>Input (JSON body)</th><th>Tip</th><th>Obligatoriu</th><th>Exemplu</th></tr>
+<tr><td>firma</td><td>string</td><td>Da</td><td><span class="mono">ERP</span></td></tr>
+<tr><td>an</td><td>integer</td><td>Da</td><td><span class="mono">2026</span></td></tr>
+<tr><td>luna</td><td>integer (1-12)</td><td>Da</td><td><span class="mono">4</span></td></tr>
+</table>
+
+</div>
+</div>
+

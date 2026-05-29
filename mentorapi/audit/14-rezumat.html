@@ -1,0 +1,44 @@
+<!-- ==================== REZUMAT COMPLET ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Rezumat complet testare — 19 mai 2026 — v1.3.0</h2>
+<span class="badge badge-ok">52 TESTATE + 14 FIXATE + 15 NOI = 100 ENDPOINT-URI | v1.3.0: fix mapări + campX expuse</span>
+</div>
+<div class="section-body">
+<table>
+<tr><th>Endpoint</th><th>Tip</th><th>Records</th><th>Câmpuri doc</th><th>Câmpuri reale</th><th>Status</th></tr>
+<tr><td>GET /api/health</td><td>System</td><td>-</td><td>-</td><td>-</td><td class="status-ok">✅</td></tr>
+<tr><td>GET /api/firme</td><td>Firme</td><td>34</td><td>-</td><td>-</td><td class="status-ok">✅</td></tr>
+<tr><td>GET /api/firme/{name}/luni</td><td>Firme</td><td>ok</td><td>-</td><td>-</td><td class="status-ok">✅</td></tr>
+<tr><td>POST /api/firme/select</td><td>Firme</td><td>ok</td><td>-</td><td>-</td><td class="status-ok">✅</td></tr>
+<tr><td>GET /api/articole</td><td>Articole</td><td>15.855</td><td>24</td><td><strong>40</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>POST /api/produse/add</td><td>Articole</td><td>ok</td><td>19 input</td><td>-</td><td class="status-ok">✅ Testat</td></tr>
+<tr><td>PUT /api/produse/update</td><td>Articole</td><td>ok</td><td>7 input</td><td>-</td><td class="status-ok">✅ Testat</td></tr>
+<tr><td>POST /api/config/id-part-field</td><td>Config</td><td>ok</td><td>-</td><td>-</td><td class="status-ok">✅</td></tr>
+<tr><td>GET /api/parteneri</td><td>Parteneri</td><td>11.447</td><td>38</td><td><strong>49</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/stocuri</td><td>Stocuri</td><td>5.891</td><td>17</td><td><strong>21</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/gestiuni</td><td>Nomencl.</td><td>13</td><td>2</td><td><strong>2</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/personal</td><td>Nomencl.</td><td>30</td><td>9</td><td><strong>9</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/banci</td><td>Nomencl.</td><td>29</td><td>2</td><td><strong>2</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/vanzari/ext</td><td>Vânzări</td><td>5.694</td><td>18</td><td><strong>23</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/vanzari/luna</td><td>Vânzări</td><td>5.072</td><td>10</td><td><strong>26</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/solduri</td><td>Financiar</td><td>149.697</td><td>6</td><td><strong>11</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/solduri/furnizori</td><td>Financiar</td><td>1.732</td><td>-</td><td><strong>13</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/incasari/luna</td><td>Financiar</td><td>153</td><td>-</td><td><strong>5</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/comenzi/furnizori</td><td>Comenzi</td><td>1.189</td><td>-</td><td><strong>10</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/comenzi/nefacturate</td><td>Comenzi</td><td>20</td><td>4</td><td><strong>25</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/receptii</td><td>Recepții</td><td>1.124</td><td>-</td><td><strong>22</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/intrari</td><td>Recepții</td><td>1.334</td><td>-</td><td><strong>11</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/transferuri</td><td>Transferuri</td><td>18</td><td>-</td><td><strong>15</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/carnete</td><td>Nomencl.</td><td>6</td><td>-</td><td><strong>4</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/oferte</td><td>Nomencl.</td><td>1.609</td><td>6</td><td><strong>11</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/delegati</td><td>Nomencl.</td><td>11.917</td><td>-</td><td><strong>11</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/monede</td><td>Nomencl.</td><td>4</td><td>-</td><td><strong>2</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/nomenclator-localitati</td><td>Nomencl.</td><td>13.904</td><td>-</td><td><strong>3</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/nir/atribute</td><td>Recepții</td><td>1.147</td><td>-</td><td><strong>5</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/livrari/orders</td><td>Logistică</td><td>20</td><td>-</td><td><strong>17</strong></td><td class="status-ok">✅ Mapat</td></tr>
+<tr><td>GET /api/system/tranzactii-in-curs</td><td>System</td><td>7</td><td>-</td><td><strong>13</strong></td><td class="status-ok">✅ Mapat</td></tr>
+</table>
+</div>
+</div>
+

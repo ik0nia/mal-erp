@@ -1,0 +1,1172 @@
+<div class="section">
+<div class="section-header"><h2>Firme (3 endpoint-uri)</h2><span class="badge badge-ok">3</span></div>
+<div class="section-body">
+<h3><span class="status-ok">GET</span> /api/firme</h3>
+<p><strong>Returnează lista tuturor firmelor disponibile în WinMentor.</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/firme"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (34 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">EXEMPLU</pre>
+<h3><span class="status-unknown">POST</span> /api/firme/select</h3>
+<p><strong>Selectează firma și luna de lucru. Obligatoriu înainte de orice altă operație.</strong></p>
+<div class="note">Necesită <strong>JSON body</strong>. Vezi secțiunea dedicată pentru structura completă.</div>
+<h3><span class="status-ok">GET</span> /api/firme/{name}/luni</h3>
+<p><strong>Luni disponibile pentru firma</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">name</span></td><td>path</td><td>string</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/firme/ERP/luni?name=test"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (6 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;"></pre>
+</div></div>
+<div class="section">
+<div class="section-header"><h2>Config (6 endpoint-uri)</h2><span class="badge badge-ok">6</span></div>
+<div class="section-body">
+<h3><span class="status-unknown">POST</span> /api/config/art-analizat</h3>
+<p><strong>SetArtAnalizat — seteaza articol analizat</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">artId</span></td><td>query</td><td>string</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<h3><span class="status-unknown">POST</span> /api/config/cat-pret-implicita</h3>
+<p><strong>SetCatPretImplicita — categorie pret implicita</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">catPret</span></td><td>query</td><td>string</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<h3><span class="status-unknown">POST</span> /api/config/filtru-doc-neoperate</h3>
+<p><strong>SetFiltruDocNeoperate — filtru documente neoperate</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">flag</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+</table>
+<h3><span class="status-unknown">POST</span> /api/config/id-art-field</h3>
+<p><strong>Setează câmpul de identificare articole: CodExtern sau CodIntern.</strong></p>
+<div class="note">Necesită <strong>JSON body</strong>. Vezi secțiunea dedicată pentru structura completă.</div>
+<h3><span class="status-unknown">POST</span> /api/config/id-part-field</h3>
+<p><strong>Setează câmpul de identificare parteneri: CodExtern, CodFiscal sau CodIntern.</strong></p>
+<div class="note">Necesită <strong>JSON body</strong>. Vezi secțiunea dedicată pentru structura completă.</div>
+<h3><span class="status-unknown">POST</span> /api/config/inclusiv-fact-aviz</h3>
+<p><strong>SetInclusivFactAviz — include facturi aviz</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">flag</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+</table>
+</div></div>
+<div class="section">
+<div class="section-header"><h2>Articole (7 endpoint-uri)</h2><span class="badge badge-ok">7</span></div>
+<div class="section-body">
+<h3><span class="status-ok">GET</span> /api/articole</h3>
+<p><strong>Returnează nomenclatorul de articole. Paginat, cu search.</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">page</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">pageSize</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">search</span></td><td>query</td><td>string</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">refresh</span></td><td>query</td><td>boolean</td><td>NU</td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/articole?page=1&amp;pageSize=2"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns paginat (7929 pagini):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">...;---- nedefinit ----;;;...;---- nedefinit ----;;;;1;;;;;Nu;;;;;;;;;;DA;;;0;;NU;0;;0;;0;;NU;;;</pre>
+<p style="font-size:11px;color:#888;">40 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/articole/clase</h3>
+<p><strong>Returnează clasele de articole (Simbol;Denumire).</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/articole/clase"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (14 rezultate):</p>
+<table><tr><th>Poz</th><th>Câmp</th><th>Valoare exemplu</th></tr>
+<tr><td>0</td><td><strong>Simbol</strong></td><td><span class="mono">...</span></td></tr>
+<tr><td>1</td><td><strong>Denumire</strong></td><td><span class="mono">---- nedefinit ----</span></td></tr>
+</table>
+<h3><span class="status-unknown">POST</span> /api/articole/gen-cod</h3>
+<p><strong>Generează următorul cod extern disponibil pentru articole.</strong></p>
+<h3><span class="status-ok">GET</span> /api/produse</h3>
+<p><strong>Returnează produsele (format diferit de /api/articole — optimizat pentru sync).</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">lastSync</span></td><td>query</td><td>string</td><td>NU</td><td></td></tr>
+</table>
+<div class="note note-danger">Eroare: <span class="mono">GetProducts failed with error code 1</span></div>
+<h3><span class="status-unknown">POST</span> /api/produse/add</h3>
+<p><strong>Adaugă un produs nou (AddProduct). Format: string semicolon-separated.</strong></p>
+<div class="note">Necesită <strong>JSON body</strong>. Vezi secțiunea dedicată pentru structura completă.</div>
+<h3><span class="status-ok">GET</span> /api/produse/stergeri</h3>
+<p><strong>GetStergeriProduse — produse sterse</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">lastSync</span></td><td>query</td><td>string</td><td>NU</td><td></td></tr>
+</table>
+<div class="note note-danger">Eroare: <span class="mono">GetStergeriProduse failed with error code 1</span></div>
+<h3><span class="status-unknown">PUT</span> /api/produse/update</h3>
+<p><strong>Modifică un produs (ModiProduct). Format: CodExtern;Producator;Clasa;Pret;gol;Denumire;gol</strong></p>
+<div class="note">Necesită <strong>JSON body</strong>. Vezi secțiunea dedicată pentru structura completă.</div>
+</div></div>
+<div class="section">
+<div class="section-header"><h2>Parteneri (9 endpoint-uri)</h2><span class="badge badge-ok">9</span></div>
+<div class="section-body">
+<h3><span class="status-ok">GET</span> /api/clienti</h3>
+<p><strong>GetListaClienti (14 campuri)</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">an</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">luna</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/clienti?an=2026&amp;luna=5"</pre>
+<div class="note">Răspuns: NULL (fără date pentru parametrii testați)</div>
+<h3><span class="status-ok">GET</span> /api/localitati</h3>
+<p><strong>GetListaLocalitati</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/localitati"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (865 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;"> NYÍREGYHÁZA</pre>
+<h3><span class="status-ok">GET</span> /api/nomenclator-localitati</h3>
+<p><strong>GetNomenclatorLocalitati (3 campuri: Localitate;Judet;CodPostal)</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/nomenclator-localitati"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (13904 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">PERRET;;</pre>
+<p style="font-size:11px;color:#888;">3 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/parteneri</h3>
+<p><strong>Returnează lista partenerilor. Paginat, cu search. 49 câmpuri per partener.</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">page</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">pageSize</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">search</span></td><td>query</td><td>string</td><td>NU</td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/parteneri?page=1&amp;pageSize=2"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns paginat (5725 pagini):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">728015292;XROMOCEA CAL S;;...;;;;PF VECH;DE STERS;;---- nedefinit ----;; ;;;;;0000000000017;NU;0;;;;..;;;;;;;PJ;Lei;19.07.2008;;0;;;NU;NU;;;;RO;;NU;0;0;0;</pre>
+<p style="font-size:11px;color:#888;">49 câmpuri separate cu ";"</p>
+<h3><span class="status-unknown">POST</span> /api/parteneri/add</h3>
+<p><strong>Adaugă un partener nou. JSON structurat cu 35 câmpuri. Obligatoriu: id + denumire.</strong></p>
+<div class="note">Necesită <strong>JSON body</strong>. Vezi secțiunea dedicată pentru structura completă.</div>
+<h3><span class="status-ok">GET</span> /api/parteneri/clase</h3>
+<p><strong>Clase parteneri (Simbol;Denumire)</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/parteneri/clase"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (17 rezultate):</p>
+<table><tr><th>Poz</th><th>Câmp</th><th>Valoare exemplu</th></tr>
+<tr><td>0</td><td><strong>Simbol</strong></td><td><span class="mono">...</span></td></tr>
+<tr><td>1</td><td><strong>Denumire</strong></td><td><span class="mono">---- nedefinit ----</span></td></tr>
+</table>
+<h3><span class="status-ok">GET</span> /api/parteneri/next-id</h3>
+<p><strong>Returnează următorul ID disponibil pentru parteneri.</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/parteneri/next-id"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns:</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">{
+  &quot;nextId&quot;: &quot;728026634&quot;
+}</pre>
+<h3><span class="status-unknown">PUT</span> /api/parteneri/update</h3>
+<p><strong>Modifică un partener existent. Aceleași câmpuri ca add. id identifică partenerul.</strong></p>
+<div class="note">Necesită <strong>JSON body</strong>. Vezi secțiunea dedicată pentru structura completă.</div>
+<h3><span class="status-ok">GET</span> /api/parteneri/{id}/info</h3>
+<p><strong>GetInfoPart — info partener</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">id</span></td><td>path</td><td>string</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/parteneri/728015653/info?id=test"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (1 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">TEMAD CO SRL</pre>
+</div></div>
+<div class="section">
+<div class="section-header"><h2>Stocuri (8 endpoint-uri)</h2><span class="badge badge-ok">8</span></div>
+<div class="section-body">
+<h3><span class="status-ok">GET</span> /api/stocuri</h3>
+<p><strong>Returnează stocurile de articole. Paginat, cu search.</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">page</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">pageSize</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">search</span></td><td>query</td><td>string</td><td>NU</td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/stocuri?page=1&amp;pageSize=2"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns paginat (3150 pagini):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">9007912539582;CLEMA COAMA TRASA TERACOT -GUNN;Buc;2,15;69;1;1;728023391;GUNN;728022030;GUNNEX S.R.L;MP;Magazin Practic;21;NU;2,6;0;0;CL TG;;</pre>
+<p style="font-size:11px;color:#888;">21 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/stocuri/ambalaje/initial</h3>
+<p><strong>GetStocInitialAmbalaj</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">an</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">luna</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/stocuri/ambalaje/initial?an=2026&amp;luna=5"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (773 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">728015355;9007767531137;PALET HOLCIM;1</pre>
+<p style="font-size:11px;color:#888;">4 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/stocuri/ambalaje/miscari</h3>
+<p><strong>GetMiscariAmbalaje</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">anStart</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">lunaStart</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">anStop</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">lunaStop</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/stocuri/ambalaje/miscari"</pre>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;">[]</pre>
+<h3><span class="status-ok">GET</span> /api/stocuri/articol/{id}</h3>
+<p><strong>GetStocArticol — stoc un articol (5 campuri)</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">id</span></td><td>path</td><td>string</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<div class="note note-danger">Eroare: <span class="mono">CallMethod GetStocArticol: The server threw an exception.</span></div>
+<h3><span class="status-ok">GET</span> /api/stocuri/articol/{id}/detaliat</h3>
+<p><strong>GetStocArtDetaliat — stoc detaliat per lot/serie</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">id</span></td><td>path</td><td>string</td><td><strong>DA</strong></td><td></td></tr>
+<tr><td><span class="mono">gestiune</span></td><td>query</td><td>string</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<div class="note note-danger">Eroare: <span class="mono">GetStocArtDetaliat failed with error code 1</span></div>
+<h3><span class="status-ok">GET</span> /api/stocuri/ext</h3>
+<p><strong>GetStocArticoleExt (20 campuri)</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/stocuri/ext"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (6299 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">9007912539582;CLEMA COAMA TRASA TERACOT -GUNN;Buc;2,15;69;1;1;728023391;GUNN;728022030;GUNNEX S.R.L;MP;Magazin Practic;21;NU;2,6;;30.12.1899;;</pre>
+<p style="font-size:11px;color:#888;">20 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/stocuri/ext2</h3>
+<p><strong>GetStocArticoleExt2 — per gestiune</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">gestiune</span></td><td>query</td><td>string</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/stocuri/ext2?gestiune=MP"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (5818 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">9007912539582;CLEMA COAMA TRASA TERACOT -GUNN;Buc;2,15;69;1;1;728023391;GUNN;728022030;GUNNEX S.R.L;MP;Magazin Practic;21;NU;2,6;;30.12.1899;;</pre>
+<p style="font-size:11px;color:#888;">20 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/stocuri/pe-gestiuni</h3>
+<p><strong>Returnează stocurile detaliate per gestiune cu valori.</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/stocuri/pe-gestiuni"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (8089 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">Magazin Practic;MP;CLEMA COAMA TRASA TERACOT -GUNN;9007912539582;371.02;Buc;69;0,85;2,6;21</pre>
+<p style="font-size:11px;color:#888;">10 câmpuri separate cu ";"</p>
+</div></div>
+<div class="section">
+<div class="section-header"><h2>Nomenclatoare (8 endpoint-uri)</h2><span class="badge badge-ok">8</span></div>
+<div class="section-body">
+<h3><span class="status-ok">GET</span> /api/banci</h3>
+<p><strong>GetListaBanci (Simbol;Denumire)</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/banci"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (29 rezultate):</p>
+<table><tr><th>Poz</th><th>Câmp</th><th>Valoare exemplu</th></tr>
+<tr><td>0</td><td><strong>Simbol</strong></td><td><span class="mono">BCIT</span></td></tr>
+<tr><td>1</td><td><strong>Denumire</strong></td><td><span class="mono">Banca HVB TIRIAC</span></td></tr>
+<tr><td>2</td><td><strong>Camp2</strong></td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>3</td><td><strong>Camp3</strong></td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>4</td><td><strong>Camp4</strong></td><td><span class="mono">(gol)</span></td></tr>
+</table>
+<h3><span class="status-ok">GET</span> /api/delegati</h3>
+<p><strong>GetListaDelegati (11 campuri)</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/delegati"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (11917 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">0;1;RADU;;;;;;;;</pre>
+<p style="font-size:11px;color:#888;">11 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/gestiuni</h3>
+<p><strong>Returnează lista gestiunilor (Simbol;Denumire).</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/gestiuni"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (14 rezultate):</p>
+<table><tr><th>Poz</th><th>Câmp</th><th>Valoare exemplu</th></tr>
+<tr><td>0</td><td><strong>Simbol</strong></td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>1</td><td><strong>Denumire</strong></td><td><span class="mono">---- nedefinit ----</span></td></tr>
+<tr><td>2</td><td><strong>Camp2</strong></td><td><span class="mono">(gol)</span></td></tr>
+</table>
+<h3><span class="status-unknown">POST</span> /api/gestiuni/add</h3>
+<p><strong>Creează o gestiune nouă. Duplicat returnează result=0.</strong></p>
+<div class="note">Necesită <strong>JSON body</strong>. Vezi secțiunea dedicată pentru structura completă.</div>
+<h3><span class="status-ok">GET</span> /api/monede</h3>
+<p><strong>GetMonede (2 campuri)</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/monede"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (4 rezultate):</p>
+<table><tr><th>Poz</th><th>Câmp</th><th>Valoare exemplu</th></tr>
+<tr><td>0</td><td><strong>Simbol</strong></td><td><span class="mono">----nedefinit-----</span></td></tr>
+<tr><td>1</td><td><strong>Denumire</strong></td><td><span class="mono">?</span></td></tr>
+</table>
+<h3><span class="status-ok">GET</span> /api/personal</h3>
+<p><strong>GetListaPersonal (9 campuri)</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/personal"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (30 rezultate):</p>
+<table><tr><th>Poz</th><th>Câmp</th><th>Valoare exemplu</th></tr>
+<tr><td>0</td><td><strong>Nume</strong></td><td><span class="mono">... ...</span></td></tr>
+<tr><td>1</td><td><strong>Marca</strong></td><td><span class="mono">0</span></td></tr>
+<tr><td>2</td><td><strong>CNP</strong></td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>3</td><td><strong>EsteActiv</strong></td><td><span class="mono">Nu</span></td></tr>
+<tr><td>4</td><td><strong>EsteAgent</strong></td><td><span class="mono">Nu</span></td></tr>
+<tr><td>5</td><td><strong>SerieBuletin</strong></td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>6</td><td><strong>NrBuletin</strong></td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>7</td><td><strong>CodPostal</strong></td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>8</td><td><strong>Camp8</strong></td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>9</td><td><strong>Camp9</strong></td><td><span class="mono">(gol)</span></td></tr>
+</table>
+<h3><span class="status-ok">GET</span> /api/personal/{id}</h3>
+<p><strong>GetInfoPers — info angajat</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">id</span></td><td>path</td><td>integer</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<div class="note note-danger">Eroare: <span class="mono">GetInfoPers failed with error code 1</span></div>
+<h3><span class="status-ok">GET</span> /api/subunitati</h3>
+<p><strong>GetListaSubunit</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/subunitati"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (1 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">FIRMA</pre>
+</div></div>
+<div class="section">
+<div class="section-header"><h2>Preturi (12 endpoint-uri)</h2><span class="badge badge-ok">12</span></div>
+<div class="section-body">
+<h3><span class="status-ok">GET</span> /api/discount/articole</h3>
+<p><strong>GetArticoleDisc — articole cu discount (NOU)</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">criteriu</span></td><td>query</td><td>integer</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/discount/articole?criteriu=1"</pre>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;">[]</pre>
+<h3><span class="status-ok">GET</span> /api/discount/intervale</h3>
+<p><strong>GetIntervaleDisc — intervale discount (NOU)</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">criteriu</span></td><td>query</td><td>integer</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/discount/intervale?criteriu=1"</pre>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;">[]</pre>
+<h3><span class="status-ok">GET</span> /api/discount/pe-articole</h3>
+<p><strong>GetCritDiscPeArticole (3 campuri)</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/discount/pe-articole"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (78 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">-3 TEST;9007767533292;-3</pre>
+<p style="font-size:11px;color:#888;">3 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/discount/pe-clase</h3>
+<p><strong>GetCritDiscPeClase</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/discount/pe-clase"</pre>
+<div class="note">Răspuns: NULL (fără date pentru parametrii testați)</div>
+<h3><span class="status-ok">GET</span> /api/discount/pe-parteneri</h3>
+<p><strong>GetCritDiscPart (2 campuri)</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/discount/pe-parteneri"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (11453 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">;</pre>
+<p style="font-size:11px;color:#888;">2 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/oferte</h3>
+<p><strong>GetOferte — oferte active (11 campuri)</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/oferte"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (1609 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">728015326;9007767471549;27.03.2024;30.04.2024;45,327;1;-13;;;Lei;</pre>
+<p style="font-size:11px;color:#888;">11 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/oferte/clienti</h3>
+<p><strong>GetOferteClienti (11 campuri)</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/oferte/clienti"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (23 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">728015362;9007767460598;;;;;;;Lei;SEBOG;</pre>
+<p style="font-size:11px;color:#888;">11 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/preturi/articol-categorii2</h3>
+<p><strong>GetListaArtCatPret2 — categorii pret per articol (NOU)</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">artId</span></td><td>query</td><td>string</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/preturi/articol-categorii2?artId=8711500354624"</pre>
+<div class="note">Răspuns: NULL (fără date pentru parametrii testați)</div>
+<h3><span class="status-ok">GET</span> /api/preturi/articole-categorii</h3>
+<p><strong>GetListaArtCatPret</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/preturi/articole-categorii"</pre>
+<div class="note">Răspuns: NULL (fără date pentru parametrii testați)</div>
+<h3><span class="status-ok">GET</span> /api/preturi/articole-categorii/ext</h3>
+<p><strong>GetListaArtCatPretExt</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/preturi/articole-categorii/ext"</pre>
+<div class="note">Răspuns: NULL (fără date pentru parametrii testați)</div>
+<h3><span class="status-ok">GET</span> /api/preturi/categorii</h3>
+<p><strong>GetListaCatPret — categorii de pret</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/preturi/categorii"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (2 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">;---- nedefinit ----;0</pre>
+<p style="font-size:11px;color:#888;">3 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/preturi/vanzare</h3>
+<p><strong>GetPretVanzare — pret vanzare articol/partener</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">artId</span></td><td>query</td><td>string</td><td><strong>DA</strong></td><td></td></tr>
+<tr><td><span class="mono">partId</span></td><td>query</td><td>string</td><td>NU</td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/preturi/vanzare?artId=8711500354624&amp;partId=728015653"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (1 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">1,25</pre>
+</div></div>
+<div class="section">
+<div class="section-header"><h2>Vanzari (5 endpoint-uri)</h2><span class="badge badge-ok">5</span></div>
+<div class="section-body">
+<h3><span class="status-ok">GET</span> /api/vanzari/articole-vandute</h3>
+<p><strong>GetArticoleVandute — articole vandute unui client</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">partId</span></td><td>query</td><td>string</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">marcaAgent</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">an</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">luna</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/vanzari/articole-vandute?partId=728015653&amp;an=2026&amp;luna=5"</pre>
+<div class="note">Răspuns: NULL (fără date pentru parametrii testați)</div>
+<h3><span class="status-ok">GET</span> /api/vanzari/ext</h3>
+<p><strong>Returnează vânzările extinse. 23 câmpuri.</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/vanzari/ext"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (2713 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">;11;166657;5945752005833;2;GAL;184,89;MP;0;SEDIU SOCIAL;1;;0;Nr.23;0;;1;=;2;;Lei;;</pre>
+<p style="font-size:11px;color:#888;">23 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/vanzari/istoric</h3>
+<p><strong>GetIstoricVanzari — istoric vanzari agent (NOU)</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">marca</span></td><td>query</td><td>integer</td><td><strong>DA</strong></td><td></td></tr>
+<tr><td><span class="mono">an</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">luna</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/vanzari/istoric?marca=1&amp;an=2026&amp;luna=5"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns:</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">{
+  &quot;result&quot;: 41
+}</pre>
+<h3><span class="status-ok">GET</span> /api/vanzari/luna</h3>
+<p><strong>Returnează vânzările lunare. 26 câmpuri per linie.</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/vanzari/luna"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (2578 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">728018497;4;166176;9007767510699;;4;BUC;45,45455;18;684,4;;NU;21;AE;;AE.166176;*PVC TEAVA 110/4M INEL ORANGE SN4;;0;04.05.2026;1;Str.CEYRAT, Nr.35A, PARTER;ORADEA;0745 687 340   ;;</pre>
+<p style="font-size:11px;color:#888;">26 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/vanzari/ultimele</h3>
+<p><strong>GetUltimeleVanzari — ultimele N vanzari</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">artId</span></td><td>query</td><td>string</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">partId</span></td><td>query</td><td>string</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">marcaAgent</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">cate</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/vanzari/ultimele?artId=8711500354624&amp;partId=728015653&amp;cate=3"</pre>
+<div class="note">Răspuns: NULL (fără date pentru parametrii testați)</div>
+</div></div>
+<div class="section">
+<div class="section-header"><h2>Comenzi (9 endpoint-uri)</h2><span class="badge badge-ok">9</span></div>
+<div class="section-body">
+<h3><span class="status-ok">GET</span> /api/bonuri/info</h3>
+<p><strong>GetInfoBon (FIXAT — necesita zi)</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">zi</span></td><td>query</td><td>integer</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/bonuri/info?zi=14"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (1 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">;;;</pre>
+<p style="font-size:11px;color:#888;">4 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/bonuri/info-ext</h3>
+<p><strong>GetInfoBonExt (FIXAT — necesita nrBon + zi)</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">nrBon</span></td><td>query</td><td>integer</td><td><strong>DA</strong></td><td></td></tr>
+<tr><td><span class="mono">zi</span></td><td>query</td><td>integer</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/bonuri/info-ext?nrBon=1&amp;zi=14"</pre>
+<div class="note">Răspuns: NULL (fără date pentru parametrii testați)</div>
+<h3><span class="status-ok">GET</span> /api/comenzi/bon/info</h3>
+<p><strong>GetInfoCmdBon (FIXAT — necesita nrCmd)</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">nrCmd</span></td><td>query</td><td>integer</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<div class="note note-danger">Eroare: <span class="mono">GetInfoCmdBon failed with error code 1</span></div>
+<h3><span class="status-ok">GET</span> /api/comenzi/bonuri/info</h3>
+<p><strong>GetInfoCmdBonuri (FIXAT — necesita zi)</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">zi</span></td><td>query</td><td>integer</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/comenzi/bonuri/info?zi=14"</pre>
+<div class="note">Răspuns: NULL (fără date pentru parametrii testați)</div>
+<h3><span class="status-ok">GET</span> /api/comenzi/furnizori</h3>
+<p><strong>Returnează comenzile către furnizori. 10 câmpuri per linie.</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/comenzi/furnizori"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (1236 rezultate):</p>
+<table><tr><th>Poz</th><th>Câmp</th><th>Valoare exemplu</th></tr>
+<tr><td>0</td><td><strong>NrDoc</strong></td><td><span class="mono">2707</span></td></tr>
+<tr><td>1</td><td><strong>CodFurnizor</strong></td><td><span class="mono">728018940</span></td></tr>
+<tr><td>2</td><td><strong>DenFurnizor</strong></td><td><span class="mono">IMCOP SRL</span></td></tr>
+<tr><td>3</td><td><strong>DataDocument</strong></td><td><span class="mono">2022-01-13 00:00:00</span></td></tr>
+<tr><td>4</td><td><strong>DataLivrare</strong></td><td><span class="mono">1899-12-30 00:00:00</span></td></tr>
+<tr><td>5</td><td><strong>CodArticol</strong></td><td><span class="mono">9007767538211</span></td></tr>
+<tr><td>6</td><td><strong>Cantitate</strong></td><td><span class="mono">5</span></td></tr>
+<tr><td>7</td><td><strong>UM</strong></td><td><span class="mono">BUC</span></td></tr>
+<tr><td>8</td><td><strong>Pret</strong></td><td><span class="mono">0</span></td></tr>
+<tr><td>9</td><td><strong>Camp9</strong></td><td><span class="mono">(gol)</span></td></tr>
+</table>
+<h3><span class="status-ok">GET</span> /api/comenzi/info</h3>
+<p><strong>Returnează informații despre comenzi active. 9 câmpuri.</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/comenzi/info"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (44 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">728018797;04.05.2026;12530;9007912543183;5;16,03;0;0;NU</pre>
+<p style="font-size:11px;color:#888;">9 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/comenzi/nefacturate</h3>
+<p><strong>GetComenziNefacturate — articole comandate nefacturate (25 campuri)</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/comenzi/nefacturate"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (20 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">9007767505770;4332;756;Buc;01.11.2025;728023548;9;6,092;756;Buc;;CC;12610;STRADA CLOPOTEILOR, 0742 027 144 LIVRARE INCEPUT MAI;SEDIU SOCIAL;;01.04.2022;;;3;SONEA ALIN FLORIN;0;;RON;</pre>
+<p style="font-size:11px;color:#888;">25 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/comenzi/subunitati-active</h3>
+<p><strong>GetCmdSubunitActive (NOU)</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/comenzi/subunitati-active"</pre>
+<div class="note">Răspuns: NULL (fără date pentru parametrii testați)</div>
+<h3><span class="status-ok">GET</span> /api/transferuri</h3>
+<p><strong>Returnează transferurile între gestiuni. 15 câmpuri.</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/transferuri"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (6 rezultate):</p>
+<table><tr><th>Poz</th><th>Câmp</th><th>Valoare exemplu</th></tr>
+<tr><td>0</td><td><strong>GestSursa</strong></td><td><span class="mono">MP</span></td></tr>
+<tr><td>1</td><td><strong>GestDest</strong></td><td><span class="mono">CNC</span></td></tr>
+<tr><td>2</td><td><strong>NrDoc</strong></td><td><span class="mono">60</span></td></tr>
+<tr><td>3</td><td><strong>Data</strong></td><td><span class="mono">4.5.2026</span></td></tr>
+<tr><td>4</td><td><strong>CodArticol</strong></td><td><span class="mono">9007767527987</span></td></tr>
+<tr><td>5</td><td><strong>DenArticol</strong></td><td><span class="mono">PIULITA  CU FLANSA M6</span></td></tr>
+<tr><td>6</td><td><strong>Cantitate</strong></td><td><span class="mono">100</span></td></tr>
+<tr><td>7</td><td><strong>PretVanzare</strong></td><td><span class="mono">0,17</span></td></tr>
+<tr><td>8</td><td><strong>PretIntrare</strong></td><td><span class="mono">0,059</span></td></tr>
+<tr><td>9</td><td><strong>ContSursa</strong></td><td><span class="mono">371.02</span></td></tr>
+<tr><td>10</td><td><strong>ContDest</strong></td><td><span class="mono">371.01</span></td></tr>
+<tr><td>11</td><td><strong>Camp11</strong></td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>12</td><td><strong>Valoare</strong></td><td><span class="mono">5,9</span></td></tr>
+<tr><td>13</td><td><strong>Camp13</strong></td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>14</td><td><strong>Camp14</strong></td><td><span class="mono">(gol)</span></td></tr>
+</table>
+</div></div>
+<div class="section">
+<div class="section-header"><h2>Financiar (10 endpoint-uri)</h2><span class="badge badge-ok">10</span></div>
+<div class="section-body">
+<h3><span class="status-ok">GET</span> /api/incasari</h3>
+<p><strong>GetIncasariClienti — incasari interval</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">an1</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">luna1</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">an2</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">luna2</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">partId</span></td><td>query</td><td>string</td><td>NU</td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/incasari?an1=2026&amp;luna1=5&amp;an2=2026&amp;luna2=5&amp;partId=728015653"</pre>
+<div class="note">Răspuns: NULL (fără date pentru parametrii testați)</div>
+<h3><span class="status-ok">GET</span> /api/incasari/factura</h3>
+<p><strong>GetIncasariFactura (FIXAT — 5 params)</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">an</span></td><td>query</td><td>integer</td><td><strong>DA</strong></td><td></td></tr>
+<tr><td><span class="mono">luna</span></td><td>query</td><td>integer</td><td><strong>DA</strong></td><td></td></tr>
+<tr><td><span class="mono">nrFact</span></td><td>query</td><td>integer</td><td><strong>DA</strong></td><td></td></tr>
+<tr><td><span class="mono">serieFact</span></td><td>query</td><td>string</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">partId</span></td><td>query</td><td>string</td><td>NU</td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/incasari/factura?an=2026&amp;luna=5&amp;nrFact=166176&amp;serieFact=MAL&amp;partId=728015653"</pre>
+<div class="note">Răspuns: NULL (fără date pentru parametrii testați)</div>
+<h3><span class="status-ok">GET</span> /api/incasari/luna</h3>
+<p><strong>GetIncasariLuna — incasari luna curenta (5 campuri)</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/incasari/luna"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (55 rezultate):</p>
+<table><tr><th>Poz</th><th>Câmp</th><th>Valoare exemplu</th></tr>
+<tr><td>0</td><td><strong>Zi</strong></td><td><span class="mono">2</span></td></tr>
+<tr><td>1</td><td><strong>Data</strong></td><td><span class="mono">04.05.2026</span></td></tr>
+<tr><td>2</td><td><strong>SerieFact</strong></td><td><span class="mono">F.MAL75713</span></td></tr>
+<tr><td>3</td><td><strong>CodPartener</strong></td><td><span class="mono">728026602</span></td></tr>
+<tr><td>4</td><td><strong>Suma</strong></td><td><span class="mono">18,89</span></td></tr>
+</table>
+<h3><span class="status-ok">GET</span> /api/plati/factura</h3>
+<p><strong>GetPlatiFactura — plati per factura (NOU)</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">an</span></td><td>query</td><td>integer</td><td><strong>DA</strong></td><td></td></tr>
+<tr><td><span class="mono">luna</span></td><td>query</td><td>integer</td><td><strong>DA</strong></td><td></td></tr>
+<tr><td><span class="mono">nrFact</span></td><td>query</td><td>integer</td><td><strong>DA</strong></td><td></td></tr>
+<tr><td><span class="mono">serie</span></td><td>query</td><td>string</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">partId</span></td><td>query</td><td>string</td><td>NU</td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/plati/factura?an=2026&amp;luna=5&amp;nrFact=166176&amp;serie=MAL&amp;partId=728015653"</pre>
+<div class="note">Răspuns: NULL (fără date pentru parametrii testați)</div>
+<h3><span class="status-ok">GET</span> /api/solduri</h3>
+<p><strong>Returnează solduri pe agenți (facturi + avansuri). 6 câmpuri.</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/solduri"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (149797 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">728015295;Factura;106782;21.06.2016;98,5;30.12.1899;1;12;98,5;Lei;1</pre>
+<p style="font-size:11px;color:#888;">11 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/solduri/ext</h3>
+<p><strong>Returnează solduri extinse per partener. 10 câmpuri.</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/solduri/ext"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (149797 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">728015295;Factura;106782;21.06.2016;98,5;30.12.1899;1;12;98,5;;;21;BF.</pre>
+<p style="font-size:11px;color:#888;">13 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/solduri/facturi-neoperate</h3>
+<p><strong>GetSoldFactNeop (FIXAT — necesita partId)</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">partId</span></td><td>query</td><td>string</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<div class="note note-danger">Eroare: <span class="mono">GetSoldFactNeop vtable: vtable call GetSoldFactNeop failed: HRESULT 0x8000FFFF</span></div>
+<h3><span class="status-ok">GET</span> /api/solduri/furnizori</h3>
+<p><strong>Returnează solduri furnizori (aceeași structură ca solduri ext).</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/solduri/furnizori"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (1758 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">728015301;Factura;811902;21.04.2026;1621,76;20.06.2026;;;1621,76;;;1;</pre>
+<p style="font-size:11px;color:#888;">13 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/solduri/partener/{id}</h3>
+<p><strong>GetSoldPart — sold un partener (3 campuri)</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">id</span></td><td>path</td><td>string</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/solduri/partener/728015653?id=test"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (1 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">728015653;TEMAD CO SRL;-42681,38</pre>
+<p style="font-size:11px;color:#888;">3 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/solduri/partener/{id}/detaliat</h3>
+<p><strong>GetSoldDetaliat — facturi + avansuri</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">id</span></td><td>path</td><td>string</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/solduri/partener/728015653/detaliat?id=test"</pre>
+<div class="note">Răspuns: NULL (fără date pentru parametrii testați)</div>
+</div></div>
+<div class="section">
+<div class="section-header"><h2>Logistica (7 endpoint-uri)</h2><span class="badge badge-ok">7</span></div>
+<div class="section-body">
+<h3><span class="status-ok">GET</span> /api/iesiri/info</h3>
+<p><strong>GetInfoIesiri (FIXAT — necesita zi)</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">zi</span></td><td>query</td><td>integer</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/iesiri/info?zi=14"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (5 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">19;99999;14.05.2026;OVINSTAL ELECTRIC SRL;;;;;;;;;219,98;0000000033350;728018497;;</pre>
+<p style="font-size:11px;color:#888;">17 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/iesiri/info-ext</h3>
+<p><strong>GetInfoIesiriExt (FIXAT — necesita nrDoc + zi)</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">nrDoc</span></td><td>query</td><td>integer</td><td><strong>DA</strong></td><td></td></tr>
+<tr><td><span class="mono">zi</span></td><td>query</td><td>integer</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/iesiri/info-ext?nrDoc=1&amp;zi=14"</pre>
+<div class="note">Răspuns: NULL (fără date pentru parametrii testați)</div>
+<h3><span class="status-ok">GET</span> /api/inventory/orders</h3>
+<p><strong>GetInventoryOrders (FIXAT — necesita gestiune)</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">gestiune</span></td><td>query</td><td>string</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/inventory/orders?gestiune=MP"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (104 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">1;20.07.2008</pre>
+<p style="font-size:11px;color:#888;">2 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/livrari/dispozitii</h3>
+<p><strong>GetDispozitiiDeLivrare (FIXAT — necesita gestiune)</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">gestiune</span></td><td>query</td><td>string</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/livrari/dispozitii?gestiune=MP"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (5 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">MAL-99999;728018497;OVINSTAL ELECTRIC SRL;9007767510699;4;BUC</pre>
+<p style="font-size:11px;color:#888;">6 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/livrari/orders</h3>
+<p><strong>GetDeliveryOrders (17 campuri)</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/livrari/orders"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (20 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">17;728023438;MATEA MARIUS FLORIAN;2025-11-01 00:00:00;2022-02-28 14:02:18;9007767531045;11;BUC;42,02;0;9;MALOF;SEDIU SOCIAL;5;SE VA LIVRA DUPA 15 APRILIE;;</pre>
+<p style="font-size:11px;color:#888;">17 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/receiving/status</h3>
+<p><strong>GetReceivingStatus (FIXAT — 3 params)</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">partId</span></td><td>query</td><td>string</td><td><strong>DA</strong></td><td></td></tr>
+<tr><td><span class="mono">serieDoc</span></td><td>query</td><td>string</td><td><strong>DA</strong></td><td></td></tr>
+<tr><td><span class="mono">nrDoc</span></td><td>query</td><td>string</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<div class="note note-danger">Eroare: <span class="mono">CallMethod GetReceivingStatus: The server threw an exception.</span></div>
+<h3><span class="status-ok">GET</span> /api/receptii/subunitati</h3>
+<p><strong>GetReceptiiIntrSubunit</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/receptii/subunitati"</pre>
+<div class="note">Răspuns: NULL (fără date pentru parametrii testați)</div>
+</div></div>
+<div class="section">
+<div class="section-header"><h2>Import (1 endpoint-uri)</h2><span class="badge badge-ok">1</span></div>
+<div class="section-body">
+<h3><span class="status-unknown">POST</span> /api/import/{docType}</h3>
+<p><strong>Import generic documente. docType: comenzi-furnizori, facturi-intrare, facturi-iesire, transferuri, bonuri-consum, modificari-pret, etc.</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">docType</span></td><td>path</td><td>string</td><td><strong>DA</strong></td><td></td></tr>
+<tr><td><span class="mono">validateOnly</span></td><td>query</td><td>boolean</td><td>NU</td><td></td></tr>
+</table>
+<div class="note">Necesită <strong>JSON body</strong>. Vezi secțiunea dedicată pentru structura completă.</div>
+</div></div>
+<div class="section">
+<div class="section-header"><h2>System (7 endpoint-uri)</h2><span class="badge badge-ok">7</span></div>
+<div class="section-body">
+<h3><span class="status-ok">GET</span> /api/diagnostics</h3>
+<p><strong>Returnează informații de diagnostic: conexiune COM, vtable methods, configurare.</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/diagnostics"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns:</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">{
+  &quot;cacheMinutes&quot;: 5,
+  &quot;comConnected&quot;: true,
+  &quot;comIdleTimeout&quot;: 300,
+  &quot;comProgId&quot;: &quot;DocImpServer.DocImpObject&quot;,
+  &quot;port&quot;: 9500,
+  &quot;vtableMethods&quot;: {
+    &quot;ActualizeazaAcceptat&quot;: 2,
+    &quot;AdaugaGestiune&quot;: 2,
+    &quot;AdaugaPartener&quot;: 2,
+    &quot;AddClasaArt&quot;: 2,
+    &quot;AddProduct&quot;: 2,
+    &quot;BonuriConsumValide&quot;: 1,
+    &quot;CheckDocument&quot;: 5,
+    &quot;ComenziFurnValide&quot;: 1,
+    &quot;ComenziValide&quot;: 1,
+    &quot;ComenziValideExt&quot;: 1,
+    &quot;DateValide&quot;: 1,
+    &quot;ExistaFactura&quot;: 2,
+    &quot;ExistaFacturaExt&quot;: 3,
+    &quot;ExistaFacturaIntrare&quot;: 4,
+    &quot;ExistaMonetarul&quot;: 3,
+    &quot;FactIntrareValida&quot;: 1,
+    &quot;GenCodArticole&quot;: 1,
+    &quot;GenCodParteneri&quot;: 1,
+    &quot;GetArtComenziInterne&quot;: 2,
+    &quot;GetArticoleDisc&quot;: 3,
+    &quot;GetArticoleVandute&quot;: 6,
+    &quot;GetClaseArticole&quot;: 2,
+    &quot;GetClaseParteneri&quot;: 2,
+    &quot;GetCmdSubunitActive&quot;: 2,
+    &quot;GetComenziNefacturate&quot;: 2,
+    &quot;GetCritDiscPart&quot;: 2,
+    &quot;GetCritDiscPeArticole&quot;: 2,
+    &quot;GetCritDiscPeClase&quot;: 2,
+    &quot;GetDeliveryOrders&quot;: 2,
+    &quot;GetDispozitiiDeLivrare&quot;: 3,
+    &quot;GetDocFromFile&quot;: 2,
+    &quot;GetEmulareNedescarcata&quot;: 2,
+    &quot;GetIncasariClienti&quot;: 7,
+    &quot;GetIncasariClientiExt&quot;: 7,
+    &quot;GetIncasariFactura&quot;: 6,
+    &quot;GetIncasariLuna&quot;: 2,
+    &quot;GetInfoBon&quot;: 3,
+    &quot;GetInfoBonConsum&quot;: 4,
+    &quot;GetInfoBonExt&quot;: 4,
+    &quot;GetInfoCmdBon&quot;: 3,
+    &quot;GetInfoCmdBonuri&quot;: 3,
+    &quot;GetInfoCmdNefacturate&quot;: 2,
+    &quot;GetInfoCmdSubNefacturate&quot;: 2,
+    &quot;GetInfoComenzi&quot;: 2,
+    &quot;GetInfoIesiri&quot;: 3,
+    &quot;GetInfoIesiriExt&quot;: 4,
+    &quot;GetInfoPart&quot;: 3,
+    &quot;GetInfoPers&quot;: 3,
+    &quot;GetIntervaleDisc&quot;: 3,
+    &quot;GetIntrari&quot;: 2,
+    &quot;GetInventoryOrders&quot;: 3,
+    &quot;GetIstoricVanzari&quot;: 5,
+    &quot;GetListRecord&quot;: 2,
+    &quot;GetListaArtCatPret&quot;: 2,
+    &quot;GetListaArtCatPret2&quot;: 3,
+    &quot;GetListaArtCatPretExt&quot;: 2,
+    &quot;GetListaBanci&quot;: 2,
+    &quot;GetListaCarnete&quot;: 2,
+    &quot;GetListaCatPret&quot;: 2,
+    &quot;GetListaClienti&quot;: 4,
+    &quot;GetListaDelegati&quot;: 2,
+    &quot;GetListaErori&quot;: 1,
+    &quot;GetListaFirme&quot;: 1,
+    &quot;GetListaFirmeExt&quot;: 1,
+    &quot;GetListaGestiuni&quot;: 2,
+    &quot;GetListaLocalitati&quot;: 2,
+    &quot;GetListaLuni&quot;: 2,
+    &quot;GetListaParteneri&quot;: 2,
+    &quot;GetListaPersonal&quot;: 2,
+    &quot;GetListaSubunit&quot;: 2,
+    &quot;GetListacarneteExt&quot;: 2,
+    &quot;GetMatComenziInterne&quot;: 2,
+    &quot;GetMiscariAmbalaje&quot;: 6,
+    &quot;GetMonede&quot;: 2,
+    &quot;GetNextPartID&quot;: 2,
+    &quot;GetNirAtribute&quot;: 2,
+    &quot;GetNomenclatorArticole&quot;: 2,
+    &quot;GetNomenclatorLocalitati&quot;: 2,
+    &quot;GetNumarFactura&quot;: 3,
+    &quot;GetOferte&quot;: 2,
+    &quot;GetOferteClienti&quot;: 2,
+    &quot;GetPlatiFactura&quot;: 6,
+    &quot;GetPlatiLuna&quot;: 2,
+    &quot;GetPretVanzare&quot;: 4,
+    &quot;GetPretVanzareBrut&quot;: 4,
+    &quot;GetProducts&quot;: 3,
+    &quot;GetReceivingStatus&quot;: 4,
+    &quot;GetReceptii&quot;: 2,
+    &quot;GetReceptiiIntrSubunit&quot;: 2,
+    &quot;GetReceptiiNeoperate&quot;: 2,
+    &quot;GetReteteActive&quot;: 2,
+    &quot;GetReziduale&quot;: 2,
+    &quot;GetSoldDetaliat&quot;: 3,
+    &quot;GetSoldFactNeop&quot;: 3,
+    &quot;GetSoldPart&quot;: 3,
+    &quot;GetSolduri&quot;: 2,
+    &quot;GetSolduriExt&quot;: 2,
+    &quot;GetSolduriFurn&quot;: 2,
+    &quot;GetStadiuComanda&quot;: 5,
+    &quot;GetStergeriProduse&quot;: 3,
+    &quot;GetStocArtDetaliat&quot;: 4,
+    &quot;GetStocArticol&quot;: 4,
+    &quot;GetStocArticole&quot;: 2,
+    &quot;GetStocArticoleExt&quot;: 2,
+    &quot;GetStocArticoleExt2&quot;: 3,
+    &quot;GetStocArticoleExt3&quot;: 2,
+    &quot;GetStocArticoleExt4&quot;: 2,
+    &quot;GetStocArticoleExt5&quot;: 2,
+    &quot;GetStocInitialAmbalaj&quot;: 4,
+    &quot;GetStocuriPeGestiuni&quot;: 2,
+    &quot;GetStringConstanta&quot;: 3,
+    &quot;GetSuppliersOrders&quot;: 2,
+    &quot;GetTransferuri&quot;: 2,
+    &quot;GetTranzactiiInCurs&quot;: 2,
+    &quot;GetUM&quot;: 2,
+    &quot;GetUltimeleVanzari&quot;: 6,
+    &quot;GetValoriAtribut&quot;: 3,
+    &quot;GetValoriAtribute&quot;: 2,
+    &quot;GetVanzariEmulare&quot;: 2,
+    &quot;GetVanzariExt&quot;: 2,
+    &quot;GetVanzariLuna&quot;: 2,
+    &quot;GetVersiuni&quot;: 3,
+    &quot;ImportaBonuriConsum&quot;: 1,
+    &quot;ImportaComenzi&quot;: 1,
+    &quot;ImportaComenziExt&quot;: 1,
+    &quot;ImportaComenziFurn&quot;: 1,
+    &quot;ImportaFactIntrare&quot;: 1,
+    &quot;ImportaFacturi&quot;: 1,
+    &quot;ImportaIncasari&quot;: 1,
+    &quot;ImportaIncasariExt&quot;: 1,
+    &quot;ImportaModifPret&quot;: 1,
+    &quot;ImportaMonetare&quot;: 1,
+    &quot;ImportaNoteContabile&quot;: 1,
+    &quot;ImportaPlatiExt&quot;: 1,
+    &quot;ImportaReglareInventar&quot;: 2,
+    &quot;ImportaTransferuri&quot;: 1,
+    &quot;IncasariValide&quot;: 1,
+    &quot;IncasariValideExt&quot;: 1,
+    &quot;LogOn&quot;: 3,
+    &quot;ModiProduct&quot;: 2,
+    &quot;ModifPretValide&quot;: 1,
+    &quot;ModificaArticol&quot;: 2,
+    &quot;ModificaPartener&quot;: 2,
+    &quot;MonetareValide&quot;: 1,
+    &quot;NCValide&quot;: 1,
+    &quot;PlatiValideExt&quot;: 1,
+    &quot;PotIntroduceDoc&quot;: 3,
+    &quot;ReglareInventarValida&quot;: 2,
+    &quot;SetArtAnalizat&quot;: 2,
+    &quot;SetCantReceptii&quot;: 5,
+    &quot;SetCatPretImplicita&quot;: 2,
+    &quot;SetClasaArt&quot;: 1,
+    &quot;SetCmdImplicitAcceptat&quot;: 1,
+    &quot;SetCodCmdAnalizata&quot;: 1,
+    &quot;SetDataReferinta&quot;: 1,
+    &quot;SetDeliveryList&quot;: 2,
+    &quot;SetDescarcareAutomata&quot;: 1,
+    &quot;SetDocsData&quot;: 1,
+    &quot;SetFiltruDocNeoperate&quot;: 1,
+    &quot;SetIDArtField&quot;: 1,
+    &quot;SetIDPartField&quot;: 1,
+    &quot;SetInclusivCmdFurn&quot;: 1,
+    &quot;SetInclusivFactAviz&quot;: 1,
+    &quot;SetIndexNart&quot;: 1,
+    &quot;SetInventoryOrders&quot;: 2,
+    &quot;SetLunaLucru&quot;: 3,
+    &quot;SetNumeFirma&quot;: 2,
+    &quot;SetPartAnalizat&quot;: 2,
+    &quot;SetPickedList&quot;: 2,
+    &quot;SetReceivingList&quot;: 2,
+    &quot;TransferuriValide&quot;: 1
+  }
+}</pre>
+<h3><span class="status-ok">GET</span> /api/erori</h3>
+<p><strong>Returnează lista erorilor din ultima operație COM.</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/erori"</pre>
+<div class="note">Răspuns: NULL (fără date pentru parametrii testați)</div>
+<h3><span class="status-ok">GET</span> /api/health</h3>
+<p><strong>Verifică dacă serverul rulează. Nu necesită autentificare.</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/health"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns:</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">{
+  &quot;comConnected&quot;: true,
+  &quot;goVersion&quot;: &quot;go1.25.0&quot;,
+  &quot;platform&quot;: &quot;windows/386&quot;,
+  &quot;status&quot;: &quot;running&quot;,
+  &quot;uptime&quot;: &quot;1h6m48.4687289s&quot;,
+  &quot;version&quot;: &quot;1.2.0&quot;
+}</pre>
+<h3><span class="status-ok">GET</span> /api/system/check-document</h3>
+<p><strong>CheckDocument</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">tipDoc</span></td><td>query</td><td>string</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">prefixDoc</span></td><td>query</td><td>string</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">nrDoc</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/system/check-document?nrDoc=1"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns:</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">{
+  &quot;result&quot;: 0
+}</pre>
+<h3><span class="status-ok">GET</span> /api/system/pot-introduce-doc</h3>
+<p><strong>PotIntroduceDoc — poate introduce documente?</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">an</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+<tr><td><span class="mono">luna</span></td><td>query</td><td>integer</td><td>NU</td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/system/pot-introduce-doc?an=2026&amp;luna=5"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns:</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">{
+  &quot;canIntroduce&quot;: true,
+  &quot;result&quot;: 1
+}</pre>
+<h3><span class="status-ok">GET</span> /api/system/tranzactii-in-curs</h3>
+<p><strong>GetTranzactiiInCurs — tranzactii in curs (13 campuri)</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/system/tranzactii-in-curs"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (7 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">728015564;CEC;126;21.12.2011;8258,40;Factura;21467;21.12.2011;8258,40;30.12.1899;;;12.11.2012</pre>
+<p style="font-size:11px;color:#888;">13 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/versiuni</h3>
+<p><strong>Returnează versiunile WinMentor și DocImpServer.</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/versiuni"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns:</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">{
+  &quot;resultCode&quot;: 1,
+  &quot;verMentor&quot;: 3226031.03,
+  &quot;verServer&quot;: 3226031.01
+}</pre>
+</div></div>
+<div class="section">
+<div class="section-header"><h2>Facturi (6 endpoint-uri)</h2><span class="badge badge-ok">6</span></div>
+<div class="section-body">
+<h3><span class="status-ok">GET</span> /api/carnete</h3>
+<p><strong>GetListaCarnete (4 campuri)</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/carnete"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (6 rezultate):</p>
+<table><tr><th>Poz</th><th>Câmp</th><th>Valoare exemplu</th></tr>
+<tr><td>0</td><td><strong>Simbol</strong></td><td><span class="mono">MAL</span></td></tr>
+<tr><td>1</td><td><strong>Tip</strong></td><td><span class="mono">FACT</span></td></tr>
+<tr><td>2</td><td><strong>Denumire</strong></td><td><span class="mono">Factura fiscala</span></td></tr>
+<tr><td>3</td><td><strong>Camp3</strong></td><td><span class="mono">(gol)</span></td></tr>
+</table>
+<h3><span class="status-ok">GET</span> /api/facturi/exists/{nr}</h3>
+<p><strong>ExistaFactura — verifica existenta factura</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">nr</span></td><td>path</td><td>integer</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/facturi/exists/166176?nr=test"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns:</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">{
+  &quot;code&quot;: 1,
+  &quot;exists&quot;: true,
+  &quot;numar&quot;: 166176,
+  &quot;status&quot;: &quot;posted&quot;
+}</pre>
+<h3><span class="status-ok">GET</span> /api/facturi/numar/{carnet}</h3>
+<p><strong>GetNumarFactura — urmatorul numar pe carnet</strong></p>
+<table><tr><th>Parametru</th><th>Locație</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">carnet</span></td><td>path</td><td>string</td><td><strong>DA</strong></td><td></td></tr>
+</table>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/facturi/numar/MAL?carnet=test"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns:</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">{
+  &quot;carnet&quot;: &quot;MAL&quot;,
+  &quot;numar&quot;: 1
+}</pre>
+<h3><span class="status-ok">GET</span> /api/intrari</h3>
+<p><strong>Returnează intrările (achiziții). 11 câmpuri.</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/intrari"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (1044 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">;02.05.2026;44499;594008496560106;1;L;700;;0;DA;</pre>
+<p style="font-size:11px;color:#888;">11 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/nir/atribute</h3>
+<p><strong>GetNirAtribute — atribute NIR (5 campuri)</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/nir/atribute"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (922 rezultate):</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;max-height:120px;">01.05.2026;MP;9007912537403;;40</pre>
+<p style="font-size:11px;color:#888;">5 câmpuri separate cu ";"</p>
+<h3><span class="status-ok">GET</span> /api/receptii</h3>
+<p><strong>Returnează recepțiile (facturi intrare) din luna curentă. 22 câmpuri.</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/receptii"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns (948 rezultate):</p>
+<table><tr><th>Poz</th><th>Câmp</th><th>Valoare exemplu</th></tr>
+<tr><td>0</td><td><strong>DenGestiune</strong></td><td><span class="mono">Magazin Practic</span></td></tr>
+<tr><td>1</td><td><strong>SimbolGest</strong></td><td><span class="mono">MP</span></td></tr>
+<tr><td>2</td><td><strong>NrNIR</strong></td><td><span class="mono">24503</span></td></tr>
+<tr><td>3</td><td><strong>DataNIR</strong></td><td><span class="mono">12.5.2026</span></td></tr>
+<tr><td>4</td><td><strong>DenFurnizor</strong></td><td><span class="mono">TEMAD CO SRL</span></td></tr>
+<tr><td>5</td><td><strong>CodFurnizor</strong></td><td><span class="mono">728015653</span></td></tr>
+<tr><td>6</td><td><strong>NrFactura</strong></td><td><span class="mono">3482</span></td></tr>
+<tr><td>7</td><td><strong>DataFactura</strong></td><td><span class="mono">12.05.2026</span></td></tr>
+<tr><td>8</td><td><strong>CodArticol</strong></td><td><span class="mono">5948941006475</span></td></tr>
+<tr><td>9</td><td><strong>DenArticol</strong></td><td><span class="mono">BANDA GIPS-CARTON 48MMX90M</span></td></tr>
+<tr><td>10</td><td><strong>ContStoc</strong></td><td><span class="mono">371.02</span></td></tr>
+<tr><td>11</td><td><strong>UM</strong></td><td><span class="mono">Buc</span></td></tr>
+<tr><td>12</td><td><strong>CantComanda</strong></td><td><span class="mono">75</span></td></tr>
+<tr><td>13</td><td><strong>CantReceptionata</strong></td><td><span class="mono">75</span></td></tr>
+<tr><td>14</td><td><strong>PretIntrare</strong></td><td><span class="mono">12,8448</span></td></tr>
+<tr><td>15</td><td><strong>PretVanzare</strong></td><td><span class="mono">20,9</span></td></tr>
+<tr><td>16</td><td><strong>CotaTVA</strong></td><td><span class="mono">21</span></td></tr>
+<tr><td>17</td><td><strong>IDComandaWM</strong></td><td><span class="mono">50722</span></td></tr>
+<tr><td>18</td><td><strong>NrLinie</strong></td><td><span class="mono">1</span></td></tr>
+<tr><td>19</td><td><strong>NrLinieComanda</strong></td><td><span class="mono">1</span></td></tr>
+<tr><td>20</td><td><strong>CodExternAlt</strong></td><td><span class="mono">520717</span></td></tr>
+<tr><td>21</td><td><strong>Camp21</strong></td><td><span class="mono">(gol)</span></td></tr>
+</table>
+</div></div>
+<div class="section">
+<div class="section-header"><h2>COM Generic (2 endpoint-uri)</h2><span class="badge badge-ok">2</span></div>
+<div class="section-body">
+<h3><span class="status-unknown">POST</span> /api/com/call</h3>
+<p><strong>Apel generic orice functie COM</strong></p>
+<div class="note">Necesită <strong>JSON body</strong>. Vezi secțiunea dedicată pentru structura completă.</div>
+<h3><span class="status-ok">GET</span> /api/com/methods</h3>
+<p><strong>Lista metode COM disponibile</strong></p>
+<p style="margin-top:8px;font-size:12px;color:#666;">Exemplu request:</p>
+<pre style="background:#2c2c2c;color:#e0e0e0;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">curl -H "X-API-Key: ***" "http://0.0.0.0:9500/api/com/methods"</pre>
+<p style="font-size:12px;color:#666;margin-top:8px;">Răspuns:</p>
+<pre style="background:#f5f0e8;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">{
+  &quot;methods&quot;: [
+    {
+      &quot;name&quot;: &quot;GetListaFirme&quot;,
+      &quot;params&quot;: &quot;none&quot;
+    },
+    {
+      &quot;name&quot;: &quot;GetListaLuni&quot;,
+      &quot;params&quot;: &quot;NumeFirma: string&quot;
+    },
+    {
+      &quot;name&quot;: &quot;SetNumeFirma&quot;,
+      &quot;params&quot;: &quot;NumeFirma: string&quot;
+    },
+    {
+      &quot;name&quot;: &quot;SetLunaLucru&quot;,
+      &quot;params&quot;: &quot;An: int, Luna: int&quot;
+    },
+    {
+      &quot;name&quot;: &quot;GetListaErori&quot;,
+      &quot;params&quot;: &quot;none&quot;
+    },
+    {
+      &quot;name&quot;: &quot;GetVersiuni&quot;,
+      &quot;params&quot;: &quot;out params&quot;
+    },
+    {
+      &quot;name&quot;: &quot;GetNomenclatorArticole&quot;,
+      &quot;params&quot;: &quot;out Error: int&quot;
+    },
+    {
+      &quot;name&quot;: &quot;GetStocArticole&quot;,
+      &quot;params&quot;: &quot;out Error: int&quot;
+    },
+    {
+      &quot;name&quot;: &quot;GetListaParteneri&quot;,
+      &quot;params&quot;: &quot;out Error: int&quot;
+    },
+    {
+      &quot;name&quot;: &quot;GetVanzariLuna&quot;,
+      &quot;params&quot;: &quot;none&quot;
+    },
+    {
+      &quot;name&quot;: &quot;GetVanzariExt&quot;,
+      &quot;params&quot;: &quot;out Error: int&quot;
+    },
+    {
+      &quot;name&quot;: &quot;GetListaGestiuni&quot;,
+      &quot;params&quot;: &quot;out Error: int&quot;
+    },
+    {
+      &quot;name&quot;: &quot;GetListaPersonal&quot;,
+      &quot;params&quot;: &quot;none&quot;
+    },
+    {
+      &quot;name&quot;: &quot;GetListaBanci&quot;,
+      &quot;params&quot;: &quot;out Error: int&quot;
+    },
+    {
+      &quot;name&quot;: &quot;GetOferte&quot;,
+      &quot;params&quot;: &quot;out Error: int&quot;
+    },
+    {
+      &quot;name&quot;: &quot;GetSolduri&quot;,
+      &quot;params&quot;: &quot;out Error: int&quot;
+    },
+    {
+      &quot;name&quot;: &quot;GetSolduriExt&quot;,
+      &quot;params&quot;: &quot;out Error: int&quot;
+    },
+    {
+      &quot;name&quot;: &quot;GetSolduriFurn&quot;,
+      &quot;params&quot;: &quot;none&quot;
+    },
+    {
+      &quot;name&quot;: &quot;GetComenziNefacturate&quot;,
+      &quot;params&quot;: &quot;none&quot;
+    },
+    {
+      &quot;name&quot;: &quot;GetSuppliersOrders&quot;,
+      &quot;params&quot;: &quot;undocumented&quot;
+    },
+    {
+      &quot;name&quot;: &quot;AddProduct&quot;,
+      &quot;params&quot;: &quot;Info: string&quot;
+    },
+    {
+      &quot;name&quot;: &quot;ModiProduct&quot;,
+      &quot;params&quot;: &quot;Info: string&quot;
+    },
+    {
+      &quot;name&quot;: &quot;AdaugaPartener&quot;,
+      &quot;params&quot;: &quot;Info: string&quot;
+    },
+    {
+      &quot;name&quot;: &quot;ModificaPartener&quot;,
+      &quot;params&quot;: &quot;Info: string&quot;
+    }
+  ],
+  &quot;note&quot;: &quot;Use POST /api/com/call to test any method&quot;,
+  &quot;totalMethods&quot;: 24
+}</pre>
+</div></div>

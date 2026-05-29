@@ -1,0 +1,244 @@
+<!-- ==================== COMENZI + CARNETE + OFERTE ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Comenzi, Carnete, Oferte</h2>
+<span class="badge badge-partial">TESTAT — câmpuri partial mapate</span>
+</div>
+<div class="section-body">
+
+<h3>GET /api/vanzari/luna</h3>
+<p>Facturi emise luna curentă. <strong>26 câmpuri</strong> (documentat 10, 16 extra).</p>
+<div class="note note-info">Testat: 5.072 înregistrări.</div>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>IDPartener</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">722367182</span></td></tr>
+<tr><td>1</td><td><strong>Zi</strong></td><td>integer</td><td class="status-ok">✅</td><td><span class="mono">1</span></td></tr>
+<tr><td>2</td><td><strong>NrFactura</strong></td><td>integer</td><td class="status-ok">✅</td><td><span class="mono">75131</span></td></tr>
+<tr><td>3</td><td><strong>IDArticol</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">9007767469003</span></td></tr>
+<tr><td>4</td><td><strong>NumarComanda</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>5</td><td><strong>Cantitate</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">30</span></td></tr>
+<tr><td>6</td><td><strong>DenUM</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Buc</span></td></tr>
+<tr><td>7</td><td><strong>Pret</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">10,31</span> (fara TVA)</td></tr>
+<tr><td>8</td><td><strong>MarcaAgent</strong></td><td>integer</td><td class="status-ok">✅</td><td><span class="mono">18</span></td></tr>
+<tr><td>9</td><td><strong>ValoareFactura</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">566,12</span></td></tr>
+<tr><td colspan="5" style="background:#fff3cd; font-weight:600">--- Campuri nedocumentate ---</td></tr>
+<tr><td>10</td><td><strong>DataScadenta</strong></td><td>date</td><td class="status-ok">✅ Gol la Avize, completat la Facturi (confirmat vs GitHub)</td><td><span class="mono">01.04.2026</span></td></tr>
+<tr><td>11</td><td><strong>TVAInclus</strong></td><td>DA/NU</td><td class="status-ok">✅ Mereu NU = TVA nu e inclus in pret (confirmat vs GitHub)</td><td><span class="mono">NU</span></td></tr>
+<tr><td>12</td><td><strong>CotaTVA</strong></td><td>integer</td><td class="status-ok">✅</td><td><span class="mono">21</span></td></tr>
+<tr><td>13</td><td><strong>TipDocument</strong></td><td>string</td><td class="status-ok">✅ AE=Aviz, F=Factura</td><td><span class="mono">F</span></td></tr>
+<tr><td>14</td><td><strong>PrefixCarnet</strong></td><td>string</td><td class="status-ok">✅ Gol la avize</td><td><span class="mono">CARNET1</span></td></tr>
+<tr><td>15</td><td><strong>ReferintaDocument</strong></td><td>string</td><td class="status-ok">✅ TipDoc.PrefixNrDoc</td><td><span class="mono">F.CARNET175131</span></td></tr>
+<tr><td>16</td><td><strong>DenArticol</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Articol exemplu</span></td></tr>
+<tr><td>17</td><td><strong>Discount %</strong></td><td>decimal</td><td class="status-ok">✅ Negativ = discount</td><td><span class="mono">-4</span>, <span class="mono">0</span></td></tr>
+<tr><td>18</td><td>(nefolosit)</td><td>mixed</td><td class="status-ok">✅ Analiză 5.072 — majoritar 0/gol</td><td><span class="mono">0</span></td></tr>
+<tr><td>19</td><td><strong>DataDocument</strong></td><td>date</td><td class="status-ok">✅</td><td><span class="mono">01.04.2026</span></td></tr>
+<tr><td>20</td><td><strong>LocatieClient</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">SEDIU SOCIAL</span></td></tr>
+<tr><td>21</td><td><strong>AdresaClient</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Str. Exemplu, Nr.1</span></td></tr>
+<tr><td>22</td><td><strong>LocalitateClient</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Localitate</span></td></tr>
+<tr><td>23-25</td><td>(goale)</td><td>-</td><td class="status-ok">✅ Mereu goale</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+
+<h3>GET /api/intrari</h3>
+<p>Intrări (recepții simplificate) luna curentă. <strong>11 câmpuri</strong>.</p>
+<div class="note note-info">Testat: 1.334 înregistrări.</div>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>IDFurnizor</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">0000000000192</span> (rar gol)</td></tr>
+<tr><td>1</td><td><strong>DataIntrare</strong></td><td>date</td><td class="status-ok">✅</td><td><span class="mono">14.04.2026</span></td></tr>
+<tr><td>2</td><td><strong>NrDocument</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">811783</span></td></tr>
+<tr><td>3</td><td><strong>CodArticol</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">6421806130564</span></td></tr>
+<tr><td>4</td><td><strong>Cantitate</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">200</span></td></tr>
+<tr><td>5</td><td><strong>UM</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Buc</span></td></tr>
+<tr><td>6</td><td><strong>Pret</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">0,04</span></td></tr>
+<tr><td>7</td><td><strong>SimbolGestiune</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">MP</span></td></tr>
+<tr><td>8</td><td><strong>ValoareTVA</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">0</span></td></tr>
+<tr><td>9</td><td><strong>FlagOperare</strong></td><td>DA/gol</td><td class="status-ok">✅ Analiză 1.334 (101x DA, restul gol)</td><td><span class="mono">DA</span> = operat</td></tr>
+<tr><td>10</td><td>(gol)</td><td>-</td><td class="status-ok">✅ Mereu gol</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+
+<h3>GET /api/transferuri</h3>
+<p>Transferuri între gestiuni luna curentă. <strong>15 câmpuri</strong>.</p>
+<div class="note note-info">Testat: 18 transferuri.</div>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>GestSursa</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">MP</span></td></tr>
+<tr><td>1</td><td><strong>GestDest</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">CNC</span></td></tr>
+<tr><td>2</td><td><strong>NrTransfer</strong></td><td>integer</td><td class="status-ok">✅</td><td><span class="mono">52</span></td></tr>
+<tr><td>3</td><td><strong>DataTransfer</strong></td><td>date</td><td class="status-ok">✅</td><td><span class="mono">1.4.2026</span></td></tr>
+<tr><td>4</td><td><strong>CodArticol</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">9007767459264</span></td></tr>
+<tr><td>5</td><td><strong>DenArticol</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Articol exemplu</span></td></tr>
+<tr><td>6</td><td><strong>Cantitate</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">300</span></td></tr>
+<tr><td>7</td><td><strong>PretVanzare</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">0,02584</span></td></tr>
+<tr><td>8</td><td><strong>PretAchizitie</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">0,02584</span></td></tr>
+<tr><td>9</td><td><strong>ContSursa</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">371.02</span></td></tr>
+<tr><td>10</td><td><strong>ContDest</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">371.01</span></td></tr>
+<tr><td>11</td><td>(gol)</td><td>-</td><td class="status-ok">✅</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>12</td><td><strong>ValoareTotala</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">16,68</span></td></tr>
+<tr><td>13-14</td><td>(goale)</td><td>-</td><td class="status-ok">✅</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+
+<h3>GET /api/delegati</h3>
+<p>Lista delegați. <strong>11 câmpuri</strong>.</p>
+<div class="note note-info">Testat: 11.917 delegați.</div>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td>(flag)</td><td>integer</td><td class="status-ok">✅ Analiză 11.917 — mereu 0</td><td><span class="mono">0</span></td></tr>
+<tr><td>1</td><td><strong>Marca</strong></td><td>integer</td><td class="status-ok">✅</td><td><span class="mono">1</span>, <span class="mono">2</span></td></tr>
+<tr><td>2</td><td><strong>Nume</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Delegat exemplu</span></td></tr>
+<tr><td>3</td><td><strong>NrAuto</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">BH00XXX</span></td></tr>
+<tr><td>4</td><td>(gol)</td><td>-</td><td class="status-ok">✅ Mereu gol</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>5</td><td><strong>SerieBuletin</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">210059</span></td></tr>
+<tr><td>6</td><td><strong>NrBuletin</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">XH</span></td></tr>
+<tr><td>7</td><td>(gol)</td><td>-</td><td class="status-ok">✅ Mereu gol</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>8</td><td><strong>MijlocTransport</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">AUTO</span></td></tr>
+<tr><td>9-10</td><td>(goale)</td><td>-</td><td class="status-ok">✅</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+
+<h3>GET /api/nir/atribute</h3>
+<p>Atribute NIR (note intrare recepție). <strong>5 câmpuri</strong>.</p>
+<div class="note note-info">Testat: 1.147 înregistrări.</div>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>DataNIR</strong></td><td>date</td><td class="status-ok">✅</td><td><span class="mono">01.04.2026</span></td></tr>
+<tr><td>1</td><td>(gol)</td><td>-</td><td class="status-ok">✅ Mereu gol</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>2</td><td><strong>CodArticol</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">9007767531137</span></td></tr>
+<tr><td>3</td><td>(gol)</td><td>-</td><td class="status-ok">✅ Mereu gol</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>4</td><td><strong>Valoare/Discount</strong></td><td>decimal</td><td class="status-ok">✅ Analiză 1.147 (valori negative = discount)</td><td><span class="mono">-26</span></td></tr>
+</table>
+
+<h3>GET /api/livrari/orders (GetDeliveryOrders)</h3>
+<p>Comenzi de livrare. <strong>17 câmpuri</strong>.</p>
+<div class="note note-info">Testat: 20 comenzi livrare.</div>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>NrComanda</strong></td><td>integer</td><td class="status-ok">✅</td><td><span class="mono">17</span></td></tr>
+<tr><td>1</td><td><strong>IDPartener</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">722364430</span></td></tr>
+<tr><td>2</td><td><strong>DenPartener</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Client exemplu</span></td></tr>
+<tr><td>3</td><td><strong>DataComanda</strong></td><td>datetime</td><td class="status-ok">✅</td><td><span class="mono">2025-11-01 00:00:00</span></td></tr>
+<tr><td>4</td><td><strong>DataLivrare</strong></td><td>datetime</td><td class="status-ok">✅</td><td><span class="mono">2022-02-28 14:02:18</span></td></tr>
+<tr><td>5</td><td><strong>CodArticol</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">9007767531045</span></td></tr>
+<tr><td>6</td><td><strong>Cantitate</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">11</span></td></tr>
+<tr><td>7</td><td><strong>UM</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">BUC</span></td></tr>
+<tr><td>8</td><td><strong>Pret</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">42,02</span></td></tr>
+<tr><td>9</td><td><strong>ValoareDiscount</strong></td><td>decimal</td><td class="status-ok">✅ Analiză 20 (majoritar 0)</td><td><span class="mono">0</span></td></tr>
+<tr><td>10</td><td><strong>MarcaAgent</strong></td><td>integer</td><td class="status-ok">✅</td><td><span class="mono">9</span></td></tr>
+<tr><td>11</td><td><strong>PrefixCarnet</strong></td><td>string</td><td class="status-ok">✅ Analiză 20 (MALOF, CC, CM, HPL)</td><td><span class="mono">MALOF</span>, <span class="mono">CC</span></td></tr>
+<tr><td>12</td><td><strong>LocatieClient</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">SEDIU SOCIAL</span></td></tr>
+<tr><td>13</td><td><strong>MarcaAgentLivrare</strong></td><td>integer</td><td class="status-ok">✅ Analiză 20</td><td><span class="mono">5</span>, <span class="mono">7</span></td></tr>
+<tr><td>14</td><td><strong>Observatii</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Observatie exemplu</span></td></tr>
+<tr><td>15-16</td><td>(goale)</td><td>-</td><td class="status-ok">✅</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+
+<h3>GET /api/system/tranzactii-in-curs (GetTranzactiiInCurs)</h3>
+<p>Tranzacții în curs (CEC-uri, efecte comerciale). <strong>13 câmpuri</strong>.</p>
+<div class="note note-info">Testat: 7 tranzacții.</div>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>IDPartener</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">0000000004077</span></td></tr>
+<tr><td>1</td><td><strong>TipDocument</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">CEC</span>, <span class="mono">EX</span></td></tr>
+<tr><td>2</td><td><strong>NrDocument</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">126</span></td></tr>
+<tr><td>3</td><td><strong>DataDocument</strong></td><td>date</td><td class="status-ok">✅</td><td><span class="mono">21.12.2011</span></td></tr>
+<tr><td>4</td><td><strong>Valoare</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">8258,40</span></td></tr>
+<tr><td>5</td><td><strong>TipFactura</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Factura</span></td></tr>
+<tr><td>6</td><td><strong>NrFactura</strong></td><td>integer</td><td class="status-ok">✅</td><td><span class="mono">21467</span></td></tr>
+<tr><td>7</td><td><strong>DataFactura</strong></td><td>date</td><td class="status-ok">✅</td><td><span class="mono">21.12.2011</span></td></tr>
+<tr><td>8</td><td><strong>ValoareFactura</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">8258,40</span></td></tr>
+<tr><td>9</td><td><strong>DataScadenta</strong></td><td>date</td><td class="status-ok">✅</td><td><span class="mono">30.09.2009</span></td></tr>
+<tr><td>10</td><td>(gol)</td><td>-</td><td class="status-ok">✅</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>11</td><td><strong>LocatiePartener</strong></td><td>string</td><td class="status-ok">✅ Analiză 7</td><td><span class="mono">SEDIU SOCIAL</span></td></tr>
+<tr><td>12</td><td><strong>DataInregistrare</strong></td><td>date</td><td class="status-ok">✅</td><td><span class="mono">12.11.2012</span></td></tr>
+</table>
+
+<h3>GET /api/comenzi/furnizori</h3>
+<p>Comenzi către furnizori. <strong>10 câmpuri</strong>.</p>
+<div class="note note-info">Testat: 1.189 înregistrări pe firma ERP.</div>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>NrComanda</strong></td><td>integer</td><td class="status-ok">✅</td><td><span class="mono">2707</span></td></tr>
+<tr><td>1</td><td><strong>IDFurnizor</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">0000000037778</span></td></tr>
+<tr><td>2</td><td><strong>DenFurnizor</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Furnizor SRL</span></td></tr>
+<tr><td>3</td><td><strong>DataComanda</strong></td><td>datetime</td><td class="status-ok">✅</td><td><span class="mono">2022-01-13 00:00:00</span></td></tr>
+<tr><td>4</td><td><strong>DataLivrare</strong></td><td>datetime</td><td class="status-ok">✅</td><td><span class="mono">2022-01-28 13:57:23</span> (1899=fara termen)</td></tr>
+<tr><td>5</td><td><strong>CodArticol</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">9007767538211</span></td></tr>
+<tr><td>6</td><td><strong>Cantitate</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">5</span></td></tr>
+<tr><td>7</td><td><strong>UM</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Buc</span></td></tr>
+<tr><td>8</td><td><strong>Pret</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">0</span> (poate fi gol)</td></tr>
+<tr><td>9</td><td><strong>Observatii</strong></td><td>string</td><td class="status-ok">✅ Analiză 10</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+
+<h3>GET /api/comenzi/nefacturate (GetComenziNefacturate) — 25 câmpuri</h3>
+<p>Articole comandate dar nelivrate/nefacturate. Documentat 4 câmpuri, real <strong>25</strong>.</p>
+<div class="note note-info">Testat: 20 înregistrări.</div>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>CodArticol</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">9007767505770</span></td></tr>
+<tr><td>1</td><td><strong>NrComanda</strong></td><td>integer</td><td class="status-ok">✅</td><td><span class="mono">4332</span></td></tr>
+<tr><td>2</td><td><strong>CantComandata</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">756</span></td></tr>
+<tr><td>3</td><td><strong>UM</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Buc</span></td></tr>
+<tr><td>4</td><td><strong>DataComanda</strong></td><td>date</td><td class="status-ok">✅</td><td><span class="mono">01.11.2025</span></td></tr>
+<tr><td>5</td><td><strong>IDPartener</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">722364540</span></td></tr>
+<tr><td>6</td><td><strong>MarcaAgent</strong></td><td>integer</td><td class="status-ok">✅</td><td><span class="mono">9</span></td></tr>
+<tr><td>7</td><td><strong>Pret</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">6,092</span></td></tr>
+<tr><td>8</td><td><strong>CantRamasa</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">756</span></td></tr>
+<tr><td>9</td><td><strong>UMAlt</strong></td><td>string</td><td class="status-ok">✅ Analiză 20 (Buc, BUC, SUL)</td><td><span class="mono">Buc</span></td></tr>
+<tr><td>10</td><td><strong>CNPDelegat</strong></td><td>string</td><td class="status-ok">✅ Analiză 20 (CNP-uri 13 cifre)</td><td><span class="mono">1234567890123</span> sau (gol)</td></tr>
+<tr><td>11</td><td><strong>PrefixCarnet</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">CC</span>, <span class="mono">CARNET1</span></td></tr>
+<tr><td>12</td><td><strong>NrDocIntern</strong></td><td>integer</td><td class="status-ok">✅ Analiză 20</td><td><span class="mono">12610</span></td></tr>
+<tr><td>13</td><td><strong>Observatii</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Observatie livrare</span></td></tr>
+<tr><td>14</td><td><strong>LocatieClient</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">SEDIU SOCIAL</span></td></tr>
+<tr><td>15</td><td>(gol)</td><td>-</td><td class="status-ok">✅</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>16</td><td><strong>DataLivrare</strong></td><td>date</td><td class="status-ok">✅</td><td><span class="mono">01.04.2022</span> (1899=fara termen)</td></tr>
+<tr><td>17-18</td><td>(goale)</td><td>-</td><td class="status-ok">✅</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>19</td><td><strong>MarcaAgentLivrare</strong></td><td>integer</td><td class="status-ok">✅ Analiză 20</td><td><span class="mono">1</span>-<span class="mono">6</span></td></tr>
+<tr><td>20</td><td><strong>DenPartener</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Client exemplu</span></td></tr>
+<tr><td>21</td><td><strong>ValoareDiscount</strong></td><td>decimal</td><td class="status-ok">✅ Analiză 20 (majoritar 0)</td><td><span class="mono">0</span> (rar: sume)</td></tr>
+<tr><td>22</td><td>(gol)</td><td>-</td><td class="status-ok">✅</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>23</td><td><strong>Moneda</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">RON</span></td></tr>
+<tr><td>24</td><td>(gol)</td><td>-</td><td class="status-ok">✅</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+
+<h3>GET /api/incasari/luna (GetIncasariLuna) — 5 câmpuri</h3>
+<p>Încasări din luna curentă.</p>
+<div class="note note-info">Testat: 153 încasări.</div>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td>(flag)</td><td>integer</td><td class="status-ok">✅ Analiză 153 — mereu 1</td><td><span class="mono">1</span></td></tr>
+<tr><td>1</td><td><strong>DataIncasare</strong></td><td>date</td><td class="status-ok">✅</td><td><span class="mono">01.04.2026</span></td></tr>
+<tr><td>2</td><td><strong>ReferintaFactura</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">F.CARNET175118</span></td></tr>
+<tr><td>3</td><td><strong>IDPartener</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">722367540</span></td></tr>
+<tr><td>4</td><td><strong>Valoare</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">541</span></td></tr>
+</table>
+
+<h3>GET /api/carnete</h3>
+<p>Carnete de documente pentru facturare. <strong>4 câmpuri</strong>.</p>
+<div class="note note-info">Testat: 6 carnete.</div>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>SimbolCarnet</strong></td><td class="status-ok">✅</td><td><span class="mono">CARNET1</span></td></tr>
+<tr><td>1</td><td><strong>PrefixDocument</strong></td><td class="status-ok">✅</td><td><span class="mono">FACT</span></td></tr>
+<tr><td>2</td><td><strong>Denumire</strong></td><td class="status-ok">✅</td><td><span class="mono">Factura fiscala</span></td></tr>
+<tr><td>3</td><td>(gol)</td><td class="status-ok">✅ Mereu gol</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+
+<h3>GET /api/oferte</h3>
+<p>Oferte active. <strong>11 câmpuri</strong> (documentat 6, 5 extra).</p>
+<div class="note note-info">Testat: 1.609 înregistrări.</div>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>PartID</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">0000000000567</span></td></tr>
+<tr><td>1</td><td><strong>ArtID</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">9007767471549</span></td></tr>
+<tr><td>2</td><td><strong>DataInceputOferta</strong></td><td>date</td><td class="status-ok">✅ Doc</td><td><span class="mono">27.03.2024</span></td></tr>
+<tr><td>3</td><td><strong>DataSfarsitOferta</strong></td><td>date</td><td class="status-ok">✅ Doc</td><td><span class="mono">30.04.2024</span></td></tr>
+<tr><td>4</td><td><strong>Pret</strong></td><td>decimal</td><td class="status-ok">✅ Doc</td><td><span class="mono">45,327</span></td></tr>
+<tr><td>5</td><td><strong>Cantitate</strong></td><td>decimal</td><td class="status-ok">✅ Doc</td><td><span class="mono">1</span></td></tr>
+<tr><td colspan="5" style="background:#fff3cd; font-weight:600">--- Câmpuri nedocumentate ---</td></tr>
+<tr><td>6</td><td><strong>Discount %</strong></td><td>decimal</td><td class="status-ok">✅ Analiză (negativ=discount)</td><td><span class="mono">-13</span>, <span class="mono">-5</span></td></tr>
+<tr><td>7</td><td>(gol)</td><td>-</td><td class="status-ok">✅ Mereu gol</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>8</td><td>(gol)</td><td>-</td><td class="status-ok">✅ Mereu gol</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>9</td><td><strong>Moneda</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Lei</span></td></tr>
+<tr><td>10</td><td>(gol)</td><td>-</td><td class="status-ok">✅ Mereu gol</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+
+</div>
+</div>
+

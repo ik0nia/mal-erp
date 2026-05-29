@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>MentorAPI — Documentație</title>
+<link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.18.2/swagger-ui.css">
+<style>
+.swagger-ui .topbar { background: #c41e3a; }
+.swagger-ui .info .title { font-size: 28px; }
+</style>
+</head>
+<body>
+<div id="swagger-ui"></div>
+<script src="https://unpkg.com/swagger-ui-dist@5.18.2/swagger-ui-bundle.js"></script>
+<script>
+SwaggerUIBundle({
+  url: '/mentorapi/openapi.json?v=20260518b',
+  dom_id: '#swagger-ui',
+  presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+  layout: 'BaseLayout',
+  deepLinking: true,
+  defaultModelsExpandDepth: -1,
+  tryItOutEnabled: false,
+  supportedSubmitMethods: []
+});
+</script>
+</body>
+</html>

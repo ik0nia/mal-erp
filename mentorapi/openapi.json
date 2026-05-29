@@ -1,0 +1,2350 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "MentorAPI",
+    "description": "REST API bridge for WinMentor DocImpServer COM interface v1.2.0\n\nAll endpoints except /api/health require API Key via header X-API-Key or query parameter api_key.\n\nMost data endpoints require a firma+luna to be selected first via POST /api/firme/select.\n\nAudit complet campuri: https://erp.malinco.ro/mentorapi/audit",
+    "version": "1.3.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:9500",
+      "description": "Local"
+    },
+    {
+      "url": "http://0.0.0.0:9500",
+      "description": "Production"
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyHeader": []
+    },
+    {
+      "ApiKeyQuery": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKeyHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      },
+      "ApiKeyQuery": {
+        "type": "apiKey",
+        "in": "query",
+        "name": "api_key"
+      }
+    }
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Health check (fara auth)",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Service status"
+          }
+        }
+      }
+    },
+    "/api/diagnostics": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Diagnostics COM (fara auth)",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "COM config"
+          }
+        }
+      }
+    },
+    "/api/erori": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Buffer erori COM (GetListaErori)",
+        "responses": {
+          "200": {
+            "description": "Lista erori"
+          }
+        }
+      }
+    },
+    "/api/versiuni": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Versiuni WinMentor + DocImpServer",
+        "responses": {
+          "200": {
+            "description": "Versiuni"
+          }
+        }
+      }
+    },
+    "/api/system/pot-introduce-doc": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "PotIntroduceDoc — poate introduce documente?",
+        "parameters": [
+          {
+            "name": "an",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "luna",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Result"
+          }
+        }
+      }
+    },
+    "/api/system/check-document": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "CheckDocument",
+        "parameters": [
+          {
+            "name": "tipDoc",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "prefixDoc",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nrDoc",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Result"
+          }
+        }
+      }
+    },
+    "/api/system/tranzactii-in-curs": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "GetTranzactiiInCurs — tranzactii in curs (13 campuri)",
+        "responses": {
+          "200": {
+            "description": "Lista tranzactii"
+          }
+        }
+      }
+    },
+    "/api/firme": {
+      "get": {
+        "tags": [
+          "Firme"
+        ],
+        "summary": "Lista firme (34 firme)",
+        "responses": {
+          "200": {
+            "description": "Array nume firme"
+          }
+        }
+      }
+    },
+    "/api/firme/{name}/luni": {
+      "get": {
+        "tags": [
+          "Firme"
+        ],
+        "summary": "Luni disponibile pentru firma",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array luni YYYY_MM"
+          }
+        }
+      }
+    },
+    "/api/firme/select": {
+      "post": {
+        "tags": [
+          "Firme"
+        ],
+        "summary": "Selecteaza firma si luna (OBLIGATORIU)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "firma": {
+                    "type": "string",
+                    "example": "ERP"
+                  },
+                  "an": {
+                    "type": "integer",
+                    "example": 2026
+                  },
+                  "luna": {
+                    "type": "integer",
+                    "example": 4
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Firma selectata"
+          }
+        }
+      }
+    },
+    "/api/articole": {
+      "get": {
+        "tags": [
+          "Articole"
+        ],
+        "summary": "Nomenclator articole (40 campuri/rand, paginat)",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 100
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista articole paginata"
+          }
+        }
+      }
+    },
+    "/api/articole/clase": {
+      "get": {
+        "tags": [
+          "Articole"
+        ],
+        "summary": "Clase articole (Simbol;Denumire)",
+        "responses": {
+          "200": {
+            "description": "Lista clase"
+          }
+        }
+      }
+    },
+    "/api/articole/gen-cod": {
+      "post": {
+        "tags": [
+          "Articole"
+        ],
+        "summary": "GenCodArticole — genereaza coduri externe",
+        "responses": {
+          "200": {
+            "description": "Nr articole actualizate"
+          }
+        }
+      }
+    },
+    "/api/produse": {
+      "get": {
+        "tags": [
+          "Articole"
+        ],
+        "summary": "GetProducts — produse modificate (incremental sync)",
+        "parameters": [
+          {
+            "name": "lastSync",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "example": "01.01.2000 00:00:00"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista produse"
+          }
+        }
+      }
+    },
+    "/api/produse/stergeri": {
+      "get": {
+        "tags": [
+          "Articole"
+        ],
+        "summary": "GetStergeriProduse — produse sterse",
+        "parameters": [
+          {
+            "name": "lastSync",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista produse sterse"
+          }
+        }
+      }
+    },
+    "/api/produse/add": {
+      "post": {
+        "tags": [
+          "Articole"
+        ],
+        "summary": "AddProduct — adauga produs (19 campuri ;)",
+        "description": "Prerequisite: POST /api/config/id-part-field {fieldName:CodIntern}",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "info": {
+                    "type": "string",
+                    "example": "COD;Denumire;;0;Buc;0;21;;;COD;;;;;;;;;;"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Produs adaugat"
+          }
+        }
+      }
+    },
+    "/api/produse/update": {
+      "put": {
+        "tags": [
+          "Articole"
+        ],
+        "summary": "ModiProduct — modifica produs (7 campuri ;)",
+        "description": "Prerequisite: POST /api/config/id-part-field {fieldName:CodExtern}. Poz: 0=CodExtern,1=Producator,2=Clasa,3=Pret,4=(gol),5=Denumire,6=(gol)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "info": {
+                    "type": "string",
+                    "example": "COD;;;99.50;;Denumire Noua;;"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Produs modificat"
+          }
+        }
+      }
+    },
+    "/api/config/id-part-field": {
+      "post": {
+        "tags": [
+          "Config"
+        ],
+        "summary": "SetIDPartField — camp identificare parteneri",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fieldName": {
+                    "type": "string",
+                    "enum": [
+                      "CodExtern",
+                      "CodFiscal",
+                      "CodIntern"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Setat"
+          }
+        }
+      }
+    },
+    "/api/config/id-art-field": {
+      "post": {
+        "tags": [
+          "Config"
+        ],
+        "summary": "SetIDArtField — camp identificare articole",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fieldName": {
+                    "type": "string",
+                    "enum": [
+                      "CodExtern",
+                      "CodIntern"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Setat"
+          }
+        }
+      }
+    },
+    "/api/config/art-analizat": {
+      "post": {
+        "tags": [
+          "Config"
+        ],
+        "summary": "SetArtAnalizat — seteaza articol analizat",
+        "parameters": [
+          {
+            "name": "artId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Setat"
+          }
+        }
+      }
+    },
+    "/api/config/cat-pret-implicita": {
+      "post": {
+        "tags": [
+          "Config"
+        ],
+        "summary": "SetCatPretImplicita — categorie pret implicita",
+        "parameters": [
+          {
+            "name": "catPret",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Setat"
+          }
+        }
+      }
+    },
+    "/api/config/filtru-doc-neoperate": {
+      "post": {
+        "tags": [
+          "Config"
+        ],
+        "summary": "SetFiltruDocNeoperate — filtru documente neoperate",
+        "parameters": [
+          {
+            "name": "flag",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Setat"
+          }
+        }
+      }
+    },
+    "/api/config/inclusiv-fact-aviz": {
+      "post": {
+        "tags": [
+          "Config"
+        ],
+        "summary": "SetInclusivFactAviz — include facturi aviz",
+        "parameters": [
+          {
+            "name": "flag",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Setat"
+          }
+        }
+      }
+    },
+    "/api/parteneri": {
+      "get": {
+        "tags": [
+          "Parteneri"
+        ],
+        "summary": "Lista parteneri (49 campuri/rand, paginat)",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 100
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista parteneri"
+          }
+        }
+      }
+    },
+    "/api/parteneri/next-id": {
+      "get": {
+        "tags": [
+          "Parteneri"
+        ],
+        "summary": "GetNextPartID — urmatorul ID partener",
+        "responses": {
+          "200": {
+            "description": "Next ID"
+          }
+        }
+      }
+    },
+    "/api/parteneri/add": {
+      "post": {
+        "tags": [
+          "Parteneri"
+        ],
+        "summary": "AdaugaPartener (35 campuri ;)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "info": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Partener adaugat"
+          }
+        }
+      }
+    },
+    "/api/parteneri/update": {
+      "put": {
+        "tags": [
+          "Parteneri"
+        ],
+        "summary": "ModificaPartener (35 campuri ;)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "info": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Partener modificat"
+          }
+        }
+      }
+    },
+    "/api/parteneri/{id}/info": {
+      "get": {
+        "tags": [
+          "Parteneri"
+        ],
+        "summary": "GetInfoPart — info partener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Info partener"
+          }
+        }
+      }
+    },
+    "/api/parteneri/clase": {
+      "get": {
+        "tags": [
+          "Parteneri"
+        ],
+        "summary": "Clase parteneri (Simbol;Denumire)",
+        "responses": {
+          "200": {
+            "description": "Lista clase"
+          }
+        }
+      }
+    },
+    "/api/clienti": {
+      "get": {
+        "tags": [
+          "Parteneri"
+        ],
+        "summary": "GetListaClienti (14 campuri)",
+        "parameters": [
+          {
+            "name": "an",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "luna",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista clienti"
+          }
+        }
+      }
+    },
+    "/api/localitati": {
+      "get": {
+        "tags": [
+          "Parteneri"
+        ],
+        "summary": "GetListaLocalitati",
+        "responses": {
+          "200": {
+            "description": "Localitati parteneri"
+          }
+        }
+      }
+    },
+    "/api/nomenclator-localitati": {
+      "get": {
+        "tags": [
+          "Parteneri"
+        ],
+        "summary": "GetNomenclatorLocalitati (3 campuri: Localitate;Judet;CodPostal)",
+        "responses": {
+          "200": {
+            "description": "13.904 localitati"
+          }
+        }
+      }
+    },
+    "/api/stocuri": {
+      "get": {
+        "tags": [
+          "Stocuri"
+        ],
+        "summary": "Stocuri articole (21 campuri/rand, paginat)",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 100
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista stocuri"
+          }
+        }
+      }
+    },
+    "/api/stocuri/ext": {
+      "get": {
+        "tags": [
+          "Stocuri"
+        ],
+        "summary": "GetStocArticoleExt (20 campuri)",
+        "responses": {
+          "200": {
+            "description": "Stocuri extinse"
+          }
+        }
+      }
+    },
+    "/api/stocuri/ext2": {
+      "get": {
+        "tags": [
+          "Stocuri"
+        ],
+        "summary": "GetStocArticoleExt2 — per gestiune",
+        "parameters": [
+          {
+            "name": "gestiune",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "MP"
+            },
+            "description": "Simbol gestiune"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stocuri extinse v2"
+          }
+        }
+      }
+    },
+    "/api/stocuri/pe-gestiuni": {
+      "get": {
+        "tags": [
+          "Stocuri"
+        ],
+        "summary": "GetStocuriPeGestiuni (10 campuri: DenGest;Simbol;Den;Cod;Cont;UM;Stoc;Val;ValPrecisa;TVA)",
+        "responses": {
+          "200": {
+            "description": "Stocuri per gestiune"
+          }
+        }
+      }
+    },
+    "/api/stocuri/articol/{id}": {
+      "get": {
+        "tags": [
+          "Stocuri"
+        ],
+        "summary": "GetStocArticol — stoc un articol (5 campuri)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stoc articol"
+          }
+        }
+      }
+    },
+    "/api/stocuri/articol/{id}/detaliat": {
+      "get": {
+        "tags": [
+          "Stocuri"
+        ],
+        "summary": "GetStocArtDetaliat — stoc detaliat per lot/serie",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gestiune",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "MP"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stoc detaliat"
+          }
+        }
+      }
+    },
+    "/api/stocuri/ambalaje/initial": {
+      "get": {
+        "tags": [
+          "Stocuri"
+        ],
+        "summary": "GetStocInitialAmbalaj",
+        "parameters": [
+          {
+            "name": "an",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "luna",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stoc initial ambalaje"
+          }
+        }
+      }
+    },
+    "/api/stocuri/ambalaje/miscari": {
+      "get": {
+        "tags": [
+          "Stocuri"
+        ],
+        "summary": "GetMiscariAmbalaje",
+        "parameters": [
+          {
+            "name": "anStart",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "lunaStart",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "anStop",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "lunaStop",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Miscari ambalaje"
+          }
+        }
+      }
+    },
+    "/api/vanzari/luna": {
+      "get": {
+        "tags": [
+          "Vanzari"
+        ],
+        "summary": "GetVanzariLuna — facturi emise luna curenta (26 campuri)",
+        "responses": {
+          "200": {
+            "description": "Lista facturi"
+          }
+        }
+      }
+    },
+    "/api/vanzari/ext": {
+      "get": {
+        "tags": [
+          "Vanzari"
+        ],
+        "summary": "GetVanzariExt — vanzari extinse (23 campuri)",
+        "responses": {
+          "200": {
+            "description": "Lista vanzari"
+          }
+        }
+      }
+    },
+    "/api/vanzari/articole-vandute": {
+      "get": {
+        "tags": [
+          "Vanzari"
+        ],
+        "summary": "GetArticoleVandute — articole vandute unui client",
+        "parameters": [
+          {
+            "name": "partId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "marcaAgent",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "an",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "luna",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Articole vandute"
+          }
+        }
+      }
+    },
+    "/api/vanzari/ultimele": {
+      "get": {
+        "tags": [
+          "Vanzari"
+        ],
+        "summary": "GetUltimeleVanzari — ultimele N vanzari",
+        "parameters": [
+          {
+            "name": "artId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "partId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "marcaAgent",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "cate",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ultimele vanzari"
+          }
+        }
+      }
+    },
+    "/api/vanzari/istoric": {
+      "get": {
+        "tags": [
+          "Vanzari"
+        ],
+        "summary": "GetIstoricVanzari — istoric vanzari agent (NOU)",
+        "parameters": [
+          {
+            "name": "marca",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "an",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "luna",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Istoric vanzari"
+          }
+        }
+      }
+    },
+    "/api/facturi/exists/{nr}": {
+      "get": {
+        "tags": [
+          "Facturi"
+        ],
+        "summary": "ExistaFactura — verifica existenta factura",
+        "parameters": [
+          {
+            "name": "nr",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "-1=err, 0=nu, 1=operata, 2=neoperata"
+          }
+        }
+      }
+    },
+    "/api/facturi/numar/{carnet}": {
+      "get": {
+        "tags": [
+          "Facturi"
+        ],
+        "summary": "GetNumarFactura — urmatorul numar pe carnet",
+        "parameters": [
+          {
+            "name": "carnet",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Numar factura"
+          }
+        }
+      }
+    },
+    "/api/carnete": {
+      "get": {
+        "tags": [
+          "Facturi"
+        ],
+        "summary": "GetListaCarnete (4 campuri)",
+        "responses": {
+          "200": {
+            "description": "Lista carnete"
+          }
+        }
+      }
+    },
+    "/api/intrari": {
+      "get": {
+        "tags": [
+          "Facturi"
+        ],
+        "summary": "GetIntrari — intrari luna curenta (11 campuri)",
+        "responses": {
+          "200": {
+            "description": "Lista intrari"
+          }
+        }
+      }
+    },
+    "/api/receptii": {
+      "get": {
+        "tags": [
+          "Facturi"
+        ],
+        "summary": "GetReceptii — receptii luna curenta (22 campuri)",
+        "responses": {
+          "200": {
+            "description": "Lista receptii"
+          }
+        }
+      }
+    },
+    "/api/nir/atribute": {
+      "get": {
+        "tags": [
+          "Facturi"
+        ],
+        "summary": "GetNirAtribute — atribute NIR (5 campuri)",
+        "responses": {
+          "200": {
+            "description": "Atribute NIR"
+          }
+        }
+      }
+    },
+    "/api/comenzi/nefacturate": {
+      "get": {
+        "tags": [
+          "Comenzi"
+        ],
+        "summary": "GetComenziNefacturate — articole comandate nefacturate (25 campuri)",
+        "responses": {
+          "200": {
+            "description": "Comenzi nefacturate"
+          }
+        }
+      }
+    },
+    "/api/comenzi/furnizori": {
+      "get": {
+        "tags": [
+          "Comenzi"
+        ],
+        "summary": "GetSuppliersOrders — comenzi furnizori (10 campuri)",
+        "responses": {
+          "200": {
+            "description": "Comenzi furnizori"
+          }
+        }
+      }
+    },
+    "/api/comenzi/info": {
+      "get": {
+        "tags": [
+          "Comenzi"
+        ],
+        "summary": "GetInfoComenzi (NOU)",
+        "responses": {
+          "200": {
+            "description": "Info comenzi"
+          }
+        }
+      }
+    },
+    "/api/comenzi/subunitati-active": {
+      "get": {
+        "tags": [
+          "Comenzi"
+        ],
+        "summary": "GetCmdSubunitActive (NOU)",
+        "responses": {
+          "200": {
+            "description": "Comenzi subunitati active"
+          }
+        }
+      }
+    },
+    "/api/comenzi/bon/info": {
+      "get": {
+        "tags": [
+          "Comenzi"
+        ],
+        "summary": "GetInfoCmdBon (FIXAT — necesita nrCmd)",
+        "parameters": [
+          {
+            "name": "nrCmd",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Info comanda bon"
+          }
+        }
+      }
+    },
+    "/api/comenzi/bonuri/info": {
+      "get": {
+        "tags": [
+          "Comenzi"
+        ],
+        "summary": "GetInfoCmdBonuri (FIXAT — necesita zi)",
+        "parameters": [
+          {
+            "name": "zi",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Info bonuri pe zi"
+          }
+        }
+      }
+    },
+    "/api/transferuri": {
+      "get": {
+        "tags": [
+          "Comenzi"
+        ],
+        "summary": "GetTransferuri — transferuri inter-gestiuni (15 campuri)",
+        "responses": {
+          "200": {
+            "description": "Lista transferuri"
+          }
+        }
+      }
+    },
+    "/api/bonuri/info": {
+      "get": {
+        "tags": [
+          "Comenzi"
+        ],
+        "summary": "GetInfoBon (FIXAT — necesita zi)",
+        "parameters": [
+          {
+            "name": "zi",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Info bon pe zi"
+          }
+        }
+      }
+    },
+    "/api/bonuri/info-ext": {
+      "get": {
+        "tags": [
+          "Comenzi"
+        ],
+        "summary": "GetInfoBonExt (FIXAT — necesita nrBon + zi)",
+        "parameters": [
+          {
+            "name": "nrBon",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "zi",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Info bon extins"
+          }
+        }
+      }
+    },
+    "/api/solduri": {
+      "get": {
+        "tags": [
+          "Financiar"
+        ],
+        "summary": "GetSolduri — solduri clienti (11 campuri)",
+        "responses": {
+          "200": {
+            "description": "Solduri"
+          }
+        }
+      }
+    },
+    "/api/solduri/ext": {
+      "get": {
+        "tags": [
+          "Financiar"
+        ],
+        "summary": "GetSolduriExt — solduri detaliate",
+        "responses": {
+          "200": {
+            "description": "Solduri extinse"
+          }
+        }
+      }
+    },
+    "/api/solduri/furnizori": {
+      "get": {
+        "tags": [
+          "Financiar"
+        ],
+        "summary": "GetSolduriFurn — solduri furnizori (13 campuri)",
+        "responses": {
+          "200": {
+            "description": "Solduri furnizori"
+          }
+        }
+      }
+    },
+    "/api/solduri/facturi-neoperate": {
+      "get": {
+        "tags": [
+          "Financiar"
+        ],
+        "summary": "GetSoldFactNeop (FIXAT — necesita partId)",
+        "parameters": [
+          {
+            "name": "partId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sold facturi neoperate"
+          }
+        }
+      }
+    },
+    "/api/solduri/partener/{id}": {
+      "get": {
+        "tags": [
+          "Financiar"
+        ],
+        "summary": "GetSoldPart — sold un partener (3 campuri)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sold partener"
+          }
+        }
+      }
+    },
+    "/api/solduri/partener/{id}/detaliat": {
+      "get": {
+        "tags": [
+          "Financiar"
+        ],
+        "summary": "GetSoldDetaliat — facturi + avansuri",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sold detaliat"
+          }
+        }
+      }
+    },
+    "/api/incasari": {
+      "get": {
+        "tags": [
+          "Financiar"
+        ],
+        "summary": "GetIncasariClienti — incasari interval",
+        "parameters": [
+          {
+            "name": "an1",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "luna1",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "an2",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "luna2",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "partId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Incasari"
+          }
+        }
+      }
+    },
+    "/api/incasari/luna": {
+      "get": {
+        "tags": [
+          "Financiar"
+        ],
+        "summary": "GetIncasariLuna — incasari luna curenta (5 campuri)",
+        "responses": {
+          "200": {
+            "description": "Incasari luna"
+          }
+        }
+      }
+    },
+    "/api/incasari/factura": {
+      "get": {
+        "tags": [
+          "Financiar"
+        ],
+        "summary": "GetIncasariFactura (FIXAT — 5 params)",
+        "parameters": [
+          {
+            "name": "an",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "luna",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "nrFact",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "serieFact",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "partId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Incasari per factura"
+          }
+        }
+      }
+    },
+    "/api/plati/factura": {
+      "get": {
+        "tags": [
+          "Financiar"
+        ],
+        "summary": "GetPlatiFactura — plati per factura (NOU)",
+        "parameters": [
+          {
+            "name": "an",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "luna",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "nrFact",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "serie",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "partId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plati per factura"
+          }
+        }
+      }
+    },
+    "/api/preturi/vanzare": {
+      "get": {
+        "tags": [
+          "Preturi"
+        ],
+        "summary": "GetPretVanzare — pret vanzare articol/partener",
+        "parameters": [
+          {
+            "name": "artId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "partId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pret vanzare"
+          }
+        }
+      }
+    },
+    "/api/preturi/categorii": {
+      "get": {
+        "tags": [
+          "Preturi"
+        ],
+        "summary": "GetListaCatPret — categorii de pret",
+        "responses": {
+          "200": {
+            "description": "Categorii pret"
+          }
+        }
+      }
+    },
+    "/api/preturi/articole-categorii": {
+      "get": {
+        "tags": [
+          "Preturi"
+        ],
+        "summary": "GetListaArtCatPret",
+        "responses": {
+          "200": {
+            "description": "Art categorii pret"
+          }
+        }
+      }
+    },
+    "/api/preturi/articole-categorii/ext": {
+      "get": {
+        "tags": [
+          "Preturi"
+        ],
+        "summary": "GetListaArtCatPretExt",
+        "responses": {
+          "200": {
+            "description": "Art categorii pret ext"
+          }
+        }
+      }
+    },
+    "/api/preturi/articol-categorii2": {
+      "get": {
+        "tags": [
+          "Preturi"
+        ],
+        "summary": "GetListaArtCatPret2 — categorii pret per articol (NOU)",
+        "parameters": [
+          {
+            "name": "artId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Categorii pret articol"
+          }
+        }
+      }
+    },
+    "/api/discount/pe-articole": {
+      "get": {
+        "tags": [
+          "Preturi"
+        ],
+        "summary": "GetCritDiscPeArticole (3 campuri)",
+        "responses": {
+          "200": {
+            "description": "Discount articole"
+          }
+        }
+      }
+    },
+    "/api/discount/pe-clase": {
+      "get": {
+        "tags": [
+          "Preturi"
+        ],
+        "summary": "GetCritDiscPeClase",
+        "responses": {
+          "200": {
+            "description": "Discount clase"
+          }
+        }
+      }
+    },
+    "/api/discount/pe-parteneri": {
+      "get": {
+        "tags": [
+          "Preturi"
+        ],
+        "summary": "GetCritDiscPart (2 campuri)",
+        "responses": {
+          "200": {
+            "description": "Discount parteneri"
+          }
+        }
+      }
+    },
+    "/api/discount/intervale": {
+      "get": {
+        "tags": [
+          "Preturi"
+        ],
+        "summary": "GetIntervaleDisc — intervale discount (NOU)",
+        "parameters": [
+          {
+            "name": "criteriu",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Intervale discount"
+          }
+        }
+      }
+    },
+    "/api/discount/articole": {
+      "get": {
+        "tags": [
+          "Preturi"
+        ],
+        "summary": "GetArticoleDisc — articole cu discount (NOU)",
+        "parameters": [
+          {
+            "name": "criteriu",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Articole discount"
+          }
+        }
+      }
+    },
+    "/api/oferte": {
+      "get": {
+        "tags": [
+          "Preturi"
+        ],
+        "summary": "GetOferte — oferte active (11 campuri)",
+        "responses": {
+          "200": {
+            "description": "Lista oferte"
+          }
+        }
+      }
+    },
+    "/api/oferte/clienti": {
+      "get": {
+        "tags": [
+          "Preturi"
+        ],
+        "summary": "GetOferteClienti (11 campuri)",
+        "responses": {
+          "200": {
+            "description": "Oferte clienti"
+          }
+        }
+      }
+    },
+    "/api/gestiuni": {
+      "get": {
+        "tags": [
+          "Nomenclatoare"
+        ],
+        "summary": "GetListaGestiuni (Simbol;Denumire)",
+        "responses": {
+          "200": {
+            "description": "13 gestiuni"
+          }
+        }
+      }
+    },
+    "/api/gestiuni/add": {
+      "post": {
+        "tags": [
+          "Nomenclatoare"
+        ],
+        "summary": "AdaugaGestiune",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "info": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Gestiune adaugata"
+          }
+        }
+      }
+    },
+    "/api/personal": {
+      "get": {
+        "tags": [
+          "Nomenclatoare"
+        ],
+        "summary": "GetListaPersonal (9 campuri)",
+        "responses": {
+          "200": {
+            "description": "30 angajati"
+          }
+        }
+      }
+    },
+    "/api/personal/{id}": {
+      "get": {
+        "tags": [
+          "Nomenclatoare"
+        ],
+        "summary": "GetInfoPers — info angajat",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Info angajat"
+          }
+        }
+      }
+    },
+    "/api/banci": {
+      "get": {
+        "tags": [
+          "Nomenclatoare"
+        ],
+        "summary": "GetListaBanci (Simbol;Denumire)",
+        "responses": {
+          "200": {
+            "description": "29 banci"
+          }
+        }
+      }
+    },
+    "/api/subunitati": {
+      "get": {
+        "tags": [
+          "Nomenclatoare"
+        ],
+        "summary": "GetListaSubunit",
+        "responses": {
+          "200": {
+            "description": "Lista subunitati"
+          }
+        }
+      }
+    },
+    "/api/delegati": {
+      "get": {
+        "tags": [
+          "Nomenclatoare"
+        ],
+        "summary": "GetListaDelegati (11 campuri)",
+        "responses": {
+          "200": {
+            "description": "11.917 delegati"
+          }
+        }
+      }
+    },
+    "/api/monede": {
+      "get": {
+        "tags": [
+          "Nomenclatoare"
+        ],
+        "summary": "GetMonede (2 campuri)",
+        "responses": {
+          "200": {
+            "description": "4 monede"
+          }
+        }
+      }
+    },
+    "/api/iesiri/info": {
+      "get": {
+        "tags": [
+          "Logistica"
+        ],
+        "summary": "GetInfoIesiri (FIXAT — necesita zi)",
+        "parameters": [
+          {
+            "name": "zi",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Info iesiri pe zi"
+          }
+        }
+      }
+    },
+    "/api/iesiri/info-ext": {
+      "get": {
+        "tags": [
+          "Logistica"
+        ],
+        "summary": "GetInfoIesiriExt (FIXAT — necesita nrDoc + zi)",
+        "parameters": [
+          {
+            "name": "nrDoc",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "zi",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Info iesiri extins"
+          }
+        }
+      }
+    },
+    "/api/receiving/status": {
+      "get": {
+        "tags": [
+          "Logistica"
+        ],
+        "summary": "GetReceivingStatus (FIXAT — 3 params)",
+        "parameters": [
+          {
+            "name": "partId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "serieDoc",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nrDoc",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status receptie"
+          }
+        }
+      }
+    },
+    "/api/inventory/orders": {
+      "get": {
+        "tags": [
+          "Logistica"
+        ],
+        "summary": "GetInventoryOrders (FIXAT — necesita gestiune)",
+        "parameters": [
+          {
+            "name": "gestiune",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "MP"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comenzi inventar"
+          }
+        }
+      }
+    },
+    "/api/livrari/dispozitii": {
+      "get": {
+        "tags": [
+          "Logistica"
+        ],
+        "summary": "GetDispozitiiDeLivrare (FIXAT — necesita gestiune)",
+        "parameters": [
+          {
+            "name": "gestiune",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "MP"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dispozitii de livrare"
+          }
+        }
+      }
+    },
+    "/api/livrari/orders": {
+      "get": {
+        "tags": [
+          "Logistica"
+        ],
+        "summary": "GetDeliveryOrders (17 campuri)",
+        "responses": {
+          "200": {
+            "description": "Comenzi livrare"
+          }
+        }
+      }
+    },
+    "/api/receptii/subunitati": {
+      "get": {
+        "tags": [
+          "Logistica"
+        ],
+        "summary": "GetReceptiiIntrSubunit",
+        "responses": {
+          "200": {
+            "description": "Receptii subunitati"
+          }
+        }
+      }
+    },
+    "/api/import/{docType}": {
+      "post": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Import document generic (SetDocsData + validate + import)",
+        "description": "Tipuri: facturi-iesire, facturi-intrare, comenzi, comenzi-ext, comenzi-furnizori, bonuri-consum, transferuri, monetare, incasari, plati, note-contabile, modificari-pret",
+        "parameters": [
+          {
+            "name": "docType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "validateOnly",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "lines": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Import reusit"
+          },
+          "400": {
+            "description": "Validare esuata"
+          }
+        }
+      }
+    },
+    "/api/com/methods": {
+      "get": {
+        "tags": [
+          "COM Generic"
+        ],
+        "summary": "Lista metode COM disponibile",
+        "responses": {
+          "200": {
+            "description": "Lista metode"
+          }
+        }
+      }
+    },
+    "/api/com/call": {
+      "post": {
+        "tags": [
+          "COM Generic"
+        ],
+        "summary": "Apel generic orice functie COM",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "method": {
+                    "type": "string",
+                    "example": "GetListaFirme"
+                  },
+                  "params": {
+                    "type": "array",
+                    "items": {}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rezultat COM"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "System",
+      "description": "Health, diagnostics, erori, versiuni"
+    },
+    {
+      "name": "Firme",
+      "description": "Selectare firma si luna de lucru — TESTAT"
+    },
+    {
+      "name": "Config",
+      "description": "Configurare campuri identificare + setari"
+    },
+    {
+      "name": "Articole",
+      "description": "Nomenclator articole, produse, clase — 40 campuri mapate"
+    },
+    {
+      "name": "Parteneri",
+      "description": "Clienti, furnizori, parteneri — 49 campuri mapate"
+    },
+    {
+      "name": "Stocuri",
+      "description": "Stocuri articole per gestiune — 21 campuri mapate"
+    },
+    {
+      "name": "Vanzari",
+      "description": "Facturi emise, vanzari — 23/26 campuri mapate"
+    },
+    {
+      "name": "Facturi",
+      "description": "Facturi, intrari, receptii, carnete, NIR"
+    },
+    {
+      "name": "Comenzi",
+      "description": "Comenzi clienti/furnizori, transferuri, bonuri"
+    },
+    {
+      "name": "Financiar",
+      "description": "Solduri, incasari, plati"
+    },
+    {
+      "name": "Preturi",
+      "description": "Preturi, categorii, discount, oferte"
+    },
+    {
+      "name": "Nomenclatoare",
+      "description": "Gestiuni, personal, banci, monede, delegati, localitati"
+    },
+    {
+      "name": "Logistica",
+      "description": "Iesiri, receptii, inventar, livrari, dispozitii"
+    },
+    {
+      "name": "Import",
+      "description": "Import documente (facturi, comenzi, transferuri, etc.)"
+    },
+    {
+      "name": "COM Generic",
+      "description": "Apel direct orice functie COM"
+    }
+  ]
+}

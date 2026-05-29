@@ -1,0 +1,40 @@
+{
+  "success": true,
+  "data": [
+    {
+      "idPartener": "0000000036351",
+      "dataComanda": "04.05.2026",
+      "nrComanda": "12530",
+      "codArticol": "9007912543183",
+      "cantitate": "5",
+      "pret": "16,03",
+      "livrat": "0",
+      "facturat": "0",
+      "acceptat": "NU"
+    },
+    {
+      "idPartener": "0000000036351",
+      "dataComanda": "04.05.2026",
+      "nrComanda": "12530",
+      "codArticol": "9007912541554",
+      "cantitate": "8",
+      "pret": "123,14",
+      "livrat": "0",
+      "facturat": "0",
+      "acceptat": "NU"
+    },
+    {
+      "idPartener": "0000000036351",
+      "dataComanda": "04.05.2026",
+      "nrComanda": "12530",
+      "codArticol": "9007912543176",
+      "cantitate": "5",
+      "pret": "22,89256",
+      "livrat": "0",
+      "facturat": "0",
+      "acceptat": "NU"
+    }
+  ],
+  "errors": [],
+  "timestamp": "2026-05-18T10:16:43Z"
+}

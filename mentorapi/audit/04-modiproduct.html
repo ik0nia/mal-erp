@@ -1,0 +1,51 @@
+<!-- ==================== MODIPRODUCT ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Articole — PUT /api/produse/update (ModiProduct)</h2>
+<span class="badge badge-ok">TESTAT OK</span>
+</div>
+<div class="section-body">
+
+<p>Modifică un produs existent. Format <strong>DIFERIT</strong> de AddProduct! Câmpuri goale = nu se modifică.</p>
+<div class="note">Prerequisite: <span class="mono">POST /api/config/id-part-field {"fieldName":"CodExtern"}</span></div>
+<div class="note note-info">Testat: modificare denumire, producător, clasă și preț pe TESTAPI003.</div>
+
+<h3>Input: JSON body <span class="mono">{"info": "camp0;camp1;...;"}</span></h3>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Obligatoriu</th><th>Confirmat</th><th>Exemplu</th><th>Observații</th></tr>
+<tr><td>0</td><td><strong>CodExtern</strong></td><td>Da</td><td class="status-ok">✅ Testat</td><td><span class="mono">TESTAPI003</span></td><td>Identifică produsul</td></tr>
+<tr><td>1</td><td><strong>IDProducator</strong></td><td>Nu</td><td class="status-ok">✅ Testat</td><td><span class="mono">0000000004978</span></td><td>Respectă SetIDPartField (CodExtern)</td></tr>
+<tr><td>2</td><td><strong>SimbolClasa</strong></td><td>Nu</td><td class="status-ok">✅ Testat</td><td><span class="mono">1</span></td><td></td></tr>
+<tr><td>3</td><td><strong>PretVanzare</strong></td><td>Nu</td><td class="status-ok">✅ Testat</td><td><span class="mono">25</span></td><td>Fără TVA. Recalculează automat PretCuTVA</td></tr>
+<tr><td>4</td><td>(fără efect)</td><td>Nu</td><td class="status-ok">✅ Testat</td><td><span class="mono">(gol)</span></td><td>Nu modifică nimic vizibil</td></tr>
+<tr><td>5</td><td><strong>Denumire</strong></td><td>Nu</td><td class="status-ok">✅ Testat</td><td><span class="mono">Denumire Noua</span></td><td>⚠️ Documentația zice poz 6, real e poz 5!</td></tr>
+<tr><td>6</td><td>(fără efect)</td><td>Nu</td><td class="status-ok">✅ Testat</td><td><span class="mono">(gol)</span></td><td>Nu modifică nimic vizibil</td></tr>
+</table>
+
+<div class="note note-danger">
+<strong>Corecție documentație:</strong> Denumirea e pe poziția <strong>5</strong>, nu 6 cum spune documentația oficială! Confirmat prin test direct.
+</div>
+
+<h3>Exemple confirmate:</h3>
+<table>
+<tr><th>Ce modifici</th><th>Info string</th></tr>
+<tr><td>Doar preț</td><td><span class="mono">TESTAPI003;;;99.50;;;;;;;;;;;;;;;;;;</span></td></tr>
+<tr><td>Doar denumire</td><td><span class="mono">TESTAPI003;;;;;Denumire Noua;;;;;;;;;;;;;;;;;</span></td></tr>
+<tr><td>Producător + preț</td><td><span class="mono">TESTAPI003;0000000004978;;25;;;;;;;;;;;;;;;;;;</span></td></tr>
+<tr><td>Tot (prod+clasa+pret+den)</td><td><span class="mono">TESTAPI003;0000000004978;1;25;;Denumire;;;;;;;;;;;;;;</span></td></tr>
+</table>
+
+<h3>Ce NU se poate modifica prin ModiProduct:</h3>
+<table>
+<tr><th>Câmp</th><th>Alternativă</th></tr>
+<tr><td>Unitate de măsură (UM)</td><td>Nu se poate schimba</td></tr>
+<tr><td>Cota TVA</td><td>Nu se poate schimba</td></tr>
+<tr><td>Gestiune implicită</td><td>Necunoscut</td></tr>
+<tr><td>Cod vamal</td><td>Necunoscut</td></tr>
+<tr><td>Observații (F26)</td><td>Necunoscut</td></tr>
+<tr><td>Masa/Greutate</td><td>Necunoscut</td></tr>
+</table>
+
+</div>
+</div>
+

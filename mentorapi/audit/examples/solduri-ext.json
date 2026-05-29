@@ -1,0 +1,49 @@
+{
+  "success": true,
+  "data": [
+    {
+      "idPartener": "0000000000055",
+      "tipDocument": "Factura",
+      "nrFactura": "106782",
+      "dataFactura": "21.06.2016",
+      "restDePlata": "98,5",
+      "termenDePlata": "30.12.1899",
+      "locatiePartener": "1",
+      "marcaAgent": "12",
+      "valoareFactura": "98,5",
+      "observatiiFactura": "",
+      "cotaTVA": "21",
+      "tipDoc": "BF."
+    },
+    {
+      "idPartener": "0000000000055",
+      "tipDocument": "Factura",
+      "nrFactura": "118839",
+      "dataFactura": "20.12.2016",
+      "restDePlata": "-91,06",
+      "termenDePlata": "30.12.1899",
+      "locatiePartener": "1",
+      "marcaAgent": "12",
+      "valoareFactura": "-91,06",
+      "observatiiFactura": "",
+      "cotaTVA": "21",
+      "tipDoc": "BF."
+    },
+    {
+      "idPartener": "0000000000055",
+      "tipDocument": "Factura",
+      "nrFactura": "115172",
+      "dataFactura": "15.10.2016",
+      "restDePlata": "3,88",
+      "termenDePlata": "30.12.1899",
+      "locatiePartener": "1",
+      "marcaAgent": "12",
+      "valoareFactura": "3,88",
+      "observatiiFactura": "",
+      "cotaTVA": "21",
+      "tipDoc": "BF."
+    }
+  ],
+  "errors": [],
+  "timestamp": "2026-05-18T10:16:58Z"
+}

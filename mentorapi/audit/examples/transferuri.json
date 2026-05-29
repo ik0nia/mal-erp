@@ -1,0 +1,49 @@
+{
+  "success": true,
+  "data": [
+    {
+      "gestSursa": "MP",
+      "gestDest": "CNC",
+      "nrDoc": "60",
+      "data": "4.5.2026",
+      "codArticol": "9007767527987",
+      "denArticol": "PIULITA  CU FLANSA M6",
+      "cantitate": "100",
+      "pretVanzare": "0,17",
+      "pretAchizitie": "0,059",
+      "contSursa": "371.02",
+      "contDest": "371.01",
+      "valoare": "5,9"
+    },
+    {
+      "gestSursa": "MP",
+      "gestDest": "CNC",
+      "nrDoc": "61",
+      "data": "6.5.2026",
+      "codArticol": "9007767462981",
+      "denArticol": "SURUB GALBEN 4X70",
+      "cantitate": "45",
+      "pretVanzare": "0,2",
+      "pretAchizitie": "0,0568",
+      "contSursa": "371.02",
+      "contDest": "371.01",
+      "valoare": "17,04"
+    },
+    {
+      "gestSursa": "MP",
+      "gestDest": "CNC",
+      "nrDoc": "61",
+      "data": "6.5.2026",
+      "codArticol": "9007767462981",
+      "denArticol": "SURUB GALBEN 4X70",
+      "cantitate": "255",
+      "pretVanzare": "0,2",
+      "pretAchizitie": "0,0568",
+      "contSursa": "371.02",
+      "contDest": "371.01",
+      "valoare": "17,04"
+    }
+  ],
+  "errors": [],
+  "timestamp": "2026-05-18T10:16:43Z"
+}

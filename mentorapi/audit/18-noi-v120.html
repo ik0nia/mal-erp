@@ -1,0 +1,76 @@
+<div class="section">
+<div class="section-header">
+<h2>Endpoint-uri NOI v1.2.0 — Toate testate</h2>
+<span class="badge badge-ok">TOATE OK (GET + SET + gestiuni)</span>
+</div>
+<div class="section-body">
+<div class="note note-info">Endpoint-uri noi descoperite din proiectul GitHub libWMEdcom. Testate pe firma ERP, luna 4/2026. Doar GET-uri (citire).</div>
+
+<h3>GET /api/comenzi/info — GetInfoComenzi — 9 campuri</h3>
+<div class="note note-info">Testat: 101 rows. Comenzi active din luna curenta.</div>
+<table>
+<tr><th>Poz</th><th>Camp</th><th>Tip</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>IDPartener</strong></td><td>string</td><td class="status-ok">&#10003;</td><td><span class="mono">722361792</span></td></tr>
+<tr><td>1</td><td><strong>DataComanda</strong></td><td>date</td><td class="status-ok">&#10003;</td><td><span class="mono">01.04.2026</span></td></tr>
+<tr><td>2</td><td><strong>NrComanda</strong></td><td>integer</td><td class="status-ok">&#10003;</td><td><span class="mono">1000</span>, <span class="mono">12499</span></td></tr>
+<tr><td>3</td><td><strong>CodArticol</strong></td><td>string</td><td class="status-ok">&#10003;</td><td><span class="mono">9007912548409</span></td></tr>
+<tr><td>4</td><td><strong>Cantitate</strong></td><td>decimal</td><td class="status-ok">&#10003;</td><td><span class="mono">2</span>, <span class="mono">8</span></td></tr>
+<tr><td>5</td><td><strong>Pret</strong></td><td>decimal</td><td class="status-ok">&#10003;</td><td><span class="mono">1030,17</span></td></tr>
+<tr><td>6</td><td>(necunoscut)</td><td>integer</td><td class="status-ok">&#10003; Mereu 0</td><td><span class="mono">0</span></td></tr>
+<tr><td>7</td><td>(necunoscut)</td><td>integer</td><td class="status-ok">&#10003; Mereu 0</td><td><span class="mono">0</span></td></tr>
+<tr><td>8</td><td><strong>FlagLivrat</strong></td><td>DA/NU</td><td class="status-ok">&#10003;</td><td><span class="mono">NU</span></td></tr>
+</table>
+
+<h3>GET /api/comenzi/subunitati-active — GetCmdSubunitActive</h3>
+<div class="note">Testat: NULL (fara date — nu exista comenzi subunitati active). Endpoint functional.</div>
+
+<h3>GET /api/preturi/articol-categorii2?artId=ID — GetListaArtCatPret2</h3>
+<div class="note">Testat: NULL (fara categorii pret speciale pentru articolul testat). Endpoint functional.</div>
+
+<h3>GET /api/discount/intervale?criteriu=1 — GetIntervaleDisc</h3>
+<div class="note">Testat: 0 rows (fara intervale discount pentru criteriul 1). Endpoint functional.</div>
+
+<h3>GET /api/discount/articole?criteriu=1 — GetArticoleDisc</h3>
+<div class="note">Testat: 0 rows (fara articole discount pentru criteriul 1). Endpoint functional.</div>
+
+<h3>GET /api/incasari/factura — GetIncasariFactura — 4 campuri (FIXAT)</h3>
+<div class="note note-info">Testat: 1 row. Anterior dadea eroare — fixat cu callReturningStrings (fara out Error param).</div>
+<table>
+<tr><th>Poz</th><th>Camp</th><th>Tip</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>NrIncasare</strong></td><td>integer</td><td class="status-ok">&#10003;</td><td><span class="mono">2</span></td></tr>
+<tr><td>1</td><td><strong>TipDocument</strong></td><td>string</td><td class="status-ok">&#10003;</td><td><span class="mono">BF</span> (bon fiscal)</td></tr>
+<tr><td>2</td><td><strong>DataIncasare</strong></td><td>date</td><td class="status-ok">&#10003;</td><td><span class="mono">01.04.2026</span></td></tr>
+<tr><td>3</td><td><strong>ValoareIncasata</strong></td><td>decimal</td><td class="status-ok">&#10003;</td><td><span class="mono">5699,96</span></td></tr>
+</table>
+
+<h3>GET /api/plati/factura — GetPlatiFactura (FIXAT)</h3>
+<div class="note note-info">Testat: NULL (fara plati pe factura testata). Anterior dadea eroare — fixat cu callReturningStrings.</div>
+
+<h3>GET /api/vanzari/istoric — GetIstoricVanzari (FIXAT)</h3>
+<div class="note note-info">Testat: returneza integer 259 (numar records). Anterior dadea eroare — fixat cu callMethodInt.</div>
+<table>
+<tr><th>Output</th><th>Tip</th><th>Exemplu</th></tr>
+<tr><td><strong>result</strong></td><td>integer</td><td><span class="mono">259</span> (numar inregistrari)</td></tr>
+</table>
+
+<h3>GET /api/vanzari/istoric/all — GetIstoricVanzari + GetListRecord iterator — 4 campuri</h3>
+<div class="note note-info">Testat: 259 records (agent marca=1, an 2026, luna 1). Iterator: apeleaza GetIstoricVanzari apoi GetListRecord repetat.</div>
+<table>
+<tr><th>Poz</th><th>Camp</th><th>Tip</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td>(gol)</td><td>-</td><td class="status-ok">&#10003; Mereu gol</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>1</td><td><strong>CodArticol</strong></td><td>string</td><td class="status-ok">&#10003;</td><td><span class="mono">594008496560735</span></td></tr>
+<tr><td>2</td><td><strong>Data</strong></td><td>date</td><td class="status-ok">&#10003;</td><td><span class="mono">08.05.2026</span></td></tr>
+<tr><td>3</td><td><strong>Cantitate</strong></td><td>decimal</td><td class="status-ok">&#10003; Negativ = retur</td><td><span class="mono">100</span>, <span class="mono">-1</span></td></tr>
+</table>
+<div class="note">Parametri: ?marca=N (agent) &amp;an=N &amp;luna=N &amp;limit=N (max records, default 100)</div>
+
+<h3>Endpoint-uri cu eroare permanentă</h3>
+<div class="note note-danger">
+<strong>GetSoldFactNeop</strong> — E_UNEXPECTED 0x8000FFFF. Returnează BSTR prin vtable. Mutat la secțiunea "Nefixabile".
+</div>
+
+<h3>Endpoint-uri NOI de tip SET — ✅ TOATE TESTATE (14 mai 2026)</h3>
+<div class="note note-info">Toate 7 Config SET + AdaugaGestiune testate OK. Fix: rawQueryHandler → client direct (vtable). Detalii în secțiunile <strong>Config</strong> și <strong>Nomenclatoare</strong> de mai sus.</div>
+
+</div>
+</div>

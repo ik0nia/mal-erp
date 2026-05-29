@@ -1,0 +1,40 @@
+{
+  "success": true,
+  "data": [
+    {
+      "idPartener": "",
+      "data": "02.05.2026",
+      "nrDoc": "44499",
+      "codArticol": "594008496560106",
+      "cant": "1",
+      "denUM": "L",
+      "pret": "700",
+      "denGest": "",
+      "flag": "DA"
+    },
+    {
+      "idPartener": "",
+      "data": "02.05.2026",
+      "nrDoc": "44500",
+      "codArticol": "594008496560105",
+      "cant": "1",
+      "denUM": "Lei",
+      "pret": "700",
+      "denGest": "",
+      "flag": "DA"
+    },
+    {
+      "idPartener": "",
+      "data": "06.05.2026",
+      "nrDoc": "44547",
+      "codArticol": "1",
+      "cant": "1",
+      "denUM": "Buc",
+      "pret": "1400",
+      "denGest": "",
+      "flag": "DA"
+    }
+  ],
+  "errors": [],
+  "timestamp": "2026-05-18T10:17:03Z"
+}

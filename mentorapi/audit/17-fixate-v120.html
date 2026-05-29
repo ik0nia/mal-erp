@@ -1,0 +1,179 @@
+<div class="section">
+<div class="section-header">
+<h2>Endpoint-uri FIXATE v1.3.0 — Testate OK</h2>
+<span class="badge badge-ok">9 din 10 OK (1 eroare: GetSoldFactNeop)</span>
+</div>
+<div class="section-body">
+<div class="note note-info">Endpoint-uri care dadeau eroare in v1.0.0 — fixate cu parametri corecti din proiectul GitHub libWMEdcom. Testate pe firma ERP, luna 4/2026.</div>
+
+<h3>GET /api/stocuri/ext2?gestiune=MP — GetStocArticoleExt2 — 20 campuri</h3>
+<div class="note note-info">Testat: 5.401 rows. Identic cu GetStocArticole dar filtrat per gestiune.</div>
+<table>
+<tr><th>Poz</th><th>Camp</th><th>Tip</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>CodExtern</strong></td><td>string</td><td><span class="mono">9007912539582</span></td></tr>
+<tr><td>1</td><td><strong>Denumire</strong></td><td>string</td><td><span class="mono">Articol exemplu</span></td></tr>
+<tr><td>2</td><td><strong>UM</strong></td><td>string</td><td><span class="mono">Buc</span></td></tr>
+<tr><td>3</td><td><strong>PretVanzare</strong></td><td>decimal</td><td><span class="mono">2,14876</span></td></tr>
+<tr><td>4</td><td><strong>Stoc</strong></td><td>decimal</td><td><span class="mono">69</span></td></tr>
+<tr><td>5</td><td><strong>SimbolClasa</strong></td><td>string</td><td><span class="mono">1</span></td></tr>
+<tr><td>6</td><td><strong>DenClasa</strong></td><td>string</td><td><span class="mono">1</span></td></tr>
+<tr><td>7</td><td><strong>IDProducator</strong></td><td>string</td><td><span class="mono">722364383</span></td></tr>
+<tr><td>8</td><td><strong>DenProducator</strong></td><td>string</td><td><span class="mono">Producator X</span></td></tr>
+<tr><td>9</td><td><strong>IDFurnizor</strong></td><td>string</td><td><span class="mono">722363025</span></td></tr>
+<tr><td>10</td><td><strong>DenFurnizor</strong></td><td>string</td><td><span class="mono">Furnizor Y SRL</span></td></tr>
+<tr><td>11</td><td><strong>SimbolGestiune</strong></td><td>string</td><td><span class="mono">MP</span></td></tr>
+<tr><td>12</td><td><strong>DenGestiune</strong></td><td>string</td><td><span class="mono">Magazin Principal</span></td></tr>
+<tr><td>13</td><td><strong>CotaTVA</strong></td><td>integer</td><td><span class="mono">21</span></td></tr>
+<tr><td>14</td><td><strong>FlagTVAInclus</strong></td><td>DA/NU</td><td><span class="mono">DA</span></td></tr>
+<tr><td>15</td><td><strong>PretCuTVA</strong></td><td>decimal</td><td><span class="mono">2,6</span></td></tr>
+<tr><td>16</td><td>(gol)</td><td>-</td><td><span class="mono">(gol)</span> — posibil StocRezervat</td></tr>
+<tr><td>17</td><td><strong>DataUltimaIntrare</strong></td><td>date</td><td><span class="mono">30.12.1899</span> = fara intrare</td></tr>
+<tr><td>18-19</td><td>(goale)</td><td>-</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+
+<h3>GET /api/stocuri/articol/{id}/detaliat?gestiune=MP — GetStocArtDetaliat — 16 campuri</h3>
+<div class="note note-info">Testat: 1 row pentru articol 9007912539582 in gestiunea MP.</div>
+<table>
+<tr><th>Poz</th><th>Camp</th><th>Tip</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>SimbolGestiune</strong></td><td>string</td><td><span class="mono">MP</span></td></tr>
+<tr><td>1</td><td><strong>DataUltimaIntrare</strong></td><td>date</td><td><span class="mono">14.06.2024</span></td></tr>
+<tr><td>2</td><td>(necunoscut)</td><td>decimal</td><td><span class="mono">0</span></td></tr>
+<tr><td>3</td><td>(necunoscut)</td><td>decimal</td><td><span class="mono">0</span></td></tr>
+<tr><td>4</td><td><strong>PretCuTVA</strong></td><td>decimal</td><td><span class="mono">2,6</span></td></tr>
+<tr><td>5</td><td><strong>Stoc</strong></td><td>decimal</td><td><span class="mono">69</span></td></tr>
+<tr><td>6</td><td><strong>DataExpirare</strong></td><td>date</td><td><span class="mono">30.12.1899</span> = fara expirare</td></tr>
+<tr><td>7</td><td><strong>DenFurnizor</strong></td><td>string</td><td><span class="mono">Furnizor Y SRL</span></td></tr>
+<tr><td>8</td><td>(gol)</td><td>-</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>9</td><td><strong>DenArticol</strong></td><td>string</td><td><span class="mono">Articol exemplu</span></td></tr>
+<tr><td>10</td><td><strong>UM</strong></td><td>string</td><td><span class="mono">Buc</span></td></tr>
+<tr><td>11</td><td><strong>PretVanzare</strong></td><td>decimal</td><td><span class="mono">2,6</span></td></tr>
+<tr><td>12</td><td><strong>ContContabil</strong></td><td>string</td><td><span class="mono">371.02</span></td></tr>
+<tr><td>13</td><td><strong>FlagTVAInclus</strong></td><td>DA/NU</td><td><span class="mono">DA</span></td></tr>
+<tr><td>14</td><td><strong>CotaTVA</strong></td><td>integer</td><td><span class="mono">21</span></td></tr>
+<tr><td>15</td><td>(gol)</td><td>-</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+
+<h3>GET /api/stocuri/ambalaje/initial?an=2026&amp;luna=4 — GetStocInitialAmbalaj — 4 campuri</h3>
+<div class="note note-info">Testat: 761 rows.</div>
+<table>
+<tr><th>Poz</th><th>Camp</th><th>Tip</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>IDPartener</strong></td><td>string</td><td><span class="mono">0000000001014</span></td></tr>
+<tr><td>1</td><td><strong>CodAmbalaj</strong></td><td>string</td><td><span class="mono">9007767531137</span></td></tr>
+<tr><td>2</td><td><strong>DenAmbalaj</strong></td><td>string</td><td><span class="mono">PALET HOLCIM</span></td></tr>
+<tr><td>3</td><td><strong>Cantitate</strong></td><td>integer</td><td><span class="mono">1</span>, <span class="mono">0</span></td></tr>
+</table>
+
+<h3>GET /api/stocuri/ambalaje/miscari — GetMiscariAmbalaje — 0 rows</h3>
+<div class="note">Testat: 0 rows (fara miscari in intervalul testat). Endpoint functional, fara eroare.</div>
+
+<h3>GET /api/bonuri/info?zi=1 — GetInfoBon — 4 campuri</h3>
+<div class="note note-info">Testat: 165 rows.</div>
+<table>
+<tr><th>Poz</th><th>Camp</th><th>Tip</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>NrBon</strong></td><td>integer</td><td><span class="mono">1</span>, <span class="mono">2</span></td></tr>
+<tr><td>1</td><td><strong>DataBon</strong></td><td>date</td><td><span class="mono">01.04.2026</span></td></tr>
+<tr><td>2</td><td><strong>Valoare</strong></td><td>decimal</td><td><span class="mono">995,31</span> sau (gol)</td></tr>
+<tr><td>3</td><td>(gol)</td><td>-</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+
+<h3>GET /api/iesiri/info?zi=1 — GetInfoIesiri — 17 campuri</h3>
+<div class="note note-info">Testat: 144 rows.</div>
+<table>
+<tr><th>Poz</th><th>Camp</th><th>Tip</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>CotaTVA</strong></td><td>integer</td><td><span class="mono">21</span></td></tr>
+<tr><td>1</td><td><strong>NrDocument</strong></td><td>integer</td><td><span class="mono">264596</span></td></tr>
+<tr><td>2</td><td><strong>DataDocument</strong></td><td>date</td><td><span class="mono">01.04.2026</span></td></tr>
+<tr><td>3</td><td><strong>NumeAngajat</strong></td><td>string</td><td><span class="mono">Agent exemplu</span></td></tr>
+<tr><td>4-5</td><td>(goale)</td><td>-</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>6</td><td><strong>Observatii</strong></td><td>string</td><td><span class="mono">BANI DE SCHIMB</span></td></tr>
+<tr><td>7</td><td>(necunoscut)</td><td>mixed</td><td><span class="mono">0</span> sau (gol)</td></tr>
+<tr><td>8-11</td><td>(goale)</td><td>-</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>12</td><td><strong>Valoare</strong></td><td>decimal</td><td><span class="mono">-500</span> (negativ)</td></tr>
+<tr><td>13</td><td><strong>IDPartener</strong></td><td>string</td><td><span class="mono">0000000040136</span></td></tr>
+<tr><td>14</td><td><strong>IDPartener2</strong></td><td>string</td><td><span class="mono">728019175</span></td></tr>
+<tr><td>15-16</td><td>(goale)</td><td>-</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+
+<h3>GET /api/inventory/orders?gestiune=MP — GetInventoryOrders — 2 campuri</h3>
+<div class="note note-info">Testat: 104 rows.</div>
+<table>
+<tr><th>Poz</th><th>Camp</th><th>Tip</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>NrInventar</strong></td><td>integer</td><td><span class="mono">1</span>, <span class="mono">2</span>, <span class="mono">3</span></td></tr>
+<tr><td>1</td><td><strong>DataInventar</strong></td><td>date</td><td><span class="mono">20.07.2008</span></td></tr>
+</table>
+
+<h3>GET /api/livrari/dispozitii?gestiune=MP — GetDispozitiiDeLivrare</h3>
+<div class="note">Testat: NULL (fara date). Endpoint functional, fara eroare.</div>
+
+<h3>GET /api/bonuri/info-ext?nrBon=1&amp;zi=1 — GetInfoBonExt — 6 campuri</h3>
+<div class="note note-info">Testat: 1 row.</div>
+<table>
+<tr><th>Poz</th><th>Camp</th><th>Tip</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>NrLinie</strong></td><td>integer</td><td><span class="mono">1</span></td></tr>
+<tr><td>1</td><td><strong>DenArticol</strong></td><td>string</td><td><span class="mono">Articol exemplu</span></td></tr>
+<tr><td>2</td><td><strong>Cantitate</strong></td><td>decimal</td><td><span class="mono">1</span></td></tr>
+<tr><td>3</td><td><strong>UM</strong></td><td>string</td><td><span class="mono">Buc</span></td></tr>
+<tr><td>4-5</td><td>(goale)</td><td>-</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+
+<h3>GET /api/iesiri/info-ext?nrDoc=264596&amp;zi=1 — GetInfoIesiriExt — 9 campuri</h3>
+<div class="note note-info">Testat: 1 row.</div>
+<table>
+<tr><th>Poz</th><th>Camp</th><th>Tip</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>NrLinie</strong></td><td>integer</td><td><span class="mono">1</span></td></tr>
+<tr><td>1</td><td><strong>TipOperatie</strong></td><td>string</td><td><span class="mono">.TRANSFER</span></td></tr>
+<tr><td>2</td><td><strong>Cantitate</strong></td><td>decimal</td><td><span class="mono">-1</span> (negativ = iesire)</td></tr>
+<tr><td>3</td><td><strong>Moneda</strong></td><td>string</td><td><span class="mono">Lei</span></td></tr>
+<tr><td>4</td><td>(gol)</td><td>-</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>5</td><td><strong>Valoare</strong></td><td>decimal</td><td><span class="mono">500</span></td></tr>
+<tr><td>6</td><td><strong>CodArticol</strong></td><td>string</td><td><span class="mono">594008496559910</span></td></tr>
+<tr><td>7-8</td><td>(goale)</td><td>-</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+
+<h3>GET /api/comenzi/bon/info?nrCmd=1000 — GetInfoCmdBon — 8 campuri</h3>
+<div class="note note-info">Testat: 1 row.</div>
+<table>
+<tr><th>Poz</th><th>Camp</th><th>Tip</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>NrComanda</strong></td><td>integer</td><td><span class="mono">1000</span></td></tr>
+<tr><td>1</td><td><strong>NrLinii</strong></td><td>integer</td><td><span class="mono">1</span></td></tr>
+<tr><td>2</td><td><strong>DenPartener</strong></td><td>string</td><td><span class="mono">Client exemplu SRL</span></td></tr>
+<tr><td>3</td><td><strong>IDPartener</strong></td><td>string</td><td><span class="mono">722361792</span></td></tr>
+<tr><td>4</td><td><strong>ValoareComanda</strong></td><td>decimal</td><td><span class="mono">2060,34</span></td></tr>
+<tr><td>5-7</td><td>(goale)</td><td>-</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+
+<h3>GET /api/facturi/ext/{serie}/{nr}/exists — ExistaFacturaExt</h3>
+<div class="note note-info">Testat: factura 75131 seria MAL — exists=true, code=1.</div>
+<table>
+<tr><th>Input</th><th>Tip</th><th>Exemplu</th></tr>
+<tr><td><strong>serie</strong> (path)</td><td>string</td><td><span class="mono">MAL</span></td></tr>
+<tr><td><strong>nr</strong> (path)</td><td>integer</td><td><span class="mono">75131</span></td></tr>
+</table>
+<table>
+<tr><th>Output</th><th>Tip</th><th>Valori</th></tr>
+<tr><td><strong>code</strong></td><td>integer</td><td>-1=eroare, 0=nu exista, 1=operata, 2=neoperata</td></tr>
+<tr><td><strong>exists</strong></td><td>boolean</td><td>true/false</td></tr>
+</table>
+
+<h3>GET /api/facturi/intrare/exists — ExistaFacturaIntrare</h3>
+<div class="note note-info">Testat: factura intrare 811783 partener 0000000000192 — exists=true, code=1.</div>
+<table>
+<tr><th>Input (query)</th><th>Tip</th><th>Obligatoriu</th><th>Exemplu</th></tr>
+<tr><td><strong>partId</strong></td><td>string</td><td>Da</td><td><span class="mono">0000000000192</span></td></tr>
+<tr><td><strong>serie</strong></td><td>string</td><td>Nu</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td><strong>numar</strong></td><td>integer</td><td>Da</td><td><span class="mono">811783</span></td></tr>
+</table>
+<table>
+<tr><th>Output</th><th>Tip</th><th>Valori</th></tr>
+<tr><td><strong>code</strong></td><td>integer</td><td>-1=eroare, 0=nu exista, 1=operata, 2=neoperata</td></tr>
+<tr><td><strong>exists</strong></td><td>boolean</td><td>true/false</td></tr>
+</table>
+
+<h3>Endpoint-uri inca cu eroare</h3>
+<div class="note note-danger">
+<strong>GetSoldFactNeop</strong> si <strong>GetReceivingStatus</strong> — returneza BSTR prin vtable, IDispatch fallback nu functioneaza. Limitare go-ole.<br>
+<strong>GetIncasariFactura</strong> — FIXAT! Mutat de la RawQuery la callReturningStrings.
+</div>
+
+</div>
+</div>

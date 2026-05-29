@@ -1,0 +1,82 @@
+<!-- ==================== IMPORT MODIFICARI PRET ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Import Modificări Preț — POST /api/import/modificari-pret</h2>
+<span class="badge badge-ok">VALIDATE OK</span>
+</div>
+<div class="section-body">
+
+<p>Importă modificări de preț de vânzare pe gestiune cu document contabil (generează diferențe de preț în contabilitate). Flow: <span class="mono">SetDocsData</span> &rarr; <span class="mono">ModifPretValide</span> &rarr; <span class="mono">ImportaModifPret</span>.</p>
+
+<div class="note note-info">✅ Validate OK 14 mai 2026 — format dedus prin 7 iterații de erori. Nu s-a importat efectiv (ar schimba prețuri pe firma reală). Tipdocument=MODIFICARE PRET, secțiune [PV_1], gestiune per item.</div>
+
+<div class="note"><strong>Diferență față de ModiProduct:</strong> <span class="mono">PUT /api/produse/update</span> schimbă prețul din nomenclator fără document contabil. Import modificări preț generează document justificativ cu efect contabil (cont 378 diferențe de preț).</div>
+
+<h3>Request body</h3>
+<pre style="background:#f5f0e8; padding:12px; border-radius:6px; font-size:13px">POST /api/import/modificari-pret
+{
+  "lines": [
+    "[InfoPachet]",
+    "AnLucru=2026",
+    "LunaLucru=5",
+    "Tipdocument=MODIFICARE PRET",
+    "TotalModifPret=1",
+    "Logon=Master",
+    "",
+    "[PV_1]",
+    "Operatie=A",
+    "NrDoc=99999",
+    "Data=14.05.2026",
+    "TotalArticole=1",
+    "",
+    "[Items_1]",
+    "Item_1=9007912539582;Buc;69;2.50;MP;"
+  ]
+}</pre>
+
+<h3>Secțiunea [InfoPachet]</h3>
+<table>
+<tr><th>Câmp</th><th>Obligatoriu</th><th>Format</th><th>Descriere</th></tr>
+<tr><td><span class="mono">Tipdocument</span></td><td>DA</td><td>string</td><td>Fix: <span class="mono">MODIFICARE PRET</span> (NU "MODIFICARI DE PRET"!)</td></tr>
+<tr><td><span class="mono">TotalModifPret</span></td><td>DA</td><td>integer</td><td>Număr documente (NU TotalDocumente!)</td></tr>
+<tr><td><span class="mono">AnLucru / LunaLucru / Logon</span></td><td>DA</td><td>-</td><td>Standard</td></tr>
+</table>
+
+<h3>Secțiunea [PV_N]</h3>
+<div class="note"><strong>Atenție:</strong> Secțiunea e <span class="mono">[PV_1]</span> (Process Verbal). NU [Document_1], [ModifPret_1] sau [Modificare_1]!</div>
+<table>
+<tr><th>Câmp</th><th>Obligatoriu</th><th>Format</th><th>Verificat</th><th>Descriere</th></tr>
+<tr><td><span class="mono">Operatie</span></td><td>DA</td><td>string</td><td class="status-ok">✅</td><td><span class="mono">A</span> = adăugare</td></tr>
+<tr><td><span class="mono">NrDoc</span></td><td>DA</td><td>integer</td><td class="status-ok">✅</td><td>Număr document (proces verbal)</td></tr>
+<tr><td><span class="mono">Data</span></td><td>DA</td><td>dd.mm.yyyy</td><td class="status-ok">✅</td><td>Data modificării de preț</td></tr>
+<tr><td><span class="mono">TotalArticole</span></td><td>DA</td><td>integer</td><td class="status-ok">✅</td><td>Nr. linii items</td></tr>
+</table>
+
+<h3>Secțiunea [Items_N]</h3>
+<p>Format: <span class="mono">Item_N=CodArticol;UM;Cantitate;PretNou;<strong>Gestiune</strong>;</span></p>
+<table>
+<tr><th>Câmp</th><th>Poz</th><th>Obligatoriu</th><th>Verificat</th><th>Descriere</th></tr>
+<tr><td><span class="mono">CodArticol</span></td><td>1</td><td>DA</td><td class="status-ok">✅</td><td>SKU/EAN (depinde de SetIDArtField)</td></tr>
+<tr><td><span class="mono">UM</span></td><td>2</td><td>DA</td><td class="status-ok">✅</td><td>Unitate măsură</td></tr>
+<tr><td><span class="mono">Cantitate</span></td><td>3</td><td>DA</td><td class="status-ok">✅</td><td>Cantitate pe stoc (la care se aplică noul preț)</td></tr>
+<tr><td><span class="mono">PretNou</span></td><td>4</td><td>DA</td><td class="status-ok">✅</td><td>Noul preț de vânzare</td></tr>
+<tr><td><span class="mono">Gestiune</span></td><td>5</td><td>DA</td><td class="status-ok">✅</td><td>Simbol gestiune (eroare 301 dacă invalid)</td></tr>
+</table>
+
+<h3>Erori posibile</h3>
+<table>
+<tr><th>Cod</th><th>Mesaj</th><th>Cauză</th></tr>
+<tr><td>131</td><td>Nu pare a fi MODIFICARI DE PRET</td><td>Tipdocument sau TotalModifPret greșit</td></tr>
+<tr><td>105</td><td>Nu gasesc referinte despre documentul</td><td>Secțiunea nu e [PV_N]</td></tr>
+<tr><td>301</td><td>Nu gasesc gestiunea</td><td>Gestiune invalidă pe item</td></tr>
+</table>
+
+<h3>Alternativă: ModiProduct (fără document contabil)</h3>
+<p>Pentru schimbare simplă de preț fără efect contabil:</p>
+<pre style="background:#f5f0e8; padding:12px; border-radius:6px; font-size:13px">PUT /api/produse/update
+{"info": "9007912539582;;;2.50;;;;"}
+// Format: CodExtern;Producator;Clasa;Pret;(gol);Denumire;(gol)</pre>
+<div class="note note-info">✅ Testat — preț schimbat de la 2,15 la 2,50 și revert. Funcțional dar fără document contabil.</div>
+
+</div>
+</div>

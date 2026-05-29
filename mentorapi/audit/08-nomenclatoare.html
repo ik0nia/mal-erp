@@ -1,0 +1,103 @@
+<!-- ==================== NOMENCLATOARE ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Nomenclatoare — Gestiuni, Personal, Bănci, Monede, Subunități, Localități</h2>
+<span class="badge badge-ok">TESTAT + MAPAT</span>
+</div>
+<div class="section-body">
+
+<h3>GET /api/gestiuni — 2 câmpuri</h3>
+<div class="note note-info">Testat: 13 gestiuni.</div>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>Simbol</strong></td><td class="status-ok">✅ Doc</td><td><span class="mono">MP</span></td></tr>
+<tr><td>1</td><td><strong>Denumire</strong></td><td class="status-ok">✅ Doc</td><td><span class="mono">Magazin Principal</span></td></tr>
+</table>
+
+<h3>GET /api/personal — 9 câmpuri</h3>
+<div class="note note-info">Testat: 30 angajați.</div>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>Nume</strong></td><td class="status-ok">✅ Doc</td><td><span class="mono">Angajat exemplu</span></td></tr>
+<tr><td>1</td><td><strong>Prenume</strong></td><td class="status-ok">✅ Doc</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>2</td><td><strong>Marca</strong></td><td class="status-ok">✅ Doc</td><td><span class="mono">1</span></td></tr>
+<tr><td>3</td><td><strong>CNP</strong></td><td class="status-ok">✅ Doc</td><td><span class="mono">1234567890123</span></td></tr>
+<tr><td>4</td><td><strong>EsteActiv</strong></td><td class="status-ok">✅ Doc</td><td><span class="mono">Da</span> / <span class="mono">Nu</span></td></tr>
+<tr><td>5</td><td><strong>EsteAgent</strong></td><td class="status-ok">✅ Doc</td><td><span class="mono">Da</span> / <span class="mono">Nu</span></td></tr>
+<tr><td>6</td><td><strong>SerieBuletin</strong></td><td class="status-ok">✅ Doc</td><td><span class="mono">XH</span></td></tr>
+<tr><td>7</td><td><strong>NrBuletin</strong></td><td class="status-ok">✅ Doc</td><td><span class="mono">123456</span></td></tr>
+<tr><td>8</td><td><strong>CodPostal</strong></td><td class="status-ok">✅ Doc</td><td><span class="mono">410000</span></td></tr>
+</table>
+
+<h3>GET /api/banci — 2 câmpuri</h3>
+<div class="note note-info">Testat: 29 bănci.</div>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>Simbol</strong></td><td class="status-ok">✅ Doc</td><td><span class="mono">BCR</span></td></tr>
+<tr><td>1</td><td><strong>Denumire</strong></td><td class="status-ok">✅ Doc</td><td><span class="mono">Banca Comerciala Romana</span></td></tr>
+</table>
+
+<h3>GET /api/monede — 2 câmpuri</h3>
+<div class="note note-info">Testat: 4 monede.</div>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>Simbol</strong></td><td class="status-ok">✅</td><td><span class="mono">Lei</span>, <span class="mono">Euro</span></td></tr>
+<tr><td>1</td><td><strong>Denumire</strong></td><td class="status-ok">✅</td><td><span class="mono">Leu romanesc</span></td></tr>
+</table>
+
+<h3>GET /api/subunitati — 1 câmp</h3>
+<div class="note note-info">Testat: 1 subunitate.</div>
+
+<h3>GET /api/nomenclator-localitati — 3 câmpuri</h3>
+<div class="note note-info">Testat: 13.904 localități.</div>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>Localitate</strong></td><td class="status-ok">✅</td><td><span class="mono">ORADEA</span></td></tr>
+<tr><td>1</td><td><strong>Judet</strong></td><td class="status-ok">✅</td><td><span class="mono">BH</span></td></tr>
+<tr><td>2</td><td><strong>CodPostal</strong></td><td class="status-ok">✅</td><td><span class="mono">410000</span></td></tr>
+</table>
+
+
+<h3>POST /api/gestiuni/add — AdaugaGestiune</h3>
+<p>Creează o gestiune nouă în WinMentor.</p>
+<div class="note note-info">✅ Testat 14 mai 2026 — gestiune TAPI;TEST API GESTIUNE creată cu succes. Duplicat returnează result=0.</div>
+<table>
+<tr><th>Parametru</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">simbol</span></td><td>string</td><td>DA</td><td>Simbolul gestiunii (unic)</td></tr>
+<tr><td><span class="mono">denumire</span></td><td>string</td><td>DA</td><td>Denumirea gestiunii</td></tr>
+</table>
+<table>
+<tr><th>Răspuns</th><th>Descriere</th></tr>
+<tr><td><span class="mono">result: 1</span></td><td>Gestiune creată cu succes</td></tr>
+<tr><td><span class="mono">result: 0</span></td><td>Duplicat — gestiunea există deja</td></tr>
+</table>
+
+<h3>POST /api/articole/add-clasa — AddClasaArt</h3>
+<p>Creează o clasă de articole nouă.</p>
+<div class="note note-info">✅ Testat 14 mai 2026 — clasă TAPI;TEST API CLASA creată cu succes. Duplicat returnează result=0.</div>
+<table>
+<tr><th>Parametru</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">simbol</span></td><td>string</td><td>DA</td><td>Simbolul clasei (unic)</td></tr>
+<tr><td><span class="mono">denumire</span></td><td>string</td><td>DA</td><td>Denumirea clasei</td></tr>
+</table>
+<table>
+<tr><th>Răspuns</th><th>Descriere</th></tr>
+<tr><td><span class="mono">result: 1</span></td><td>Clasă creată cu succes</td></tr>
+<tr><td><span class="mono">result: 0</span></td><td>Duplicat — clasa există deja</td></tr>
+</table>
+
+<h3>POST /api/articole/set-clasa — SetClasaArt</h3>
+<p>Setează clasa de articole curentă pentru operațiuni ulterioare (filtru temporar de sesiune).</p>
+<div class="note note-info">✅ Testat 14 mai 2026 — setat TAPI. Clasă inexistentă nu dă eroare (ignorată silențios).</div>
+<table>
+<tr><th>Parametru</th><th>Tip</th><th>Obligatoriu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">numeClasa</span></td><td>string</td><td>DA</td><td>Numele/simbolul clasei de setat</td></tr>
+</table>
+<table>
+<tr><th>Răspuns</th><th>Descriere</th></tr>
+<tr><td><span class="mono">applied: true</span></td><td>Clasă setată (void — fără cod eroare)</td></tr>
+</table>
+
+</div>
+</div>
+

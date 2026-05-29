@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MentorAPI — Audit Complet (100 Endpoint-uri)</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f5f0e8; color: #333; }
+.header { background: #c41e3a; color: white; padding: 20px 40px; }
+.header h1 { font-size: 24px; font-weight: 600; }
+.header p { opacity: 0.8; margin-top: 4px; }
+.nav { background: #2c2c2c; padding: 0 40px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2); overflow-x: auto; white-space: nowrap; }
+.nav a { color: #ccc; text-decoration: none; display: inline-block; padding: 10px 14px; font-size: 13px; font-weight: 500; transition: all 0.2s; border-bottom: 2px solid transparent; }
+.nav a:hover { color: white; background: #444; }
+.nav a.active { color: #fff; border-bottom-color: #c41e3a; }
+.nav-sep { display: inline-block; width: 1px; height: 20px; background: #555; vertical-align: middle; margin: 0 2px; }
+.container { max-width: 1400px; margin: 0 auto; padding: 20px 40px; }
+.section { background: white; border-radius: 8px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+.section-header { background: #f8f4ef; padding: 16px 20px; border-bottom: 1px solid #e5ddd3; cursor: pointer; user-select: none; display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 0 12px; }
+.section-header h2 { font-size: 18px; color: #333; }
+.section-header .badge { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.section-header .toggle-icon { font-size: 12px; color: #999; transition: transform 0.2s; }
+.section.collapsed .toggle-icon { transform: rotate(-90deg); }
+.section-preview { display: none; grid-column: 1 / -1; grid-row: 2; font-size: 12px; color: #888; margin-top: 4px; }
+.section.collapsed .section-preview { display: block; }
+.section.collapsed .section-body { display: none; }
+.badge-ok { background: #d4edda; color: #155724; }
+.badge-partial { background: #fff3cd; color: #856404; }
+.badge-netestat { background: #f8d7da; color: #721c24; }
+.section-body { padding: 20px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { background: #f8f4ef; text-align: left; padding: 10px 12px; border-bottom: 2px solid #e5ddd3; font-weight: 600; }
+td { padding: 8px 12px; border-bottom: 1px solid #eee; vertical-align: top; }
+tr:hover { background: #faf8f5; }
+.status-ok { color: #155724; font-weight: 600; }
+.status-fail { color: #721c24; font-weight: 600; }
+.status-unknown { color: #856404; }
+.mono { font-family: 'Consolas', monospace; font-size: 13px; background: #f5f0e8; padding: 2px 6px; border-radius: 3px; word-break: break-all; }
+.note { background: #fff3cd; padding: 12px 16px; border-radius: 6px; margin: 12px 0; font-size: 13px; }
+.note-info { background: #d4edda; }
+.note-danger { background: #f8d7da; }
+h3 { margin: 16px 0 8px; color: #c41e3a; font-size: 15px; }
+.stats { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+.stat-card { background: white; border-radius: 8px; padding: 16px 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; min-width: 140px; }
+.stat-card .number { font-size: 32px; font-weight: 700; color: #c41e3a; }
+.stat-card .label { font-size: 12px; color: #666; margin-top: 4px; }
+.sub-header { background: #faf8f5; padding: 10px 16px; margin: 8px 0 0; border: 1px solid #e5ddd3; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; }
+.sub-header h3 { margin: 0; font-size: 14px; flex: 1; }
+.sub-header .sub-toggle { font-size: 11px; color: #999; transition: transform 0.2s; margin-left: 12px; }
+.sub-header.sub-collapsed .sub-toggle { transform: rotate(-90deg); }
+.sub-content { padding: 8px 16px; border-left: 2px solid #e5ddd3; margin-left: 8px; margin-bottom: 4px; }
+@media print {
+  .section.collapsed .section-body { display: block !important; }
+  .sub-content { display: block !important; }
+  .toggle-icon, .sub-toggle { display: none; }
+  .section-preview { display: none !important; }
+  .nav { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+<h1>MentorAPI — Audit Complet</h1>
+<p>100 endpoint-uri documentate — parametri, format, exemple live</p>
+<p style="opacity:0.7; font-size:12px; margin-top:4px;">v1.2.0 | 14 mai 2026 | 99/100 testate OK | 7/10 importuri | 4/5 logistică</p>
+</div>
+
+<nav class="nav" id="main-nav"></nav>
+
+<div class="container">
+<div id="s-header"></div>
+<div id="s-all"></div>
+<div id="s-blocate"></div>
+</div>
+
+<script>
+const sections = [
+  ['s-header', 'audit/header.html?v=5'],
+  ['s-all', 'audit/30-all-endpoints.html?v=1'],
+  ['s-blocate', 'audit/16-netestate.html?v=3'],
+];
+
+let loaded = 0;
+sections.forEach(([id, url]) => {
+  fetch(url).then(r => r.text()).then(html => {
+    document.getElementById(id).innerHTML = html;
+    loaded++;
+    if (loaded === sections.length) initUI();
+  }).catch(() => {
+    document.getElementById(id).innerHTML = '<div class="loading">Eroare: ' + url + '</div>';
+    loaded++;
+    if (loaded === sections.length) initUI();
+  });
+});
+
+function initUI() {
+  // Build nav from section h2s
+  const nav = document.getElementById('main-nav');
+  const sectionEls = document.querySelectorAll('.section');
+  let navHtml = '';
+  sectionEls.forEach((sec, i) => {
+    const h2 = sec.querySelector('.section-header h2');
+    if (!h2) return;
+    const id = 'sec-' + i;
+    sec.id = id;
+    const text = h2.textContent.replace(/\s*\(\d+ endpoint-uri\)/, '');
+    navHtml += `<a href="#${id}">${text}</a>`;
+  });
+  nav.innerHTML = navHtml;
+
+  // Add toggle icons + previews + collapse sections
+  sectionEls.forEach(sec => {
+    const header = sec.querySelector('.section-header');
+    if (!header) return;
+
+    // Toggle icon
+    const icon = document.createElement('span');
+    icon.className = 'toggle-icon';
+    icon.textContent = '▼';
+    header.appendChild(icon);
+
+    // Preview
+    const body = sec.querySelector('.section-body');
+    const h3s = body ? body.querySelectorAll(':scope > h3') : [];
+    if (h3s.length > 0) {
+      const endpoints = Array.from(h3s).map(h => h.textContent.trim()).slice(0, 4);
+      const preview = document.createElement('div');
+      preview.className = 'section-preview';
+      preview.textContent = endpoints.join(' | ') + (h3s.length > 4 ? ` | +${h3s.length - 4} more...` : '');
+      header.appendChild(preview);
+    }
+
+    // Collapse by default (except header/stats)
+    if (!sec.closest('#s-header')) {
+      sec.classList.add('collapsed');
+    }
+  });
+
+  // Make h3 endpoint blocks collapsible
+  document.querySelectorAll('.section-body').forEach(body => {
+    const h3s = Array.from(body.querySelectorAll(':scope > h3'));
+    if (h3s.length < 1) return;
+
+    h3s.forEach(h3 => {
+      const elements = [];
+      let el = h3.nextElementSibling;
+      while (el && el.tagName !== 'H3') {
+        elements.push(el);
+        el = el.nextElementSibling;
+      }
+      if (elements.length === 0) return;
+
+      const subHeader = document.createElement('div');
+      subHeader.className = 'sub-header sub-collapsed';
+      subHeader.innerHTML = '<h3>' + h3.innerHTML + '</h3><span class="sub-toggle">▼</span>';
+
+      const subContent = document.createElement('div');
+      subContent.className = 'sub-content';
+      subContent.style.display = 'none';
+      elements.forEach(el => subContent.appendChild(el));
+
+      h3.replaceWith(subHeader);
+      subHeader.after(subContent);
+    });
+  });
+
+  // Scroll highlight
+  const navLinks = document.querySelectorAll('.nav a');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const link = document.querySelector(`.nav a[href="#${entry.target.id}"]`);
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-80px 0px -70% 0px' });
+  sectionEls.forEach(el => { if (el.id) observer.observe(el); });
+}
+
+// Toggle handlers
+document.addEventListener('click', (e) => {
+  const header = e.target.closest('.section-header');
+  if (header) { header.closest('.section').classList.toggle('collapsed'); return; }
+  const sub = e.target.closest('.sub-header');
+  if (sub) {
+    sub.classList.toggle('sub-collapsed');
+    const content = sub.nextElementSibling;
+    if (content && content.classList.contains('sub-content')) {
+      content.style.display = content.style.display === 'none' ? '' : 'none';
+    }
+  }
+});
+</script>
+
+</body>
+</html>

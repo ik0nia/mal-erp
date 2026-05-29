@@ -1,0 +1,28 @@
+{
+  "success": true,
+  "data": [
+    {
+      "pozitie": "2",
+      "dataIncasare": "04.05.2026",
+      "documentRef": "F.MAL75713",
+      "idPartener": "722367592",
+      "suma": "18,89"
+    },
+    {
+      "pozitie": "1",
+      "dataIncasare": "04.05.2026",
+      "documentRef": "F.MAL75714",
+      "idPartener": "722366171",
+      "suma": "16,8"
+    },
+    {
+      "pozitie": "2",
+      "dataIncasare": "04.05.2026",
+      "documentRef": "F.MAL75721",
+      "idPartener": "",
+      "suma": "82,69"
+    }
+  ],
+  "errors": [],
+  "timestamp": "2026-05-18T10:17:02Z"
+}

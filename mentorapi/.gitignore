@@ -1,0 +1,6 @@
+mentorapi.exe
+mentorapi.log
+*.log
+cache/
+appsettings.json
+test_docimpserver.exe

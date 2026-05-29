@@ -1,0 +1,49 @@
+<!-- ==================== SOLDURI ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Financiar — Solduri</h2>
+<span class="badge badge-ok">TESTAT + MAPAT</span>
+</div>
+<div class="section-body">
+
+<h3>GET /api/solduri</h3>
+<p>Solduri clienți — facturi neîncasate și avansuri. <strong>11 câmpuri</strong>.</p>
+<div class="note note-info">Testat: 149.697 înregistrări pe firma ERP.</div>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>IDPartener</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">0000000000055</span></td></tr>
+<tr><td>1</td><td><strong>TipLinie</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Factura</span> sau <span class="mono">Avans</span></td></tr>
+<tr><td>2</td><td><strong>NrFactura</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">106782</span></td></tr>
+<tr><td>3</td><td><strong>DataFactura</strong></td><td>date</td><td class="status-ok">✅</td><td><span class="mono">21.06.2016</span></td></tr>
+<tr><td>4</td><td><strong>RestDePlata</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">98.5</span> (negativ = overpaid)</td></tr>
+<tr><td>5</td><td><strong>TermenPlata</strong></td><td>date</td><td class="status-ok">✅</td><td><span class="mono">30.06.2016</span></td></tr>
+<tr><td>6</td><td><strong>LocatiePartener</strong></td><td>string</td><td class="status-ok">✅ Analiză 149.697 (localitati, SEDIU SOCIAL)</td><td><span class="mono">SEDIU SOCIAL</span> sau localitate</td></tr>
+<tr><td>7</td><td><strong>MarcaAgent</strong></td><td>integer</td><td class="status-ok">✅ Analiză 149.697</td><td><span class="mono">12</span>, <span class="mono">3</span>, <span class="mono">7</span></td></tr>
+<tr><td>8</td><td><strong>ValoareFactura</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">98.5</span></td></tr>
+<tr><td>9</td><td><strong>Moneda</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Lei</span></td></tr>
+<tr><td>10</td><td>(flag)</td><td>integer</td><td class="status-ok">✅ Analiză 149.697 — mereu 1</td><td><span class="mono">1</span></td></tr>
+</table>
+
+<h3>GET /api/solduri/furnizori</h3>
+<p>Solduri furnizori — aceeași structură de bază. <strong>13 câmpuri</strong>.</p>
+<div class="note note-info">Testat: 1.732 înregistrări pe firma ERP.</div>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>IDPartener</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">0000000000192</span></td></tr>
+<tr><td>1</td><td><strong>TipLinie</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Factura</span></td></tr>
+<tr><td>2</td><td><strong>NrFactura</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">811274</span></td></tr>
+<tr><td>3</td><td><strong>DataFactura</strong></td><td>date</td><td class="status-ok">✅</td><td><span class="mono">12.03.2026</span></td></tr>
+<tr><td>4</td><td><strong>RestDePlata</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">9786.31</span></td></tr>
+<tr><td>5</td><td><strong>TermenPlata</strong></td><td>date</td><td class="status-ok">✅</td><td><span class="mono">11.05.2026</span></td></tr>
+<tr><td>6</td><td><strong>ValoareScadenta</strong></td><td>decimal</td><td class="status-ok">✅ Analiză 1.732 (sume sau gol)</td><td><span class="mono">232,05</span> sau (gol)</td></tr>
+<tr><td>7</td><td>(gol)</td><td>-</td><td class="status-ok">✅ Analiză 1.732 — mereu gol</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>8</td><td><strong>ValoareFactura</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">9786.31</span></td></tr>
+<tr><td>9</td><td>(gol)</td><td>-</td><td class="status-ok">✅ Analiză 1.732 — mereu gol</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>10</td><td><strong>ObservatiiFactura</strong></td><td>string</td><td class="status-ok">✅ Analiză 1.732 (rar completat)</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>11</td><td><strong>MarcaAgent</strong></td><td>integer</td><td class="status-ok">✅ Analiză 1.732</td><td><span class="mono">1</span>, <span class="mono">3</span>, <span class="mono">4</span></td></tr>
+<tr><td>12</td><td>(gol)</td><td>-</td><td class="status-ok">✅ Analiză 1.732 — mereu gol</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+
+</div>
+</div>
+

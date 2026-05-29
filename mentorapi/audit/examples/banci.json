@@ -1,0 +1,123 @@
+{
+    "success": true,
+    "data": [
+        {
+            "simbol": "BCIT",
+            "denumire": "Banca HVB TIRIAC"
+        },
+        {
+            "simbol": "BRCE",
+            "denumire": "Banca Romana de Comert Exterior"
+        },
+        {
+            "simbol": "BRD",
+            "denumire": "Banca Romana pentru Dezvoltare"
+        },
+        {
+            "simbol": "CV",
+            "denumire": "Conversie valutara"
+        },
+        {
+            "simbol": "BCR",
+            "denumire": "Banca Comerciala Romana"
+        },
+        {
+            "simbol": "BA",
+            "denumire": "Banca Agricola"
+        },
+        {
+            "simbol": "BP",
+            "denumire": "BancPost"
+        },
+        {
+            "simbol": "BK",
+            "denumire": "BankCoop"
+        },
+        {
+            "simbol": "TRA",
+            "denumire": "TRANSILVANIA"
+        },
+        {
+            "simbol": "OTP",
+            "denumire": "OTP BANK"
+        },
+        {
+            "simbol": "UNI",
+            "denumire": "UNICREDIT BANK"
+        },
+        {
+            "simbol": "SAO",
+            "denumire": "SAN PAOLO BANK"
+        },
+        {
+            "simbol": "Trez",
+            "denumire": "Trezoreria Comunala Oradea"
+        },
+        {
+            "simbol": "ROM",
+            "denumire": "MKB ROMEXTERRA BANK ORADEA"
+        },
+        {
+            "simbol": "AL",
+            "denumire": "ALPHA BANK"
+        },
+        {
+            "simbol": "RAI",
+            "denumire": "Raiffeisen Bank"
+        },
+        {
+            "simbol": "RBS",
+            "denumire": "RBS"
+        },
+        {
+            "simbol": "CRE",
+            "denumire": "CREDIEUROPE"
+        },
+        {
+            "simbol": "TRA",
+            "denumire": "TRANSILVANIA"
+        },
+        {
+            "simbol": "Volk",
+            "denumire": "VolksbanK Oradea"
+        },
+        {
+            "simbol": "BRMA",
+            "denumire": "EXIM Banca Romaneasca"
+        },
+        {
+            "simbol": "ATE",
+            "denumire": "ATEBANK"
+        },
+        {
+            "simbol": "OTP",
+            "denumire": "OTP"
+        },
+        {
+            "simbol": "LEU",
+            "denumire": "Leumi Banc"
+        },
+        {
+            "simbol": "PIR",
+            "denumire": "PIREUS BANK"
+        },
+        {
+            "simbol": "ING",
+            "denumire": "ING BANK N.V.Amsterdam-Oradea"
+        },
+        {
+            "simbol": "IDEA",
+            "denumire": "IDEA BANK"
+        },
+        {
+            "simbol": "FIRST",
+            "denumire": "FIRST BANK"
+        },
+        {
+            "simbol": "PA",
+            "denumire": "PARIBAS FORTIS"
+        }
+    ],
+    "errors": [],
+    "timestamp": "2026-05-18T10:16:38Z"
+}

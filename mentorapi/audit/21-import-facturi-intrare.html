@@ -1,0 +1,118 @@
+<!-- ==================== IMPORT FACTURI INTRARE ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Import Facturi Intrare — POST /api/import/facturi-intrare</h2>
+<span class="badge badge-ok">TESTAT + MAPAT</span>
+</div>
+<div class="section-body">
+
+<p>Importă facturi de intrare (achiziții/NIR-uri) în WinMentor. Flow: <span class="mono">SetDocsData</span> &rarr; <span class="mono">FactIntrareValida</span> &rarr; <span class="mono">ImportaFactIntrare</span>.</p>
+
+<div class="note note-info">✅ Testat 14 mai 2026 pe firma ERP, luna 5/2026 — factură 99999 importată cu succes. Mapare câmpuri verificată complet: NrNir, DataNir, NrDoc, CodFurnizor, articole cu gestiune per item. Format dedus prin iterare erori WinMentor (5 iterații).</div>
+
+<h3>Parametri query</h3>
+<table>
+<tr><th>Parametru</th><th>Tip</th><th>Descriere</th></tr>
+<tr><td><span class="mono">validateOnly=1</span></td><td>bool</td><td>Doar validează fără import</td></tr>
+</table>
+
+<h3>Request body</h3>
+<pre style="background:#f5f0e8; padding:12px; border-radius:6px; font-size:13px">POST /api/import/facturi-intrare
+{
+  "lines": [
+    "[InfoPachet]",
+    "AnLucru=2026",
+    "LunaLucru=5",
+    "Tipdocument=FACTURA INTRARE",
+    "TotalFacturi=1",
+    "Logon=Master",
+    "",
+    "[Factura_1]",
+    "Operatie=A",
+    "NrDoc=99999",
+    "SerieDoc=AB",
+    "Data=14.05.2026",
+    "DataNir=14.05.2026",
+    "NrNir=99999",
+    "CodFurnizor=728015653",
+    "Moneda=LEI",
+    "TotalArticole=2",
+    "Observatii=Text observatii",
+    "Scadenta=13.06.2026",
+    "",
+    "[Items_1]",
+    "Item_1=5948941006475;Buc;10;12.50;MP;14.05.2026;",
+    "Item_2=9002588723471;Buc;24;6.67;MP;14.05.2026;"
+  ]
+}</pre>
+
+<h3>Secțiunea [InfoPachet]</h3>
+<table>
+<tr><th>Câmp</th><th>Obligatoriu</th><th>Format</th><th>Descriere</th></tr>
+<tr><td><span class="mono">AnLucru</span></td><td>DA</td><td>integer</td><td>Anul de lucru</td></tr>
+<tr><td><span class="mono">LunaLucru</span></td><td>DA</td><td>integer</td><td>Luna de lucru</td></tr>
+<tr><td><span class="mono">Tipdocument</span></td><td>DA</td><td>string</td><td>Fix: <span class="mono">FACTURA INTRARE</span> (obligatoriu, fără el eroare 112)</td></tr>
+<tr><td><span class="mono">TotalFacturi</span></td><td>DA</td><td>integer</td><td>Numărul de facturi din pachet</td></tr>
+<tr><td><span class="mono">Logon</span></td><td>DA</td><td>string</td><td>Fix: <span class="mono">Master</span></td></tr>
+</table>
+
+<h3>Secțiunea [Factura_N]</h3>
+<table>
+<tr><th>Câmp</th><th>Obligatoriu</th><th>Format</th><th>Verificat</th><th>Descriere</th></tr>
+<tr><td><span class="mono">Operatie</span></td><td>DA</td><td>string</td><td class="status-ok">✅</td><td><span class="mono">A</span> = adăugare (eroare 202 dacă lipsește)</td></tr>
+<tr><td><span class="mono">NrDoc</span></td><td>DA</td><td>integer</td><td class="status-ok">✅ → [6]</td><td>Număr factură furnizor</td></tr>
+<tr><td><span class="mono">SerieDoc</span></td><td>NU</td><td>string</td><td class="status-ok">✅</td><td>Serie document</td></tr>
+<tr><td><span class="mono">Data</span></td><td>DA</td><td>dd.mm.yyyy</td><td class="status-ok">✅</td><td>Data facturii</td></tr>
+<tr><td><span class="mono">DataNir</span></td><td>DA</td><td>dd.mm.yyyy</td><td class="status-ok">✅ → [3]</td><td>Data NIR (eroare 225 dacă lipsește)</td></tr>
+<tr><td><span class="mono">NrNir</span></td><td>DA</td><td>integer</td><td class="status-ok">✅ → [2]</td><td>Număr NIR (eroare 227 dacă lipsește)</td></tr>
+<tr><td><span class="mono">CodFurnizor</span></td><td>DA</td><td>string</td><td class="status-ok">✅ → [4],[5]</td><td>Depinde de SetIDPartField</td></tr>
+<tr><td><span class="mono">Moneda</span></td><td>DA</td><td>string</td><td class="status-ok">✅</td><td><span class="mono">LEI</span> sau <span class="mono">EUR</span></td></tr>
+<tr><td><span class="mono">TotalArticole</span></td><td>DA</td><td>integer</td><td class="status-ok">✅</td><td>Nr. linii items</td></tr>
+<tr><td><span class="mono">Observatii</span></td><td>NU</td><td>string</td><td class="status-ok">✅</td><td>Observații document</td></tr>
+<tr><td><span class="mono">Scadenta</span></td><td>NU</td><td>dd.mm.yyyy</td><td class="status-ok">✅</td><td>Data scadență (format dată, nu zile!)</td></tr>
+<tr><td><span class="mono">Agent</span></td><td>NU</td><td>integer</td><td class="status-ok">✅ salvat intern</td><td>Marca agent (NU "MarcaAgent"!). Salvat dar nu apare în GetReceptii</td></tr>
+</table>
+
+<h3>Secțiunea [Items_N] — linii articole</h3>
+<p>Format: <span class="mono">Item_N=CodArticol;UM;Cantitate;Pret;<strong>SimbolGestiune</strong>;Data;</span></p>
+<div class="note"><strong>Diferență față de comenzi furnizori:</strong> Poziția 5 este <strong>SimbolGestiune</strong> (nu Discount). Gestiunea e per item, nu per document.</div>
+<table>
+<tr><th>Câmp</th><th>Poz</th><th>Obligatoriu</th><th>Verificat</th><th>Descriere</th></tr>
+<tr><td><span class="mono">CodArticol</span></td><td>1</td><td>DA</td><td class="status-ok">✅ → [8]</td><td>SKU/EAN (depinde de SetIDArtField)</td></tr>
+<tr><td><span class="mono">UM</span></td><td>2</td><td>DA</td><td class="status-ok">✅ → [11]</td><td>Unitate măsură (eroare 303 dacă nu corespunde)</td></tr>
+<tr><td><span class="mono">Cantitate</span></td><td>3</td><td>DA</td><td class="status-ok">✅ → [12],[13]</td><td>Cantitate (eroare 307 dacă nenumerică)</td></tr>
+<tr><td><span class="mono">Pret</span></td><td>4</td><td>DA</td><td class="status-ok">✅ → [14]</td><td>Preț intrare unitar</td></tr>
+<tr><td><span class="mono">SimbolGestiune</span></td><td>5</td><td>DA</td><td class="status-ok">✅ → [1]</td><td>Gestiunea de recepție (eroare 301 dacă invalid)</td></tr>
+<tr><td><span class="mono">Data</span></td><td>6</td><td>NU</td><td class="status-ok">✅</td><td>Dată per linie</td></tr>
+</table>
+
+<h3>Output GET /api/receptii — verificare import (22 câmpuri)</h3>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Valoare test</th></tr>
+<tr><td>0</td><td>DenGestiune</td><td><span class="mono">Magazin Practic</span></td></tr>
+<tr><td>1</td><td>SimbolGestiune</td><td><span class="mono">MP</span></td></tr>
+<tr><td>2</td><td>NrNIR</td><td><span class="mono">99999</span></td></tr>
+<tr><td>3</td><td>DataNIR</td><td><span class="mono">14.5.2026</span></td></tr>
+<tr><td>4</td><td>DenFurnizor</td><td><span class="mono">TEMAD CO SRL</span> (auto din CodFurnizor)</td></tr>
+<tr><td>5</td><td>CodFurnizor</td><td><span class="mono">728015653</span></td></tr>
+<tr><td>6</td><td>NrFactura</td><td><span class="mono">99999</span></td></tr>
+<tr><td>7</td><td>DataFactura</td><td><span class="mono">14.05.2026</span></td></tr>
+<tr><td>8</td><td>CodArticol</td><td><span class="mono">5948941006475</span></td></tr>
+<tr><td>9</td><td>DenArticol</td><td><span class="mono">BANDA GIPS-CARTON 48MMX90M</span> (auto)</td></tr>
+<tr><td>14</td><td>PretIntrare</td><td><span class="mono">12,5</span></td></tr>
+</table>
+
+<h3>Erori posibile la validare</h3>
+<table>
+<tr><th>Cod</th><th>Mesaj</th><th>Cauză</th></tr>
+<tr><td>112</td><td>Fisierul text nu pare a fi FACTURI INTRARE</td><td>Lipsește <span class="mono">Tipdocument=FACTURA INTRARE</span></td></tr>
+<tr><td>202</td><td>Tip operatie eronat sau neprecizat</td><td>Lipsește <span class="mono">Operatie=A</span></td></tr>
+<tr><td>225</td><td>Data NIR-ului este eronata</td><td>Lipsește/invalid <span class="mono">DataNir</span></td></tr>
+<tr><td>227</td><td>Numar NIR eronat sau inexistent</td><td>Lipsește/invalid <span class="mono">NrNir</span></td></tr>
+<tr><td>301</td><td>Nu gasesc gestiunea cu simbolul precizat</td><td>SimbolGestiune invalid în item</td></tr>
+<tr><td>303</td><td>Articolul facturat la alta UM</td><td>UM nu corespunde nomenclatorului</td></tr>
+<tr><td>307</td><td>Cantitate eronata (nenumerica)</td><td>Câmpurile item sunt deplasate</td></tr>
+</table>
+
+</div>
+</div>

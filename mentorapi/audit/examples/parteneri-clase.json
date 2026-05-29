@@ -1,0 +1,75 @@
+{
+    "success": true,
+    "data": [
+        {
+            "simbol": "...",
+            "denumire": "---- nedefinit ----"
+        },
+        {
+            "simbol": "Special",
+            "denumire": "Relatii speciale"
+        },
+        {
+            "simbol": "PRESCURTARI",
+            "denumire": "PRESCURTARI"
+        },
+        {
+            "simbol": "*SC",
+            "denumire": "SOCIETATI COMERCIALE"
+        },
+        {
+            "simbol": "*PF",
+            "denumire": "PERSOANE FIZICE"
+        },
+        {
+            "simbol": "AS",
+            "denumire": "AS+COMP"
+        },
+        {
+            "simbol": "M",
+            "denumire": "MAGAZIN"
+        },
+        {
+            "simbol": "ANGAJATI",
+            "denumire": "ANGAJATI"
+        },
+        {
+            "simbol": "SRL",
+            "denumire": "SOCIETATI"
+        },
+        {
+            "simbol": "PF VECH",
+            "denumire": "DE STERS"
+        },
+        {
+            "simbol": "PF INACTIVI",
+            "denumire": "INACTIVI"
+        },
+        {
+            "simbol": "A",
+            "denumire": "MAGAZIN"
+        },
+        {
+            "simbol": "SITE",
+            "denumire": "CLIENTI SITE"
+        },
+        {
+            "simbol": "SUC",
+            "denumire": "SUCURI"
+        },
+        {
+            "simbol": " INV",
+            "denumire": "INVENTAR"
+        },
+        {
+            "simbol": "AA HALA",
+            "denumire": "HALA"
+        },
+        {
+            "simbol": "ZZZ",
+            "denumire": "DIVERSE"
+        }
+    ],
+    "errors": [],
+    "timestamp": "2026-05-18T10:16:35Z"
+}

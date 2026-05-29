@@ -1,0 +1,78 @@
+<!-- ==================== IMPORT BONURI CONSUM ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Import Bonuri de Consum — POST /api/import/bonuri-consum</h2>
+<span class="badge badge-ok">TESTAT + MAPAT</span>
+</div>
+<div class="section-body">
+
+<p>Importă bonuri de consum (consum intern materiale) în WinMentor. Flow: <span class="mono">SetDocsData</span> &rarr; <span class="mono">BonuriConsumValide</span> &rarr; <span class="mono">ImportaBonuriConsum</span>.</p>
+
+<div class="note note-info">✅ Testat 14 mai 2026 — bon consum NrDoc=99999, 2 buc PIULITA CU FLANSA M6 din MP → consum CNC. Format dedus prin iterare erori (3 iterații): Tipdocument=BON DE CONSUM, secțiune [Bon_1].</div>
+
+<h3>Request body</h3>
+<pre style="background:#f5f0e8; padding:12px; border-radius:6px; font-size:13px">POST /api/import/bonuri-consum
+{
+  "lines": [
+    "[InfoPachet]",
+    "AnLucru=2026",
+    "LunaLucru=5",
+    "Tipdocument=BON DE CONSUM",
+    "TotalDocumente=1",
+    "TotalBonuri=1",
+    "Logon=Master",
+    "",
+    "[Bon_1]",
+    "Operatie=A",
+    "NrDoc=99999",
+    "Data=14.05.2026",
+    "GestConsum=CNC",
+    "TotalArticole=1",
+    "",
+    "[Items_1]",
+    "Item_1=9007767527987;Buc;2;0.17;MP;14.05.2026;"
+  ]
+}</pre>
+
+<h3>Secțiunea [InfoPachet]</h3>
+<table>
+<tr><th>Câmp</th><th>Obligatoriu</th><th>Format</th><th>Descriere</th></tr>
+<tr><td><span class="mono">Tipdocument</span></td><td>DA</td><td>string</td><td>Fix: <span class="mono">BON DE CONSUM</span> (nu "BON CONSUM", nu "BONURI DE CONSUM"!)</td></tr>
+<tr><td><span class="mono">TotalDocumente</span></td><td>DA</td><td>integer</td><td>Număr bonuri în pachet</td></tr>
+<tr><td><span class="mono">TotalBonuri</span></td><td>DA</td><td>integer</td><td>Idem (ambele necesare)</td></tr>
+<tr><td><span class="mono">AnLucru / LunaLucru / Logon</span></td><td>DA</td><td>-</td><td>Standard</td></tr>
+</table>
+
+<h3>Secțiunea [Bon_N]</h3>
+<div class="note"><strong>Atenție:</strong> Secțiunea e <span class="mono">[Bon_1]</span>, nu [BonConsum_1] sau [Document_1]!</div>
+<table>
+<tr><th>Câmp</th><th>Obligatoriu</th><th>Format</th><th>Verificat</th><th>Descriere</th></tr>
+<tr><td><span class="mono">Operatie</span></td><td>DA</td><td>string</td><td class="status-ok">✅</td><td><span class="mono">A</span> = adăugare</td></tr>
+<tr><td><span class="mono">NrDoc</span></td><td>DA</td><td>integer</td><td class="status-ok">✅</td><td>Număr document</td></tr>
+<tr><td><span class="mono">Data</span></td><td>DA</td><td>dd.mm.yyyy</td><td class="status-ok">✅</td><td>Data bonului</td></tr>
+<tr><td><span class="mono">GestConsum</span></td><td>DA</td><td>string</td><td class="status-ok">✅</td><td>Gestiune destinație consum (ex: CNC)</td></tr>
+<tr><td><span class="mono">TotalArticole</span></td><td>DA</td><td>integer</td><td class="status-ok">✅</td><td>Nr. linii items</td></tr>
+</table>
+
+<h3>Secțiunea [Items_N]</h3>
+<p>Format: <span class="mono">Item_N=CodArticol;UM;Cantitate;Pret;<strong>GestSursa</strong>;Data;</span></p>
+<div class="note">Identic cu transferuri — gestiunea sursă pe item (poz 5), gestiunea consum în header.</div>
+<table>
+<tr><th>Câmp</th><th>Poz</th><th>Obligatoriu</th><th>Verificat</th><th>Descriere</th></tr>
+<tr><td><span class="mono">CodArticol</span></td><td>1</td><td>DA</td><td class="status-ok">✅</td><td>SKU/EAN</td></tr>
+<tr><td><span class="mono">UM</span></td><td>2</td><td>DA</td><td class="status-ok">✅</td><td>Unitate măsură</td></tr>
+<tr><td><span class="mono">Cantitate</span></td><td>3</td><td>DA</td><td class="status-ok">✅</td><td>Cantitate consumată</td></tr>
+<tr><td><span class="mono">Pret</span></td><td>4</td><td>DA</td><td class="status-ok">✅</td><td>Preț</td></tr>
+<tr><td><span class="mono">GestSursa</span></td><td>5</td><td>DA</td><td class="status-ok">✅</td><td>Gestiune sursă (de unde se consumă)</td></tr>
+<tr><td><span class="mono">Data</span></td><td>6</td><td>NU</td><td class="status-ok">✅</td><td>Dată per linie</td></tr>
+</table>
+
+<h3>Erori posibile</h3>
+<table>
+<tr><th>Cod</th><th>Mesaj</th><th>Cauză</th></tr>
+<tr><td>110</td><td>Nu pare a fi BONURI DE CONSUM</td><td>Tipdocument greșit (nu e exact "BON DE CONSUM")</td></tr>
+<tr><td>105</td><td>Nu gasesc in pachet referinte despre documentul</td><td>Secțiunea nu e [Bon_N] (ex: [BonConsum_1] e greșit)</td></tr>
+</table>
+
+</div>
+</div>

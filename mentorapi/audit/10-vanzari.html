@@ -1,0 +1,95 @@
+<!-- ==================== VANZARI ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Vanzari — GET /api/vanzari/ext</h2>
+<span class="badge badge-ok">TESTAT + MAPAT v1.3.0</span>
+</div>
+<div class="section-body">
+<p>Returnează vânzările din luna de lucru curentă. <strong>23 câmpuri</strong> DLL, <strong>18 expuse</strong> în JSON (5 mereu goale, omise cu omitempty).</p>
+<div class="note note-info">Testat: 3.932 înregistrări pe firma MAL2019 + 2.713 pe ERP, luna 5/2026.</div>
+
+<h3>Câmpuri JSON output (v1.3.0)</h3>
+<table>
+<tr><th>Poz</th><th>JSON key</th><th>Tip</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>idPartener</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">(gol sau ID partener)</span></td></tr>
+<tr><td>1</td><td><strong>zi</strong></td><td>integer</td><td class="status-ok">✅</td><td><span class="mono">11</span></td></tr>
+<tr><td>2</td><td><strong>nrFactura</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">166657</span></td></tr>
+<tr><td>3</td><td><strong>codArticol</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">5945752005833</span> (EAN)</td></tr>
+<tr><td>4</td><td><strong>cantitate</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">2</span></td></tr>
+<tr><td>5</td><td><strong>denUM</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">GAL</span>, <span class="mono">Buc</span></td></tr>
+<tr><td>6</td><td><strong>pret</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">184,89</span> (fără TVA)</td></tr>
+<tr><td>7</td><td><strong>denGestiune</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">MP</span></td></tr>
+<tr><td>8</td><td><em>(omis — mereu "0")</em></td><td>-</td><td class="status-ok">✅</td><td>-</td></tr>
+<tr><td>9</td><td><strong>locatieClient</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">SEDIU SOCIAL</span></td></tr>
+<tr><td>10</td><td><strong>marcaAgent</strong></td><td>integer</td><td class="status-ok">✅</td><td><span class="mono">1</span>, <span class="mono">19</span></td></tr>
+<tr><td>11</td><td><strong>codFiscal</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">RO5707909</span> sau (gol)</td></tr>
+<tr><td>12</td><td><em>(omis — mereu "0")</em></td><td>-</td><td class="status-ok">✅</td><td>-</td></tr>
+<tr><td>13</td><td><strong>adresa</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Nr.23</span></td></tr>
+<tr><td>14</td><td><em>(omis — mereu "0")</em></td><td>-</td><td class="status-ok">✅</td><td>-</td></tr>
+<tr><td>15</td><td><strong>codPostal</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">410000</span> sau (gol)</td></tr>
+<tr><td>16</td><td><strong>clasaArticol</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">1</span></td></tr>
+<tr><td>17</td><td><strong>tipDocument</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">=</span> (normal), <span class="mono">S</span> (storno)</td></tr>
+<tr><td>18</td><td><strong>pozitieDocument</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">2</span>, <span class="mono">0</span></td></tr>
+<tr><td>19</td><td><strong>prefixCarnet</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">MAL</span> sau (gol)</td></tr>
+<tr><td>20</td><td><strong>moneda</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Lei</span></td></tr>
+<tr><td>21-22</td><td><em>(omise — mereu goale)</em></td><td>-</td><td class="status-ok">✅</td><td>-</td></tr>
+</table>
+<div class="note note-info">
+<strong>v1.3.0:</strong> Câmpuri redenumite: cant→cantitate, denGest→denGestiune. Adăugate: tipDocument, pozitieDocument, prefixCarnet, moneda.
+</div>
+</div>
+</div>
+
+<!-- ==================== VANZARI EMULARE ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Vanzari Emulare — GET /api/vanzari/emulare</h2>
+<span class="badge badge-ok">TESTAT + MAPAT v1.3.0</span>
+</div>
+<div class="section-body">
+<p>Emulare casă de marcat — toate bonurile din luna curentă. <strong>21 câmpuri</strong> DLL, toate expuse (campX cu omitempty pt cele necunoscute).</p>
+<div class="note note-info">Testat: 4.266 înregistrări pe firma MAL2019, 2.858 pe ERP, luna 5/2026.</div>
+
+<h3>Câmpuri JSON output</h3>
+<table>
+<tr><th>Poz</th><th>JSON key</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>idBon</strong></td><td class="status-ok">✅</td><td><span class="mono">654605</span></td></tr>
+<tr><td>1</td><td><strong>pozitie</strong> (nr. bon zilnic)</td><td class="status-ok">✅</td><td><span class="mono">96</span></td></tr>
+<tr><td>2</td><td><strong>data</strong></td><td class="status-ok">✅</td><td><span class="mono">19.05.2026</span></td></tr>
+<tr><td>3</td><td><strong>valoare</strong> (total bon)</td><td class="status-ok">✅</td><td><span class="mono">22</span></td></tr>
+<tr><td>4-9</td><td><strong>camp4..camp9</strong></td><td class="status-ok">✅ mereu goale</td><td>(omitempty)</td></tr>
+<tr><td>10</td><td><strong>numeClient</strong></td><td class="status-ok">✅</td><td><span class="mono">(spațiu = retail)</span></td></tr>
+<tr><td>11</td><td><strong>cantitate</strong> (linii pe bon)</td><td class="status-ok">✅</td><td><span class="mono">1</span></td></tr>
+<tr><td>12</td><td><strong>denArticol</strong></td><td class="status-ok">✅</td><td><span class="mono">TRAFALET M 18 CM VESTAN</span></td></tr>
+<tr><td>13</td><td><strong>codArticol</strong> (EAN)</td><td class="status-ok">✅</td><td><span class="mono">5905061036768</span></td></tr>
+<tr><td>14</td><td><strong>codExtern</strong> (cod furnizor)</td><td class="status-ok">✅</td><td><span class="mono">0130-544018</span></td></tr>
+<tr><td>15</td><td><strong>nrComanda</strong></td><td class="status-ok">✅</td><td><span class="mono">1</span></td></tr>
+<tr><td>16</td><td><strong>cantVanduta</strong></td><td class="status-ok">✅</td><td><span class="mono">2</span></td></tr>
+<tr><td>17</td><td><strong>pret</strong> (unitar)</td><td class="status-ok">✅</td><td><span class="mono">11</span></td></tr>
+<tr><td>18</td><td><strong>denGestiune</strong></td><td class="status-ok">✅</td><td><span class="mono">Magazin Practic</span></td></tr>
+<tr><td>19</td><td><strong>simbolGestiune</strong></td><td class="status-ok">✅</td><td><span class="mono">MP</span></td></tr>
+<tr><td>20</td><td><strong>camp20</strong></td><td class="status-ok">✅ mereu gol</td><td>(omitempty)</td></tr>
+</table>
+</div>
+</div>
+
+<!-- ==================== BONURI ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Bonuri — GET /api/bonuri/info</h2>
+<span class="badge badge-ok">FIX v1.3.0</span>
+</div>
+<div class="section-body">
+<p>Lista bonurilor pe o zi. Parametru: <code>?zi=19</code></p>
+<div class="note note-danger">
+<strong>Fix v1.3.0:</strong> Câmpul [1] era etichetat "valoare" dar conținea data. Corectat: nrBon, data, camp2, camp3.
+</div>
+<table>
+<tr><th>Poz</th><th>JSON key</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>nrBon</strong></td><td class="status-ok">✅</td><td><span class="mono">96</span></td></tr>
+<tr><td>1</td><td><strong>data</strong></td><td class="status-ok">✅</td><td><span class="mono">19.05.2026</span></td></tr>
+<tr><td>2</td><td><strong>camp2</strong></td><td class="status-ok">✅ mereu gol</td><td>(omitempty)</td></tr>
+<tr><td>3</td><td><strong>camp3</strong></td><td class="status-ok">✅ mereu gol</td><td>(omitempty)</td></tr>
+</table>
+</div>
+</div>

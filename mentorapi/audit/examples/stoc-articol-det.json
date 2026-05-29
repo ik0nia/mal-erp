@@ -1,0 +1,21 @@
+{
+    "success": true,
+    "data": [
+        {
+            "simbolGestiune": "MP",
+            "dataIntrare": "18.05.2026",
+            "pretAchizitie": "4",
+            "stoc": "20",
+            "dataExpirare": "30.12.1899",
+            "denFurnizor": "MODERN COLOR SRL",
+            "denArticol": "ZZZBEC 100 WATT",
+            "denUM": "Buc",
+            "pretVanzare": "1,5",
+            "cont": "371.02",
+            "operat": "DA",
+            "cotaTVA": "20"
+        }
+    ],
+    "errors": [],
+    "timestamp": "2026-05-18T10:16:38Z"
+}

@@ -1,0 +1,23 @@
+{
+    "success": true,
+    "data": [
+        {
+            "denumire": "----nedefinit-----",
+            "simbol": "?"
+        },
+        {
+            "denumire": "Lei",
+            "simbol": "lei"
+        },
+        {
+            "denumire": "EURO",
+            "simbol": "EUR"
+        },
+        {
+            "denumire": "RON",
+            "simbol": "RON"
+        }
+    ],
+    "errors": [],
+    "timestamp": "2026-05-18T10:16:38Z"
+}

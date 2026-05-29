@@ -1,0 +1,43 @@
+{
+  "success": true,
+  "data": [
+    {
+      "idPartener": "0000000000055",
+      "tipDocument": "Factura",
+      "nrDocument": "106782",
+      "dataDocument": "21.06.2016",
+      "restDePlata": "98,5",
+      "dataScadenta": "30.12.1899",
+      "sediu": "1",
+      "marcaAgent": "12",
+      "valoareDocument": "98,5",
+      "moneda": "Lei"
+    },
+    {
+      "idPartener": "0000000000055",
+      "tipDocument": "Factura",
+      "nrDocument": "118839",
+      "dataDocument": "20.12.2016",
+      "restDePlata": "-91,06",
+      "dataScadenta": "30.12.1899",
+      "sediu": "1",
+      "marcaAgent": "12",
+      "valoareDocument": "-91,06",
+      "moneda": "Lei"
+    },
+    {
+      "idPartener": "0000000000055",
+      "tipDocument": "Factura",
+      "nrDocument": "115172",
+      "dataDocument": "15.10.2016",
+      "restDePlata": "3,88",
+      "dataScadenta": "30.12.1899",
+      "sediu": "1",
+      "marcaAgent": "12",
+      "valoareDocument": "3,88",
+      "moneda": "Lei"
+    }
+  ],
+  "errors": [],
+  "timestamp": "2026-05-18T10:16:46Z"
+}

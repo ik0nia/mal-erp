@@ -1,0 +1,37 @@
+{
+    "success": true,
+    "data": [
+        {
+            "simbol": "MAL",
+            "tipDocument": "FACT",
+            "denumire": "Factura fiscala"
+        },
+        {
+            "simbol": "MAL",
+            "tipDocument": "FACT",
+            "denumire": "FACTURA"
+        },
+        {
+            "simbol": "MAL",
+            "tipDocument": "FACT",
+            "denumire": "FACTURA"
+        },
+        {
+            "simbol": "MAL",
+            "tipDocument": "FACT",
+            "denumire": "Factura fiscala"
+        },
+        {
+            "simbol": "MAL",
+            "tipDocument": "FACT",
+            "denumire": "Factura fiscala"
+        },
+        {
+            "simbol": "NT",
+            "tipDocument": "NT",
+            "denumire": "MARFA DIN PRODUCTIE"
+        }
+    ],
+    "errors": [],
+    "timestamp": "2026-05-18T10:16:43Z"
+}

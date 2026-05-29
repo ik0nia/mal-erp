@@ -1,0 +1,85 @@
+<!-- ==================== IMPORT FACTURI IESIRE ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Import Facturi Ieșire — POST /api/import/facturi-iesire</h2>
+<span class="badge badge-ok">TESTAT + MAPAT</span>
+</div>
+<div class="section-body">
+
+<p>Importă facturi de ieșire (vânzări) în WinMentor. Flow: <span class="mono">SetDocsData</span> &rarr; <span class="mono">DateValide</span> &rarr; <span class="mono">ImportaFacturi</span>.</p>
+
+<div class="note note-info">✅ Testat 14 mai 2026 — 2 facturi importate (99999 minim, 99998 cu 2 articole + parametri extra). Parametri opționali verificați: Scadenta ✅, Observatii ✅, TVAInclus ✅, MarcaAgent (acceptat dar nu apare în output), Locatie (acceptat dar nu apare). ValoareFactura calculată automat de WinMentor (cu TVA).</div>
+
+<h3>Request body</h3>
+<pre style="background:#f5f0e8; padding:12px; border-radius:6px; font-size:13px">POST /api/import/facturi-iesire
+{
+  "lines": [
+    "[InfoPachet]",
+    "AnLucru=2026",
+    "LunaLucru=5",
+    "Tipdocument=FACTURA IESIRE",
+    "TotalFacturi=1",
+    "Logon=Master",
+    "",
+    "[Factura_1]",
+    "Operatie=A",
+    "NrDoc=99999",
+    "SimbolCarnet=MAL",
+    "Data=14.05.2026",
+    "CodClient=728018497",
+    "Moneda=LEI",
+    "TotalArticole=1",
+    "",
+    "[Items_1]",
+    "Item_1=9007767510699;BUC;4;45.45;MP;"
+  ]
+}</pre>
+
+<h3>Secțiunea [InfoPachet]</h3>
+<table>
+<tr><th>Câmp</th><th>Obligatoriu</th><th>Format</th><th>Descriere</th></tr>
+<tr><td><span class="mono">Tipdocument</span></td><td>DA</td><td>string</td><td>Fix: <span class="mono">FACTURA IESIRE</span> (eroare 102 dacă lipsește)</td></tr>
+<tr><td><span class="mono">TotalFacturi</span></td><td>DA</td><td>integer</td><td>Număr facturi în pachet</td></tr>
+<tr><td><span class="mono">AnLucru / LunaLucru / Logon</span></td><td>DA</td><td>-</td><td>Standard</td></tr>
+</table>
+
+<h3>Secțiunea [Factura_N]</h3>
+<table>
+<tr><th>Câmp</th><th>Obligatoriu</th><th>Format</th><th>Verificat</th><th>Descriere</th></tr>
+<tr><td><span class="mono">Operatie</span></td><td>DA</td><td>string</td><td class="status-ok">✅</td><td><span class="mono">A</span> = adăugare</td></tr>
+<tr><td><span class="mono">NrDoc</span></td><td>DA</td><td>integer</td><td class="status-ok">✅ → [2]</td><td>Număr factură</td></tr>
+<tr><td><span class="mono">SimbolCarnet</span></td><td>DA</td><td>string</td><td class="status-ok">✅ → [14]</td><td>Carnet documente (ex: <span class="mono">MAL</span>)</td></tr>
+<tr><td><span class="mono">Data</span></td><td>DA</td><td>dd.mm.yyyy</td><td class="status-ok">✅ → [1]</td><td>Data facturii</td></tr>
+<tr><td><span class="mono">CodClient</span></td><td>DA</td><td>string</td><td class="status-ok">✅ → [0]</td><td>Cod partener client (depinde de SetIDPartField)</td></tr>
+<tr><td><span class="mono">Moneda</span></td><td>DA</td><td>string</td><td class="status-ok">✅</td><td><span class="mono">LEI</span> sau <span class="mono">EUR</span></td></tr>
+<tr><td><span class="mono">TotalArticole</span></td><td>DA</td><td>integer</td><td class="status-ok">✅</td><td>Nr. linii items</td></tr>
+<tr><td><span class="mono">Scadenta</span></td><td>NU</td><td>dd.mm.yyyy</td><td class="status-ok">✅ → [10]</td><td>Data scadență (format dată, nu zile!)</td></tr>
+<tr><td><span class="mono">Observatii</span></td><td>NU</td><td>string</td><td class="status-ok">✅ → [23]</td><td>Observații factură</td></tr>
+<tr><td><span class="mono">TVAInclus</span></td><td>NU</td><td>DA/NU</td><td class="status-ok">✅ → [11]</td><td>Preț cu TVA inclus</td></tr>
+<tr><td><span class="mono">Agent</span></td><td>NU</td><td>integer</td><td class="status-ok">✅ → [8]</td><td>Marca agent (NU "MarcaAgent"!). Ex: <span class="mono">Agent=7</span></td></tr>
+<tr><td><span class="mono">Locatie</span></td><td>NU</td><td>integer</td><td class="status-ok">✅ → [20],[21],[22]</td><td>Index sediu partener (1, 2...). Auto-completează adresa + localitatea</td></tr>
+</table>
+
+<h3>Secțiunea [Items_N] — linii articole</h3>
+<p>Format: <span class="mono">Item_N=CodArticol;UM;Cantitate;Pret;<strong>Gestiune</strong>;</span></p>
+<div class="note"><strong>Diferență față de facturi intrare/comenzi:</strong> Doar 5 câmpuri per item (fără discount, fără dată). Discount pe poz 5 dă eroare 311 + necesită cont discount în constante WinMentor.</div>
+<table>
+<tr><th>Câmp</th><th>Poz</th><th>Obligatoriu</th><th>Verificat</th><th>Descriere</th></tr>
+<tr><td><span class="mono">CodArticol</span></td><td>1</td><td>DA</td><td class="status-ok">✅ → [3]</td><td>SKU/EAN</td></tr>
+<tr><td><span class="mono">UM</span></td><td>2</td><td>DA</td><td class="status-ok">✅ → [6]</td><td>Unitate măsură</td></tr>
+<tr><td><span class="mono">Cantitate</span></td><td>3</td><td>DA</td><td class="status-ok">✅ → [5]</td><td>Cantitate vândută</td></tr>
+<tr><td><span class="mono">Pret</span></td><td>4</td><td>DA</td><td class="status-ok">✅ → [7]</td><td>Preț vânzare unitar</td></tr>
+<tr><td><span class="mono">Gestiune</span></td><td>DA</td><td>string</td><td class="status-ok">✅</td><td>Simbol gestiune sursă (eroare 301 dacă invalid)</td></tr>
+</table>
+
+<h3>Erori posibile</h3>
+<table>
+<tr><th>Cod</th><th>Mesaj</th><th>Cauză</th></tr>
+<tr><td>102</td><td>Nu pare a fi FACTURI IESIRE</td><td>Lipsește <span class="mono">Tipdocument=FACTURA IESIRE</span></td></tr>
+<tr><td>301</td><td>Nu gasesc gestiunea</td><td>Gestiune invalidă pe item</td></tr>
+<tr><td>311</td><td>Discount eronat</td><td>Nu pune discount pe poz 5 — pune gestiune</td></tr>
+<tr><td>008</td><td>Cont discount lipsă</td><td>Apare dacă ai pus discount fără cont configurat</td></tr>
+</table>
+
+</div>
+</div>

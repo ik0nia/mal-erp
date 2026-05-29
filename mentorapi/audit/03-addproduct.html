@@ -1,0 +1,42 @@
+<!-- ==================== ADDPRODUCT ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Articole — POST /api/produse/add (AddProduct)</h2>
+<span class="badge badge-ok">TESTAT OK</span>
+</div>
+<div class="section-body">
+
+<p>Adaugă un produs nou în nomenclator. <strong>19 câmpuri</strong> separate prin ";".</p>
+<div class="note">Prerequisite: <span class="mono">POST /api/config/id-part-field {"fieldName":"CodIntern"}</span></div>
+<div class="note note-info">Testat: TESTAPI002 și TESTAPI003 create cu succes pe firma ERP.</div>
+
+<h3>Input: JSON body <span class="mono">{"info": "camp0;camp1;...;camp18"}</span></h3>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Obligatoriu</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>CodExtern</strong></td><td>Da</td><td class="status-ok">✅</td><td><span class="mono">TESTAPI003</span></td></tr>
+<tr><td>1</td><td><strong>Denumire</strong></td><td>Da</td><td class="status-ok">✅</td><td><span class="mono">Produs Test v3</span></td></tr>
+<tr><td>2</td><td>(necunoscut)</td><td>Nu</td><td class="status-fail">❌ Text provoacă eșec</td><td>Lăsați gol</td></tr>
+<tr><td>3</td><td><strong>IDProducator</strong></td><td>Nu</td><td class="status-ok">✅</td><td><span class="mono">0</span> (fără producător)</td></tr>
+<tr><td>4</td><td><strong>UM</strong></td><td>Da</td><td class="status-ok">✅</td><td><span class="mono">Buc</span></td></tr>
+<tr><td>5</td><td><strong>TipSerie</strong></td><td>Nu</td><td class="status-unknown">⚠️ Neverificabil vizibil</td><td><span class="mono">0</span> (fără serie)</td></tr>
+<tr><td>6</td><td><strong>CotaTVA</strong></td><td>Da</td><td class="status-ok">✅</td><td><span class="mono">21</span></td></tr>
+<tr><td>7</td><td>(necunoscut)</td><td>Nu</td><td class="status-fail">❌ Text provoacă eșec</td><td>Lăsați gol</td></tr>
+<tr><td>8</td><td>(necunoscut)</td><td>Nu</td><td class="status-fail">❌ Text provoacă eșec</td><td>Lăsați gol</td></tr>
+<tr><td>9</td><td><strong>CodExternAlt</strong></td><td>Nu</td><td class="status-ok">✅</td><td><span class="mono">TESTAPI003</span></td></tr>
+<tr><td>10-12</td><td>(necunoscute)</td><td>Nu</td><td class="status-fail">❌ Text provoacă eșec</td><td>Lăsați gol</td></tr>
+<tr><td>13</td><td><strong>Masa</strong></td><td>Nu</td><td class="status-fail">❌ Trimis 0.75, nu s-a salvat</td><td>Posibil format greșit</td></tr>
+<tr><td>14-17</td><td>(necunoscute)</td><td>Nu</td><td class="status-fail">❌ Text provoacă eșec</td><td>Lăsați gol</td></tr>
+<tr><td>18</td><td><strong>Flag</strong></td><td>Nu</td><td class="status-unknown">⚠️ Neverificabil vizibil</td><td><span class="mono">D</span></td></tr>
+</table>
+
+<div class="note note-danger">
+<strong>Important:</strong> Completarea câmpurilor necunoscute (2, 7, 8, 10-12, 14-17) cu text provoacă result=0 (eșec silențios).
+Lăsați-le goale (;;).
+</div>
+
+<h3>Format minim funcțional confirmat:</h3>
+<p><span class="mono">{"info": "COD;Denumire;;0;Buc;0;21;;;COD;;;;;;;;;;;;"}</span></p>
+
+</div>
+</div>
+

@@ -1,0 +1,46 @@
+{
+  "success": true,
+  "data": [
+    {
+      "idArticol": "9007912539582",
+      "denumire": "CLEMA COAMA TRASA TERACOT -GUNN",
+      "denUM": "Buc",
+      "idProducator": "722364383",
+      "denumireProducator": "GUNN",
+      "tipSerie": "0",
+      "dataAdaugarii": "27.06.2008 00:00:00",
+      "dataUltimeiModificari": "09.01.2026 14:43:35",
+      "tipUM": "0",
+      "codInternWinMentor": "30",
+      "simbolClasa": "1"
+    },
+    {
+      "idArticol": "3800157631976",
+      "denumire": "BEC LED 11W V-TAC E27 4000K A60 NEUTRU",
+      "denUM": "Buc",
+      "idProducator": "0000000004770",
+      "denumireProducator": "ELECTRO",
+      "tipSerie": "0",
+      "dataAdaugarii": "27.06.2008 00:00:00",
+      "dataUltimeiModificari": "12.01.2026 11:16:34",
+      "tipUM": "0",
+      "codInternWinMentor": "31",
+      "simbolClasa": "2"
+    },
+    {
+      "idArticol": "5949027057251",
+      "denumire": "BEC HALOGEN MIC 28W DULIE MICA",
+      "denUM": "Buc",
+      "idProducator": "0000000024297",
+      "denumireProducator": "ELBI",
+      "tipSerie": "0",
+      "dataAdaugarii": "27.06.2008 00:00:00",
+      "dataUltimeiModificari": "12.01.2026 11:13:31",
+      "tipUM": "0",
+      "codInternWinMentor": "38",
+      "simbolClasa": "1"
+    }
+  ],
+  "errors": [],
+  "timestamp": "2026-05-18T10:16:33Z"
+}

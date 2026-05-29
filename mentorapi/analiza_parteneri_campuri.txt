@@ -1,0 +1,141 @@
+Total parteneri: 10000
+
+=== PARTENERI [29] — 48 valori distincte ===
+    9950x  (gol)
+       2x  ~
+       2x  0741065820~0741013071
+       2x  0742 267 444
+       1x  0735527473~
+       1x  0722799112
+       1x  0757061690
+       1x  0723125936
+  Exemple:
+    ENDLES SRL                     → 0735527473~
+    CIDAN SRL                      → 0722799112
+    PRIMARIA TOBOLIU               → 0757061690
+    ASOCIATIA DE TURISM APUSENI    → 0723125936
+    DAN MESTER GAL                 → 0747660653
+
+=== PARTENERI [33] — 16 valori distincte ===
+    9870x  (gol)
+      91x  ~
+      14x  ~~
+       8x  ~~~~
+       5x  ~~~
+       2x  ~~~~~~~~~~~~~~~~~~~~~~~~~~
+       1x  08.10.2009
+       1x  ~~~~~~~~~~~~
+  Exemple:
+    SECARA CALIN                   → 08.10.2009
+    LENCAR HOREA CRISTIAN          → ~~~~
+    NEW DESIGN CONSTRUCT SRL       → ~~~~~~~~~~~~
+    NEAG EMILIAN                   → 19.06.2013
+    DEME MACARALE S.R.L.           → ~~~~
+
+=== PARTENERI [37] — 3 valori distincte ===
+    9990x  NU
+       7x  DA
+       3x  ~
+
+=== PARTENERI [38] — 3 valori distincte ===
+    9996x  NU
+       3x  DA
+       1x  ~
+
+=== PARTENERI [39] — 14 valori distincte ===
+    9870x  (gol)
+      91x  ~
+      14x  ~~
+       8x  ~~~~
+       5x  ~~~
+       3x  NU
+       2x  ~~~~~~~~~~~~~~~~~~~~~~~~~~
+       1x  ~~~~~~~~~~~~
+  Exemple:
+    LENCAR HOREA CRISTIAN          → ~~~~
+    NEW DESIGN CONSTRUCT SRL       → ~~~~~~~~~~~~
+    DEME MACARALE S.R.L.           → ~~~~
+    DEMCON DESIGN SRL              → ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    CONCEPT CASA MEA SRL           → ~~~~~
+
+=== PARTENERI [40] — 84 valori distincte ===
+    6802x  (gol)
+    1791x  ZH
+    1205x  XH
+      16x  SX
+      12x  SM
+      10x  CJ
+       7x  KX
+       6x  TZ
+  Exemple:
+    GAVRIS DOINA                   → XH
+    GRIGOROSCUTA MANUEL            → XH
+    MIHAI LAZAR                    → ZH
+    POP MARIA                      → XH
+    OPRE GABRIEL                   → XH
+
+=== PARTENERI [41] — 3139 valori distincte ===
+    6801x  (gol)
+       3x  696274
+       3x  267821
+       2x  312186
+       2x  331372
+       2x  469003
+       2x  113707
+       2x  460184
+  Exemple:
+    GAVRIS DOINA                   → 470942
+    GRIGOROSCUTA MANUEL            → 467799
+    MIHAI LAZAR                    → 060121
+    POP MARIA                      → 918357
+    OPRE GABRIEL                   → 062753
+
+=== PARTENERI [43] — 14 valori distincte ===
+    9871x  (gol)
+      91x  ~
+      14x  ~~
+       8x  ~~~~
+       5x  ~~~
+       2x  RO
+       2x  ~~~~~~~~~~~~~~~~~~~~~~~~~~
+       1x  ~~~~~~~~~~~~
+  Exemple:
+    SECARA CALIN                   → RO
+    LENCAR HOREA CRISTIAN          → ~~~~
+    NEW DESIGN CONSTRUCT SRL       → ~~~~~~~~~~~~
+    DEME MACARALE S.R.L.           → ~~~~
+    DEMCON DESIGN SRL              → ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=== PARTENERI [44] — 3 valori distincte ===
+    9997x  NU
+       2x  (gol)
+       1x  RO
+  Exemple:
+    NEAG EMILIAN                   → RO
+
+=== PARTENERI [45] — 4 valori distincte ===
+    8379x  0
+    1618x  (gol)
+       2x  NU
+       1x  5
+  Exemple:
+    KAON CONCEPT S.R.L.            → 5
+
+=== PARTENERI [46] — 5 valori distincte ===
+    8380x  0
+    1617x  (gol)
+       1x  NU
+       1x  2
+       1x  1
+  Exemple:
+    KAON CONCEPT S.R.L.            → 2
+    XMIL TRADE S.R.L.              → 1
+
+=== PARTENERI [47] — 2 valori distincte ===
+    8381x  0
+    1619x  (gol)
+
+=== PARTENERI [48] — 2 valori distincte ===
+    9998x  (gol)
+       2x  0
+

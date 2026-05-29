@@ -1,0 +1,90 @@
+<!-- ==================== IMPORT TRANSFERURI ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Import Transferuri — POST /api/import/transferuri</h2>
+<span class="badge badge-ok">TESTAT + MAPAT</span>
+</div>
+<div class="section-body">
+
+<p>Importă transferuri între gestiuni (mișcări interne fără factură). Flow: <span class="mono">SetDocsData</span> &rarr; <span class="mono">TransferuriValide</span> &rarr; <span class="mono">ImportaTransferuri</span>.</p>
+
+<div class="note note-info">✅ Testat 14 mai 2026 pe firma ERP — transfer NrDoc=99999, 5 buc PIULITA CU FLANSA M6 din MP → CNC. Validate + import OK. Mapare verificată în GET /api/transferuri.</div>
+
+<h3>Request body</h3>
+<pre style="background:#f5f0e8; padding:12px; border-radius:6px; font-size:13px">POST /api/import/transferuri
+{
+  "lines": [
+    "[InfoPachet]",
+    "AnLucru=2026",
+    "LunaLucru=5",
+    "Tipdocument=TRANSFER",
+    "TotalTransferuri=1",
+    "Logon=Master",
+    "",
+    "[Transfer_1]",
+    "Operatie=A",
+    "NrDoc=99999",
+    "Data=14.05.2026",
+    "GestDest=CNC",
+    "TotalArticole=1",
+    "",
+    "[Items_1]",
+    "Item_1=9007767527987;Buc;5;0.17;MP;14.05.2026;"
+  ]
+}</pre>
+
+<h3>Secțiunea [InfoPachet]</h3>
+<table>
+<tr><th>Câmp</th><th>Obligatoriu</th><th>Format</th><th>Descriere</th></tr>
+<tr><td><span class="mono">AnLucru</span></td><td>DA</td><td>integer</td><td>Anul de lucru</td></tr>
+<tr><td><span class="mono">LunaLucru</span></td><td>DA</td><td>integer</td><td>Luna de lucru</td></tr>
+<tr><td><span class="mono">Tipdocument</span></td><td>DA</td><td>string</td><td>Fix: <span class="mono">TRANSFER</span></td></tr>
+<tr><td><span class="mono">TotalTransferuri</span></td><td>DA</td><td>integer</td><td>Numărul de transferuri din pachet</td></tr>
+<tr><td><span class="mono">Logon</span></td><td>DA</td><td>string</td><td>Fix: <span class="mono">Master</span></td></tr>
+</table>
+
+<h3>Secțiunea [Transfer_N]</h3>
+<table>
+<tr><th>Câmp</th><th>Obligatoriu</th><th>Format</th><th>Verificat</th><th>Descriere</th></tr>
+<tr><td><span class="mono">Operatie</span></td><td>DA</td><td>string</td><td class="status-ok">✅</td><td><span class="mono">A</span> = adăugare</td></tr>
+<tr><td><span class="mono">NrDoc</span></td><td>DA</td><td>integer</td><td class="status-ok">✅ → [2]</td><td>Număr document transfer</td></tr>
+<tr><td><span class="mono">Data</span></td><td>DA</td><td>dd.mm.yyyy</td><td class="status-ok">✅ → [3]</td><td>Data transferului</td></tr>
+<tr><td><span class="mono">GestDest</span></td><td>DA</td><td>string</td><td class="status-ok">✅ → [1]</td><td>Simbol gestiune destinație</td></tr>
+<tr><td><span class="mono">TotalArticole</span></td><td>DA</td><td>integer</td><td class="status-ok">✅</td><td>Nr. linii items</td></tr>
+<tr><td><span class="mono">Agent</span></td><td>NU</td><td>integer</td><td class="status-ok">✅ salvat intern</td><td>Marca agent. Salvat dar nu apare în GetTransferuri</td></tr>
+</table>
+
+<h3>Secțiunea [Items_N] — linii articole</h3>
+<p>Format: <span class="mono">Item_N=CodArticol;UM;Cantitate;Pret;<strong>GestSursa</strong>;Data;</span></p>
+<div class="note"><strong>Gestiune sursă per item</strong> (poz 5) — gestiunea destinație e pe header (<span class="mono">GestDest</span>). Identic cu facturi intrare.</div>
+<table>
+<tr><th>Câmp</th><th>Poz</th><th>Obligatoriu</th><th>Verificat</th><th>Descriere</th></tr>
+<tr><td><span class="mono">CodArticol</span></td><td>1</td><td>DA</td><td class="status-ok">✅ → [4]</td><td>SKU/EAN</td></tr>
+<tr><td><span class="mono">UM</span></td><td>2</td><td>DA</td><td class="status-ok">✅</td><td>Unitate măsură</td></tr>
+<tr><td><span class="mono">Cantitate</span></td><td>3</td><td>DA</td><td class="status-ok">✅ → [6]</td><td>Cantitate transferată</td></tr>
+<tr><td><span class="mono">Pret</span></td><td>4</td><td>DA</td><td class="status-ok">✅ → [7],[8]</td><td>Preț (setat automat pe PretV și PretI)</td></tr>
+<tr><td><span class="mono">GestSursa</span></td><td>5</td><td>DA</td><td class="status-ok">✅ → [0]</td><td>Simbol gestiune sursă (eroare 301 dacă invalid)</td></tr>
+<tr><td><span class="mono">Data</span></td><td>6</td><td>NU</td><td class="status-ok">✅</td><td>Dată per linie</td></tr>
+</table>
+
+<h3>Output GET /api/transferuri — 15 câmpuri</h3>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Valoare test</th></tr>
+<tr><td>0</td><td><strong>GestSursa</strong></td><td><span class="mono">MP</span></td></tr>
+<tr><td>1</td><td><strong>GestDest</strong></td><td><span class="mono">CNC</span></td></tr>
+<tr><td>2</td><td><strong>NrDoc</strong></td><td><span class="mono">99999</span></td></tr>
+<tr><td>3</td><td><strong>Data</strong></td><td><span class="mono">14.5.2026</span></td></tr>
+<tr><td>4</td><td><strong>CodArticol</strong></td><td><span class="mono">9007767527987</span></td></tr>
+<tr><td>5</td><td><strong>DenArticol</strong></td><td><span class="mono">PIULITA CU FLANSA M6</span> (auto)</td></tr>
+<tr><td>6</td><td><strong>Cantitate</strong></td><td><span class="mono">5</span></td></tr>
+<tr><td>7</td><td><strong>PretVanzare</strong></td><td><span class="mono">0,17</span></td></tr>
+<tr><td>8</td><td><strong>PretIntrare</strong></td><td><span class="mono">0,17</span></td></tr>
+<tr><td>9</td><td><strong>ContSursa</strong></td><td><span class="mono">371.02</span> (auto)</td></tr>
+<tr><td>10</td><td><strong>ContDest</strong></td><td><span class="mono">371.02</span> (auto)</td></tr>
+<tr><td>11</td><td><strong>Camp11</strong></td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>12</td><td><strong>Valoare</strong></td><td><span class="mono">0,85</span> (=5×0,17)</td></tr>
+<tr><td>13-14</td><td>-</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+
+</div>
+</div>

@@ -1,0 +1,68 @@
+<!-- ==================== ARTICOLE GET ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Articole — GET /api/articole (Nomenclator)</h2>
+<span class="badge badge-ok">TESTAT OK</span>
+</div>
+<div class="section-body">
+
+<p>Returnează nomenclatorul de articole. Paginat, cu search. Fiecare articol e un string cu <strong>40 câmpuri</strong> separate prin ";".</p>
+<div class="note note-info">Testat: 15.855 articole pe firma ERP. Documentația oficială zice 24 câmpuri — realitatea e 40.</div>
+
+<h3>Parametri input (query string)</h3>
+<table>
+<tr><th>Parametru</th><th>Tip</th><th>Default</th><th>Descriere</th></tr>
+<tr><td>page</td><td>integer</td><td>1</td><td>Pagina curentă</td></tr>
+<tr><td>pageSize</td><td>integer</td><td>100 (max 10000)</td><td>Articole per pagină</td></tr>
+<tr><td>search</td><td>string</td><td>-</td><td>Caută în cod și denumire</td></tr>
+<tr><td>refresh</td><td>boolean</td><td>false</td><td>Ignoră cache</td></tr>
+</table>
+
+<h3>Câmpuri output — 40 câmpuri per articol (separator ";")</h3>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Confirmat</th><th>Exemplu real</th></tr>
+<tr><td>0</td><td><strong>CodExtern</strong></td><td>string</td><td class="status-ok">✅ Doc + test</td><td><span class="mono">3800157631976</span></td></tr>
+<tr><td>1</td><td><strong>Denumire</strong></td><td>string</td><td class="status-ok">✅ Doc + test</td><td><span class="mono">BEC LED 11W V-TAC E27 4000K</span></td></tr>
+<tr><td>2</td><td><strong>DenUM</strong></td><td>string</td><td class="status-ok">✅ Doc + test</td><td><span class="mono">Buc</span></td></tr>
+<tr><td>3</td><td><strong>PretVanzare</strong></td><td>decimal</td><td class="status-ok">✅ Doc + test</td><td><span class="mono">7,68595</span> (fără TVA)</td></tr>
+<tr><td>4</td><td><strong>SimbolClasa</strong></td><td>string</td><td class="status-ok">✅ Doc + test</td><td><span class="mono">2</span></td></tr>
+<tr><td>5</td><td><strong>DenClasa</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">ALTE</span></td></tr>
+<tr><td>6</td><td><strong>CodProducator</strong></td><td>string</td><td class="status-ok">✅ Doc + test</td><td><span class="mono">0000000004770</span></td></tr>
+<tr><td>7</td><td><strong>DenProducator</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">ELECTRO</span></td></tr>
+<tr><td>8</td><td><strong>GestImplicita</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">MP</span></td></tr>
+<tr><td>9</td><td><strong>CodExternAlt</strong></td><td>string</td><td class="status-ok">✅ Doc + test</td><td><span class="mono">SKU-232</span></td></tr>
+<tr><td>10</td><td><strong>CotaTVA</strong></td><td>integer</td><td class="status-ok">✅ Doc + test</td><td><span class="mono">21</span></td></tr>
+<tr><td>11</td><td><strong>DenUMSecundara</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>12</td><td><strong>ParitateUMSecundara</strong></td><td>decimal</td><td class="status-ok">✅ Doc</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>13</td><td><strong>Masa</strong></td><td>decimal</td><td class="status-ok">✅ Doc</td><td><span class="mono">(gol)</span> kg</td></tr>
+<tr><td>14</td><td><strong>Serviciu</strong></td><td>Da/Nu</td><td class="status-ok">✅ Doc</td><td><span class="mono">Nu</span></td></tr>
+<tr><td>15</td><td><strong>CodVamal</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">2</span></td></tr>
+<tr><td>16</td><td><strong>PretMinim</strong></td><td>decimal</td><td class="status-ok">✅ Doc</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>17</td><td><strong>CantImplicita</strong></td><td>decimal</td><td class="status-ok">✅ Doc</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>18</td><td><strong>PretValuta</strong></td><td>decimal</td><td class="status-ok">✅ Doc</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>19</td><td><strong>DataAdaug</strong></td><td>date</td><td class="status-ok">✅ Doc + test</td><td><span class="mono">27.06.2008</span></td></tr>
+<tr><td>20</td><td><strong>MasaAlt</strong></td><td>decimal</td><td class="status-ok">✅ Doc</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>21</td><td><strong>PretVCuTVA</strong></td><td>decimal</td><td class="status-ok">✅ Doc + test</td><td><span class="mono">9,3</span></td></tr>
+<tr><td>22</td><td><strong>Locatie</strong></td><td>string</td><td class="status-ok">✅ Doc</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>23</td><td><strong>PretReferinta</strong></td><td>decimal</td><td class="status-ok">✅ Doc</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>24</td><td><strong>Activ</strong></td><td>DA/NU</td><td class="status-ok">✅ Analiză 15.855 art.</td><td><span class="mono">DA</span> (mereu DA)</td></tr>
+<tr><td>25</td><td>(nefolosit)</td><td>-</td><td class="status-ok">✅ Mereu gol</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>26</td><td><strong>Observatii</strong></td><td>string</td><td class="status-ok">✅ Analiză 422 art.</td><td><span class="mono">CIP SAMSUNG</span>, <span class="mono">40SACI</span>, <span class="mono">30%</span></td></tr>
+<tr><td>27</td><td><strong>ObservatiiAmbalaj</strong></td><td>string</td><td class="status-ok">✅ Analiză 15.857 (9 non-standard)</td><td><span class="mono">0</span> (rar: <span class="mono">15 BUC /PACHET</span>, <span class="mono">40MP/SUL</span>)</td></tr>
+<tr><td>28</td><td><strong>CantitateMinimVanzare</strong></td><td>integer</td><td class="status-ok">✅ Analiză 15.857 (3.945 non-standard)</td><td><span class="mono">1</span>, <span class="mono">2</span>, <span class="mono">5</span>, <span class="mono">10</span>, <span class="mono">20</span>, <span class="mono">50</span></td></tr>
+<tr><td>29</td><td>(flag)</td><td>DA/NU</td><td class="status-ok">✅ Analiză 15.857 — 15.846x NU, 1x DA</td><td><span class="mono">NU</span></td></tr>
+<tr><td>30</td><td><strong>CategPretAlternativ1_ID</strong></td><td>integer</td><td class="status-ok">✅ Analiză 15.857 — doar 1 produs cu val non-zero</td><td><span class="mono">0</span> (practic nefolosit)</td></tr>
+<tr><td>31</td><td><strong>CategPretAlternativ1_Den</strong></td><td>string</td><td class="status-ok">✅ Analiză 15.857 — doar 1 produs completat</td><td><span class="mono">(gol)</span> (practic nefolosit)</td></tr>
+<tr><td>32</td><td><strong>CategPretAlternativ2_ID</strong></td><td>integer</td><td class="status-ok">✅ Analiză 15.857 — doar 1 produs</td><td><span class="mono">0</span> (practic nefolosit)</td></tr>
+<tr><td>33</td><td><strong>CategPretAlternativ2_Den</strong></td><td>string</td><td class="status-ok">✅ Analiză 15.857 — doar 1 produs</td><td><span class="mono">(gol)</span> (practic nefolosit)</td></tr>
+<tr><td>34</td><td><strong>CategPretAlternativ3_ID</strong></td><td>integer</td><td class="status-ok">✅ Analiză 15.857 — doar 1 produs</td><td><span class="mono">0</span> (practic nefolosit)</td></tr>
+<tr><td>35</td><td><strong>CategPretAlternativ3_Den</strong></td><td>string</td><td class="status-ok">✅ Analiză 15.857 — doar 1 produs</td><td><span class="mono">(gol)</span> (practic nefolosit)</td></tr>
+<tr><td>36</td><td>(flag)</td><td>DA/NU</td><td class="status-ok">✅ Analiză 15.857 — 15.846x NU, 1x DA</td><td><span class="mono">NU</span></td></tr>
+<tr><td>37</td><td>(flag)</td><td>NU/gol</td><td class="status-ok">✅ Analiză 15.857 — 10x NU, restul gol</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>38</td><td>(nefolosit)</td><td>-</td><td class="status-ok">✅ Mereu gol</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>39</td><td>(nefolosit)</td><td>-</td><td class="status-ok">✅ Mereu gol</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+
+</div>
+</div>
+

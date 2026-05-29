@@ -1,0 +1,13 @@
+{
+    "success": true,
+    "data": {
+        "comConnected": true,
+        "goVersion": "go1.25.0",
+        "platform": "windows/386",
+        "status": "running",
+        "uptime": "33m35.800065s",
+        "version": "1.2.0"
+    },
+    "errors": [],
+    "timestamp": "2026-05-18T10:17:03Z"
+}

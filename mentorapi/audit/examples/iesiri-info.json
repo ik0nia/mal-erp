@@ -1,0 +1,39 @@
+{
+  "success": true,
+  "data": [
+    {
+      "pozitie": "19",
+      "nrDoc": "88811",
+      "data": "18.05.2026",
+      "denPartener": "MODERN COLOR SRL",
+      "observatii": "",
+      "marcaAgent": "SEDIU SOCIAL",
+      "localitate": "PICLEU",
+      "judet": "BH",
+      "tara": "RO",
+      "adresa": "Nr. 343",
+      "valoare": "48",
+      "idPartener": "0000000000048",
+      "telefon": "728015294",
+      "codPostal": "417096"
+    },
+    {
+      "pozitie": "24",
+      "nrDoc": "88814",
+      "data": "18.05.2026",
+      "denPartener": "DEPOZIT CALIN",
+      "observatii": "",
+      "marcaAgent": "",
+      "localitate": "",
+      "judet": "",
+      "tara": "",
+      "adresa": "",
+      "valoare": "8",
+      "idPartener": "0000000000116",
+      "telefon": "728015298",
+      "codPostal": ""
+    }
+  ],
+  "errors": [],
+  "timestamp": "2026-05-18T10:17:03Z"
+}

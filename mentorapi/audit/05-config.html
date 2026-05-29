@@ -1,0 +1,126 @@
+<!-- ==================== CONFIG ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Config — Setări identificare</h2>
+<span class="badge badge-ok">TESTAT OK</span>
+</div>
+<div class="section-body">
+
+<h3>POST /api/config/id-part-field</h3>
+<p>Setează câmpul de identificare parteneri/producători.</p>
+<div class="note note-info">Testat: CodIntern (pentru AddProduct) și CodExtern (pentru ModiProduct).</div>
+<table>
+<tr><th>Input</th><th>Valori acceptate</th><th>Când se folosește</th></tr>
+<tr><td>fieldName</td><td><span class="mono">CodExtern</span>, <span class="mono">CodFiscal</span>, <span class="mono">CodIntern</span></td><td>Înainte de AddProduct (CodIntern) sau ModiProduct (CodExtern)</td></tr>
+</table>
+
+<h3>POST /api/config/id-art-field</h3>
+<p>Setează câmpul de identificare articole.</p>
+<table>
+<tr><th>Input</th><th>Valori acceptate</th></tr>
+<tr><td>fieldName</td><td><span class="mono">CodExtern</span>, <span class="mono">CodIntern</span></td></tr>
+</table>
+
+<h3>POST /api/config/art-analizat</h3>
+<p>Setează articolul curent pentru analiză/filtrare. Afectează ce returnează funcțiile de discount și prețuri.</p>
+<table>
+<tr><th>Parametru</th><th>Tip</th><th>Exemplu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">artId</span> (query)</td><td>string</td><td><span class="mono">0001</span></td><td>Codul articolului de analizat</td></tr>
+</table>
+<table>
+<tr><th>Răspuns</th><th>Tip</th><th>Descriere</th></tr>
+<tr><td><span class="mono">method</span></td><td>string</td><td>"SetArtAnalizat"</td></tr>
+<tr><td><span class="mono">artId</span></td><td>string</td><td>Codul trimis</td></tr>
+<tr><td><span class="mono">result</span></td><td>int</td><td>0 = succes</td></tr>
+<tr><td><span class="mono">applied</span></td><td>bool</td><td>true</td></tr>
+</table>
+<div class="note note-info">✅ Testat 14 mai 2026 — artId=0001, result=0</div>
+
+<h3>POST /api/config/cat-pret-implicita</h3>
+<p>Setează categoria de preț implicită (ex: retail, dealer). Afectează prețurile returnate de GetNomenclatorArticole etc.</p>
+<table>
+<tr><th>Parametru</th><th>Tip</th><th>Exemplu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">catPret</span> (query)</td><td>string</td><td><span class="mono">1</span></td><td>ID-ul categoriei de preț</td></tr>
+</table>
+<table>
+<tr><th>Răspuns</th><th>Tip</th><th>Descriere</th></tr>
+<tr><td><span class="mono">method</span></td><td>string</td><td>"SetCatPretImplicita"</td></tr>
+<tr><td><span class="mono">catPret</span></td><td>string</td><td>ID-ul trimis</td></tr>
+<tr><td><span class="mono">result</span></td><td>int</td><td>0 = succes</td></tr>
+<tr><td><span class="mono">applied</span></td><td>bool</td><td>true</td></tr>
+</table>
+<div class="note note-info">✅ Testat 14 mai 2026 — catPret=1, result=0</div>
+
+<h3>POST /api/config/filtru-doc-neoperate</h3>
+<p>Activează/dezactivează filtrarea doar a documentelor neoperate în liste.</p>
+<table>
+<tr><th>Parametru</th><th>Tip</th><th>Exemplu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">flag</span> (query)</td><td>int</td><td><span class="mono">0</span> sau <span class="mono">1</span></td><td>0 = toate documentele, 1 = doar neoperate</td></tr>
+</table>
+<table>
+<tr><th>Răspuns</th><th>Tip</th><th>Descriere</th></tr>
+<tr><td><span class="mono">method</span></td><td>string</td><td>"SetFiltruDocNeoperate"</td></tr>
+<tr><td><span class="mono">flag</span></td><td>int</td><td>Valoarea setată</td></tr>
+<tr><td><span class="mono">applied</span></td><td>bool</td><td>true</td></tr>
+</table>
+<div class="note note-info">✅ Testat 14 mai 2026 — flag=0</div>
+
+<h3>POST /api/config/inclusiv-fact-aviz</h3>
+<p>Include/exclude facturile cu aviz din rezultatele de vânzări/ieșiri.</p>
+<table>
+<tr><th>Parametru</th><th>Tip</th><th>Exemplu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">flag</span> (query)</td><td>int</td><td><span class="mono">0</span> sau <span class="mono">1</span></td><td>0 = fără avize, 1 = inclusiv avize</td></tr>
+</table>
+<table>
+<tr><th>Răspuns</th><th>Tip</th><th>Descriere</th></tr>
+<tr><td><span class="mono">method</span></td><td>string</td><td>"SetInclusivFactAviz"</td></tr>
+<tr><td><span class="mono">flag</span></td><td>int</td><td>Valoarea setată</td></tr>
+<tr><td><span class="mono">applied</span></td><td>bool</td><td>true</td></tr>
+</table>
+<div class="note note-info">✅ Testat 14 mai 2026 — flag=0</div>
+
+<h3>POST /api/system/descarcare-automata</h3>
+<p>Activează/dezactivează descărcarea automată de gestiune la facturare.</p>
+<table>
+<tr><th>Parametru</th><th>Tip</th><th>Exemplu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">flag</span> (query)</td><td>int</td><td><span class="mono">0</span> sau <span class="mono">1</span></td><td>0 = manual, 1 = automat</td></tr>
+</table>
+<table>
+<tr><th>Răspuns</th><th>Tip</th><th>Descriere</th></tr>
+<tr><td><span class="mono">method</span></td><td>string</td><td>"SetDescarcareAutomata"</td></tr>
+<tr><td><span class="mono">flag</span></td><td>int</td><td>Valoarea setată</td></tr>
+<tr><td><span class="mono">applied</span></td><td>bool</td><td>true</td></tr>
+</table>
+<div class="note note-info">✅ Testat 14 mai 2026 — flag=1</div>
+
+<h3>POST /api/comenzi/set-inclusiv-furn</h3>
+<p>Include/exclude comenzile de la furnizori din listele de comenzi.</p>
+<table>
+<tr><th>Parametru</th><th>Tip</th><th>Exemplu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">flag</span> (query)</td><td>int</td><td><span class="mono">0</span> sau <span class="mono">1</span></td><td>0 = fără furnizori, 1 = inclusiv furnizori</td></tr>
+</table>
+<table>
+<tr><th>Răspuns</th><th>Tip</th><th>Descriere</th></tr>
+<tr><td><span class="mono">method</span></td><td>string</td><td>"SetInclusivCmdFurn"</td></tr>
+<tr><td><span class="mono">flag</span></td><td>int</td><td>Valoarea setată</td></tr>
+<tr><td><span class="mono">applied</span></td><td>bool</td><td>true</td></tr>
+</table>
+<div class="note note-info">✅ Testat 14 mai 2026 — flag=1</div>
+
+<h3>POST /api/comenzi/set-acceptat</h3>
+<p>Setează dacă comenzile noi sunt implicit acceptate sau nu.</p>
+<table>
+<tr><th>Parametru</th><th>Tip</th><th>Exemplu</th><th>Descriere</th></tr>
+<tr><td><span class="mono">flag</span> (query)</td><td>int</td><td><span class="mono">0</span> sau <span class="mono">1</span></td><td>0 = neacceptat implicit, 1 = acceptat implicit</td></tr>
+</table>
+<table>
+<tr><th>Răspuns</th><th>Tip</th><th>Descriere</th></tr>
+<tr><td><span class="mono">method</span></td><td>string</td><td>"SetCmdImplicitAcceptat"</td></tr>
+<tr><td><span class="mono">flag</span></td><td>int</td><td>Valoarea setată</td></tr>
+<tr><td><span class="mono">applied</span></td><td>bool</td><td>true</td></tr>
+</table>
+<div class="note note-info">✅ Testat 14 mai 2026 — flag=1</div>
+
+</div>
+</div>
+

@@ -1,0 +1,43 @@
+{
+  "success": true,
+  "data": [
+    {
+      "denGestiune": "Magazin Practic",
+      "simbolGestiune": "MP",
+      "denumire": "ZZZBEC 100 WATT",
+      "codExtern": "8711500354624",
+      "contContabil": "371.02",
+      "denUM": "Buc",
+      "stoc": "20",
+      "valoareStoc": "4",
+      "valoareStocPrecisa": "4",
+      "cotaTVA": "20"
+    },
+    {
+      "denGestiune": "Magazin Practic",
+      "simbolGestiune": "MP",
+      "denumire": "BEC HALOGEN 70 WATT",
+      "codExtern": "5994100164210",
+      "contContabil": "371.02",
+      "denUM": "Buc",
+      "stoc": "15",
+      "valoareStoc": "7,5",
+      "valoareStocPrecisa": "7,5",
+      "cotaTVA": "21"
+    },
+    {
+      "denGestiune": "Magazin Practic",
+      "simbolGestiune": "MP",
+      "denumire": "CLEMA COAMA TRASA TERACOT -GUNN",
+      "codExtern": "9007912539582",
+      "contContabil": "371.02",
+      "denUM": "Buc",
+      "stoc": "69",
+      "valoareStoc": "0,85",
+      "valoareStocPrecisa": "2,6",
+      "cotaTVA": "21"
+    }
+  ],
+  "errors": [],
+  "timestamp": "2026-05-18T10:16:36Z"
+}

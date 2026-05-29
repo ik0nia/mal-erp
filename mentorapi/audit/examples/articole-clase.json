@@ -1,0 +1,63 @@
+{
+    "success": true,
+    "data": [
+        {
+            "simbol": "...",
+            "denumire": "---- nedefinit ----"
+        },
+        {
+            "simbol": "1",
+            "denumire": "1"
+        },
+        {
+            "simbol": "2",
+            "denumire": "ALTE"
+        },
+        {
+            "simbol": "3",
+            "denumire": "DE STERS"
+        },
+        {
+            "simbol": "4",
+            "denumire": "SERVICII"
+        },
+        {
+            "simbol": "5",
+            "denumire": "AMBALAJ"
+        },
+        {
+            "simbol": "6",
+            "denumire": "AUTO"
+        },
+        {
+            "simbol": "7",
+            "denumire": "SUCURI"
+        },
+        {
+            "simbol": "10",
+            "denumire": "HALA"
+        },
+        {
+            "simbol": "11",
+            "denumire": "CASA RAPIDA"
+        },
+        {
+            "simbol": "8",
+            "denumire": "PRODUCTIE"
+        },
+        {
+            "simbol": "9",
+            "denumire": "TEST"
+        },
+        {
+            "simbol": "09",
+            "denumire": "TRANSFER"
+        },
+        {
+            "simbol": "TAPI",
+            "denumire": "TEST API CLASA"
+        }
+    ],
+    "errors": [],
+    "timestamp": "2026-05-18T10:16:32Z"
+}

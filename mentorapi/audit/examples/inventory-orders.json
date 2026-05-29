@@ -1,0 +1,423 @@
+{
+    "success": true,
+    "data": [
+        {
+            "nrInventar": "1",
+            "dataInventar": "20.07.2008"
+        },
+        {
+            "nrInventar": "2",
+            "dataInventar": "08.08.2008"
+        },
+        {
+            "nrInventar": "3",
+            "dataInventar": "04.09.2008"
+        },
+        {
+            "nrInventar": "256",
+            "dataInventar": "14.09.2008"
+        },
+        {
+            "nrInventar": "257",
+            "dataInventar": "16.09.2008"
+        },
+        {
+            "nrInventar": "100",
+            "dataInventar": "11.01.2009"
+        },
+        {
+            "nrInventar": "101",
+            "dataInventar": "13.01.2009"
+        },
+        {
+            "nrInventar": "1",
+            "dataInventar": "16.04.2010"
+        },
+        {
+            "nrInventar": "1000",
+            "dataInventar": "29.12.2010"
+        },
+        {
+            "nrInventar": "2",
+            "dataInventar": "31.12.2010"
+        },
+        {
+            "nrInventar": "1",
+            "dataInventar": "31.12.2010"
+        },
+        {
+            "nrInventar": "1",
+            "dataInventar": "11.04.2011"
+        },
+        {
+            "nrInventar": "10",
+            "dataInventar": "02.06.2011"
+        },
+        {
+            "nrInventar": "1",
+            "dataInventar": "01.06.2011"
+        },
+        {
+            "nrInventar": "8",
+            "dataInventar": "20.08.2011"
+        },
+        {
+            "nrInventar": "1001",
+            "dataInventar": "19.12.2011"
+        },
+        {
+            "nrInventar": "2011",
+            "dataInventar": "29.12.2011"
+        },
+        {
+            "nrInventar": "2012",
+            "dataInventar": "30.12.2011"
+        },
+        {
+            "nrInventar": "25032012",
+            "dataInventar": "25.03.2012"
+        },
+        {
+            "nrInventar": "31032012",
+            "dataInventar": "31.03.2012"
+        },
+        {
+            "nrInventar": "29042012",
+            "dataInventar": "29.04.2012"
+        },
+        {
+            "nrInventar": "17052012",
+            "dataInventar": "17.05.2012"
+        },
+        {
+            "nrInventar": "17052012",
+            "dataInventar": "17.05.2012"
+        },
+        {
+            "nrInventar": "26052012",
+            "dataInventar": "26.05.2012"
+        },
+        {
+            "nrInventar": "1062012",
+            "dataInventar": "01.06.2012"
+        },
+        {
+            "nrInventar": "23062012",
+            "dataInventar": "23.06.2012"
+        },
+        {
+            "nrInventar": "7072012",
+            "dataInventar": "07.07.2012"
+        },
+        {
+            "nrInventar": "19082012",
+            "dataInventar": "19.08.2012"
+        },
+        {
+            "nrInventar": "23082012",
+            "dataInventar": "23.08.2012"
+        },
+        {
+            "nrInventar": "23092012",
+            "dataInventar": "23.09.2012"
+        },
+        {
+            "nrInventar": "9102012",
+            "dataInventar": "09.10.2012"
+        },
+        {
+            "nrInventar": "27102012",
+            "dataInventar": "27.10.2012"
+        },
+        {
+            "nrInventar": "2",
+            "dataInventar": "02.11.2012"
+        },
+        {
+            "nrInventar": "25112012",
+            "dataInventar": "25.11.2012"
+        },
+        {
+            "nrInventar": "13022013",
+            "dataInventar": "13.02.2013"
+        },
+        {
+            "nrInventar": "2032013",
+            "dataInventar": "02.03.2013"
+        },
+        {
+            "nrInventar": "27042013",
+            "dataInventar": "27.04.2013"
+        },
+        {
+            "nrInventar": "7062013",
+            "dataInventar": "07.06.2013"
+        },
+        {
+            "nrInventar": "1082013",
+            "dataInventar": "01.08.2013"
+        },
+        {
+            "nrInventar": "2",
+            "dataInventar": "09.08.2013"
+        },
+        {
+            "nrInventar": "10082013",
+            "dataInventar": "10.08.2013"
+        },
+        {
+            "nrInventar": "3",
+            "dataInventar": "21.08.2013"
+        },
+        {
+            "nrInventar": "10",
+            "dataInventar": "26.08.2013"
+        },
+        {
+            "nrInventar": "8092013",
+            "dataInventar": "08.09.2013"
+        },
+        {
+            "nrInventar": "1",
+            "dataInventar": "21.09.2013"
+        },
+        {
+            "nrInventar": "13102013",
+            "dataInventar": "13.10.2013"
+        },
+        {
+            "nrInventar": "3112013",
+            "dataInventar": "03.11.2013"
+        },
+        {
+            "nrInventar": "12",
+            "dataInventar": "30.11.2013"
+        },
+        {
+            "nrInventar": "17062014",
+            "dataInventar": "17.06.2014"
+        },
+        {
+            "nrInventar": "10072014",
+            "dataInventar": "10.07.2014"
+        },
+        {
+            "nrInventar": "31",
+            "dataInventar": "01.08.2014"
+        },
+        {
+            "nrInventar": "3122014",
+            "dataInventar": "03.12.2014"
+        },
+        {
+            "nrInventar": "12032014",
+            "dataInventar": "03.12.2014"
+        },
+        {
+            "nrInventar": "11122014",
+            "dataInventar": "11.12.2014"
+        },
+        {
+            "nrInventar": "1",
+            "dataInventar": "12.01.2015"
+        },
+        {
+            "nrInventar": "2",
+            "dataInventar": "12.01.2015"
+        },
+        {
+            "nrInventar": "1",
+            "dataInventar": "31.12.2015"
+        },
+        {
+            "nrInventar": "1012016",
+            "dataInventar": "09.01.2016"
+        },
+        {
+            "nrInventar": "1012016",
+            "dataInventar": "09.01.2016"
+        },
+        {
+            "nrInventar": "31032016",
+            "dataInventar": "31.03.2016"
+        },
+        {
+            "nrInventar": "1012017",
+            "dataInventar": "31.12.2016"
+        },
+        {
+            "nrInventar": "2012017",
+            "dataInventar": "31.12.2016"
+        },
+        {
+            "nrInventar": "3012017",
+            "dataInventar": "31.12.2016"
+        },
+        {
+            "nrInventar": "15122017",
+            "dataInventar": "15.12.2017"
+        },
+        {
+            "nrInventar": "98",
+            "dataInventar": "31.12.2017"
+        },
+        {
+            "nrInventar": "1",
+            "dataInventar": "14.12.2018"
+        },
+        {
+            "nrInventar": "1",
+            "dataInventar": "31.12.2018"
+        },
+        {
+            "nrInventar": "1",
+            "dataInventar": "01.02.2019"
+        },
+        {
+            "nrInventar": "5",
+            "dataInventar": "16.05.2019"
+        },
+        {
+            "nrInventar": "831",
+            "dataInventar": "31.08.2019"
+        },
+        {
+            "nrInventar": "3011",
+            "dataInventar": "30.11.2019"
+        },
+        {
+            "nrInventar": "12020",
+            "dataInventar": "31.12.2019"
+        },
+        {
+            "nrInventar": "1",
+            "dataInventar": "13.03.2020"
+        },
+        {
+            "nrInventar": "1",
+            "dataInventar": "01.04.2020"
+        },
+        {
+            "nrInventar": "12",
+            "dataInventar": "31.12.2020"
+        },
+        {
+            "nrInventar": "1",
+            "dataInventar": "09.01.2021"
+        },
+        {
+            "nrInventar": "1231",
+            "dataInventar": "07.02.2021"
+        },
+        {
+            "nrInventar": "311",
+            "dataInventar": "23.03.2021"
+        },
+        {
+            "nrInventar": "11",
+            "dataInventar": "25.05.2021"
+        },
+        {
+            "nrInventar": "20219",
+            "dataInventar": "04.09.2021"
+        },
+        {
+            "nrInventar": "17",
+            "dataInventar": "17.10.2021"
+        },
+        {
+            "nrInventar": "12",
+            "dataInventar": "31.12.2021"
+        },
+        {
+            "nrInventar": "31122021",
+            "dataInventar": "31.12.2021"
+        },
+        {
+            "nrInventar": "1",
+            "dataInventar": "02.02.2022"
+        },
+        {
+            "nrInventar": "31012022",
+            "dataInventar": "31.01.2022"
+        },
+        {
+            "nrInventar": "31012022",
+            "dataInventar": "31.01.2022"
+        },
+        {
+            "nrInventar": "4022022",
+            "dataInventar": "04.02.2022"
+        },
+        {
+            "nrInventar": "33",
+            "dataInventar": "03.03.2022"
+        },
+        {
+            "nrInventar": "1072022",
+            "dataInventar": "01.07.2022"
+        },
+        {
+            "nrInventar": "30062022",
+            "dataInventar": "30.06.2022"
+        },
+        {
+            "nrInventar": "31082022",
+            "dataInventar": "31.08.2022"
+        },
+        {
+            "nrInventar": "2023",
+            "dataInventar": "19.12.2022"
+        },
+        {
+            "nrInventar": "122022",
+            "dataInventar": "19.12.2022"
+        },
+        {
+            "nrInventar": "1",
+            "dataInventar": "31.01.2023"
+        },
+        {
+            "nrInventar": "18122023",
+            "dataInventar": "18.12.2023"
+        },
+        {
+            "nrInventar": "181223",
+            "dataInventar": "18.12.2023"
+        },
+        {
+            "nrInventar": "20241612",
+            "dataInventar": "16.12.2024"
+        },
+        {
+            "nrInventar": "20242012",
+            "dataInventar": "20.12.2024"
+        },
+        {
+            "nrInventar": "20242012",
+            "dataInventar": "20.12.2024"
+        },
+        {
+            "nrInventar": "10",
+            "dataInventar": "14.04.2025"
+        },
+        {
+            "nrInventar": "12",
+            "dataInventar": "14.04.2025"
+        },
+        {
+            "nrInventar": "1",
+            "dataInventar": "16.09.2025"
+        },
+        {
+            "nrInventar": "2025",
+            "dataInventar": "31.12.2025"
+        },
+        {
+            "nrInventar": "31012026",
+            "dataInventar": "31.01.2026"
+        }
+    ],
+    "errors": [],
+    "timestamp": "2026-05-18T10:17:03Z"
+}

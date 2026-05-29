@@ -1,0 +1,108 @@
+Total articole: 15857
+
+=== ARTICOLE [27] — 11 valori distincte, 9 non-standard ===
+   15847x  0
+       1x  (gol)
+       1x  15 BUC /PACHET
+       1x  40MP/SUL
+       1x  68 BUC /MC
+       1x  PALET-SE VINDE DOAR LA PALET INTREG
+       1x  MC
+       1x  .2MC  0.225MC/BAX
+       1x  7COLI
+       1x  3 COLU
+  Exemple non-standard:
+    9007767492278   PLACA ONDUVILLA TERACOTA 3D         → 15 BUC /PACHET
+    9007767497709   MEMBRANA CAUCIU DRENAJ CU GEOTEXTIL → 40MP/SUL
+    9007767514161   XCARAMIDA POROTON 25 D+             → 68 BUC /MC
+    9007767535272   CORP UMPLUTURA  PTH45(POROTHERM)    → PALET-SE VINDE DOAR LA PALET INTREG
+    9007912538509   POLISTIREN AUSTROTHERM EPS 120 20 C → MC
+    9007912538516   POLISTIREN AUSTROTHERM EPS 200 15 C → .2MC  0.225MC/BAX
+    9007912544968   POLISTIREN AUSTROTHERM EPS 120 7 CM → 7COLI
+    9007912545002   POLISTIREN AUSTROTHERM EPS 120 14 C → 3 COLU
+    594008496560776 CARAMIDA POROTON 25 NF 380X250X238  → 72 BUC/PALET
+
+=== ARTICOLE [28] — 33 valori distincte, 3945 non-standard ===
+    9129x  0
+    2783x  (gol)
+     880x  2
+     731x  1
+     572x  5
+     558x  3
+     423x  10
+     158x  20
+     135x  50
+     109x  6
+  Exemple non-standard:
+    8711500354624   ZZZBEC 100 WATT                     → 10
+    5994100164210   BEC HALOGEN 70 WATT                 → 20
+    9007912539582   CLEMA COAMA TRASA TERACOT -GUNN     → 20
+    3800157631976   BEC LED 11W V-TAC E27 4000K A60 NEU → 20
+    8711500043603   BEC SPOT 40 W DULIE MARE            → 10
+    5949027057251   BEC HALOGEN MIC 28W DULIE MICA      → 10
+    5949027068417   BEC SPOT LED E27 8W LUMINA RECE     → 10
+    8711500054159   BEC SPOT 40 W DULIE MICA            → 10
+    5949027057282   BEC HALOGEN LUMANARE 42W DULIE MARE → 5
+    3800157675680   BEC LED 4.5W V-TAC E14 LUSTRA CALD  → 5
+
+=== ARTICOLE [29] — 5 valori distincte, 1 non-standard ===
+   15846x  NU
+       8x  0
+       1x  10
+       1x  (gol)
+       1x  DA
+  Exemple non-standard:
+    9007767468815   *ZINC MUFA 3/4                      → 10
+
+=== ARTICOLE [30] — 4 valori distincte, 1 non-standard ===
+   13795x  0
+    2051x  (gol)
+      10x  NU
+       1x  28
+  Exemple non-standard:
+    594008496560654 MARFA VALORIC                       → 28
+
+=== ARTICOLE [31] — 3 valori distincte, 1 non-standard ===
+   15849x  (gol)
+       7x  0
+       1x  MOSTRA
+  Exemple non-standard:
+    594008496560654 MARFA VALORIC                       → MOSTRA
+
+=== ARTICOLE [32] — 3 valori distincte, 1 non-standard ===
+   13795x  0
+    2061x  (gol)
+       1x  25
+  Exemple non-standard:
+    594008496560654 MARFA VALORIC                       → 25
+
+=== ARTICOLE [33] — 3 valori distincte, 1 non-standard ===
+   15849x  (gol)
+       7x  0
+       1x  1.984MP /PACHET
+  Exemple non-standard:
+    594008496560654 MARFA VALORIC                       → 1.984MP /PACHET
+
+=== ARTICOLE [34] — 3 valori distincte, 1 non-standard ===
+   13795x  0
+    2061x  (gol)
+       1x  23
+  Exemple non-standard:
+    594008496560654 MARFA VALORIC                       → 23
+
+=== ARTICOLE [35] — 3 valori distincte, 1 non-standard ===
+   15849x  (gol)
+       7x  0
+       1x  PACHET 1.9845MP
+  Exemple non-standard:
+    594008496560654 MARFA VALORIC                       → PACHET 1.9845MP
+
+=== ARTICOLE [36] — 3 valori distincte, 0 non-standard ===
+   15846x  NU
+      10x  (gol)
+       1x  DA
+
+=== ARTICOLE [37] — 2 valori distincte, 0 non-standard ===
+   15847x  (gol)
+      10x  NU
+

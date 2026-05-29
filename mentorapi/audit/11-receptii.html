@@ -1,0 +1,39 @@
+<!-- ==================== RECEPTII ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Recepții — GET /api/receptii</h2>
+<span class="badge badge-ok">TESTAT + MAPAT</span>
+</div>
+<div class="section-body">
+<p>Returnează recepțiile (facturi intrare) din luna curentă. <strong>22 câmpuri</strong> per recepție.</p>
+<div class="note note-info">Testat: 1.124 recepții pe firma ERP, luna 4/2026. Toate au exact 22 câmpuri (consistent).</div>
+
+<h3>Câmpuri output — 22 câmpuri per recepție (separator ";")</h3>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Confirmat</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>DenGestiune</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Magazin Principal</span></td></tr>
+<tr><td>1</td><td><strong>SimbolGestiune</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">MP</span></td></tr>
+<tr><td>2</td><td><strong>NrReceptie</strong></td><td>integer</td><td class="status-ok">✅</td><td><span class="mono">24310</span></td></tr>
+<tr><td>3</td><td><strong>DataReceptie</strong></td><td>date</td><td class="status-ok">✅</td><td><span class="mono">14.4.2026</span></td></tr>
+<tr><td>4</td><td><strong>DenFurnizor</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Furnizor SRL</span></td></tr>
+<tr><td>5</td><td><strong>PartID</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">0000000000192</span></td></tr>
+<tr><td>6</td><td><strong>NrFactura</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">811783</span></td></tr>
+<tr><td>7</td><td><strong>DataFactura</strong></td><td>date</td><td class="status-ok">✅</td><td><span class="mono">14.04.2026</span></td></tr>
+<tr><td>8</td><td><strong>CodArticol</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">8011564016392</span></td></tr>
+<tr><td>9</td><td><strong>DenArticol</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Articol exemplu</span></td></tr>
+<tr><td>10</td><td><strong>ValoareTotala</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">371.02</span></td></tr>
+<tr><td>11</td><td><strong>UM</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">Buc</span></td></tr>
+<tr><td>12</td><td><strong>CantComandata</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">10</span></td></tr>
+<tr><td>13</td><td><strong>CantReceptionata</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">10</span></td></tr>
+<tr><td>14</td><td><strong>PretIntrare</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">2.57</span></td></tr>
+<tr><td>15</td><td><strong>PretVanzare</strong></td><td>decimal</td><td class="status-ok">✅</td><td><span class="mono">4</span></td></tr>
+<tr><td>16</td><td><strong>CotaTVA</strong></td><td>integer</td><td class="status-ok">✅</td><td><span class="mono">21</span></td></tr>
+<tr><td>17</td><td><strong>IDComandaWM</strong></td><td>integer</td><td class="status-ok">✅ Analiză 1.124 (ID intern unic)</td><td><span class="mono">50439</span></td></tr>
+<tr><td>18</td><td><strong>NrLinie</strong></td><td>integer</td><td class="status-ok">✅ Analiză 1.124 (1,2,3 = pozitie pe factura)</td><td><span class="mono">1</span></td></tr>
+<tr><td>19</td><td><strong>NrLinieComanda</strong></td><td>integer</td><td class="status-ok">✅ Analiză 1.124 (pozitie pe comanda furnizor)</td><td><span class="mono">1</span>-<span class="mono">14</span></td></tr>
+<tr><td>20</td><td><strong>CodExternAlt/SKU</strong></td><td>string</td><td class="status-ok">✅</td><td><span class="mono">SKU-232</span></td></tr>
+<tr><td>21</td><td>(gol)</td><td>-</td><td class="status-ok">✅ Mereu gol</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+</div>
+</div>
+

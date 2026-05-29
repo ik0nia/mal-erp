@@ -1,0 +1,40 @@
+{
+  "success": true,
+  "data": [
+    {
+      "nrComanda": "2707",
+      "idPartener": "0000000037778",
+      "denPartener": "IMCOP SRL",
+      "dataComanda": "2022-01-13 00:00:00",
+      "dataLivrare": "1899-12-30 00:00:00",
+      "codArticol": "9007767538211",
+      "cantitate": "5",
+      "denUM": "BUC",
+      "stare": "0"
+    },
+    {
+      "nrComanda": "2723",
+      "idPartener": "0000000032957",
+      "denPartener": "MELINDA-IMPEX INSTAL S.A.",
+      "dataComanda": "2022-01-28 00:00:00",
+      "dataLivrare": "2022-01-28 13:57:23",
+      "codArticol": "9007767506456",
+      "cantitate": "6",
+      "denUM": "Buc",
+      "stare": "0"
+    },
+    {
+      "nrComanda": "2723",
+      "idPartener": "0000000032957",
+      "denPartener": "MELINDA-IMPEX INSTAL S.A.",
+      "dataComanda": "2022-01-28 00:00:00",
+      "dataLivrare": "2022-01-28 13:57:23",
+      "codArticol": "9007767506401",
+      "cantitate": "5",
+      "denUM": "Buc",
+      "stare": "0"
+    }
+  ],
+  "errors": [],
+  "timestamp": "2026-05-18T10:16:42Z"
+}

@@ -1,0 +1,26 @@
+<div class="section">
+<div class="section-header">
+<h2>Funcții rămase — nefixabile sau blocate fără documentație</h2>
+<span class="badge badge-netestat">BLOCATE</span>
+</div>
+<div class="section-body">
+<table>
+<tr><th>Grup</th><th>Funcții</th><th>Status</th></tr>
+<tr><td colspan="3" style="background:#f8d7da; font-weight:600; text-align:center">--- Erori vtable (4 — limitare COM interop Go ↔ DocImpServer) ---</td></tr>
+<tr><td>GetSoldFactNeop</td><td>/api/solduri/facturi-neoperate — E_UNEXPECTED 0x8000FFFF (retval BSTR*)</td><td>Nefixabil</td></tr>
+<tr><td>GetReceivingStatus</td><td>/api/receiving/status — E_UNEXPECTED similar</td><td>Nefixabil</td></tr>
+<tr><td>GetListaCarneteExt</td><td>/api/carnete/ext — server exception în DocImpServer</td><td>Nefixabil</td></tr>
+<tr><td>SetInventoryOrders</td><td>POST /api/inventory/set-orders — E_UNEXPECTED chiar cu date valide din GetInventoryOrders</td><td>Nefixabil</td></tr>
+<tr><td colspan="3" style="background:#fff3cd; font-weight:600; text-align:center">--- Netestat (1) ---</td></tr>
+<tr><td>GetDocFromFile</td><td>POST /api/system/doc-from-file — citește document din fișier de pe disc Windows</td><td>Necesită fișier pe disc</td></tr>
+<tr><td colspan="3" style="background:#fff3cd; font-weight:600; text-align:center">--- Câmpuri neverificabile (2) ---</td></tr>
+<tr><td>AddProduct poz 5</td><td>TipSerie (0=fără serie, 1=cu serie) — reverse engineering</td><td>⚠️ Neverificabil</td></tr>
+<tr><td>AddProduct poz 18</td><td>Flag (D=activ) — reverse engineering</td><td>⚠️ Neverificabil</td></tr>
+<tr><td colspan="3" style="background:#f8d7da; font-weight:600; text-align:center">--- Import documente blocate (4 — necesită documentație oficială WinMentor) ---</td></tr>
+<tr><td>Import încasări</td><td>POST /api/import/incasari — eroare 501: format referință factură necunoscut. Header OK (INCASARE + TotalDocumente + [Document_1])</td><td>❌ Blocat</td></tr>
+<tr><td>Import plăți</td><td>POST /api/import/plati — eroare 501: idem încasări</td><td>❌ Blocat</td></tr>
+<tr><td>Import note contabile</td><td>POST /api/import/note-contabile — eroare 122: FLAG TIP TRANZACTIE DEBIT ERONAT. Header OK (NOTA CONTABILA + TotalNote + [Nota_1] + TotalLinii)</td><td>❌ Blocat</td></tr>
+<tr><td>Import monetare</td><td>POST /api/import/monetare — eroare 502: Nume casă neprecizat. Header OK (MONETAR + TotalMonetare + [Monetar_1])</td><td>❌ Blocat</td></tr>
+</table>
+</div>
+</div>

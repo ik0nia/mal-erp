@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MentorAPI — Audit Functii & Campuri</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f5f0e8; color: #333; }
+.header { background: #c41e3a; color: white; padding: 20px 40px; }
+.header h1 { font-size: 24px; font-weight: 600; }
+.header p { opacity: 0.8; margin-top: 4px; }
+.nav { background: #2c2c2c; padding: 0 40px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2); overflow-x: auto; white-space: nowrap; }
+.nav a { color: #ccc; text-decoration: none; display: inline-block; padding: 10px 14px; font-size: 13px; font-weight: 500; transition: all 0.2s; border-bottom: 2px solid transparent; }
+.nav a:hover { color: white; background: #444; }
+.nav a.active { color: #fff; border-bottom-color: #c41e3a; }
+.nav-sep { display: inline-block; width: 1px; height: 20px; background: #555; vertical-align: middle; margin: 0 2px; }
+.container { max-width: 1400px; margin: 0 auto; padding: 20px 40px; }
+.group-title { background: #c41e3a; color: white; padding: 12px 20px; border-radius: 8px 8px 0 0; margin-top: 32px; margin-bottom: 0; font-size: 16px; font-weight: 600; letter-spacing: 0.5px; }
+.section { background: white; border-radius: 8px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+.section-header { background: #f8f4ef; padding: 16px 20px; border-bottom: 1px solid #e5ddd3; cursor: pointer; user-select: none; display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 0 12px; }
+.section-header h2 { font-size: 18px; color: #333; }
+.section-header .badge { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.section-header .toggle-icon { font-size: 12px; color: #999; transition: transform 0.2s; }
+.section.collapsed .toggle-icon { transform: rotate(-90deg); }
+.section-preview { display: none; grid-column: 1 / -1; grid-row: 2; font-size: 12px; color: #888; margin-top: 4px; line-height: 1.4; }
+.section.collapsed .section-preview { display: block; }
+.section.collapsed .section-body { display: none; }
+.badge-ok { background: #d4edda; color: #155724; }
+.badge-partial { background: #fff3cd; color: #856404; }
+.badge-netestat { background: #f8d7da; color: #721c24; }
+.section-body { padding: 20px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { background: #f8f4ef; text-align: left; padding: 10px 12px; border-bottom: 2px solid #e5ddd3; font-weight: 600; }
+td { padding: 8px 12px; border-bottom: 1px solid #eee; vertical-align: top; }
+tr:hover { background: #faf8f5; }
+.status-ok { color: #155724; font-weight: 600; }
+.status-fail { color: #721c24; font-weight: 600; }
+.status-unknown { color: #856404; }
+.mono { font-family: 'Consolas', monospace; font-size: 13px; background: #f5f0e8; padding: 2px 6px; border-radius: 3px; }
+.note { background: #fff3cd; padding: 12px 16px; border-radius: 6px; margin: 12px 0; font-size: 13px; }
+.note-info { background: #d4edda; }
+.note-danger { background: #f8d7da; }
+.updated { font-size: 12px; color: #888; margin-top: 4px; }
+h3 { margin: 16px 0 8px; color: #c41e3a; font-size: 16px; }
+.stats { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+.stat-card { background: white; border-radius: 8px; padding: 16px 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; min-width: 140px; }
+.stat-card .number { font-size: 32px; font-weight: 700; color: #c41e3a; }
+.stat-card .label { font-size: 12px; color: #666; margin-top: 4px; }
+.loading { color: #888; padding: 20px; text-align: center; }
+.sub-header { background: #faf8f5; padding: 10px 16px; margin: 8px 0 0; border: 1px solid #e5ddd3; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; }
+.sub-header h3 { margin: 0; font-size: 14px; flex: 1; }
+.sub-header .sub-toggle { font-size: 11px; color: #999; transition: transform 0.2s; margin-left: 12px; }
+.sub-header.sub-collapsed .sub-toggle { transform: rotate(-90deg); }
+.sub-content { padding: 8px 16px; border-left: 2px solid #e5ddd3; margin-left: 8px; margin-bottom: 4px; }
+@media print {
+  .section.collapsed .section-body { display: block !important; }
+  .sub-content { display: block !important; }
+  .toggle-icon, .sub-toggle { display: none; }
+  .section-preview { display: none !important; }
+  .nav { display: none; }
+  .group-title { break-before: page; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+<h1>MentorAPI — Audit Functii & Campuri</h1>
+<p>Documentatie completa: endpoint-uri, parametri input, campuri output, status testare</p>
+<p class="updated">Ultima actualizare: 19 mai 2026 — v1.3.0 | 99/100 endpoint-uri testate | 7/10 importuri | 4/5 logistica | Fix mapări VanzariExt, InfoBon + toate câmpurile campX expuse</p>
+</div>
+
+<nav class="nav">
+<a href="#g-stats">Statistici</a>
+<span class="nav-sep"></span>
+<a href="#g-config">Config</a>
+<a href="#g-articole">Articole</a>
+<a href="#g-parteneri">Parteneri</a>
+<span class="nav-sep"></span>
+<a href="#g-stocuri">Stocuri</a>
+<a href="#g-nomenclatoare">Nomenclatoare</a>
+<a href="#g-vanzari">Vanzari</a>
+<a href="#g-receptii">Receptii</a>
+<a href="#g-comenzi">Comenzi</a>
+<a href="#g-financiar">Financiar</a>
+<span class="nav-sep"></span>
+<a href="#g-logistica">Logistica</a>
+<a href="#g-import">Import</a>
+<span class="nav-sep"></span>
+<a href="#g-sistem">Sistem</a>
+<a href="#g-blocate">Blocate</a>
+</nav>
+
+<div class="container">
+
+<!-- STATISTICI -->
+<div id="g-stats"></div>
+<div id="s-header"></div>
+
+<!-- FIRME & CONFIG -->
+<div id="g-config" class="group-title">Firme & Configurare</div>
+<div id="s-firme"></div>
+<div id="s-config"></div>
+<div id="s-system"></div>
+
+<!-- ARTICOLE -->
+<div id="g-articole" class="group-title">Articole & Produse</div>
+<div id="s-articole-get"></div>
+<div id="s-addproduct"></div>
+<div id="s-modiproduct"></div>
+
+<!-- PARTENERI -->
+<div id="g-parteneri" class="group-title">Parteneri</div>
+<div id="s-parteneri"></div>
+
+<!-- STOCURI -->
+<div id="g-stocuri" class="group-title">Stocuri</div>
+<div id="s-stocuri"></div>
+
+<!-- NOMENCLATOARE -->
+<div id="g-nomenclatoare" class="group-title">Nomenclatoare (Gestiuni, Personal, Banci, Monede)</div>
+<div id="s-nomenclatoare"></div>
+
+<!-- VANZARI -->
+<div id="g-vanzari" class="group-title">Vanzari</div>
+<div id="s-vanzari"></div>
+
+<!-- RECEPTII -->
+<div id="g-receptii" class="group-title">Receptii & Intrari</div>
+<div id="s-receptii"></div>
+
+<!-- COMENZI -->
+<div id="g-comenzi" class="group-title">Comenzi, Carnete, Oferte</div>
+<div id="s-comenzi"></div>
+
+<!-- FINANCIAR -->
+<div id="g-financiar" class="group-title">Solduri & Financiar</div>
+<div id="s-solduri"></div>
+
+<!-- LOGISTICA -->
+<div id="g-logistica" class="group-title">Logistica (Receptie, Picking, Livrare)</div>
+<div id="s-logistica"></div>
+
+<!-- IMPORT -->
+<div id="g-import" class="group-title">Import Documente</div>
+<div id="s-import-furn"></div>
+<div id="s-import-fact-intr"></div>
+<div id="s-import-fact-ies"></div>
+<div id="s-import-transferuri"></div>
+<div id="s-import-bonuri"></div>
+<div id="s-import-modif-pret"></div>
+
+<!-- SISTEM -->
+<div id="g-sistem" class="group-title">Sistem & Referinta</div>
+<div id="s-rezumat"></div>
+<div id="s-toate"></div>
+
+<!-- BLOCATE -->
+<div id="g-blocate" class="group-title">Nefixabile & Blocate</div>
+<div id="s-netestate"></div>
+
+</div>
+
+<script>
+const v = Date.now();
+const sections = [
+  ['s-header', `audit/header.html?v=${v}`],
+  ['s-firme', `audit/01-firme.html?v=${v}`],
+  ['s-config', `audit/05-config.html?v=${v}`],
+  ['s-system', `audit/09-system.html?v=${v}`],
+  ['s-articole-get', `audit/02-articole-get.html?v=${v}`],
+  ['s-addproduct', `audit/03-addproduct.html?v=${v}`],
+  ['s-modiproduct', `audit/04-modiproduct.html?v=${v}`],
+  ['s-parteneri', `audit/06-parteneri.html?v=${v}`],
+  ['s-stocuri', `audit/07-stocuri.html?v=${v}`],
+  ['s-nomenclatoare', `audit/08-nomenclatoare.html?v=${v}`],
+  ['s-vanzari', `audit/10-vanzari.html?v=${v}`],
+  ['s-receptii', `audit/11-receptii.html?v=${v}`],
+  ['s-comenzi', `audit/13-comenzi-carnete-oferte.html?v=${v}`],
+  ['s-solduri', `audit/12-solduri.html?v=${v}`],
+  ['s-logistica', `audit/20-logistica.html?v=${v}`],
+  ['s-import-furn', `audit/19-import-comenzi-furn.html?v=${v}`],
+  ['s-import-fact-intr', `audit/21-import-facturi-intrare.html?v=${v}`],
+  ['s-import-fact-ies', `audit/23-import-facturi-iesire.html?v=${v}`],
+  ['s-import-transferuri', `audit/22-import-transferuri.html?v=${v}`],
+  ['s-import-bonuri', `audit/24-import-bonuri-consum.html?v=${v}`],
+  ['s-import-modif-pret', `audit/25-import-modificari-pret.html?v=${v}`],
+  ['s-rezumat', `audit/14-rezumat.html?v=${v}`],
+  ['s-toate', `audit/15-toate-functiile.html?v=${v}`],
+  ['s-netestate', `audit/16-netestate.html?v=${v}`],
+];
+
+let loaded = 0;
+sections.forEach(([id, url]) => {
+  fetch(url).then(r => r.text()).then(html => {
+    document.getElementById(id).innerHTML = html;
+    loaded++;
+    if (loaded === sections.length) initUI();
+  }).catch(() => {
+    document.getElementById(id).innerHTML = '<div class="loading">Eroare: ' + url + '</div>';
+    loaded++;
+    if (loaded === sections.length) initUI();
+  });
+});
+
+function initUI() {
+  // Add toggle icons + previews + collapse all sections
+  document.querySelectorAll('.section').forEach(sec => {
+    const header = sec.querySelector('.section-header');
+    if (!header) return;
+
+    // Toggle icon
+    const icon = document.createElement('span');
+    icon.className = 'toggle-icon';
+    icon.textContent = '▼';
+    header.appendChild(icon);
+
+    // Preview from first <p> or .note-info
+    const body = sec.querySelector('.section-body');
+    const source = body?.querySelector('p, .note-info');
+    if (source) {
+      const preview = document.createElement('div');
+      preview.className = 'section-preview';
+      preview.textContent = source.textContent.substring(0, 200) + (source.textContent.length > 200 ? '...' : '');
+      header.appendChild(preview);
+    }
+
+    // Collapse by default (except stats header)
+    if (!sec.closest('#s-header')) {
+      sec.classList.add('collapsed');
+    }
+  });
+
+  // Make h3 blocks with API endpoints collapsible
+  document.querySelectorAll('.section-body').forEach(body => {
+    const h3s = Array.from(body.querySelectorAll(':scope > h3'));
+    if (h3s.length < 2) return;
+
+    h3s.forEach(h3 => {
+      const elements = [];
+      let el = h3.nextElementSibling;
+      while (el && el.tagName !== 'H3') {
+        elements.push(el);
+        el = el.nextElementSibling;
+      }
+      if (elements.length === 0) return;
+
+      const subHeader = document.createElement('div');
+      subHeader.className = 'sub-header sub-collapsed';
+      subHeader.innerHTML = '<h3>' + h3.innerHTML + '</h3><span class="sub-toggle">▼</span>';
+
+      const subContent = document.createElement('div');
+      subContent.className = 'sub-content';
+      subContent.style.display = 'none';
+      elements.forEach(el => subContent.appendChild(el));
+
+      h3.replaceWith(subHeader);
+      subHeader.after(subContent);
+    });
+  });
+
+  // Nav scroll highlight
+  const navLinks = document.querySelectorAll('.nav a');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const link = document.querySelector(`.nav a[href="#${entry.target.id}"]`);
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-80px 0px -70% 0px' });
+  document.querySelectorAll('[id^="g-"]').forEach(el => observer.observe(el));
+}
+
+// Toggle handlers
+document.addEventListener('click', (e) => {
+  const header = e.target.closest('.section-header');
+  if (header) { header.closest('.section').classList.toggle('collapsed'); return; }
+  const sub = e.target.closest('.sub-header');
+  if (sub) {
+    sub.classList.toggle('sub-collapsed');
+    const content = sub.nextElementSibling;
+    if (content && content.classList.contains('sub-content')) {
+      content.style.display = content.style.display === 'none' ? '' : 'none';
+    }
+  }
+});
+</script>
+
+</body>
+</html>

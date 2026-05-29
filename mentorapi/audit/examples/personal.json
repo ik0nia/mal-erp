@@ -1,0 +1,37 @@
+{
+  "success": true,
+  "data": [
+    {
+      "nume": "... ...",
+      "marca": "0",
+      "cnp": "",
+      "esteActiv": "Nu",
+      "esteAgent": "Nu",
+      "serieBuletin": "",
+      "numarBuletin": "",
+      "codPostal": ""
+    },
+    {
+      "nume": "Nume Prenume",
+      "marca": "1",
+      "cnp": "2721207050017",
+      "esteActiv": "Da",
+      "esteAgent": "Nu",
+      "serieBuletin": "ZH",
+      "numarBuletin": "069015",
+      "codPostal": ""
+    },
+    {
+      "nume": "BIRO CRISTIAN",
+      "marca": "3",
+      "cnp": "1830620055091",
+      "esteActiv": "Da",
+      "esteAgent": "Nu",
+      "serieBuletin": "XH",
+      "numarBuletin": "515545",
+      "codPostal": "417515"
+    }
+  ],
+  "errors": [],
+  "timestamp": "2026-05-18T10:16:38Z"
+}

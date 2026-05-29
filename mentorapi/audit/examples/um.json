@@ -1,0 +1,22 @@
+{
+  "success": true,
+  "data": [
+    {
+      "denumire": "Buc"
+    },
+    {
+      "denumire": "Ore"
+    },
+    {
+      "denumire": "Perechi"
+    },
+    {
+      "denumire": "L"
+    },
+    {
+      "denumire": "Lei"
+    }
+  ],
+  "errors": [],
+  "timestamp": "2026-05-18T10:16:38Z"
+}

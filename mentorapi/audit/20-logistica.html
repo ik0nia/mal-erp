@@ -1,0 +1,112 @@
+<!-- ==================== LOGISTICA ==================== -->
+<div class="section">
+<div class="section-header">
+<h2>Logistică — Acceptare comenzi, Recepție, Picking, Livrare</h2>
+<span class="badge badge-partial">4/5 TESTAT</span>
+</div>
+<div class="section-body">
+
+<div class="note note-info">✅ Testat 14 mai 2026 — toate 5 funcțiile trecute pe vtable SAFEARRAY (CallWithVariantArray). 4 din 5 funcționează. SetInventoryOrders dă E_UNEXPECTED chiar cu date valide — adăugat la nefixabile.</div>
+<div class="note"><strong>Fix:</strong> Handler-ele trecute de la genericComCall (IDispatch) la variantArrayHandler care construiește SAFEARRAY(BSTR) manual și apelează vtable — same fix ca SetDocsData.</div>
+
+<h3>POST /api/comenzi/actualizeaza-acceptat — ActualizeazaAcceptat</h3>
+<p>Actualizează statusul de acceptare pe linii de comenzi. Primește array de string-uri (format similar GetInfoComenzi).</p>
+<div class="note note-info">✅ Apel COM funcțional (result=0 cu date test). Format exact de update necunoscut — nu avem documentație oficială.</div>
+
+<h4>GET /api/comenzi/info — GetInfoComenzi (date sursă, 9 câmpuri)</h4>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>CodPartener</strong></td><td>string</td><td><span class="mono">0000000036351</span> (CodIntern)</td></tr>
+<tr><td>1</td><td><strong>DataComanda</strong></td><td>date</td><td><span class="mono">04.05.2026</span></td></tr>
+<tr><td>2</td><td><strong>NrComanda</strong></td><td>integer</td><td><span class="mono">12530</span></td></tr>
+<tr><td>3</td><td><strong>CodArticol</strong></td><td>string</td><td><span class="mono">9007912543183</span></td></tr>
+<tr><td>4</td><td><strong>Cantitate</strong></td><td>decimal</td><td><span class="mono">5</span></td></tr>
+<tr><td>5</td><td><strong>Pret</strong></td><td>decimal</td><td><span class="mono">16,03</span></td></tr>
+<tr><td>6</td><td><strong>Camp6</strong></td><td>integer</td><td><span class="mono">0</span></td></tr>
+<tr><td>7</td><td><strong>Camp7</strong></td><td>integer</td><td><span class="mono">0</span></td></tr>
+<tr><td>8</td><td><strong>Acceptat</strong></td><td>DA/NU</td><td><span class="mono">NU</span></td></tr>
+</table>
+
+<h3>POST /api/receiving/set-list — SetReceivingList</h3>
+<p>Setează lista de recepție. Primește linii cu formatul din GetReceptii (22 câmpuri per linie).</p>
+<div class="note note-info">✅ Testat cu date reale recepție — funcțional (result=0). E_UNEXPECTED cu date invalide.</div>
+
+<h4>GET /api/receptii — GetReceptii (date sursă, 22 câmpuri)</h4>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>DenGestiune</strong></td><td>string</td><td><span class="mono">Magazin Practic</span></td></tr>
+<tr><td>1</td><td><strong>SimbolGestiune</strong></td><td>string</td><td><span class="mono">MP</span></td></tr>
+<tr><td>2</td><td><strong>NrNIR</strong></td><td>integer</td><td><span class="mono">24503</span></td></tr>
+<tr><td>3</td><td><strong>DataNIR</strong></td><td>date</td><td><span class="mono">12.5.2026</span></td></tr>
+<tr><td>4</td><td><strong>DenFurnizor</strong></td><td>string</td><td><span class="mono">TEMAD CO SRL</span></td></tr>
+<tr><td>5</td><td><strong>CodFurnizor</strong></td><td>string</td><td><span class="mono">728015653</span></td></tr>
+<tr><td>6</td><td><strong>NrFactura</strong></td><td>string</td><td><span class="mono">3482</span></td></tr>
+<tr><td>7</td><td><strong>DataFactura</strong></td><td>date</td><td><span class="mono">12.05.2026</span></td></tr>
+<tr><td>8</td><td><strong>CodArticol</strong></td><td>string</td><td><span class="mono">5948941006475</span></td></tr>
+<tr><td>9</td><td><strong>DenArticol</strong></td><td>string</td><td><span class="mono">BANDA GIPS-CARTON 48MMX90M</span></td></tr>
+<tr><td>10</td><td><strong>ContStoc</strong></td><td>string</td><td><span class="mono">371.02</span></td></tr>
+<tr><td>11</td><td><strong>UM</strong></td><td>string</td><td><span class="mono">Buc</span></td></tr>
+<tr><td>12</td><td><strong>CantComanda</strong></td><td>decimal</td><td><span class="mono">75</span></td></tr>
+<tr><td>13</td><td><strong>CantReceptionata</strong></td><td>decimal</td><td><span class="mono">75</span></td></tr>
+<tr><td>14</td><td><strong>PretIntrare</strong></td><td>decimal</td><td><span class="mono">12,8448</span></td></tr>
+<tr><td>15</td><td><strong>PretVanzare</strong></td><td>decimal</td><td><span class="mono">20,9</span></td></tr>
+<tr><td>16</td><td><strong>CotaTVA</strong></td><td>integer</td><td><span class="mono">21</span></td></tr>
+<tr><td>17</td><td><strong>Camp17</strong></td><td>integer</td><td><span class="mono">50722</span></td></tr>
+<tr><td>18</td><td><strong>Camp18</strong></td><td>integer</td><td><span class="mono">1</span></td></tr>
+<tr><td>19</td><td><strong>Camp19</strong></td><td>integer</td><td><span class="mono">1</span></td></tr>
+<tr><td>20</td><td><strong>Camp20</strong></td><td>integer</td><td><span class="mono">520717</span></td></tr>
+<tr><td>21</td><td><strong>Camp21</strong></td><td>-</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+<p><em>946 recepții pe luna curentă. Format consistent 22 câmpuri.</em></p>
+
+<h3>POST /api/livrari/set-picked — SetPickedList</h3>
+<p>Setează lista de picking (produse pregătite pentru livrare).</p>
+<div class="note note-info">✅ Funcțional (result=0). Format input necunoscut — nu există GET corespunzător dedicat.</div>
+
+<h3>POST /api/livrari/set-delivery — SetDeliveryList</h3>
+<p>Setează lista de livrare. Primește linii cu formatul din GetDeliveryOrders (17 câmpuri per linie).</p>
+<div class="note note-info">✅ Testat cu date reale delivery orders — funcțional (result=0).</div>
+
+<h4>GET /api/livrari/orders — GetDeliveryOrders (date sursă, 17 câmpuri)</h4>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>NrComanda</strong></td><td>integer</td><td><span class="mono">17</span></td></tr>
+<tr><td>1</td><td><strong>CodPartener</strong></td><td>string</td><td><span class="mono">728023438</span></td></tr>
+<tr><td>2</td><td><strong>DenPartener</strong></td><td>string</td><td><span class="mono">MATEA MARIUS FLORIAN</span></td></tr>
+<tr><td>3</td><td><strong>DataComanda</strong></td><td>datetime</td><td><span class="mono">2025-11-01 00:00:00</span></td></tr>
+<tr><td>4</td><td><strong>DataLivrare</strong></td><td>datetime</td><td><span class="mono">2022-02-28 14:02:18</span></td></tr>
+<tr><td>5</td><td><strong>CodArticol</strong></td><td>string</td><td><span class="mono">9007767531045</span></td></tr>
+<tr><td>6</td><td><strong>Cantitate</strong></td><td>decimal</td><td><span class="mono">11</span></td></tr>
+<tr><td>7</td><td><strong>UM</strong></td><td>string</td><td><span class="mono">BUC</span></td></tr>
+<tr><td>8</td><td><strong>Pret</strong></td><td>decimal</td><td><span class="mono">42,02</span></td></tr>
+<tr><td>9</td><td><strong>Discount</strong></td><td>decimal</td><td><span class="mono">0</span></td></tr>
+<tr><td>10</td><td><strong>MarcaAgent</strong></td><td>integer</td><td><span class="mono">9</span></td></tr>
+<tr><td>11</td><td><strong>SimbolGestiune</strong></td><td>string</td><td><span class="mono">MALOF</span></td></tr>
+<tr><td>12</td><td><strong>Locatie</strong></td><td>string</td><td><span class="mono">SEDIU SOCIAL</span></td></tr>
+<tr><td>13</td><td><strong>Camp13</strong></td><td>integer</td><td><span class="mono">5</span></td></tr>
+<tr><td>14</td><td><strong>Observatii</strong></td><td>string</td><td><span class="mono">SE VA LIVRA DUPA 15 APRILIE</span></td></tr>
+<tr><td>15</td><td><strong>Camp15</strong></td><td>-</td><td><span class="mono">(gol)</span></td></tr>
+<tr><td>16</td><td><strong>Camp16</strong></td><td>-</td><td><span class="mono">(gol)</span></td></tr>
+</table>
+<p><em>20 delivery orders active. Format consistent 17 câmpuri.</em></p>
+
+<h3>POST /api/inventory/set-orders — SetInventoryOrders ⚠️</h3>
+<div class="note note-danger">❌ E_UNEXPECTED (0x8000FFFF) chiar cu date valide din GetInventoryOrders. Adăugat la nefixabile.</div>
+
+<h4>GET /api/inventory/orders — GetInventoryOrders (date sursă, 2 câmpuri)</h4>
+<table>
+<tr><th>Poz</th><th>Câmp</th><th>Tip</th><th>Exemplu</th></tr>
+<tr><td>0</td><td><strong>NrInventar</strong></td><td>integer</td><td><span class="mono">1</span></td></tr>
+<tr><td>1</td><td><strong>DataInventar</strong></td><td>date</td><td><span class="mono">20.07.2008</span></td></tr>
+</table>
+<p><em>104 inventare pe gestiune MP.</em></p>
+
+<h3>Request body (comun pentru toate)</h3>
+<pre style="background:#f5f0e8; padding:12px; border-radius:6px; font-size:13px">POST /api/{endpoint}
+{"lines": ["camp1;camp2;camp3;...", "camp1;camp2;camp3;..."]}</pre>
+
+<h3>Răspuns</h3>
+<pre style="background:#f5f0e8; padding:12px; border-radius:6px; font-size:13px">{"success": true, "data": {"method": "NumeFunctie", "result": 0}}</pre>
+
+</div>
+</div>
