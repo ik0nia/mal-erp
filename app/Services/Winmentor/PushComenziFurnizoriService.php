@@ -383,6 +383,17 @@ class PushComenziFurnizoriService
             'winmentor_order_nr'    => $orderNr,
         ]);
 
+        // Documentul (NrDoc = numărul PO) e acum în WinMentor — marcăm și PO-ul,
+        // altfel winmentor:retry-failed-po-sync l-ar reimporta și ar dubla comanda
+        if ($po->winmentor_sync_status !== PurchaseOrder::WINMENTOR_SYNCED) {
+            $po->update([
+                'winmentor_sync_status' => PurchaseOrder::WINMENTOR_SYNCED,
+                'winmentor_sync_error'  => null,
+                'winmentor_synced_at'   => now(),
+                'winmentor_order_nr'    => $orderNr,
+            ]);
+        }
+
         $this->log('info', "Recepție #{$reception->reception_number} [{$po->number}] importată cu succes");
 
         return ['success' => true, 'error' => null, 'orderNr' => $orderNr];

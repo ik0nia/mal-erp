@@ -49,7 +49,9 @@ class RetryFailedWinmentorPoSyncCommand extends Command
         $this->info("Bridge OK — retrimitem {$failed->count()} PO-uri...");
 
         foreach ($failed as $po) {
-            $po->update([
+            // updateQuietly: hook-ul din model dispatchează și el la trecerea pe PENDING —
+            // cu update() normal jobul pleca de două ori per retry
+            $po->updateQuietly([
                 'winmentor_sync_status' => PurchaseOrder::WINMENTOR_PENDING,
                 'winmentor_sync_error'  => null,
             ]);
