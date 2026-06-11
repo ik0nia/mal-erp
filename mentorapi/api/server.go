@@ -3,6 +3,7 @@ package api
 import (
 	"log"
 	"strconv"
+	"sync"
 	"time"
 
 	"mentorapi/cache"
@@ -20,6 +21,7 @@ type Server struct {
 	cache     *cache.Cache
 	startTime time.Time
 	connected bool
+	comMu     sync.Mutex // protects wm + connected
 }
 
 func NewServer(cfg config.MentorAPIConfig) *Server {
@@ -31,7 +33,11 @@ func NewServer(cfg config.MentorAPIConfig) *Server {
 }
 
 // EnsureConnected lazily connects to DocImpServer on first use.
+// Uses a mutex so only one goroutine attempts the (slow) COM connection.
 func (s *Server) EnsureConnected() error {
+	s.comMu.Lock()
+	defer s.comMu.Unlock()
+
 	if s.connected && s.wm != nil {
 		return nil
 	}
@@ -49,6 +55,8 @@ func (s *Server) EnsureConnected() error {
 }
 
 func (s *Server) Close() {
+	s.comMu.Lock()
+	defer s.comMu.Unlock()
 	s.cache.Stop()
 	if s.wm != nil {
 		s.wm.Close()

@@ -248,6 +248,7 @@ func (s *Server) SetupRoutes() http.Handler {
 	// === COM Generic Call (Discovery & Testing) ===
 	mux.HandleFunc("GET /api/com/methods", s.handleComMethods)
 	mux.HandleFunc("POST /api/com/call", s.handleComCall)
+	mux.HandleFunc("POST /api/com/reset", s.handleComReset)
 
 	// Apply middleware chain (outermost first)
 	var handler http.Handler = mux

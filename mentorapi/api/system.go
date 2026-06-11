@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"runtime"
 	"time"
@@ -156,4 +157,29 @@ func (s *Server) handleLogOn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	Success(w, map[string]interface{}{"method": "LogOn", "result": rows})
+}
+
+// handleComReset closes the current COM connection and forces a fresh reconnect.
+func (s *Server) handleComReset(w http.ResponseWriter, r *http.Request) {
+	log.Println("[COM] Reset requested via API")
+
+	s.comMu.Lock()
+	if s.wm != nil {
+		s.wm.Close()
+		s.wm = nil
+		s.connected = false
+		log.Println("[COM] Old connection closed")
+	}
+	s.comMu.Unlock()
+
+	if err := s.EnsureConnected(); err != nil {
+		Error(w, http.StatusInternalServerError, "COM reconnect failed: "+err.Error())
+		return
+	}
+
+	log.Println("[COM] Reconnected successfully")
+	Success(w, map[string]interface{}{
+		"reset":        true,
+		"comConnected": s.connected,
+	})
 }
