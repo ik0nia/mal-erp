@@ -236,12 +236,21 @@ class ComputeAbcClassificationCommand extends Command
             }
 
             if (! empty($rows)) {
-                DB::table('woo_products')
-                    ->upsert(
-                        $rows,
-                        ['id'],
-                        ['abc_classification', 'xyz_classification', 'avg_daily_consumption', 'reorder_qty']
-                    );
+                $existingIds = DB::table('woo_products')
+                    ->whereIn('id', array_column($rows, 'id'))
+                    ->pluck('id')
+                    ->flip();
+
+                $rows = array_filter($rows, fn ($row) => isset($existingIds[$row['id']]));
+
+                if (! empty($rows)) {
+                    DB::table('woo_products')
+                        ->upsert(
+                            array_values($rows),
+                            ['id'],
+                            ['abc_classification', 'xyz_classification', 'avg_daily_consumption', 'reorder_qty']
+                        );
+                }
             }
 
             unset($rows);

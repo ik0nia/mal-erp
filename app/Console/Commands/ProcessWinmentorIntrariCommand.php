@@ -76,7 +76,13 @@ class ProcessWinmentorIntrariCommand extends Command
                 ->get();
 
             foreach ($rows as $row) {
-                $result = $this->processRow($row, $firma, $bridge);
+                try {
+                    $result = $this->processRow($row, $firma, $bridge);
+                } catch (\Throwable $e) {
+                    Log::error("[ProcessIntrari] Eroare la rândul raw id={$row->id} sku={$row->sku}: {$e->getMessage()}", ['exception' => $e]);
+                    $this->warn("  eroare la id={$row->id} sku={$row->sku}: {$e->getMessage()}");
+                    $result = 'error';
+                }
 
                 match ($result) {
                     'saved'     => $saved++,
@@ -160,10 +166,10 @@ class ProcessWinmentorIntrariCommand extends Command
         }
 
         // Match furnizor
-        [$supplierId, $supplierNameRaw] = $this->resolveSupplier($partId, $bridge);
+        [$supplierId, $supplierNameRaw] = $partId ? $this->resolveSupplier($partId, $bridge) : [null, null];
 
         // Detectare anomalie (pe prețul în RON)
-        $anomalyType = $this->detectAnomaly($productId, $supplierId, $partId, $pretRon, $date);
+        $anomalyType = $this->detectAnomaly($productId, $supplierId, $partId, $pretRon);
 
         if ($anomalyType === WinmentorPriceAnomaly::TYPE_POSSIBLE_SKU_REUSE) {
             $this->saveAnomaly($row, $productId, $supplierId, $partId, $pretRon, $date, $anomalyType, $firma);
@@ -216,7 +222,7 @@ class ProcessWinmentorIntrariCommand extends Command
 
     // ─── Detectare anomalii ───────────────────────────────────────────────────────
 
-    private function detectAnomaly(int $productId, ?int $supplierId, string $partId, float $newPrice, string $date): ?string
+    private function detectAnomaly(int $productId, ?int $supplierId, ?string $partId, float $newPrice): ?string
     {
         $prev = $this->latestPrices[$productId] ?? null;
         if (! $prev || ! $prev['price']) return null;
@@ -226,8 +232,8 @@ class ProcessWinmentorIntrariCommand extends Command
 
         $changePct = (($newPrice - $prevPrice) / $prevPrice) * 100;
 
-        // Posibilă refolosire SKU: schimbare masivă + furnizor diferit
-        if (abs($changePct) >= $this->skuReuseThreshold && $partId !== $prev['part_id']) {
+        // Posibilă refolosire SKU: schimbare masivă + furnizor diferit (necunoscut ≠ diferit)
+        if (abs($changePct) >= $this->skuReuseThreshold && $partId !== null && $partId !== $prev['part_id']) {
             return WinmentorPriceAnomaly::TYPE_POSSIBLE_SKU_REUSE;
         }
 
@@ -249,7 +255,7 @@ class ProcessWinmentorIntrariCommand extends Command
         return null;
     }
 
-    private function saveAnomaly(object $row, int $productId, ?int $supplierId, string $partId, float $newPrice, string $date, string $type, string $firma): void
+    private function saveAnomaly(object $row, int $productId, ?int $supplierId, ?string $partId, float $newPrice, string $date, string $type, string $firma): void
     {
         $prev      = $this->latestPrices[$productId] ?? null;
         $prevPrice = $prev ? (float) $prev['price'] : null;

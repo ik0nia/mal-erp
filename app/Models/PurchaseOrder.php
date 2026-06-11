@@ -106,6 +106,12 @@ class PurchaseOrder extends Model
             }
 
             if ($record->wasChanged('status') && $record->status === self::STATUS_SENT) {
+                if (! $record->winmentor_sync_status) {
+                    $record->winmentor_sync_status = self::WINMENTOR_PENDING;
+                    $record->saveQuietly();
+                    \App\Jobs\PushComenziFurnizoriToWinmentorJob::dispatch($record->id)->afterCommit();
+                }
+
                 $supplier = $record->supplier?->name ?? 'Furnizor necunoscut';
                 \App\Jobs\SendWhPushNotificationJob::dispatch(
                     title: '📦 Comandă nouă de recepționat',

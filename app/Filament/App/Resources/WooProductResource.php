@@ -505,6 +505,7 @@ class WooProductResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->with(['connection.location']))
             ->paginationPageOptions([25, 50, 100, 250, 500])
             ->defaultPaginationPageOption(50)
             ->columns([

@@ -10,14 +10,15 @@ class SyncSupplierSkuFromWinmentorCommand extends Command
 {
     protected $signature = 'winmentor:sync-supplier-sku
                             {--supplier= : ID furnizor specific (opțional)}
-                            {--only-empty : Actualizează doar înregistrările fără supplier_sku}';
+                            {--only-empty : (deprecated, acum implicit) Actualizează doar cele fără supplier_sku}
+                            {--force : Suprascrie și codurile existente (implicit NU suprascrie)}';
 
     protected $description = 'Sincronizează supplier_sku din codExternAlt WinMentor Bridge pentru toți furnizorii';
 
     public function handle(WinmentorBridgeClient $bridge): int
     {
         $supplierId = $this->option('supplier') ? (int) $this->option('supplier') : null;
-        $onlyEmpty  = (bool) $this->option('only-empty');
+        $onlyEmpty  = ! (bool) $this->option('force'); // implicit protejăm codurile existente
 
         // ── 1. Descarcă toți articolii din WinMentor (paginat) ──────────────────
         $this->info('Descarcă articoli din WinMentor Bridge...');

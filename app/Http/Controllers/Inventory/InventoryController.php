@@ -35,7 +35,7 @@ class InventoryController extends Controller
         if (!$product) {
             // Verifică dacă există deja o cerere pending pentru acest EAN
             $existing = EanAssociationRequest::where('ean', $code)
-                ->whereIn('status', [EanAssociationRequest::STATUS_PENDING, EanAssociationRequest::STATUS_APPROVED])
+                ->whereIn('status', [EanAssociationRequest::STATUS_PENDING, EanAssociationRequest::STATUS_APPROVED, EanAssociationRequest::STATUS_AUTO_DETECTED])
                 ->latest()
                 ->first();
 
@@ -124,20 +124,36 @@ class InventoryController extends Controller
             return response()->json(['ok' => true, 'already_exists' => true]);
         }
 
+        // Auto-detectare: produsul are winmentor_name și SKU diferit de EAN-ul scanat
+        $autoDetected = false;
+        $oldSku = null;
+        if (! empty($validated['woo_product_id'])) {
+            $product = WooProduct::find($validated['woo_product_id']);
+            if ($product && $product->winmentor_name && $product->sku && $product->sku !== $validated['ean']) {
+                $autoDetected = true;
+                $oldSku = $product->sku;
+            }
+        }
+
         $eanRequest = EanAssociationRequest::create([
             'ean'            => $validated['ean'],
             'woo_product_id' => $validated['woo_product_id'] ?? null,
             'requested_by'   => Auth::id(),
-            'status'         => EanAssociationRequest::STATUS_PENDING,
-            'notes'          => $validated['notes'] ?? null,
+            'status'         => $autoDetected ? EanAssociationRequest::STATUS_AUTO_DETECTED : EanAssociationRequest::STATUS_PENDING,
+            'processed_at'   => $autoDetected ? now() : null,
+            'notes'          => $autoDetected
+                ? "EAN vechi: {$oldSku}"
+                : ($validated['notes'] ?? null),
         ]);
 
-        // Notificare email
-        $eanRequest->loadMissing(['product', 'requestedBy']);
-        Mail::to(['codrut@ikonia.ro', 'office@malinco.ro'])
-            ->queue(new \App\Mail\EanAssociationRequestMail($eanRequest));
+        // Notificare email doar pentru cererile manuale
+        if (! $autoDetected) {
+            $eanRequest->loadMissing(['product', 'requestedBy']);
+            Mail::to(['codrut@ikonia.ro', 'office@malinco.ro'])
+                ->queue(new \App\Mail\EanAssociationRequestMail($eanRequest));
+        }
 
-        return response()->json(['ok' => true, 'already_exists' => false]);
+        return response()->json(['ok' => true, 'already_exists' => false, 'auto_detected' => $autoDetected]);
     }
 
     // ─── Căutare produse pentru asociere ────────────────────────────────────
@@ -187,9 +203,9 @@ class InventoryController extends Controller
         )->first();
         if ($product) return $product;
 
-        // 4. EAN Association Request aprobat
+        // 4. EAN Association Request aprobat sau auto-detectat
         $assoc = EanAssociationRequest::where('ean', $code)
-            ->where('status', EanAssociationRequest::STATUS_APPROVED)
+            ->whereIn('status', [EanAssociationRequest::STATUS_APPROVED, EanAssociationRequest::STATUS_AUTO_DETECTED])
             ->with('product')
             ->latest('processed_at')
             ->first();

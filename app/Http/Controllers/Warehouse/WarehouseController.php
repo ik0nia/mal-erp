@@ -307,123 +307,140 @@ class WarehouseController extends Controller
             ], 422);
         }
 
-        $order->loadMissing(['items', 'receptions']);
+        $result = \DB::transaction(function () use ($order, $data, $isFinal) {
+            // Lock PO row to prevent concurrent receptions
+            $order = PurchaseOrder::lockForUpdate()->findOrFail($order->id);
 
-        // Următorul număr de recepție
-        $nextReceptionNr = ($order->receptions->max('reception_number') ?? 0) + 1;
+            // Re-check status inside transaction (altă cerere concurentă poate schimba statusul)
+            if (! in_array($order->status, [
+                PurchaseOrder::STATUS_SENT,
+                PurchaseOrder::STATUS_PARTIALLY_RECEIVED,
+            ])) {
+                return ['ok' => false, 'message' => 'Comanda a fost deja recepționată sau nu mai este disponibilă.', 'status' => 403];
+            }
 
-        // Creăm recepția (fără PENDING — dispatch manual după ce items sunt salvate)
-        $reception = PurchaseOrderReception::create([
-            'purchase_order_id'     => $order->id,
-            'reception_number'      => $nextReceptionNr,
-            'is_final'              => $isFinal,
-            'received_at'           => now(),
-            'received_by'           => Auth::id(),
-            'received_notes'        => $data['received_notes'] ?? null,
-            'winmentor_sync_status' => 'pending',
-        ]);
+            $order->loadMissing(['items', 'receptions']);
 
-        $submittedById = collect($data['items'])->keyBy('id');
-        $affectedRequestIds = [];
-        $hasShortfall       = false;
+            // Următorul număr de recepție (atomic — sub lock)
+            $nextReceptionNr = ($order->receptions->max('reception_number') ?? 0) + 1;
 
-        foreach ($order->items as $orderItem) {
-            $submitted   = $submittedById[$orderItem->id] ?? [];
-            $thisQty     = (float) ($submitted['qty'] ?? 0);
+            // Creăm recepția
+            $reception = PurchaseOrderReception::create([
+                'purchase_order_id'     => $order->id,
+                'reception_number'      => $nextReceptionNr,
+                'is_final'              => $isFinal,
+                'received_at'           => now(),
+                'received_by'           => Auth::id(),
+                'received_notes'        => $data['received_notes'] ?? null,
+                'winmentor_sync_status' => 'pending',
+            ]);
 
-            // Creăm item de recepție (chiar dacă qty=0, pentru evidență completă)
-            if ($thisQty > 0) {
+            $submittedById = collect($data['items'])->keyBy('id');
+            $affectedRequestIds = [];
+            $hasShortfall       = false;
+
+            foreach ($order->items as $orderItem) {
+                $submitted   = $submittedById[$orderItem->id] ?? [];
+                $thisQty     = (float) ($submitted['qty'] ?? 0);
+
+                if ($thisQty > 0) {
+                    PurchaseOrderReceptionItem::create([
+                        'reception_id'      => $reception->id,
+                        'order_item_id'     => $orderItem->id,
+                        'received_quantity'  => $thisQty,
+                        'received_note'     => $submitted['reason'] ?? null,
+                        'invoice_position'  => isset($submitted['invoice_position']) ? (int) $submitted['invoice_position'] : null,
+                    ]);
+                }
+
+                // Actualizăm cantitatea cumulativă pe PO item
+                $previousTotal = (float) ($orderItem->received_quantity ?? 0);
+                $newTotal      = $previousTotal + $thisQty;
+
+                $orderItem->update([
+                    'received_quantity' => $newTotal,
+                    'received_note'     => $submitted['reason'] ?? $orderItem->received_note,
+                    'invoice_position'  => isset($submitted['invoice_position']) ? (int) $submitted['invoice_position'] : $orderItem->invoice_position,
+                ]);
+
+                if ($isFinal) {
+                    $orderedQty = (float) $orderItem->quantity;
+                    $shortfall  = max(0, $orderedQty - $newTotal);
+                    if ($shortfall > 0) {
+                        $hasShortfall = true;
+                        $this->revertShortfall($orderItem, $shortfall, $affectedRequestIds);
+                    }
+                }
+            }
+
+            if ($isFinal) {
+                foreach (array_unique($affectedRequestIds) as $requestId) {
+                    PurchaseRequest::find($requestId)?->recalculateStatus();
+                }
+            }
+
+            // Produse neplanificate
+            foreach ($data['extra_items'] ?? [] as $extra) {
+                $qty          = (float) $extra['qty'];
+                $wooProductId = $extra['woo_product_id'] ? (int) $extra['woo_product_id'] : null;
+                $sku = $extra['sku'] ?: null;
+                if ($wooProductId) {
+                    $wooSku = \App\Models\WooProduct::find($wooProductId)?->sku;
+                    if ($wooSku) $sku = $wooSku;
+                }
+
+                $newItem = $order->items()->create([
+                    'product_name'      => $extra['name'],
+                    'sku'               => $sku,
+                    'woo_product_id'    => $wooProductId,
+                    'quantity'          => $qty,
+                    'received_quantity' => $qty,
+                    'unit_price'        => 0,
+                    'line_total'        => 0,
+                    'notes'             => 'Adăugat la recepție (neplanificat)',
+                ]);
+
                 PurchaseOrderReceptionItem::create([
                     'reception_id'      => $reception->id,
-                    'order_item_id'     => $orderItem->id,
-                    'received_quantity'  => $thisQty,
-                    'received_note'     => $submitted['reason'] ?? null,
-                    'invoice_position'  => isset($submitted['invoice_position']) ? (int) $submitted['invoice_position'] : null,
+                    'order_item_id'     => $newItem->id,
+                    'received_quantity'  => $qty,
                 ]);
             }
 
-            // Actualizăm cantitatea cumulativă pe PO item
-            $previousTotal = (float) ($orderItem->received_quantity ?? 0);
-            $newTotal      = $previousTotal + $thisQty;
+            // Actualizăm PO status
+            $newStatus = $isFinal ? PurchaseOrder::STATUS_RECEIVED : PurchaseOrder::STATUS_PARTIALLY_RECEIVED;
 
-            $orderItem->update([
-                'received_quantity' => $newTotal,
-                'received_note'     => $submitted['reason'] ?? $orderItem->received_note,
-                'invoice_position'  => isset($submitted['invoice_position']) ? (int) $submitted['invoice_position'] : $orderItem->invoice_position,
+            $order->update([
+                'status'                => $newStatus,
+                'received_at'           => $isFinal ? now() : ($order->received_at ?? now()),
+                'received_by'           => $isFinal ? Auth::id() : ($order->received_by ?? Auth::id()),
+                'received_notes'        => $data['received_notes'] ?? $order->received_notes,
             ]);
 
-            // Revert shortfall doar la recepția finală
-            if ($isFinal) {
-                $orderedQty = (float) $orderItem->quantity;
-                $shortfall  = max(0, $orderedQty - $newTotal);
-                if ($shortfall > 0) {
-                    $hasShortfall = true;
-                    $this->revertShortfall($orderItem, $shortfall, $affectedRequestIds);
-                }
-            }
+            // Șterge draftul server-side
+            \DB::table('purchase_order_reception_drafts')
+                ->where('purchase_order_id', $order->id)
+                ->delete();
+
+            $message = $isFinal
+                ? ($hasShortfall
+                    ? 'Recepție finală înregistrată. Lipsurile returnate în coada de cumpărare.'
+                    : 'Recepție finală înregistrată cu succes.')
+                : "Recepție parțială #{$nextReceptionNr} înregistrată. Comanda rămâne deschisă.";
+
+            return ['ok' => true, 'message' => $message, 'reception_id' => $reception->id, 'hasShortfall' => $hasShortfall];
+        });
+
+        if (! $result['ok']) {
+            return response()->json($result, $result['status'] ?? 422);
         }
 
-        if ($isFinal) {
-            foreach (array_unique($affectedRequestIds) as $requestId) {
-                PurchaseRequest::find($requestId)?->recalculateStatus();
-            }
-        }
-
-        // Produse neplanificate
-        foreach ($data['extra_items'] ?? [] as $extra) {
-            $qty          = (float) $extra['qty'];
-            $wooProductId = $extra['woo_product_id'] ? (int) $extra['woo_product_id'] : null;
-            $sku = $extra['sku'] ?: null;
-            if ($wooProductId) {
-                $wooSku = \App\Models\WooProduct::find($wooProductId)?->sku;
-                if ($wooSku) $sku = $wooSku;
-            }
-
-            $newItem = $order->items()->create([
-                'product_name'      => $extra['name'],
-                'sku'               => $sku,
-                'woo_product_id'    => $wooProductId,
-                'quantity'          => $qty,
-                'received_quantity' => $qty,
-                'unit_price'        => 0,
-                'line_total'        => 0,
-                'notes'             => 'Adăugat la recepție (neplanificat)',
-            ]);
-
-            PurchaseOrderReceptionItem::create([
-                'reception_id'      => $reception->id,
-                'order_item_id'     => $newItem->id,
-                'received_quantity'  => $qty,
-            ]);
-        }
-
-        // Actualizăm PO status
-        $newStatus = $isFinal ? PurchaseOrder::STATUS_RECEIVED : PurchaseOrder::STATUS_PARTIALLY_RECEIVED;
-
-        $order->update([
-            'status'                => $newStatus,
-            'received_at'           => $isFinal ? now() : ($order->received_at ?? now()),
-            'received_by'           => $isFinal ? Auth::id() : ($order->received_by ?? Auth::id()),
-            'received_notes'        => $data['received_notes'] ?? $order->received_notes,
-        ]);
-
-        // Șterge draftul server-side (recepția e finalizată)
-        \DB::table('purchase_order_reception_drafts')
-            ->where('purchase_order_id', $order->id)
-            ->delete();
-
-        // Dispatch WinMentor sync job acum (după ce toate items sunt salvate)
-        \App\Jobs\PushReceptionToWinmentorJob::dispatch($reception->id)->afterCommit();
-
-        $message = $isFinal
-            ? ($hasShortfall
-                ? 'Recepție finală înregistrată. Lipsurile returnate în coada de cumpărare.'
-                : 'Recepție finală înregistrată cu succes.')
-            : "Recepție parțială #{$nextReceptionNr} înregistrată. Comanda rămâne deschisă.";
+        // Dispatch WinMentor sync job DUPĂ tranzacție (afterCommit)
+        \App\Jobs\PushReceptionToWinmentorJob::dispatch($result['reception_id'])->afterCommit();
 
         return response()->json([
             'ok'      => true,
-            'message' => $message,
+            'message' => $result['message'],
         ]);
     }
 

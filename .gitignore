@@ -36,3 +36,9 @@ node-renderer/node_modules/
 
 # Claude Code
 .claude/
+
+# Fișiere de lucru locale
+/public/mentorapi.exe
+/storage/filebrowser.db
+/storage/temad_*.sql
+/storage/wordpress-theme/

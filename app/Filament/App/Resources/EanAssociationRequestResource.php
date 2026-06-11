@@ -28,7 +28,7 @@ class EanAssociationRequestResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        $count = static::getModel()::where('status', 'pending')->count();
+        $count = static::getModel()::whereIn('status', ['pending', 'auto_detected'])->count();
 
         return $count > 0 ? (string) $count : null;
     }
@@ -66,20 +66,29 @@ class EanAssociationRequestResource extends Resource
                     ->label('Status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
-                        'pending'  => 'warning',
-                        'approved' => 'success',
-                        'rejected' => 'danger',
-                        default    => 'gray',
+                        'pending'       => 'warning',
+                        'approved'      => 'success',
+                        'rejected'      => 'danger',
+                        'auto_detected' => 'info',
+                        default         => 'gray',
                     })
                     ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'pending'  => 'În așteptare',
-                        'approved' => 'Aprobat',
-                        'rejected' => 'Respins',
-                        default    => $state,
+                        'pending'       => 'În așteptare',
+                        'approved'      => 'Aprobat',
+                        'rejected'      => 'Respins',
+                        'auto_detected' => 'Detectat automat',
+                        default         => $state,
                     }),
 
+                Tables\Columns\TextColumn::make('processed_at')
+                    ->label('Detectat la')
+                    ->dateTime('d.m.Y H:i')
+                    ->sortable()
+                    ->tooltip(fn (EanAssociationRequest $record) => $record->notes)
+                    ->placeholder('—'),
+
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Data')
+                    ->label('Data cerere')
                     ->dateTime('d.m.Y H:i')
                     ->sortable(),
             ])
@@ -88,30 +97,58 @@ class EanAssociationRequestResource extends Resource
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Status')
                     ->options([
-                        'pending'  => 'În așteptare',
-                        'approved' => 'Aprobat',
-                        'rejected' => 'Respins',
+                        'pending'       => 'În așteptare',
+                        'approved'      => 'Aprobat',
+                        'rejected'      => 'Respins',
+                        'auto_detected' => 'Detectat automat',
                     ]),
             ])
             ->deferFilters(false)
             ->recordActions([
                 Actions\Action::make('approve')
-                    ->label('Aprobă')
+                    ->label('Aprobă & Aplică')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(fn (EanAssociationRequest $record) => $record->status === 'pending')
                     ->requiresConfirmation()
-                    ->modalHeading('Marchează ca aprobat')
-                    ->modalDescription(fn (EanAssociationRequest $record) => "Marchezi cererea de asociere EAN «{$record->ean}» → «{$record->product->name}» ca aprobată. Procesarea efectivă a SKU-ului se face separat.")
+                    ->modalHeading('Aprobă și aplică schimbarea de EAN')
+                    ->modalDescription(fn (EanAssociationRequest $record) => "SKU-ul produsului «{$record->product->name}» se va schimba din «{$record->product->sku}» → «{$record->ean}». Actualizare ERP + WooCommerce.")
                     ->action(function (EanAssociationRequest $record): void {
+                        $product = $record->product;
+                        $oldSku  = $product->sku;
+                        $newSku  = $record->ean;
+
+                        // 1. Update ERP
+                        $product->update(['sku' => $newSku]);
+
+                        // 2. Push to WooCommerce
+                        if ($product->woo_id) {
+                            try {
+                                $conn = \App\Models\IntegrationConnection::where('provider', 'woocommerce')->first();
+                                if ($conn) {
+                                    $woo = new \App\Services\WooCommerce\WooClient($conn);
+                                    $woo->updateProduct($product->woo_id, ['sku' => $newSku]);
+                                }
+                            } catch (\Throwable $e) {
+                                Notification::make()
+                                    ->title('ERP actualizat, dar WooCommerce a eșuat')
+                                    ->body($e->getMessage())
+                                    ->danger()
+                                    ->send();
+                            }
+                        }
+
+                        // 3. Mark approved
                         $record->update([
                             'status'       => EanAssociationRequest::STATUS_APPROVED,
                             'processed_by' => Auth::id(),
                             'processed_at' => now(),
+                            'notes'        => trim(($record->notes ? $record->notes . "\n" : '') . "SKU schimbat: {$oldSku} → {$newSku}"),
                         ]);
 
                         Notification::make()
-                            ->title('Cerere aprobată')
+                            ->title('EAN actualizat')
+                            ->body("{$product->name}: {$oldSku} → {$newSku}")
                             ->success()
                             ->send();
                     }),

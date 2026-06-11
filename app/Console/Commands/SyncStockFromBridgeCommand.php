@@ -154,6 +154,48 @@ class SyncStockFromBridgeCommand extends Command
                 $product = $products->get($sku);
 
                 if (! $product) {
+                    // Înainte de a crea placeholder, verificăm dacă e o schimbare de EAN:
+                    // căutăm un produs existent cu aceeași denumire WinMentor (winmentor_name)
+                    $bridgeName = trim($item['denumire'] ?? '');
+                    if (! $dryRun && $bridgeName && $sku) {
+                        $existingByName = WooProduct::where('winmentor_name', $bridgeName)->first();
+                        if ($existingByName && $existingByName->sku !== $sku) {
+                            $oldSku = $existingByName->sku;
+                            // Verifică dacă noul EAN nu e deja pe alt produs (conflict real)
+                            $conflict = WooProduct::where('sku', $sku)->where('id', '!=', $existingByName->id)->first();
+                            if (! $conflict) {
+                                // Schimbare de EAN — actualizăm SKU-ul pe produsul existent
+                                $existingByName->updateQuietly(['sku' => $sku]);
+                                $products->put($sku, $existingByName);
+                                $product = $existingByName;
+
+                                // Actualizăm și pe WooCommerce
+                                if ($existingByName->woo_id && $defaultWooConnection) {
+                                    try {
+                                        $wooClient = new \App\Services\WooCommerce\WooClient($defaultWooConnection);
+                                        $wooClient->updateProduct($existingByName->woo_id, ['sku' => $sku]);
+                                    } catch (\Throwable $e) {
+                                        $this->warn("  WooCommerce SKU update failed for {$existingByName->name}: {$e->getMessage()}");
+                                    }
+                                }
+
+                                // Creăm EAN request ca evidență
+                                \App\Models\EanAssociationRequest::create([
+                                    'ean'            => $sku,
+                                    'woo_product_id' => $existingByName->id,
+                                    'requested_by'   => 1,
+                                    'status'         => \App\Models\EanAssociationRequest::STATUS_APPROVED,
+                                    'processed_at'   => now(),
+                                    'notes'          => "Auto-aplicat la sync stoc: {$oldSku} → {$sku}",
+                                ]);
+
+                                $this->info("  EAN schimbat automat: {$existingByName->name} ({$oldSku} → {$sku})");
+                                $stats['matched']++;
+                                goto afterMatch;
+                            }
+                        }
+                    }
+
                     if (! $dryRun && $defaultWooConnection && $sku) {
                         $product = $this->createPlaceholderProduct(
                             wooConnection: $defaultWooConnection,
@@ -173,6 +215,8 @@ class SyncStockFromBridgeCommand extends Command
                 }
 
                 $stats['matched']++;
+
+                afterMatch:
 
                 // Populăm winmentor_name dacă lipsește (pentru match viitor la schimbare EAN)
                 $bridgeName = trim($item['denumire'] ?? '');
@@ -256,7 +300,61 @@ class SyncStockFromBridgeCommand extends Command
                     }
                 }
 
-                if ($priceChanged) {
+                // Produse cu feed furnizor activ + stoc WM 0 → nu suprascrie prețul (vine din feed)
+                // + dacă stocul tocmai a scăzut la 0, activăm prețul furnizor imediat
+                $hasFeed = isset($productIdsWithActiveFeed[$product->id]);
+                $skipPrice = $priceChanged && $newQty <= 0 && $hasFeed;
+
+                if ($skipPrice && $stockChanged && $oldQty > 0 && $newQty <= 0) {
+                    // Stoc tocmai ajuns la 0 — calculăm prețul furnizor (purchase_price * markup * TVA)
+                    $feedRow = DB::table('product_suppliers as ps')
+                        ->join('supplier_feeds as sf', 'sf.supplier_id', '=', 'ps.supplier_id')
+                        ->where('sf.is_active', true)
+                        ->where('ps.woo_product_id', $product->id)
+                        ->whereNotNull('ps.purchase_price')
+                        ->where('ps.purchase_price', '>', 0)
+                        ->select('ps.purchase_price', 'sf.settings')
+                        ->first();
+
+                    $feedPrice = null;
+                    if ($feedRow) {
+                        $settings = json_decode($feedRow->settings ?? '{}', true);
+                        $markup = (float) ($settings['markup'] ?? 0);
+                        $vat = (float) ($settings['vat'] ?? 21);
+                        $feedPrice = round((float) $feedRow->purchase_price * (1 + $markup / 100) * (1 + $vat / 100), 2);
+                    }
+
+                    if ($feedPrice && $feedPrice > 0 && abs($feedPrice - $oldPrice) >= 0.01) {
+                        $stats['price_updated']++;
+                        $priceUpdates[$product->id] = (float) $feedPrice;
+
+                        $priceLogs[] = [
+                            'woo_product_id' => $product->id,
+                            'location_id'    => $connection->location_id,
+                            'old_price'      => $oldPrice,
+                            'new_price'      => (float) $feedPrice,
+                            'source'         => 'supplier_feed_fallback',
+                            'sync_run_id'    => $run->id,
+                            'payload'        => json_encode(['reason' => 'stoc_zero_feed_price', 'sku' => $sku], JSON_UNESCAPED_UNICODE),
+                            'changed_at'     => $now,
+                            'created_at'     => $now,
+                            'updated_at'     => $now,
+                        ];
+
+                        foreach ($wooConnections as $wooConn) {
+                            if ($product->woo_id && $product->woo_id < 1_000_000_000_000_000) {
+                                $sitePrices[$wooConn->id][$product->woo_id] = [
+                                    'woo_id'        => $product->woo_id,
+                                    'sku'           => $product->sku,
+                                    'regular_price' => (string) $feedPrice,
+                                    'sale_price'    => $product->sale_price ?? '',
+                                ];
+                            }
+                        }
+                    }
+                }
+
+                if ($priceChanged && ! $skipPrice) {
                     $stats['price_updated']++;
                     $priceUpdates[$product->id] = $newPrice;
 

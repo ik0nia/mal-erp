@@ -1096,7 +1096,12 @@
         document.getElementById('summary-screen').style.display = 'none';
     }
 
+    let _submitting = false;
+
     async function doSubmit(isRetry = false) {
+        if (_submitting) return;
+        _submitting = true;
+
         const allReasons = {};
         Object.entries(discReasons).forEach(([id, r]) => { if (!confirmedItems[parseInt(id)]) allReasons[id] = r; });
         Object.entries(confirmedItems).forEach(([id, d]) => { if (d.reason) allReasons[id] = d.reason; });
@@ -1193,6 +1198,7 @@
                 if (partialBtn) { partialBtn.disabled = false; }
                 if (finalBtn) { finalBtn.disabled = false; }
                 if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = '✅ Confirmă'; }
+                _submitting = false;
             }
         }
     }

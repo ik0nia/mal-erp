@@ -144,9 +144,9 @@ Schedule::command('bi:generate-period-report --type=annual')
     ->withoutOverlapping()
     ->runInBackground();
 
-// Toya — sync prețuri achiziție + alerte modificări semnificative (zilnic la 07:00).
+// Toya — sync prețuri + stocuri + push WooCommerce (la fiecare 4 ore, 07:00–19:00).
 Schedule::command('toya:sync-prices')
-    ->dailyAt('07:00')
+    ->cron('0 7,11,15,19 * * *')
     ->timezone('Europe/Bucharest')
     ->withoutOverlapping()
     ->runInBackground();
@@ -231,6 +231,36 @@ Schedule::command('winmentor:watch-vanzari --firma=MAL2019')
 // WinMentor — sync livrări CM cu istoric (la fiecare 15 minute, luni–sâmbătă 08:00–18:00).
 Schedule::command('sync:winmentor-livrari')
     ->everyFiveMinutes()
+    ->timezone('Europe/Bucharest')
+    ->days([1, 2, 3, 4, 5, 6])
+    ->between('08:00', '18:00')
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// MentorAPI — COM reset zilnic la 05:00 (previne memory leaks COM Windows).
+Schedule::call(function () {
+    $conn = \App\Models\IntegrationConnection::find(5);
+    if (! $conn) return;
+    try {
+        \Illuminate\Support\Facades\Http::withHeaders(['X-API-Key' => $conn->bridgeApiKey()])
+            ->timeout(30)
+            ->post($conn->base_url . '/api/system/com-reset');
+        \Illuminate\Support\Facades\Log::channel('daily')->info('[MentorAPI] COM reset zilnic executat');
+    } catch (\Throwable $e) {
+        \Illuminate\Support\Facades\Log::channel('daily')->warning('[MentorAPI] COM reset failed: ' . $e->getMessage());
+    }
+})->dailyAt('05:00')->timezone('Europe/Bucharest')->name('mentorapi:com-reset');
+
+// WinMentor — sync coduri furnizor (codExternAlt) — zilnic la 06:00 (doar cele goale).
+Schedule::command('winmentor:sync-supplier-sku')
+    ->dailyAt('06:00')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// WinMentor — retry automat PO-uri failed (la fiecare 30 min, luni–sâmbătă 08:00–18:00).
+Schedule::command('winmentor:retry-failed-po-sync')
+    ->everyThirtyMinutes()
     ->timezone('Europe/Bucharest')
     ->days([1, 2, 3, 4, 5, 6])
     ->between('08:00', '18:00')

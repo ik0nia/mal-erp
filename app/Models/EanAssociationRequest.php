@@ -24,9 +24,10 @@ class EanAssociationRequest extends Model
         ];
     }
 
-    const STATUS_PENDING  = 'pending';
-    const STATUS_APPROVED = 'approved';
-    const STATUS_REJECTED = 'rejected';
+    const STATUS_PENDING       = 'pending';
+    const STATUS_APPROVED      = 'approved';
+    const STATUS_REJECTED      = 'rejected';
+    const STATUS_AUTO_DETECTED = 'auto_detected';
 
     public function product(): BelongsTo
     {
