@@ -9,7 +9,7 @@
 
 În `IntegrationConnection` ID=5:
 - `base_url`: `https://82.79.74.132:8501` → `http://82.79.74.132:9500`
-- `consumer_key`: `pvJaYCmvbUQYORL6UQMBmyQMaEqJw5bWEWU1pXW8` → `213d3d668943e52c00f3822f64300c21a67a9d58a118518a`
+- `consumer_key`: `<cheia bridge vechi — retrasă>` → `<vezi config pe serverul Windows>`
 - `settings.firma`: `MAL2019` → rămâne ce e (ERP-ul folosește firma din setări)
 - **Fișier**: `app/Services/Winmentor/WinmentorBridgeClient.php` — constructorul citește din `IntegrationConnection::find(5)`
 - **Atenție**: bridge-ul vechi e HTTPS cu `withoutVerifying()`, MentorAPI e HTTP → trebuie verificat că HTTP merge fără problemă

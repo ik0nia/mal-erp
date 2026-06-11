@@ -2,7 +2,13 @@
 // GitHub Webhook — auto-pull on push to main
 // Secret configurat în GitHub repo settings → Webhooks
 
-$secret = 'c78e0ccfc829f7c845740fa2808684650c3468729bf27387889264d2a70e45d6';
+$secret = '';
+foreach (file(__DIR__ . '/../.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+    if (str_starts_with($line, 'DEPLOY_WEBHOOK_SECRET=')) {
+        $secret = trim(substr($line, strlen('DEPLOY_WEBHOOK_SECRET=')), "\"'");
+        break;
+    }
+}
 
 // Verifică semnătura GitHub
 $payload = file_get_contents('php://input');

@@ -6,7 +6,8 @@ FILE="${BACKUP_DIR}/erp_malinco_${DATE}.sql.gz"
 LOG="/var/www/erp/storage/logs/backup.log"
 
 mkdir -p "$BACKUP_DIR"
-mysqldump -h 127.0.0.1 -u erp_user -pTypo1bmng!@! erp_malinco --single-transaction --quick --lock-tables=false --no-tablespaces | gzip > "$FILE"
+DB_PASS=$(grep -E '^DB_PASSWORD=' /var/www/erp/.env | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
+mysqldump -h 127.0.0.1 -u erp_user -p"$DB_PASS" erp_malinco --single-transaction --quick --lock-tables=false --no-tablespaces | gzip > "$FILE"
 SIZE=$(du -sh "$FILE" | cut -f1)
 echo "[$(date)] DB backup OK: $FILE ($SIZE)" >> "$LOG"
 

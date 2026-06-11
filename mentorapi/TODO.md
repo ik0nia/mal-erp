@@ -75,7 +75,7 @@
 
 ## Informații conexiune
 - Windows Server: 82.79.74.132:9500
-- API Key: 213d3d668943e52c00f3822f64300c21a67a9d58a118518a
+- API Key: <vezi config pe serverul Windows>
 - Exe location: D:\WinMent\cod\mentorapi.exe
 - Firma lucru: ERP, luna 5/2026
 - libWMEdcom fork local: mentorapi/libWMEdcom/ (replace directive in go.mod)

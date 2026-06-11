@@ -1,11 +1,18 @@
 <?php
-// ─── Config ────────────────────────────────────────────────────────────────────
-const DB_HOST = '127.0.0.1';
-const DB_PORT = '3306';
-const DB_NAME = 'erp_malinco';
-const DB_USER = 'erp_user';
-const DB_PASS = 'Typo1bmng!@!';
-const API_TOKEN = '060155cb555b0465f1099f01da6a6798';
+// ─── Config (din .env — nu hardcoda secrete aici) ───────────────────────────
+$__env = [];
+foreach (file(__DIR__ . '/../.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $__line) {
+    if ($__line !== '' && $__line[0] !== '#' && str_contains($__line, '=')) {
+        [$__k, $__v] = explode('=', $__line, 2);
+        $__env[trim($__k)] = trim(trim($__v), "\"'");
+    }
+}
+define('DB_HOST', $__env['DB_HOST'] ?? '127.0.0.1');
+define('DB_PORT', $__env['DB_PORT'] ?? '3306');
+define('DB_NAME', $__env['DB_DATABASE'] ?? 'erp_malinco');
+define('DB_USER', $__env['DB_USERNAME'] ?? 'erp_user');
+define('DB_PASS', $__env['DB_PASSWORD'] ?? '');
+define('API_TOKEN', $__env['CATEGORY_REVIEW_TOKEN'] ?? '');
 const BASE_URL  = 'https://erp.malinco.ro';
 
 // ─── JSON API endpoints ─────────────────────────────────────────────────────────

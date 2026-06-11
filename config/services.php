@@ -46,7 +46,7 @@ return [
         'private_key' => env('VAPID_PRIVATE_KEY'),
     ],
 
-    'category_review_token' => env('CATEGORY_REVIEW_TOKEN', '060155cb555b0465f1099f01da6a6798'),
+    'category_review_token' => env('CATEGORY_REVIEW_TOKEN'),
 
     'openai_image' => [
         'key' => env('OPEN_AI_API_KEY_IMAGE'),
