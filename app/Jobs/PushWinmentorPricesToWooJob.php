@@ -108,7 +108,13 @@ class PushWinmentorPricesToWooJob implements ShouldQueue
             }
         }
 
-        $this->recordProgress($successCount, $failureCount, $newErrors);
+        $stageCompleted = $this->recordProgress($successCount, $failureCount, $newErrors);
+
+        // Ultimul batch scris → golim cache-ul site-ului DUPĂ ce prețurile
+        // sunt efectiv în baza WooCommerce (nu înainte, din comandă).
+        if ($stageCompleted && $successCount > 0) {
+            FlushWooCacheJob::dispatch()->onQueue('default');
+        }
 
         Log::info('Deferred Woo price push job finished', [
             'sync_run_id' => $this->syncRunId,
@@ -137,14 +143,17 @@ class PushWinmentorPricesToWooJob implements ShouldQueue
 
     /**
      * @param  array<int, array<string, mixed>>  $newErrors
+     * @return bool true dacă acesta a fost ultimul batch (stage complet)
      */
-    private function recordProgress(int $successCount, int $failureCount, array $newErrors): void
+    private function recordProgress(int $successCount, int $failureCount, array $newErrors): bool
     {
         if ($successCount <= 0 && $failureCount <= 0 && $newErrors === []) {
-            return;
+            return false;
         }
 
-        DB::transaction(function () use ($successCount, $failureCount, $newErrors): void {
+        $stageCompleted = false;
+
+        DB::transaction(function () use ($successCount, $failureCount, $newErrors, &$stageCompleted): void {
             $run = SyncRun::query()
                 ->lockForUpdate()
                 ->find($this->syncRunId);
@@ -201,7 +210,11 @@ class PushWinmentorPricesToWooJob implements ShouldQueue
                     'site_price_updates' => $stats['site_price_updates'] ?? 0,
                     'site_price_update_failures' => $stats['site_price_update_failures'] ?? 0,
                 ]);
+
+                $stageCompleted = true;
             }
         });
+
+        return $stageCompleted;
     }
 }

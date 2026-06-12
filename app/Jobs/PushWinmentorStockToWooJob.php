@@ -59,6 +59,11 @@ class PushWinmentorStockToWooJob implements ShouldQueue
                 'failed' => $result['failed'],
             ]);
 
+            if ($result['updated'] > 0) {
+                // Delay mic + ShouldBeUnique: batch-urile multiple → un singur flush
+                FlushWooCacheJob::dispatch()->onQueue('default')->delay(now()->addSeconds(10));
+            }
+
             if ($result['failed'] > 0) {
                 Log::warning('[WinmentorStockPush] Unele update-uri au eșuat', [
                     'sync_run_id' => $this->syncRunId,

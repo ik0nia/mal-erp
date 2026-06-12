@@ -36,6 +36,9 @@ class SyncStockFromBridgeCommand extends Command
 
     protected $description = 'Sincronizează stoc și preț de vânzare din WinMentor Bridge (clasa 1, gestiunea configurată)';
 
+    /** SKU-uri redenumite pe site în această rulare (schimbare EAN) — cer reindex FiboSearch */
+    private int $eanRenames = 0;
+
     public function handle(WinmentorBridgeClient $bridge, DailyStockMetricAggregator $aggregator): int
     {
         $dryRun      = $this->option('dry-run');
@@ -203,6 +206,7 @@ class SyncStockFromBridgeCommand extends Command
                                     'notes'          => "Auto-aplicat la sync stoc: {$oldSku} → {$sku}",
                                 ]);
 
+                                $this->eanRenames++;
                                 $this->info("  EAN schimbat automat: {$existingByName->name} ({$oldSku} → {$sku})");
                                 $stats['matched']++;
                                 goto afterMatch;
@@ -534,11 +538,16 @@ class SyncStockFromBridgeCommand extends Command
                     'stats'       => json_encode($stats),
                 ]);
 
-                // Post-sync: flush WooCommerce cache + rebuild FiboSearch index
-                try {
-                    (new \App\Services\WooCommerce\WooDirectSqlService)->afterSync();
-                } catch (\Throwable $e) {
-                    Log::channel('winmentor_sync')->warning('[BridgeStockSync] afterSync failed: '.$e->getMessage());
+                // Cache-ul site-ului se golește din job-urile de push (FlushWooCacheJob),
+                // DUPĂ ce SQL-ul a fost scris efectiv — nu de aici (race condition).
+                // FiboSearch reindex doar când s-a schimbat un SKU pe site (rename EAN),
+                // nu la fiecare rulare (consuma 1-3 min CPU pe server degeaba).
+                if ($this->eanRenames > 0) {
+                    try {
+                        (new \App\Services\WooCommerce\WooDirectSqlService)->afterSync();
+                    } catch (\Throwable $e) {
+                        Log::channel('winmentor_sync')->warning('[BridgeStockSync] afterSync failed: '.$e->getMessage());
+                    }
                 }
             }
 
@@ -588,6 +597,7 @@ class SyncStockFromBridgeCommand extends Command
                 // altfel sunt două articole distincte cu același nume.
                 if (! isset($activeSkus[$oldSku])) {
                     $byName->update(['sku' => $sku]);
+                    $this->eanRenames++;
                     Log::channel('winmentor_sync')->info("[BridgeStockSync] SKU actualizat (schimbare EAN): [{$oldSku}] → [{$sku}] — \"{$trimmedName}\"");
                     $this->line("  [SKU UPDATE] \"{$trimmedName}\": {$oldSku} → {$sku}");
                     return $byName;

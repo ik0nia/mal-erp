@@ -72,6 +72,10 @@ class PushProductPriceToWooJob implements ShouldQueue
                 'woo_id'        => $product->woo_id,
                 'regular_price' => $regularPrice,
             ]);
+
+            // Fără flush, pagina ar servi prețul vechi din cache-ul nginx până la 60 min.
+            // Delay + ShouldBeUnique: edit-urile în rafală → un singur flush.
+            FlushWooCacheJob::dispatch()->onQueue('default')->delay(now()->addSeconds(15));
         } catch (\Throwable $e) {
             Log::error('[PriceSync] Eroare push preț WooCommerce', [
                 'product_id' => $product->id,
