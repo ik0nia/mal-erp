@@ -156,21 +156,26 @@ class WooDirectSqlService
         // Pașii rulează independent (`;`, nu `&&`): dacă `wp cache flush` crapă
         // (ex. Redis read error intermitent), cache-ul nginx tot trebuie golit —
         // el servește efectiv paginile cu prețuri vechi.
+        // Fără paranteze/escapări complexe în comanda remote: o eroare de sintaxă
+        // bash blochează execuția ÎNTREGII linii, inclusiv purge-ul nginx.
         $result = Process::timeout(30)->run(
             "ssh -i {$this->sshKey} -o StrictHostKeyChecking=no {$this->sshHost} ".
             "'rm -rf /var/cache/nginx/malinco/* 2>/dev/null; ".
             "wp --path={$this->wpPath} cache flush --allow-root 2>/dev/null; ".
             "wp --path={$this->wpPath} transient delete --all --allow-root 2>/dev/null; ".
-            "wp --path={$this->wpPath} eval \\\"do_action(\\\\\\\"litespeed_purge_all\\\\\\\");\\\" --allow-root 2>/dev/null'"
+            "echo FLUSH_OK'"
         );
 
-        if (! $result->successful()) {
+        if (! str_contains($result->output(), 'FLUSH_OK')) {
             Log::warning('[WooDirectSQL] cache flush failed', [
+                'output' => $result->output(),
                 'error' => $result->errorOutput(),
             ]);
+
+            return false;
         }
 
-        return $result->successful();
+        return true;
     }
 
     /**

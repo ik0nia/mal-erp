@@ -87,11 +87,15 @@ class SyncStockFromBridgeCommand extends Command
             }
 
             // ── 5. Index produse ERP după SKU ────────────────────────────────────
-            $skus     = array_column($items, 'codExtern');
+            $skus       = array_column($items, 'codExtern');
+            $bridgeSkus = array_fill_keys(array_filter($skus), true);
             $products = WooProduct::whereIn('sku', $skus)
                 ->where(function ($q) {
                     $q->where('type', '!=', 'external')->orWhere('is_placeholder', true);
                 })
+                // La SKU duplicat (produs real + placeholder), keyBy păstrează
+                // ultimul rând — ordonăm ca produsul real să câștige.
+                ->orderByDesc('is_placeholder')
                 ->get()
                 ->keyBy('sku');
 
@@ -161,6 +165,16 @@ class SyncStockFromBridgeCommand extends Command
                         $existingByName = WooProduct::where('winmentor_name', $bridgeName)->first();
                         if ($existingByName && $existingByName->sku !== $sku) {
                             $oldSku = $existingByName->sku;
+                            // E schimbare de EAN doar dacă vechiul EAN a dispărut din WinMentor.
+                            // Dacă ambele EAN-uri există în Bridge = două articole distincte cu
+                            // același nume → NU redenumim (altfel SKU-ul face ping-pong la fiecare sync).
+                            if (isset($bridgeSkus[$oldSku])) {
+                                Log::channel('winmentor_sync')->warning(
+                                    "[BridgeStockSync] Două articole WinMentor cu același nume \"{$bridgeName}\": [{$oldSku}] și [{$sku}] — de clarificat în WinMentor"
+                                );
+                                $stats['unmatched']++;
+                                continue;
+                            }
                             // Verifică dacă noul EAN nu e deja pe alt produs (conflict real)
                             $conflict = WooProduct::where('sku', $sku)->where('id', '!=', $existingByName->id)->first();
                             if (! $conflict) {
@@ -203,6 +217,7 @@ class SyncStockFromBridgeCommand extends Command
                             name: $item['denumire'] ?? null,
                             price: (float) str_replace(',', '.', $item['pretCuTVA'] ?? '0'),
                             quantity: (float) str_replace(',', '.', $item['stoc'] ?? '0'),
+                            activeSkus: $bridgeSkus,
                         );
                         $products->put($sku, $product);
                         if ($product->wasRecentlyCreated) {
@@ -468,6 +483,14 @@ class SyncStockFromBridgeCommand extends Command
             if (! $dryRun && $defaultWooConnection) {
                 $allArticole = $bridge->fetchAllArticoleSkuMap();
 
+                // SKU-uri active = stocuri + toate articolele (pentru garda anti ping-pong EAN)
+                $articoleSkus = $bridgeSkus;
+                foreach ($allArticole as $article) {
+                    if (! empty($article['codExtern'])) {
+                        $articoleSkus[$article['codExtern']] = true;
+                    }
+                }
+
                 foreach ($allArticole as $skuLower => $article) {
                     if (($article['simbolClasa']   ?? '') !== $clasa)    continue;
                     if (($article['gestImplicita'] ?? '') !== $gestiune) continue;
@@ -485,6 +508,7 @@ class SyncStockFromBridgeCommand extends Command
                         name: $article['denumire'] ?? null,
                         price: $price,
                         quantity: 0,
+                        activeSkus: $articoleSkus,
                     );
 
                     if ($placeholder->wasRecentlyCreated) {
@@ -539,6 +563,7 @@ class SyncStockFromBridgeCommand extends Command
         ?string $name,
         float $price,
         float $quantity,
+        array $activeSkus = [],
     ): WooProduct {
         $existing = WooProduct::where('connection_id', $wooConnection->id)
             ->where('sku', $sku)
@@ -558,10 +583,19 @@ class SyncStockFromBridgeCommand extends Command
 
             if ($byName) {
                 $oldSku = $byName->sku;
-                $byName->update(['sku' => $sku]);
-                Log::channel('winmentor_sync')->info("[BridgeStockSync] SKU actualizat (schimbare EAN): [{$oldSku}] → [{$sku}] — \"{$trimmedName}\"");
-                $this->line("  [SKU UPDATE] \"{$trimmedName}\": {$oldSku} → {$sku}");
-                return $byName;
+
+                // Redenumim doar dacă vechiul EAN a dispărut din WinMentor;
+                // altfel sunt două articole distincte cu același nume.
+                if (! isset($activeSkus[$oldSku])) {
+                    $byName->update(['sku' => $sku]);
+                    Log::channel('winmentor_sync')->info("[BridgeStockSync] SKU actualizat (schimbare EAN): [{$oldSku}] → [{$sku}] — \"{$trimmedName}\"");
+                    $this->line("  [SKU UPDATE] \"{$trimmedName}\": {$oldSku} → {$sku}");
+                    return $byName;
+                }
+
+                Log::channel('winmentor_sync')->warning(
+                    "[BridgeStockSync] Două articole WinMentor cu același nume \"{$trimmedName}\": [{$oldSku}] și [{$sku}] — creez placeholder separat"
+                );
             }
         }
 
