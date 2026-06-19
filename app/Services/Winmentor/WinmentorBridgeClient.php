@@ -491,6 +491,85 @@ class WinmentorBridgeClient
     }
 
     /**
+     * Caută TOȚI partenerii din WinMentor cu un CUI dat.
+     * Necesar pentru CUI duble (mai multe firme cu același cod fiscal),
+     * unde dezambiguarea se face apoi după nume.
+     * Returnează array de parteneri (poate fi gol).
+     */
+    public function searchParteneriByCui(string $cui): array
+    {
+        $this->selectFirma();
+
+        $cuiNormalized = preg_replace('/[^0-9]/', '', $cui);
+
+        if (strlen($cuiNormalized) < 5) {
+            return []; // CUI prea scurt, risc de false positive
+        }
+
+        $matches = [];
+        $page = 1;
+        do {
+            $result = $this->get('/api/parteneri', ['pageSize' => 500, 'page' => $page]);
+            if (! ($result['success'] ?? false)) {
+                return $matches;
+            }
+
+            $items      = $result['data']['items'] ?? [];
+            $totalPages = (int) ($result['data']['totalPages'] ?? 1);
+
+            foreach ($items as $item) {
+                if ($this->partenerMatchesCui($item, $cuiNormalized)) {
+                    $matches[] = $item;
+                }
+            }
+
+            $page++;
+        } while ($page <= $totalPages);
+
+        return $matches;
+    }
+
+    /**
+     * Dintr-o listă de parteneri (de obicei cu același CUI), alege-l pe cel
+     * al cărui nume se potrivește cel mai bine cu numele furnizorului ERP.
+     * Returnează null dacă niciun candidat nu trece verificarea de nume.
+     */
+    private function pickBestPartenerByName(string $erpName, array $candidates): ?array
+    {
+        // Un singur candidat: îl validăm tot prin nume (CUI corect dar firmă greșită = risc)
+        $best      = null;
+        $bestScore = -1.0;
+
+        foreach ($candidates as $candidate) {
+            $name = $candidate['denumire'] ?? '';
+            if (! $this->partenerNameMatches($erpName, $name)) {
+                continue;
+            }
+
+            similar_text(mb_strtolower($erpName), mb_strtolower($name), $percent);
+            // Partenerii dezactivați (prefix "X" în denumire = nu mai lucrăm cu ei) au
+            // prioritate mai mică, dar rămân fallback dacă e singurul match.
+            $score = ($this->isDeactivatedPartenerName($name) ? 0.0 : 1000.0) + $percent;
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $best      = $candidate;
+            }
+        }
+
+        return $best;
+    }
+
+    /**
+     * Convenție WinMentor: un partener al cărui denumire începe cu unul/mai mulți "X"
+     * urmați de o literă (ex: "XMETALURGICA INDUSTRIAL SRL") este o înregistrare
+     * dezactivată — firmă cu care nu mai lucrăm. La CUI dublu o evităm.
+     */
+    private function isDeactivatedPartenerName(string $name): bool
+    {
+        return (bool) preg_match('/^\s*X+[A-Z]/', $name);
+    }
+
+    /**
      * Verifică dacă un partener WinMentor corespunde unui CUI normalizat.
      * Compară pe codFiscal principal, coduriFiscaleSedii și puncteAcumulate.
      */
@@ -719,26 +798,37 @@ class WinmentorBridgeClient
         // Apelantul trebuie să fi setat deja selectFirma() + setIdPartField('CodIntern')
         // ÎNAINTE de a apela această metodă.
 
-        // 1. Avem winmentor_id din sincronizare → lookup direct după ID
+        // 1. Avem winmentor_id din sincronizare → lookup direct după ID.
+        //    ATENȚIE: mai multe firme pot avea ACELAȘI CUI (ex: CEMPLUS RO vs PROMIX PLUS).
+        //    Verificăm și numele — dacă ID-ul stocat duce la altă firmă, îl ignorăm și re-rezolvăm.
         if ($supplier->winmentor_id) {
             $partener = $this->searchPartenerById($supplier->winmentor_id);
             if ($partener) {
-                return ['ok' => true, 'partener' => $partener, 'error' => null];
+                $foundName = $partener['denumire'] ?? '';
+                // Acceptăm ID-ul stocat doar dacă numele se potrivește ȘI partenerul nu e
+                // dezactivat (prefix "X" = nu mai lucrăm cu el). Altfel re-rezolvăm.
+                if ($this->partenerNameMatches($supplier->name, $foundName) && ! $this->isDeactivatedPartenerName($foundName)) {
+                    return ['ok' => true, 'partener' => $partener, 'error' => null];
+                }
+                // ID-ul stocat duce la altă firmă (CUI dublu) sau la un partener dezactivat
+                // — îl ignorăm și mergem pe CUI + nume (care preferă partenerul activ).
+                Log::channel('daily')->warning("[WinMentor Bridge] winmentor_id={$supplier->winmentor_id} duce la \"{$foundName}\" (≠ \"{$supplier->name}\" sau dezactivat). Re-rezolv după CUI + nume.");
+            } else {
+                // ID-ul nu mai e valid — va fi corectat mai jos prin fallback CUI
+                Log::channel('daily')->warning("[WinMentor Bridge] winmentor_id={$supplier->winmentor_id} invalid pentru [{$supplier->name}], fallback pe CUI");
             }
-            // ID-ul nu mai e valid — va fi corectat mai jos prin fallback CUI
-            Log::channel('daily')->warning("[WinMentor Bridge] winmentor_id={$supplier->winmentor_id} invalid pentru [{$supplier->name}], fallback pe CUI");
         }
 
-        // 2. Fallback: caută paginated după CUI
+        // 2. Fallback: caută paginated după CUI — pot exista MAI MULȚI parteneri cu același CUI
         $cui = $supplier->vat_number;
 
         if (! $cui) {
             return ['ok' => false, 'partener' => null, 'error' => "Furnizorul \"{$supplier->name}\" nu are CUI/CIF completat în ERP și nu are winmentor_id setat."];
         }
 
-        $partener = $this->searchPartenerByCui($cui);
+        $candidates = $this->searchParteneriByCui($cui);
 
-        if (! $partener) {
+        if (empty($candidates)) {
             return [
                 'ok'       => false,
                 'partener' => null,
@@ -746,36 +836,33 @@ class WinmentorBridgeClient
             ];
         }
 
+        // Alegem partenerul al cărui nume se potrivește cel mai bine (CUI dublu = firme diferite)
+        $partener = $this->pickBestPartenerByName($supplier->name, $candidates);
+
+        if (! $partener) {
+            $names = implode(', ', array_map(
+                fn ($p) => '"' . ($p['denumire'] ?? '?') . '" (ID: ' . ($p['idPartener'] ?? '?') . ')',
+                $candidates
+            ));
+            Log::channel('daily')->warning("[WinMentor Bridge] CUI {$cui} match suspect pentru [{$supplier->name}]: candidați [{$names}]. Nu suprascriu winmentor_id.");
+            return [
+                'ok'       => false,
+                'partener' => null,
+                'error'    => "CUI {$cui} găsit în WinMentor la: {$names}, dar niciun nume nu corespunde cu \"{$supplier->name}\". Verificați manual.",
+            ];
+        }
+
         $foundId   = $partener['idPartener'] ?? '';
         $foundName = $partener['denumire'] ?? '';
 
-        // Verificare de siguranță: numele din WinMentor trebuie să semene cu al nostru
-        if (! $this->partenerNameMatches($supplier->name, $foundName)) {
-            Log::channel('daily')->warning("[WinMentor Bridge] CUI match suspect: [{$supplier->name}] → WM [{$foundName}] (ID: {$foundId}). Nu suprascriu winmentor_id.");
-            return [
-                'ok'       => false,
-                'partener' => null,
-                'error'    => "CUI {$cui} găsit în WinMentor ca \"{$foundName}\" (ID: {$foundId}), dar numele nu corespunde cu \"{$supplier->name}\". Verificați manual.",
-            ];
-        }
-
-        // Verificare finală: ID-ul returnat trebuie să existe efectiv ca partener
-        $verify = $this->searchPartenerById($foundId);
-        if (! $verify) {
-            Log::channel('daily')->error("[WinMentor Bridge] CUI match [{$supplier->name}] → ID {$foundId}, dar searchPartenerById returnează null. Date inconsistente în WinMentor.");
-            return [
-                'ok'       => false,
-                'partener' => null,
-                'error'    => "Partenerul \"{$foundName}\" (ID: {$foundId}) găsit prin CUI dar nu poate fi verificat prin ID. Posibilă inconsistență în WinMentor.",
-            ];
-        }
-
-        // Salvăm winmentor_id verificat pentru viitor
+        // Salvăm winmentor_id verificat pentru viitor (doar dacă s-a schimbat)
         $oldId = $supplier->winmentor_id;
-        $supplier->updateQuietly(['winmentor_id' => $foundId]);
-        Log::channel('daily')->info("[WinMentor Bridge] winmentor_id corectat: [{$supplier->name}] {$oldId} → {$foundId} (verificat prin CUI + nume + ID)");
+        if ($oldId !== $foundId) {
+            $supplier->updateQuietly(['winmentor_id' => $foundId]);
+            Log::channel('daily')->info("[WinMentor Bridge] winmentor_id corectat: [{$supplier->name}] {$oldId} → {$foundId} (\"{$foundName}\", verificat prin CUI + nume)");
+        }
 
-        return ['ok' => true, 'partener' => $verify, 'error' => null];
+        return ['ok' => true, 'partener' => $partener, 'error' => null];
     }
 
     /**

@@ -206,6 +206,38 @@
     </div>
 </div>
 
+{{-- Modal poziție factură --}}
+<div id="pos-modal" style="display:none; position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.5); align-items:flex-start; justify-content:center; padding-top:16px; padding-left:16px; padding-right:16px">
+    <div style="background:white; border-radius:18px; padding:24px; width:100%; max-width:360px; box-shadow:0 8px 32px rgba(0,0,0,0.2)">
+        <div style="font-weight:700; font-size:16px; color:#1e293b; margin-bottom:4px">Poziție pe factură</div>
+        <div id="pos-modal-name" style="font-size:13px; color:#64748b; margin-bottom:20px; line-height:1.4"></div>
+
+        <label style="font-size:13px; font-weight:600; color:#374151; display:block; margin-bottom:8px">
+            Nr. poziție pe factura furnizorului
+        </label>
+        <input id="pos-modal-input" type="number" min="1" max="9999" inputmode="numeric"
+            placeholder="ex: 1, 2, 3..."
+            style="width:100%; padding:14px 16px; font-size:20px; font-weight:700; text-align:center; border:2px solid #e2e8f0; border-radius:12px; outline:none; box-sizing:border-box; -moz-appearance:textfield">
+        <div id="pos-modal-error" style="display:none; font-size:13px; color:#dc2626; font-weight:600; margin-top:8px; text-align:center"></div>
+
+        <div style="display:flex; gap:10px; margin-top:20px">
+            <button onclick="closePositionModal()"
+                style="flex:1; padding:14px; border-radius:12px; border:2px solid #e2e8f0; background:white; color:#64748b; font-size:15px; font-weight:600; cursor:pointer">
+                Anulează
+            </button>
+            <button onclick="skipPosition()"
+                id="pos-modal-skip-btn"
+                style="flex:1; padding:14px; border-radius:12px; border:2px solid #f59e0b; background:#fffbeb; color:#92400e; font-size:15px; font-weight:600; cursor:pointer">
+                Fără poziție →
+            </button>
+            <button onclick="confirmWithPosition()"
+                style="flex:1; padding:14px; border-radius:12px; border:none; background:#b91c1c; color:white; font-size:15px; font-weight:700; cursor:pointer">
+                Confirmă ✓
+            </button>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
@@ -247,8 +279,12 @@
     const DRAFT_KEY  = 'wh_batch_draft_' + PO_IDS.join('_');
 
     const discReasons    = {}; // key → reason
-    const confirmedItems = {}; // key → {qty, reason|null}
+    const confirmedItems = {}; // key → {qty, reason|null, invoice_position|null}
     let extraItemCounter = 0;
+
+    // Poziție factură — coadă pentru confirmarea în masă (de la submit)
+    let _bulkConfirmMode      = false;
+    let _pendingPositionQueue = [];
 
     const reasonLabels = {
         lipsa_stoc:      'Lipsă stoc furnizor',
@@ -286,11 +322,115 @@
             return;
         }
 
-        confirmedItems[key] = { qty, reason: discReasons[key] || null };
-        document.getElementById('row_' + key).style.display = 'none';
+        // Popup poziție factură (poziție per linie comasată)
+        showPositionModal(key, qty);
+    }
+
+    // ── Poziție factură ──────────────────────────────────────────────────────
+
+    function showPositionModal(key, qty) {
+        const item = MERGED.find(i => i.key === key);
+        const existing = confirmedItems[key]?.invoice_position ?? '';
+        document.getElementById('pos-modal-name').textContent = item.name;
+        document.getElementById('pos-modal-input').value = existing;
+        document.getElementById('pos-modal').style.display = 'flex';
+        document.getElementById('pos-modal-error').style.display = 'none';
+        document.getElementById('pos-modal-input').style.outline = '';
+        const posInput = document.getElementById('pos-modal-input');
+        posInput.setAttribute('inputmode', 'numeric');
+        setTimeout(() => posInput.focus(), 100);
+        document.getElementById('pos-modal').dataset.itemKey = key;
+        document.getElementById('pos-modal').dataset.qty     = qty;
+    }
+
+    function closePositionModal(cancelBulk = true) {
+        document.getElementById('pos-modal').style.display = 'none';
+        document.getElementById('pos-modal-error').style.display = 'none';
+        document.getElementById('pos-modal-input').style.outline = '';
+        if (cancelBulk && _bulkConfirmMode) {
+            _bulkConfirmMode = false;
+            _pendingPositionQueue = [];
+        }
+    }
+
+    function confirmWithPosition() {
+        const modal = document.getElementById('pos-modal');
+        const key   = modal.dataset.itemKey;
+        const qty   = parseFloat(modal.dataset.qty);
+        const posInput = document.getElementById('pos-modal-input');
+        const errorEl  = document.getElementById('pos-modal-error');
+        const posVal = posInput.value.trim();
+
+        // Poziția e opțională — dacă e goală, se salvează fără
+        let pos = null;
+        if (posVal !== '') {
+            pos = parseInt(posVal);
+            if (isNaN(pos) || pos < 1 || pos > 9999) {
+                posInput.style.outline = '2px solid #dc2626';
+                errorEl.textContent = 'Introdu un număr valid (1-9999)';
+                errorEl.style.display = 'block';
+                posInput.focus();
+                return;
+            }
+        }
+
+        // Verifică duplicat (doar dacă s-a introdus o poziție)
+        if (pos !== null) {
+            const duplicate = Object.entries(confirmedItems).find(([ckey, data]) => ckey !== key && data.invoice_position === pos);
+            if (duplicate) {
+                const dupItem = MERGED.find(i => i.key === duplicate[0]);
+                posInput.style.outline = '2px solid #dc2626';
+                errorEl.textContent = `Poziția ${pos} este deja folosită de: ${dupItem ? dupItem.name : 'alt produs'}`;
+                errorEl.style.display = 'block';
+                posInput.focus();
+                return;
+            }
+        }
+
+        posInput.style.outline = '';
+        errorEl.style.display = 'none';
+        const wasBulk = _bulkConfirmMode;
+        closePositionModal(false); // nu anula bulk mode
+        applyConfirm(key, qty, pos);
+
+        if (wasBulk) {
+            _pendingPositionQueue.shift();
+            processNextPendingPosition();
+        }
+    }
+
+    function skipPosition() {
+        const modal = document.getElementById('pos-modal');
+        const key   = modal.dataset.itemKey;
+        const qty   = parseFloat(modal.dataset.qty);
+        const wasBulk = _bulkConfirmMode;
+        closePositionModal(false);
+        applyConfirm(key, qty, null);
+
+        if (wasBulk) {
+            _pendingPositionQueue.shift();
+            processNextPendingPosition();
+        }
+    }
+
+    function applyConfirm(key, qty, pos) {
+        confirmedItems[key] = { qty, reason: discReasons[key] || null, invoice_position: pos };
+        const row = document.getElementById('row_' + key);
+        if (row) row.style.display = 'none';
         renderConfirmedList();
         updatePendingCount();
         saveDraft();
+    }
+
+    function processNextPendingPosition() {
+        if (_pendingPositionQueue.length === 0) {
+            _bulkConfirmMode = false;
+            showSummary();
+            return;
+        }
+        const key = _pendingPositionQueue[0];
+        const qty = getQty(key);
+        showPositionModal(key, qty);
     }
 
     function unconfirmItem(key) {
@@ -323,10 +463,11 @@
             const color  = diff < 0 ? '#dc2626' : (diff > 0 ? '#d97706' : '#15803d');
             const sign   = diff > 0 ? '+' : '';
             const reason = data.reason ? reasonLabels[data.reason] : '';
+            const posLabel = data.invoice_position ? `<span style="background:#f1f5f9; border-radius:6px; padding:1px 6px; font-size:11px; color:#475569; font-weight:600">poz. ${data.invoice_position}</span>` : '';
 
             return `<div class="confirmed-card" id="conf_${key}">
                 <div style="flex:1; min-width:0">
-                    <div class="c-name">${item.name}</div>
+                    <div class="c-name" style="display:flex; align-items:center; gap:6px">${item.name} ${posLabel}</div>
                     <div class="c-detail">
                         ${item.sku ? `SKU: ${item.sku} &bull; ` : ''}
                         Primit: <strong style="color:#15803d">${data.qty}</strong>
@@ -602,6 +743,8 @@
         MERGED.forEach(merged => {
             const received = getEffectiveQty(merged.key);
             const reason   = allReasons[merged.key] || null;
+            // Poziția de pe factură = una per linie comasată → o punem pe toate sub-liniile acelui SKU
+            const pos      = confirmedItems[merged.key]?.invoice_position ?? null;
             let remaining  = received;
             merged.sub_items.forEach((sub, idx) => {
                 let give;
@@ -610,7 +753,7 @@
                 } else {
                     give = Math.min(remaining, sub.qty);
                 }
-                flat.push({ id: sub.id, qty: give, reason });
+                flat.push({ id: sub.id, qty: give, reason, invoice_position: pos });
                 remaining -= give;
             });
         });
@@ -659,7 +802,17 @@
             return;
         }
 
-        showSummary();
+        // Cere poziția pentru liniile neconfirmate cu qty > 0
+        _pendingPositionQueue = MERGED
+            .filter(item => confirmedItems[item.key] === undefined && getQty(item.key) > 0)
+            .map(item => item.key);
+
+        if (_pendingPositionQueue.length > 0) {
+            _bulkConfirmMode = true;
+            processNextPendingPosition();
+        } else {
+            showSummary();
+        }
     }
 
     function showSummary() {
@@ -679,10 +832,12 @@
             const reason   = getEffectiveReason(item.key);
             const reasonTxt= reason ? reasonLabels[reason] : '';
             const confBadge= isConf ? `<span style="font-size:11px; background:#dcfce7; color:#15803d; border-radius:6px; padding:2px 7px; font-weight:700; margin-left:6px">✓</span>` : '';
+            const pos      = confirmedItems[item.key]?.invoice_position ?? null;
+            const posBadge = pos ? `<span style="font-size:11px; background:#f1f5f9; color:#475569; border-radius:6px; padding:2px 7px; font-weight:700; margin-left:6px">poz. ${pos}</span>` : '';
 
             return `<div class="wh-card" style="margin-bottom:10px; border-left:4px solid ${isOk ? '#16a34a' : (diff < 0 ? '#dc2626' : '#f59e0b')}">
                 <div style="display:flex; align-items:center; margin-bottom:4px">
-                    <span style="font-weight:600; font-size:14px">${item.name}</span>${confBadge}
+                    <span style="font-weight:600; font-size:14px">${item.name}</span>${confBadge}${posBadge}
                 </div>
                 ${item.sku ? `<div style="font-size:12px; color:#64748b; margin-bottom:6px">SKU: ${item.sku}</div>` : ''}
                 <div style="display:flex; align-items:baseline; flex-wrap:wrap; gap:4px; font-size:13px; color:#475569">
@@ -932,6 +1087,11 @@
         filterItems('');
         input.focus();
     }
+
+    // Enter pe input-ul de poziție = confirmă
+    document.getElementById('pos-modal-input')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') confirmWithPosition();
+    });
 
     // Init
     loadDraft();

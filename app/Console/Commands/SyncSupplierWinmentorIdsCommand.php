@@ -82,8 +82,10 @@ class SyncSupplierWinmentorIdsCommand extends Command
         $this->newLine();
         $this->info('Descărcați ' . count($wmParteneri) . ' parteneri.');
 
-        // 3. Construim index pe CUI normalizat → partener WinMentor
-        $cuiIndex = [];    // cuiNormalized => partener
+        // 3. Construim index pe CUI normalizat → LISTĂ parteneri WinMentor.
+        //    Mai multe firme pot avea același CUI (ex: CEMPLUS RO vs PROMIX PLUS) —
+        //    păstrăm toți candidații și dezambiguăm după nume la matching.
+        $cuiIndex = [];    // cuiNormalized => [partener, ...]
         $idIndex  = [];    // idPartener => partener
 
         foreach ($wmParteneri as $p) {
@@ -94,14 +96,11 @@ class SyncSupplierWinmentorIdsCommand extends Command
 
             $cui = preg_replace('/[^0-9]/', '', $p['codFiscal'] ?? '');
             if ($cui && strlen($cui) >= 3) {
-                // Poate exista duplicate — păstrăm ultimul (sau primul)
-                if (! isset($cuiIndex[$cui])) {
-                    $cuiIndex[$cui] = $p;
-                }
+                $cuiIndex[$cui][] = $p;
             }
         }
 
-        $this->info('Index CUI: ' . count($cuiIndex) . ' intrări unice.');
+        $this->info('Index CUI: ' . count($cuiIndex) . ' CUI-uri distincte.');
 
         // 4. Verificăm fiecare furnizor din ERP
         $suppliers = Supplier::all();
@@ -122,8 +121,9 @@ class SyncSupplierWinmentorIdsCommand extends Command
             // Verificăm dacă ID-ul curent există în WinMentor
             $currentExists = $currentWmId && isset($idIndex[$currentWmId]);
 
-            // Căutăm match pe CUI
-            $cuiMatch = ($vatNormalized && strlen($vatNormalized) >= 3) ? ($cuiIndex[$vatNormalized] ?? null) : null;
+            // Căutăm match pe CUI — pot fi mai mulți candidați (CUI dublu) → alegem după nume
+            $cuiCandidates = ($vatNormalized && strlen($vatNormalized) >= 3) ? ($cuiIndex[$vatNormalized] ?? []) : [];
+            $cuiMatch  = $this->pickByName($supplier->name, $cuiCandidates);
             $correctId = $cuiMatch ? ($cuiMatch['idPartener'] ?? null) : null;
 
             if ($currentExists && (! $cuiMatch || $correctId === $currentWmId)) {
@@ -198,5 +198,48 @@ class SyncSupplierWinmentorIdsCommand extends Command
         }
 
         return 0;
+    }
+
+    /**
+     * Dintr-o listă de candidați WinMentor (același CUI) alege-l pe cel cu numele
+     * cel mai apropiat de furnizorul ERP. Esențial când mai multe firme au același CUI.
+     * Dacă e un singur candidat, îl returnează direct.
+     */
+    private function pickByName(string $erpName, array $candidates): ?array
+    {
+        if (empty($candidates)) {
+            return null;
+        }
+        if (count($candidates) === 1) {
+            return $candidates[0];
+        }
+
+        $normalize = function (string $name): string {
+            $name = mb_strtolower($name);
+            $name = preg_replace('/\b(s\.?r\.?l\.?|s\.?a\.?|srl|sa|ii|pfa)\b/i', '', $name);
+            $name = preg_replace('/[^a-z0-9\s]/u', '', $name);
+            return trim(preg_replace('/\s+/', ' ', $name));
+        };
+
+        $erp     = $normalize($erpName);
+        $best    = null;
+        $bestPct = -1.0;
+        $bestScore = -1.0;
+
+        foreach ($candidates as $c) {
+            $den = $c['denumire'] ?? '';
+            similar_text($erp, $normalize($den), $percent);
+            // Prefix "X" = partener dezactivat (nu mai lucrăm cu el) → prioritate mai mică
+            $deactivated = (bool) preg_match('/^\s*X+[A-Z]/', $den);
+            $score = ($deactivated ? 0.0 : 1000.0) + $percent;
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $bestPct   = $percent;
+                $best      = $c;
+            }
+        }
+
+        // Prag minim ca să nu atribuim greșit un CUI dublu cu nume complet diferite
+        return $bestPct >= 50 ? $best : null;
     }
 }
