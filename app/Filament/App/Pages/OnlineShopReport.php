@@ -35,6 +35,8 @@ class OnlineShopReport extends Page
 
     public ?int $month = null;
 
+    public bool $allTime = false;
+
     // Stat cards
     public float $statRevenue = 0.0;
 
@@ -84,17 +86,27 @@ class OnlineShopReport extends Page
 
     public function setYear(int $year): void
     {
-        $this->year  = $year;
-        $this->month = null;
+        $this->year    = $year;
+        $this->month   = null;
+        $this->allTime = false;
         $this->computeStats();
-        $this->dispatch('onlineShopSetPeriod', year: $this->year, month: null);
+        $this->dispatch('onlineShopSetPeriod', year: $this->year, month: null, allTime: false);
+    }
+
+    public function setAllTime(): void
+    {
+        $this->allTime = true;
+        $this->month   = null;
+        $this->computeStats();
+        $this->dispatch('onlineShopSetPeriod', year: $this->year, month: null, allTime: true);
     }
 
     public function setMonth(?int $month): void
     {
-        $this->month = $month;
+        $this->month   = $month;
+        $this->allTime = false;
         $this->computeStats();
-        $this->dispatch('onlineShopSetPeriod', year: $this->year, month: $this->month);
+        $this->dispatch('onlineShopSetPeriod', year: $this->year, month: $this->month, allTime: false);
     }
 
     private function computeStats(): void
@@ -103,7 +115,7 @@ class OnlineShopReport extends Page
 
         // Global revenue stats
         $row = DB::table('woo_orders')
-            ->whereRaw('YEAR(order_date) = ?', [$this->year])
+            ->when(! $this->allTime, fn ($q) => $q->whereRaw('YEAR(order_date) = ?', [$this->year]))
             ->when($this->month, fn ($q) => $q->whereRaw('MONTH(order_date) = ?', [$this->month]))
             ->whereNotIn('status', $excluded)
             ->selectRaw('COUNT(*) as cnt, SUM(total) as revenue, AVG(total) as avg_total')
@@ -114,7 +126,7 @@ class OnlineShopReport extends Page
         $this->statAvgOrder = round((float) ($row->avg_total ?? 0), 2);
 
         $baseCount = fn (string $status): int => (int) DB::table('woo_orders')
-            ->whereRaw('YEAR(order_date) = ?', [$this->year])
+            ->when(! $this->allTime, fn ($q) => $q->whereRaw('YEAR(order_date) = ?', [$this->year]))
             ->when($this->month, fn ($q) => $q->whereRaw('MONTH(order_date) = ?', [$this->month]))
             ->where('status', $status)
             ->count();
@@ -124,7 +136,7 @@ class OnlineShopReport extends Page
 
         // Status breakdown (all statuses)
         $this->statusData = DB::table('woo_orders')
-            ->whereRaw('YEAR(order_date) = ?', [$this->year])
+            ->when(! $this->allTime, fn ($q) => $q->whereRaw('YEAR(order_date) = ?', [$this->year]))
             ->when($this->month, fn ($q) => $q->whereRaw('MONTH(order_date) = ?', [$this->month]))
             ->selectRaw('status, COUNT(*) as cnt, SUM(total) as revenue')
             ->groupBy('status')
@@ -149,7 +161,7 @@ class OnlineShopReport extends Page
             ->leftJoin('woo_categories as par', 'par.id', '=', 'wc.parent_id')
             ->leftJoin('woo_categories as gp', 'gp.id', '=', 'par.parent_id')
             ->whereNotIn('o.status', $excluded)
-            ->whereRaw('YEAR(o.order_date) = ?', [$this->year])
+            ->when(! $this->allTime, fn ($q) => $q->whereRaw('YEAR(o.order_date) = ?', [$this->year]))
             ->when($this->month, fn ($q) => $q->whereRaw('MONTH(o.order_date) = ?', [$this->month]))
             ->selectRaw('
                 COALESCE(gp.name, par.name, wc.name) as cat_name,
@@ -176,7 +188,7 @@ class OnlineShopReport extends Page
             ->join('product_suppliers as ps', 'ps.woo_product_id', '=', 'wp.id')
             ->join('suppliers as s', 's.id', '=', 'ps.supplier_id')
             ->whereNotIn('o.status', $excluded)
-            ->whereRaw('YEAR(o.order_date) = ?', [$this->year])
+            ->when(! $this->allTime, fn ($q) => $q->whereRaw('YEAR(o.order_date) = ?', [$this->year]))
             ->when($this->month, fn ($q) => $q->whereRaw('MONTH(o.order_date) = ?', [$this->month]))
             ->selectRaw('s.id, s.name, SUM(oi.total) as revenue, COUNT(DISTINCT o.id) as orders')
             ->groupBy('s.id', 's.name')
@@ -198,7 +210,7 @@ class OnlineShopReport extends Page
                   ->whereColumn('wp.connection_id', 'o.connection_id');
             })
             ->whereNotIn('o.status', $excluded)
-            ->whereRaw('YEAR(o.order_date) = ?', [$this->year])
+            ->when(! $this->allTime, fn ($q) => $q->whereRaw('YEAR(o.order_date) = ?', [$this->year]))
             ->when($this->month, fn ($q) => $q->whereRaw('MONTH(o.order_date) = ?', [$this->month]))
             ->whereNotNull('wp.brand')
             ->where('wp.brand', '!=', '')

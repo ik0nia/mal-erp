@@ -1,3 +1,5 @@
+<x-filament-panels::page>
+
 <style>
 .ua-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; }
 .ua-badge { display:inline-flex; align-items:center; padding:0.25rem 0.75rem; border-radius:9999px; font-size:0.875rem; font-weight:500; }
@@ -27,8 +29,6 @@
 .ua-empty p { font-size:1.125rem; font-weight:500; }
 .ua-empty .sub { font-size:0.875rem; margin-top:0.25rem; }
 </style>
-
-<x-filament-panels::page>
 
     @if(empty($items))
         <div class="ua-empty">

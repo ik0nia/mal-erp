@@ -1,3 +1,5 @@
+<x-filament-panels::page>
+
 <style>
 .osr-pills { display:flex; flex-wrap:wrap; align-items:center; gap:0.75rem; }
 .osr-pills-label { font-size:0.875rem; color:#6b7280; }
@@ -47,15 +49,14 @@
 .osr-status-badge { display:inline-flex; padding:0.125rem 0.625rem; border-radius:9999px; font-size:0.75rem; font-weight:500; }
 </style>
 
-<x-filament-panels::page>
-
     {{-- Year / Month filters --}}
     <div class="osr-pills">
         <div style="display:flex; align-items:center; gap:0.5rem;">
             <span class="osr-pills-label">An:</span>
             @foreach($this->availableYears as $yr)
-                <button wire:click="setYear({{ $yr }})" class="osr-pill {{ $this->year === $yr ? 'osr-pill--active' : '' }}">{{ $yr }}</button>
+                <button type="button" wire:click="setYear({{ $yr }})" class="osr-pill {{ (! $this->allTime && $this->year === $yr) ? 'osr-pill--active' : '' }}">{{ $yr }}</button>
             @endforeach
+            <button type="button" wire:click="setAllTime" class="osr-pill {{ $this->allTime ? 'osr-pill--active' : '' }}">Toată perioada</button>
         </div>
         <span class="osr-sep">|</span>
         <div style="display:flex; flex-wrap:wrap; align-items:center; gap:0.375rem;">

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CustomerDeliveryAddress extends Model
 {
+    use \App\Models\Concerns\Auditable;
     protected $fillable = [
         'customer_id',
         'label',

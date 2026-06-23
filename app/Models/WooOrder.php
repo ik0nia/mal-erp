@@ -50,6 +50,19 @@ class WooOrder extends Model
         'fee_total',
         'tax_total',
         'total',
+        'winmentor_sync_status',
+        'winmentor_synced_at',
+        'winmentor_client_id',
+        'winmentor_synced_by',
+        'winmentor_sync_error',
+        'winmentor_invoice_nr',
+        'winmentor_invoice_serie',
+        'winmentor_invoice_an',
+        'winmentor_invoice_luna',
+        'winmentor_invoice_data',
+        'winmentor_invoice_total',
+        'winmentor_invoice_estimat',
+        'winmentor_invoice_matched_at',
         'date_paid',
         'date_completed',
         'order_date',
@@ -71,6 +84,8 @@ class WooOrder extends Model
             'fee_total'      => 'decimal:2',
             'tax_total'      => 'decimal:2',
             'total'          => 'decimal:2',
+            'winmentor_synced_at' => 'datetime',
+            'winmentor_invoice_matched_at' => 'datetime',
             'date_paid'      => 'datetime',
             'date_completed' => 'datetime',
             'order_date'     => 'datetime',
@@ -95,6 +110,11 @@ class WooOrder extends Model
     public function samedayAwbs(): HasMany
     {
         return $this->hasMany(SamedayAwb::class, 'woo_order_id');
+    }
+
+    public function syncedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'winmentor_synced_by');
     }
 
     protected function customerName(): Attribute

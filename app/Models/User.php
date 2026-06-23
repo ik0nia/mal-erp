@@ -13,6 +13,7 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable implements FilamentUser
 {
+    use \App\Models\Concerns\Auditable;
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 

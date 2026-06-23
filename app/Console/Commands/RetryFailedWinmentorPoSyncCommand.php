@@ -19,7 +19,10 @@ class RetryFailedWinmentorPoSyncCommand extends Command
                 $q->where('winmentor_sync_status', PurchaseOrder::WINMENTOR_FAILED)
                   ->orWhereNull('winmentor_sync_status');
             })
-            ->whereIn('status', [PurchaseOrder::STATUS_SENT, PurchaseOrder::STATUS_RECEIVED])
+            // Doar PO-uri recepționate: comanda furnizori în WinMentor se construiește
+            // din cantitatea recepționată. Cele doar SENT (0 recepționat) ar pica mereu.
+            ->whereIn('status', [PurchaseOrder::STATUS_RECEIVED, PurchaseOrder::STATUS_PARTIALLY_RECEIVED])
+            ->whereHas('items', fn ($q) => $q->where('received_quantity', '>', 0))
             ->get();
 
         if ($failed->isEmpty()) {

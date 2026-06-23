@@ -11,7 +11,10 @@ use App\Models\WooOrder;
 use App\Models\WooProduct;
 use App\Services\WooCommerce\WooClient;
 use App\Services\WooCommerce\WooOrderSyncService;
+use App\Filament\App\Pages\WinmentorVanzariDetailPage;
+use App\Services\Winmentor\ImportWooOrderToWinmentorService;
 use Filament\Actions\Action;
+use Illuminate\Support\Facades\DB;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
@@ -29,9 +32,120 @@ class ViewWooOrder extends ViewRecord
         $this->syncOrderFromWoo();
     }
 
+    /**
+     * Factura WinMentor asociată comenzii — citită din coloanele SALVATE pe comandă
+     * (populate de `winmentor:match-woo-facturi`, read-only, local). Instant, fără COM/LIKE.
+     */
+    public function winmentorInvoice(): ?object
+    {
+        if (! $this->record->winmentor_invoice_nr) {
+            return null;
+        }
+
+        return (object) [
+            'nr_factura' => $this->record->winmentor_invoice_nr,
+            'serie'      => $this->record->winmentor_invoice_serie,
+            'an'         => $this->record->winmentor_invoice_an,
+            'luna'       => $this->record->winmentor_invoice_luna,
+            'data'       => $this->record->winmentor_invoice_data,
+            'total'      => $this->record->winmentor_invoice_total,
+        ];
+    }
+
+    /** Diferența valorică absolută între total comandă și total factură WinMentor (cu TVA). */
+    public function facturaDiferenta(): float
+    {
+        $inv = $this->winmentorInvoice();
+        if (! $inv) {
+            return 0.0;
+        }
+        return abs((float) $this->record->total - (float) $inv->total);
+    }
+
+    /** True dacă factura coincide valoric cu comanda (toleranță 0,05 RON la rotunjiri). */
+    public function facturaValoricOk(): bool
+    {
+        return $this->facturaDiferenta() <= 0.05;
+    }
+
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('factura_winmentor')
+                ->label(function (): string {
+                    $inv = $this->winmentorInvoice();
+                    if (! $inv) {
+                        return 'Nefacturat în WinMentor';
+                    }
+                    $serie = $inv->serie ?: $inv->nr_factura;
+                    return $this->facturaValoricOk()
+                        ? 'Facturat: ' . $serie
+                        : '⚠ Facturat: ' . $serie . ' — diferență ' . number_format($this->facturaDiferenta(), 2, ',', '.') . ' RON';
+                })
+                ->icon(function (): string {
+                    $inv = $this->winmentorInvoice();
+                    if (! $inv) {
+                        return 'heroicon-o-document';
+                    }
+                    return $this->facturaValoricOk() ? 'heroicon-o-document-check' : 'heroicon-o-exclamation-triangle';
+                })
+                ->color(function (): string {
+                    $inv = $this->winmentorInvoice();
+                    if (! $inv) {
+                        return 'gray';
+                    }
+                    return $this->facturaValoricOk() ? 'success' : 'danger';
+                })
+                ->disabled(fn (): bool => $this->winmentorInvoice() === null)
+                ->url(function (): ?string {
+                    $inv = $this->winmentorInvoice();
+                    return $inv
+                        ? WinmentorVanzariDetailPage::getUrl(['nr' => $inv->nr_factura, 'an' => $inv->an, 'luna' => $inv->luna])
+                        : null;
+                }),
+            Action::make('import_winmentor')
+                ->label(fn (): string => $this->record->winmentor_sync_status === 'synced'
+                    ? 'Trimisă în WinMentor'
+                    : 'Import în WinMentor')
+                ->icon('heroicon-o-arrow-up-tray')
+                ->color(fn (): string => $this->record->winmentor_sync_status === 'synced' ? 'gray' : 'success')
+                ->disabled(fn (): bool => $this->record->winmentor_sync_status === 'synced')
+                ->requiresConfirmation()
+                ->modalHeading('Import comandă client în WinMentor')
+                ->modalDescription('Se verifică întâi că toate produsele există ca articol în WinMentor (firma MAL2019). '
+                    .'Dacă lipsește vreunul, importul se OPREȘTE și ți se arată produsele. '
+                    .'Altfel: se verifică/creează clientul și se creează comanda client. Comanda se marchează ca trimisă (nu se dublează).')
+                ->modalSubmitActionLabel('Importă în WinMentor')
+                ->action(function (): void {
+                    /** @var WooOrder $order */
+                    $order = $this->record;
+
+                    $result = (new ImportWooOrderToWinmentorService())->import($order);
+
+                    if ($result['success'] ?? false) {
+                        $client = $result['client'] ?? [];
+                        $clientInfo = ($client['name'] ?? '—').(($client['created'] ?? false) ? ' (client nou creat)' : ' (client existent)');
+
+                        Notification::make()
+                            ->success()
+                            ->title('Comandă importată în WinMentor')
+                            ->body('Comanda '.$result['nrComanda'].' creată. Client: '.$clientInfo.'.')
+                            ->persistent()
+                            ->send();
+
+                        $this->record = $order->fresh();
+                    } else {
+                        Notification::make()
+                            ->danger()
+                            ->title('Import oprit')
+                            ->body($result['error'] ?? 'Eroare necunoscută.')
+                            ->persistent()
+                            ->send();
+
+                        $this->record = $order->fresh();
+                    }
+                }),
+
             Action::make('change_status')
                 ->label('Schimbă status')
                 ->icon('heroicon-o-arrow-path')

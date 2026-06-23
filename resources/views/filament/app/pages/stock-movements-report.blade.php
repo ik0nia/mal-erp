@@ -1,3 +1,5 @@
+<x-filament-panels::page>
+
 <style>
 .smr-pills { display:flex; flex-wrap:wrap; align-items:center; gap:0.75rem; }
 .smr-pills-label { font-size:0.875rem; color:#6b7280; }
@@ -41,8 +43,6 @@
 .smr-cat-value span { font-size:0.75rem; font-weight:400; color:#9ca3af; }
 .smr-cat-sub { margin-top:0.125rem; font-size:0.75rem; color:#9ca3af; }
 </style>
-
-<x-filament-panels::page>
 
     {{-- Filters --}}
     <div class="smr-pills">

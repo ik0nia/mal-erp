@@ -28,6 +28,11 @@ class AppSetting extends Model
     const KEY_PNR_START_NUMBER   = 'pnr_start_number';
     const KEY_OFFER_SERIES       = 'offer_series';
     const KEY_OFFER_START_NUMBER = 'offer_start_number';
+    const KEY_OFFER_VAT_RATE     = 'offer_vat_rate';
+    const KEY_OFFER_DEF_DISCOUNT_COND = 'offer_def_discount_cond';
+    const KEY_OFFER_DEF_TRANSPORT     = 'offer_def_transport';
+    const KEY_OFFER_DEF_PAYMENT       = 'offer_def_payment';
+    const KEY_OFFER_DEF_DELIVERY      = 'offer_def_delivery';
 
     // IMAP — inbox read-only
     const KEY_IMAP_HOST          = 'imap_host';

@@ -30,7 +30,10 @@ class SyncProductSupplierMetaJob implements ShouldQueue
         $product = WooProduct::with(['suppliers' => fn ($q) => $q->wherePivot('is_preferred', true)])
             ->find($this->wooProductId);
 
-        if (! $product || ! $product->woo_id || $product->is_placeholder) {
+        // woo_id >= 1e15 = placeholder sintetic (8e18 + crc32), produsul NU există pe site.
+        // Guard-ul prinde și inconsistențele unde is_placeholder a rămas false dar woo_id e fals.
+        if (! $product || ! $product->woo_id || $product->is_placeholder
+            || $product->woo_id >= 1_000_000_000_000_000) {
             return;
         }
 

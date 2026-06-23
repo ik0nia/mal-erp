@@ -21,6 +21,8 @@ class OrderStatusChartWidget extends ChartWidget
 
     public ?int $month = null;
 
+    public bool $allTime = false;
+
     public function mount(): void
     {
         $this->filter = (string) now()->year;
@@ -28,10 +30,11 @@ class OrderStatusChartWidget extends ChartWidget
     }
 
     #[On('onlineShopSetPeriod')]
-    public function syncPeriod(int $year, ?int $month): void
+    public function syncPeriod(int $year, ?int $month, bool $allTime = false): void
     {
         $this->filter = (string) $year;
         $this->month  = $month;
+        $this->allTime = $allTime;
         $this->cachedData = null;
     }
 
@@ -52,7 +55,7 @@ class OrderStatusChartWidget extends ChartWidget
         $year = (int) ($this->filter ?? now()->year);
 
         $rows = DB::table('woo_orders')
-            ->whereRaw('YEAR(order_date) = ?', [$year])
+            ->when(! $this->allTime, fn ($q) => $q->whereRaw('YEAR(order_date) = ?', [$year]))
             ->when($this->month, fn ($q) => $q->whereRaw('MONTH(order_date) = ?', [$this->month]))
             ->selectRaw('status, COUNT(*) as cnt')
             ->groupBy('status')

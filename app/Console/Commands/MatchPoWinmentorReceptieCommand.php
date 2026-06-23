@@ -114,8 +114,13 @@ class MatchPoWinmentorReceptieCommand extends Command
 
     private function updatePricesFromWm(PurchaseOrder $po, array $nrDocs): void
     {
+        // nr_doc nu e unic între furnizori — fără filtru part_id am putea prelua prețul
+        // altui furnizor cu același nr_doc (același EAN) și am corupe last_purchase_price.
+        $partId = $po->supplier?->winmentor_id;
+
         $wmLines = DB::table('winmentor_intrari_raw')
             ->whereIn('nr_doc', $nrDocs)
+            ->when($partId, fn ($q) => $q->where('part_id', $partId))
             ->whereNotNull('pret')
             ->where('pret', '>', 0)
             ->get(['sku', 'pret', 'data_intrare'])

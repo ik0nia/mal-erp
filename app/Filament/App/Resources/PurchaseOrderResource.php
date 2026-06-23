@@ -646,8 +646,12 @@ class PurchaseOrderResource extends Resource
                                 ? (function() use ($record): \Illuminate\Support\Collection {
                                     $nrs = $record->winmentor_receptie_nrs ?? [$record->winmentor_receptie_nr];
                                     $nrs = array_filter($nrs);
+                                    // nr_doc NU e unic între furnizori (se resetează per partener) — filtrăm pe
+                                    // part_id, altfel apar liniile altor furnizori cu același nr_doc în listă.
+                                    $partId = $record->supplier?->winmentor_id;
                                     return \Illuminate\Support\Facades\DB::table('winmentor_intrari_raw')
                                         ->whereIn('nr_doc', $nrs)
+                                        ->when($partId, fn ($q) => $q->where('part_id', $partId))
                                         ->get(['sku', 'cantitate', 'pret', 'den_articol'])
                                         ->keyBy('sku');
                                   })()
@@ -1137,12 +1141,24 @@ class PurchaseOrderResource extends Resource
                         if ($supplierSku) $skuParts[] = 'F: '.e($supplierSku);
                         $skuHtml = $skuParts ? '<div style="font-size:11px;color:#9ca3af;margin-top:1px">'.implode(' · ', $skuParts).'</div>' : '';
 
+                        // Hint: același produs e mai ieftin la alt furnizor decât cel al PO-ului
+                        $cheaperHtml = '';
+                        $supplierId  = (int) ($get('../../supplier_id') ?? 0);
+                        $alts        = static::getCheaperAlternatives($productId, $supplierId);
+                        if (! empty($alts)) {
+                            $best = $alts[0];
+                            $cheaperHtml = '<div style="font-size:11px;margin-top:2px;color:#15803d;font-weight:600" title="Folosește butonul „Mută la furnizor mai ieftin” din dreapta rândului">'
+                                .'💡 mai ieftin la '.e($best['name']).': '.number_format($best['price'], 2, ',', '.').' RON ('.($best['delta_pct'] > 0 ? '+' : '').$best['delta_pct'].'%)'
+                                .'</div>';
+                        }
+
                         return new HtmlString(
                             '<div style="display:flex;align-items:center;gap:8px">'
                             .$thumb->toHtml()
                             .'<div style="min-width:0">'
                             .'<div style="font-size:13px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:320px" title="'.e($decodedName).'">'.$nameHtml.'</div>'
                             .$skuHtml
+                            .$cheaperHtml
                             .'</div></div>'
                         );
                     })
@@ -1347,6 +1363,77 @@ class PurchaseOrderResource extends Resource
             ->label('')
             ->relationship('items')
             ->schema($schema)
+            ->extraItemActions($isCreate ? [
+                \Filament\Actions\Action::make('moveToCheaperSupplier')
+                    ->label('Mută la furnizor mai ieftin')
+                    ->icon('heroicon-m-arrows-right-left')
+                    ->color('warning')
+                    ->action(function (array $arguments, Repeater $component): void {
+                        $item              = $component->getRawItemState($arguments['item']);
+                        $productId         = (int) ($item['woo_product_id'] ?? 0);
+                        $currentSupplierId = (int) ($component->getLivewire()->supplierId ?? 0);
+
+                        if (! $productId || ! $currentSupplierId) {
+                            \Filament\Notifications\Notification::make()
+                                ->warning()->title('Selectează mai întâi produsul')->send();
+                            return;
+                        }
+
+                        $alts = static::getCheaperAlternatives($productId, $currentSupplierId);
+                        if (empty($alts)) {
+                            \Filament\Notifications\Notification::make()
+                                ->warning()
+                                ->title('Niciun furnizor mai ieftin')
+                                ->body('Produsul nu are alt furnizor cu preț mai mic decât cel curent.')
+                                ->send();
+                            return;
+                        }
+
+                        $target = $alts[0];
+                        $qty    = (float) ($item['quantity'] ?? 0);
+                        if ($qty <= 0) {
+                            $qty = (float) ($item['quantity_hint'] ?? 1);
+                        }
+
+                        \Illuminate\Support\Facades\DB::transaction(function () use ($item, $productId, $qty, $target): void {
+                            $sources        = json_decode($item['sources_json'] ?? '[]', true) ?: [];
+                            $requestItemIds = collect($sources)->pluck('request_item_id')->filter()->all();
+
+                            if (! empty($requestItemIds)) {
+                                // Linia vine din necesare → re-rutează necesarele către furnizorul ieftin
+                                \App\Models\PurchaseRequestItem::whereIn('id', $requestItemIds)
+                                    ->where('status', \App\Models\PurchaseRequestItem::STATUS_PENDING)
+                                    ->update(['supplier_id' => $target['supplier_id']]);
+                            } else {
+                                // Linie din rulaj/manuală → creează un necesar nou rutat către furnizorul ieftin
+                                $req = \App\Models\PurchaseRequest::create([
+                                    'status' => \App\Models\PurchaseRequest::STATUS_SUBMITTED,
+                                    'notes'  => 'Rutat din PO către furnizor mai ieftin',
+                                ]);
+                                $req->items()->create([
+                                    'woo_product_id' => $productId,
+                                    'supplier_id'    => $target['supplier_id'],
+                                    'quantity'       => $qty,
+                                    'status'         => \App\Models\PurchaseRequestItem::STATUS_PENDING,
+                                    'notes'          => 'Rutat din PO către furnizor mai ieftin',
+                                ]);
+                            }
+                        });
+
+                        // Scoate rândul din PO-ul curent
+                        $state = $component->getState();
+                        unset($state[$arguments['item']]);
+                        $component->state($state);
+
+                        \Filament\Notifications\Notification::make()
+                            ->success()
+                            ->title('Mutat la ' . $target['name'])
+                            ->body('Produsul a ieșit din acest PO și apare ca necesar pentru ' . $target['name']
+                                . ' (preț ' . number_format($target['price'], 2, ',', '.') . ' RON, ' . $target['delta_pct'] . '%). '
+                                . 'Creează PO-ul pentru acel furnizor din Dashboard achiziții.')
+                            ->send();
+                    }),
+            ] : [])
             ->columns($isCreate ? 12 : 10)
             ->defaultItems($isCreate ? 0 : 1)
             ->addActionLabel('Adaugă produs')
@@ -1357,6 +1444,48 @@ class PurchaseOrderResource extends Resource
                 }
                 return $data;
             });
+    }
+
+    /**
+     * Furnizorii alternativi pentru un produs care au preț MAI MIC decât furnizorul curent al PO-ului.
+     * Sortați crescător după preț (cel mai ieftin primul). Gol dacă nu există referință de preț.
+     *
+     * @return array<int, array{supplier_id:int, name:string, price:float, delta_pct:float}>
+     */
+    private static function getCheaperAlternatives(int $productId, int $currentSupplierId): array
+    {
+        if (! $productId || ! $currentSupplierId) {
+            return [];
+        }
+
+        $rows = ProductSupplier::query()
+            ->where('woo_product_id', $productId)
+            ->with('supplier:id,name')
+            ->get(['id', 'supplier_id', 'purchase_price', 'last_purchase_price']);
+
+        if ($rows->count() < 2) {
+            return [];
+        }
+
+        $priceOf = fn ($r): float => (float) ($r->last_purchase_price ?: $r->purchase_price ?: 0);
+
+        $current      = $rows->firstWhere('supplier_id', $currentSupplierId);
+        $currentPrice = $current ? $priceOf($current) : 0.0;
+        if ($currentPrice <= 0) {
+            return []; // fără preț de referință la furnizorul curent nu putem compara corect
+        }
+
+        return $rows
+            ->filter(fn ($r) => (int) $r->supplier_id !== $currentSupplierId && $priceOf($r) > 0 && $priceOf($r) < $currentPrice)
+            ->map(fn ($r) => [
+                'supplier_id' => (int) $r->supplier_id,
+                'name'        => $r->supplier?->name ?? ('#' . $r->supplier_id),
+                'price'       => $priceOf($r),
+                'delta_pct'   => round(($priceOf($r) - $currentPrice) / $currentPrice * 100, 1),
+            ])
+            ->sortBy('price')
+            ->values()
+            ->all();
     }
 
     private static function productThumbnail(?int $productId): HtmlString

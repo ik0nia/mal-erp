@@ -35,5 +35,6 @@ class CreateOffer extends CreateRecord
     protected function afterCreate(): void
     {
         $this->record->recalculateTotals();
+        $this->record->notifyApproversIfNeeded();
     }
 }

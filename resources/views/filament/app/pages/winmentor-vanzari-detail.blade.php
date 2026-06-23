@@ -24,11 +24,23 @@
 .wm-obs-box{padding:1rem 1.25rem;background:#fffbeb;border-left:4px solid #f59e0b;margin:0;}
 .wm-obs-label{font-size:.7rem;font-weight:600;text-transform:uppercase;color:#92400e;margin-bottom:.25rem;}
 .wm-obs-text{font-size:.875rem;color:#78350f;}
+.wm-print-btn{display:inline-flex;align-items:center;gap:.375rem;font-size:.875rem;color:#fff;text-decoration:none;margin-bottom:1rem;margin-left:.5rem;padding:.375rem .85rem;border:none;border-radius:.5rem;background:#b91c1c;}
+.wm-print-btn:hover{background:#991b1b;}
 </style>
 
 <a href="{{ \App\Filament\App\Pages\WinmentorVanzariPage::getUrl() }}" class="wm-back">
   &larr; Inapoi la Vanzari
 </a>
+
+@php
+  $linkedOrder = $this->getLinkedOrder();
+@endphp
+@if($linkedOrder)
+  <a href="{{ $linkedOrder['url'] }}" class="wm-back" style="margin-left:.75rem;color:#1d4ed8;">
+    &rarr; Comanda online #{{ $linkedOrder['number'] }}
+  </a>
+@endif
+<a href="{{ route('print.winmentor-factura', ['nr' => $this->nr, 'an' => $this->an, 'luna' => $this->luna]) }}" target="_blank" class="wm-print-btn">&#128424; Printează factura</a>
 
 @php
   $doc   = $this->getDocument();

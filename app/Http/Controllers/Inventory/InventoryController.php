@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\EanAssociationRequest;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
+use App\Models\PurchaseRequest;
 use App\Models\ProductStock;
+use App\Models\User;
 use App\Models\WooProduct;
 use App\Models\Location;
 use Illuminate\Http\Request;
@@ -18,6 +20,40 @@ class InventoryController extends Controller
     public function index()
     {
         return view('inventory.scan');
+    }
+
+    /** Adaugă produsul scanat la necesarul (draft) utilizatorului. */
+    public function addNecesar(Request $request)
+    {
+        $data = $request->validate([
+            'woo_product_id' => ['required', 'integer', 'exists:woo_products,id'],
+            'quantity'       => ['nullable', 'numeric', 'min:0.001'],
+            'notes'          => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $user = Auth::user();
+        if (! $user instanceof User) {
+            return response()->json(['ok' => false], 403);
+        }
+
+        $qty   = (float) ($data['quantity'] ?? 1);
+        $draft = PurchaseRequest::getOrCreateDraft($user);
+
+        $existing = $draft->items()->where('woo_product_id', $data['woo_product_id'])->first();
+        if ($existing) {
+            $existing->update(['quantity' => (float) $existing->quantity + $qty]);
+        } else {
+            $draft->items()->create([
+                'woo_product_id' => $data['woo_product_id'],
+                'quantity'       => $qty,
+                'notes'          => $data['notes'] ?? null,
+            ]);
+        }
+
+        return response()->json([
+            'ok'          => true,
+            'total_items' => $draft->items()->count(),
+        ]);
     }
 
     // ─── Lookup barcode / SKU ────────────────────────────────────────────────

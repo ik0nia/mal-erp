@@ -82,7 +82,7 @@ type PartnerInput struct {
 	CodExtern             string
 	SimbolAutoJudetLivr   string
 	SimbolAutoJudetSediu  string
-	FlagPF                string
+	FlagPF                string // "PF" = persoană fizică; gol (empty) = juridică (confirmat live 2026-06-23). NU "PJ"/"D".
 	ScadentaImplicita     string
 	SimbolTipContabil     string
 	FlagProducator        string // P

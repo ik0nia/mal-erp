@@ -110,7 +110,7 @@
 <tr><td><span class="mono">codExtern</span></td><td>22</td><td>[17] CodExtern</td><td>string</td><td>-</td><td>Cod extern (recomandat = id)</td></tr>
 <tr><td><span class="mono">judetLivrare</span></td><td>23</td><td>-</td><td>string</td><td>-</td><td>Simbol auto județ livrare</td></tr>
 <tr><td><span class="mono">judetSediu</span></td><td>24</td><td>[23] Judet</td><td>string</td><td>-</td><td>Simbol auto județ sediu (completat automat din localitate)</td></tr>
-<tr><td><span class="mono">flagPF</span></td><td>25</td><td>[30] PFsauPJ</td><td>string</td><td>-</td><td>PF/PJ (autodetectat din CodFiscal)</td></tr>
+<tr><td><span class="mono">flagPF</span></td><td>25</td><td>[30] PFsauPJ</td><td>string</td><td>-</td><td>"PF" = persoană fizică, gol = juridică (confirmat live 2026-06-23). RO la CodFiscal forțează PJ. NU trimite "PJ"/"D".</td></tr>
 <tr><td><span class="mono">scadentaImplicita</span></td><td>26</td><td>[14] Scadenta</td><td>string</td><td>-</td><td>Scadența implicită (zile)</td></tr>
 <tr><td><span class="mono">simbolTipContabil</span></td><td>27</td><td>-</td><td>string</td><td>-</td><td>Simbol tip contabil</td></tr>
 <tr><td><span class="mono">flagProducator</span></td><td>28</td><td>[38] FlagProducator</td><td>string</td><td>-</td><td>"P" = producător</td></tr>
@@ -171,7 +171,7 @@
 <table>
 <tr><th>Câmp</th><th>Comportament</th></tr>
 <tr><td>[23] Judet</td><td>Dedus automat din localitate (ORADEA → BH)</td></tr>
-<tr><td>[30] PFsauPJ</td><td>Dedus din CodFiscal (prefix RO → PJ)</td></tr>
+<tr><td>[30] PFsauPJ</td><td>flagPF="PF" → PF, gol → PJ (confirmat live 2026-06-23); prefix RO la CodFiscal forțează PJ</td></tr>
 <tr><td>[32] DataAdaugarii</td><td>Setat automat la data creării</td></tr>
 <tr><td>[42] Tara</td><td>Setat automat (RO)</td></tr>
 </table>

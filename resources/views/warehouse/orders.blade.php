@@ -3,7 +3,10 @@
 
 @section('body')
 <div class="wh-header">
-    <img src="/malinco-logo.png" alt="Malinco" class="header-logo">
+    <div style="display:flex;align-items:center;gap:10px">
+        <a href="/app" aria-label="Înapoi la aplicație" style="font-size:22px;line-height:1;color:#fff;text-decoration:none;background:rgba(255,255,255,0.15);min-width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center">‹</a>
+        <img src="/malinco-logo.png" alt="Malinco" class="header-logo">
+    </div>
     <div style="display:flex; gap:8px; align-items:center">
         <a href="{{ route('warehouse.pin.change') }}" style="font-size:13px; background:rgba(255,255,255,0.15); border:none; color:white; padding:6px 12px; border-radius:20px; text-decoration:none">PIN</a>
         <form method="POST" action="{{ route('warehouse.logout') }}" style="margin:0">

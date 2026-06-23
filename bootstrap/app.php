@@ -23,7 +23,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Redirecționează utilizatorii neautentificați — PWA warehouse spre /wh/login, restul spre Filament
         $middleware->redirectGuestsTo(function (\Illuminate\Http\Request $request): string {
-            if (str_starts_with($request->path(), 'wh')) {
+            // PWA (recepție /wh, hub /app) → login-ul PWA
+            if (str_starts_with($request->path(), 'wh')
+                || str_starts_with($request->path(), 'app')) {
                 return route('warehouse.login');
             }
             return '/login';

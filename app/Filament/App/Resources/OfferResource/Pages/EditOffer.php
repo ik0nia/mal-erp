@@ -20,14 +20,21 @@ class EditOffer extends EditRecord
                 ->icon('heroicon-o-eye')
                 ->url(fn (): string => OfferResource::getUrl('view', ['record' => $this->record]))
                 ->openUrlInNewTab(),
-            Actions\Action::make('print')
-                ->label('Print ofertă')
-                ->icon('heroicon-o-printer')
-                ->url(fn (): string => OfferResource::getUrl('print', [
-                    'record' => $this->record,
-                    'auto_print' => 1,
-                ]))
-                ->openUrlInNewTab(),
+            Actions\Action::make('download_pdf')
+                ->label('Descarcă PDF')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('gray')
+                ->action(function (): \Symfony\Component\HttpFoundation\StreamedResponse {
+                    \App\Services\Offers\OfferPdf::invalidate($this->record);
+                    $content  = \App\Services\Offers\OfferPdf::get($this->record);
+                    $filename = \App\Services\Offers\OfferPdf::filename($this->record);
+
+                    return response()->streamDownload(
+                        fn () => print($content),
+                        $filename,
+                        ['Content-Type' => 'application/pdf'],
+                    );
+                }),
             Actions\DeleteAction::make(),
         ];
     }
@@ -52,5 +59,6 @@ class EditOffer extends EditRecord
     protected function afterSave(): void
     {
         $this->record->recalculateTotals();
+        $this->record->notifyApproversIfNeeded();
     }
 }

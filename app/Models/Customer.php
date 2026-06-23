@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Customer extends Model
 {
+    use \App\Models\Concerns\Auditable;
     use HasLocationScope;
 
     public const TYPE_INDIVIDUAL = 'individual';

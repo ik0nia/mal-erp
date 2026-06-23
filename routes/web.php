@@ -165,6 +165,26 @@ Route::middleware('web')->get('/docs/winmentor-integrare', function () {
     return response()->view('docs.winmentor-integrare', ['content' => $html]);
 })->name('docs.winmentor-integrare');
 
+// Print factură WinMentor — pagină dedicată, standalone (logo + date firmă)
+Route::middleware(['web', 'auth'])->get('/print/winmentor-factura', function (Request $request) {
+    abort_unless(auth()->user()?->isSuperAdmin(), 403);
+
+    $page = new \App\Filament\App\Pages\WinmentorVanzariDetailPage();
+    $page->skipBridge = true; // print rapid — fără apeluri COM (încasări/SKU)
+    $page->nr   = (string) $request->query('nr', '');
+    $page->an   = (int) $request->query('an', 0);
+    $page->luna = (int) $request->query('luna', 0);
+
+    $doc = $page->getDocument();
+    abort_if(! $doc, 404, 'Document inexistent');
+
+    return response()->view('print.winmentor-factura', [
+        'doc'     => $doc,
+        'lines'   => $page->getLines(),
+        'company' => \App\Models\Location::find(1),
+    ]);
+})->name('print.winmentor-factura');
+
 // Redirect permanent de la vechea cale woo-products → produse
 Route::permanentRedirect('/woo-products', '/produse');
 Route::get('/woo-products/{any}', fn (Request $request, string $any) =>

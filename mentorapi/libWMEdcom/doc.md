@@ -766,7 +766,7 @@ Used by `AdaugaPartener()` and `ModificaPartener()`. 35 fields.
 | `CodExtern` | string | External code |
 | `SimbolAutoJudetLivr` | string | Auto-county for delivery |
 | `SimbolAutoJudetSediu` | string | Auto-county for head office |
-| `FlagPF` | string | Individual flag |
+| `FlagPF` | string | `"PF"` = individual (persoană fizică); empty = company (juridică). Confirmed live 2026-06-23. Do NOT send `"PJ"`/`"D"`. |
 | `ScadentaImplicita` | string | Default payment term |
 | `SimbolTipContabil` | string | Accounting type symbol |
 | `FlagProducator` | string | Producer flag (`P`) |

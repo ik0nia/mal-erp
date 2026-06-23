@@ -1,4 +1,4 @@
-const CACHE = 'wh-v6';
+const CACHE = 'wh-v7';
 
 const STATIC = [
     '/wh-manifest.json',
@@ -71,8 +71,15 @@ self.addEventListener('notificationclick', e => {
     const url = e.notification.data?.url || '/wh/';
     e.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-            const wh = list.find(c => c.url.includes('/wh'));
-            if (wh) return wh.focus();
+            // Fereastră deja pe URL-ul țintă → focus.
+            const exact = list.find(c => c.url.includes(url));
+            if (exact) return exact.focus();
+            // Altfel navigăm o fereastră existentă către URL (nu doar focus pe /wh).
+            for (const c of list) {
+                if ('navigate' in c) {
+                    return c.navigate(url).then(w => (w || c).focus()).catch(() => clients.openWindow(url));
+                }
+            }
             return clients.openWindow(url);
         })
     );

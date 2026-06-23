@@ -17,6 +17,7 @@
         "phpoffice/phpspreadsheet": "^5.7",
         "picqer/php-barcode-generator": "^3.2",
         "smalot/pdfparser": "^2.12",
+        "spatie/laravel-activitylog": "^4.12",
         "webklex/laravel-imap": "^6.2"
     },
     "require-dev": {

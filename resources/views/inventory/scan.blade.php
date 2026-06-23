@@ -169,7 +169,10 @@
 <body>
 
 <div class="inv-header">
-    <img src="/malinco-logo.png" alt="Malinco" class="header-logo">
+    <div style="display:flex;align-items:center;gap:10px">
+        <a href="/app" aria-label="Înapoi la aplicație" style="font-size:22px;line-height:1;color:#fff;text-decoration:none;background:rgba(255,255,255,0.15);min-width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center">‹</a>
+        <img src="/malinco-logo.png" alt="Malinco" class="header-logo">
+    </div>
     <button id="kbd-toggle" class="scanner-mode" aria-label="Comută mod scanner/tastatură">
         <span class="kbd-icon">📷</span>
         <span class="kbd-label">scanner</span>
@@ -213,6 +216,16 @@
         <div id="orders-section" style="display:none">
             <div class="section-title">Comenzi active — în drum</div>
             <div class="section-card" id="orders-card"></div>
+        </div>
+
+        <div class="section-title">Necesar achiziție</div>
+        <div class="section-card">
+            <div style="display:flex; gap:8px; align-items:center">
+                <input type="number" id="necesar-qty" min="0.001" step="1" value="1"
+                    style="width:78px; padding:12px; border:1px solid #cbd5e1; border-radius:10px; font-size:16px; text-align:center; font-weight:700">
+                <button class="btn btn-amber" id="necesar-btn" onclick="addToNecesar()" style="flex:1">➕ Adaugă la necesar</button>
+            </div>
+            <div id="necesar-msg" style="display:none; margin-top:10px; font-size:14px; font-weight:600; color:#15803d; text-align:center"></div>
         </div>
     </div>
 
@@ -561,10 +574,38 @@ async function doScan(code) {
 }
 
 // ── Render produs ─────────────────────────────────────────────────────────────
+let __prodId = null;
+function addToNecesar() {
+    if (!__prodId) return;
+    const qty = parseFloat(document.getElementById('necesar-qty').value) || 1;
+    const btn = document.getElementById('necesar-btn');
+    btn.disabled = true; btn.textContent = '...';
+    fetch('/inv/necesar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF },
+        body: JSON.stringify({ woo_product_id: __prodId, quantity: qty }),
+    }).then(r => r.json()).then(j => {
+        if (j.ok) {
+            const m = document.getElementById('necesar-msg');
+            m.style.display = 'block';
+            m.textContent = `✅ Adăugat la necesar (${j.total_items} în coș)`;
+            btn.textContent = '✓ Adăugat';
+            setTimeout(() => { btn.disabled = false; btn.textContent = '➕ Adaugă la necesar'; }, 1500);
+        } else { btn.disabled = false; btn.textContent = '➕ Adaugă la necesar'; }
+    }).catch(() => { btn.disabled = false; btn.textContent = '➕ Adaugă la necesar'; });
+}
+
 function renderProduct(data) {
     const p = data.product;
 
     document.getElementById('prod-name').textContent = p.name;
+
+    // Necesar: reset UI + reține produsul curent
+    __prodId = p.id;
+    document.getElementById('necesar-qty').value = 1;
+    const nbtn = document.getElementById('necesar-btn');
+    nbtn.disabled = false; nbtn.textContent = '➕ Adaugă la necesar';
+    document.getElementById('necesar-msg').style.display = 'none';
 
     // Poză produs
     const imgEl = document.getElementById('prod-img');

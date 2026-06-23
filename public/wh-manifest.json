@@ -3,6 +3,7 @@
     "short_name": "ERP Malinco",
     "description": "Recepție cantitativă comenzi furnizori",
     "start_url": "/wh/",
+    "scope": "/",
     "display": "standalone",
     "background_color": "#b91c1c",
     "theme_color": "#b91c1c",

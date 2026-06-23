@@ -2,13 +2,30 @@
 
 use App\Http\Controllers\Warehouse\WarehouseController;
 use App\Http\Controllers\Inventory\InventoryController;
+use App\Http\Controllers\Mobile\HubController;
 use Illuminate\Support\Facades\Route;
+
+// ─── PWA unificat — hub cu icoane ────────────────────────────────────────────
+Route::prefix('app')->name('mobile.')->middleware('auth')->group(function () {
+    Route::get('/', [HubController::class, 'home'])->name('home');
+
+    // Dispecerizare vânzări azi (magazin / depozit / livrare)
+    Route::get('dispecer',           [\App\Http\Controllers\Mobile\DispecerController::class, 'index'])->name('dispecer');
+    Route::post('dispecer/set',      [\App\Http\Controllers\Mobile\DispecerController::class, 'set'])->name('dispecer.set');
+    Route::post('dispecer/confirma', [\App\Http\Controllers\Mobile\DispecerController::class, 'confirma'])->name('dispecer.confirma');
+
+    // De predat — pentru manipulanți / gestionar depozit
+    Route::get('de-predat',        [\App\Http\Controllers\Mobile\DispecerController::class, 'dePredat'])->name('depredat');
+    Route::post('de-predat/gata',  [\App\Http\Controllers\Mobile\DispecerController::class, 'predat'])->name('depredat.gata');
+    Route::post('de-predat/linie', [\App\Http\Controllers\Mobile\DispecerController::class, 'predatLinie'])->name('depredat.linie');
+});
 
 // ─── PWA Inventar / Lookup produse ──────────────────────────────────────────
 Route::prefix('inv')->name('inventory.')->middleware('auth')->group(function () {
     Route::get('/',               [InventoryController::class, 'index'])->name('index');
     Route::post('scan',           [InventoryController::class, 'scan'])->name('scan');
     Route::post('ean-request',    [InventoryController::class, 'eanRequest'])->name('ean-request');
+    Route::post('necesar',        [InventoryController::class, 'addNecesar'])->name('necesar');
     Route::get('search',          [InventoryController::class, 'searchProducts'])->name('search');
 });
 

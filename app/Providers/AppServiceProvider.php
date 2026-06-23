@@ -40,6 +40,43 @@ class AppServiceProvider extends ServiceProvider
             }
         );
 
+        // Audit autentificare (GDPR/securitate) — login/logout/eșec + tracking last_login
+        \Illuminate\Support\Facades\Event::listen(
+            \Illuminate\Auth\Events\Login::class,
+            function (\Illuminate\Auth\Events\Login $event) {
+                if ($event->user instanceof \App\Models\User) {
+                    $event->user->forceFill([
+                        'last_login_at' => now(),
+                        'last_login_ip' => request()->ip(),
+                    ])->saveQuietly();
+                    activity('auth')->causedBy($event->user)->event('login')
+                        ->withProperties(['ip' => request()->ip(), 'agent' => request()->userAgent()])
+                        ->log('Autentificare reușită');
+                }
+            }
+        );
+        \Illuminate\Support\Facades\Event::listen(
+            \Illuminate\Auth\Events\Logout::class,
+            function (\Illuminate\Auth\Events\Logout $event) {
+                if ($event->user instanceof \App\Models\User) {
+                    activity('auth')->causedBy($event->user)->event('logout')
+                        ->withProperties(['ip' => request()->ip()])
+                        ->log('Deconectare');
+                }
+            }
+        );
+        \Illuminate\Support\Facades\Event::listen(
+            \Illuminate\Auth\Events\Failed::class,
+            function (\Illuminate\Auth\Events\Failed $event) {
+                activity('auth')->event('failed')
+                    ->withProperties([
+                        'email' => $event->credentials['email'] ?? null,
+                        'ip' => request()->ip(),
+                    ])
+                    ->log('Autentificare eșuată');
+            }
+        );
+
         RateLimiter::for('search', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });

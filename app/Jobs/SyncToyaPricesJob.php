@@ -110,8 +110,8 @@ class SyncToyaPricesJob implements ShouldQueue
             $row = $rows->get($code);
             if (! $row) {
                 $stats['missing']++;
-                // SKU nou doar dacă e cod EAN (13 cifre) — codurile scurte sunt piese interne Toya
-                if (strlen((string) $code) >= 10) {
+                // SKU nou doar dacă e cod EAN numeric (≥13 cifre) — codurile gen YT-XXXXXXX sunt coduri interne Toya
+                if (ctype_digit((string) $code) && strlen((string) $code) >= 13) {
                     $newSkus[] = [
                         'sku'   => $code,
                         'price' => number_format((float) ($priceData['netPrice'] ?? 0), 2, '.', ''),

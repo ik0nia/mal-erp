@@ -11,6 +11,18 @@ Artisan::command('inspire', function () {
 // Horizon metrics snapshot — la fiecare 5 minute (grafice throughput în dashboard).
 Schedule::command('horizon:snapshot')->everyFiveMinutes();
 
+// Sondă disponibilitate (uptime) — la 5 minute, pentru raportul lunar și creditele de serviciu (contract Art. 8.9).
+Schedule::command('monitoring:probe')->everyFiveMinutes()->withoutOverlapping();
+
+// Detecție automată anomalii securitate (brute-force login) → creează breșe + notifică. La 15 minute.
+Schedule::command('security:detect-anomalies')->everyFifteenMinutes()->withoutOverlapping();
+
+// Expiră ofertele trimise cu valabilitatea depășită — zilnic la 00:30.
+Schedule::command('offers:expire')
+    ->dailyAt('00:30')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();
+
 // Snapshot de închidere zilnică la 17:30 (closing stock pentru rapoarte).
 // Snapshot-urile intra-zi sunt preluate direct de winmentor:sync-stock-bridge (la 5 minute).
 Schedule::command('stock:snapshot-daily-metrics')
@@ -228,6 +240,13 @@ Schedule::command('winmentor:watch-vanzari --firma=MAL2019')
     ->withoutOverlapping()
     ->runInBackground();
 
+// WinMentor — asociere comenzi Woo ↔ facturi (DETERMINIST, local, read-only) — la 15 min.
+// Fuzzy-ul istoric NU rulează automat (necesită --fuzzy + verificare).
+Schedule::command('winmentor:match-woo-facturi --apply')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->runInBackground();
+
 // WinMentor — sync livrări CM cu istoric (la fiecare 15 minute, luni–sâmbătă 08:00–18:00).
 Schedule::command('sync:winmentor-livrari')
     ->everyFiveMinutes()
@@ -236,6 +255,28 @@ Schedule::command('sync:winmentor-livrari')
     ->between('08:00', '18:00')
     ->withoutOverlapping()
     ->runInBackground();
+
+// WinMentor — sync comenzi clienți non-CM (deschise/facturate) + euristic factura/aviz.
+Schedule::command('sync:winmentor-comenzi')
+    ->everyTenMinutes()
+    ->timezone('Europe/Bucharest')
+    ->days([1, 2, 3, 4, 5, 6])
+    ->between('08:00', '18:00')
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// Recepții — curăță draft-urile comenzilor la care recepția cantitativă s-a finalizat.
+Schedule::command('wh:cleanup-reception-drafts')
+    ->dailyAt('03:30')
+    ->timezone('Europe/Bucharest');
+
+// Dispecerizare — pre-încălzire cache vânzări azi (bonuri reale), ca paginile să fie rapide.
+Schedule::command('dispecer:warm')
+    ->everyMinute()
+    ->timezone('Europe/Bucharest')
+    ->days([1, 2, 3, 4, 5, 6])
+    ->between('08:00', '19:00')
+    ->withoutOverlapping();
 
 // MentorAPI — COM reset zilnic la 05:00 (previne memory leaks COM Windows).
 Schedule::call(function () {

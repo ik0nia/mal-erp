@@ -654,11 +654,25 @@ class WarehouseController extends Controller
 
     private function revertShortfall($orderItem, float $shortfall, array &$affectedRequestIds): void
     {
-        foreach ($orderItem->sources_json ?? [] as $source) {
-            $requestItem = PurchaseRequestItem::find($source['purchase_request_item_id'] ?? null);
+        // sources_json poate fi dublu-encodat pe rânduri vechi (string JSON în string),
+        // caz în care cast-ul 'array' îl lasă string → foreach ar crăpa. Normalizăm.
+        $sources = $orderItem->sources_json ?? [];
+        if (is_string($sources)) {
+            $sources = json_decode($sources, true) ?: [];
+        }
+        if (! is_array($sources)) {
+            return;
+        }
+
+        foreach ($sources as $source) {
+            if (! is_array($source)) continue;
+
+            $requestItemId = $source['purchase_request_item_id'] ?? $source['request_item_id'] ?? null;
+            $requestItem   = PurchaseRequestItem::find($requestItemId);
             if (! $requestItem) continue;
 
-            $revert = min($shortfall, (float) ($source['quantity'] ?? 0));
+            $sourceQty = (float) ($source['quantity'] ?? $source['allocated_qty'] ?? 0);
+            $revert    = min($shortfall, $sourceQty);
             if ($revert <= 0) continue;
 
             $requestItem->increment('ordered_quantity', -$revert);

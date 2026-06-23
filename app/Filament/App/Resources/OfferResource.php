@@ -14,6 +14,7 @@ use App\Models\WooProduct;
 use App\Services\CompanyData\OpenApiCompanyLookupService;
 use Filament\Actions\Action as FormAction;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
@@ -58,6 +59,14 @@ class OfferResource extends Resource
     protected static ?string $pluralModelLabel = 'Oferte';
 
     protected static ?int $navigationSort = 10;
+
+    private static ?\App\Services\Offers\DiscountPolicyService $resolverInstance = null;
+
+    /** Resolver de plafoane memoizat pe request (evită re-interogarea politicilor per linie). */
+    private static function resolver(): \App\Services\Offers\DiscountPolicyService
+    {
+        return static::$resolverInstance ??= app(\App\Services\Offers\DiscountPolicyService::class);
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -318,37 +327,66 @@ class OfferResource extends Resource
                 Section::make('Produse ofertă')
                     ->columnSpanFull()
                     ->schema([
+                        Select::make('_quick_add')
+                            ->label('Adaugă produs')
+                            ->placeholder('Caută produs după nume sau cod și dă click pentru a-l adăuga...')
+                            ->prefixIcon('heroicon-m-magnifying-glass')
+                            ->searchable()
+                            ->live()
+                            ->dehydrated(false)
+                            ->columnSpanFull()
+                            ->getSearchResultsUsing(fn (string $search, Get $get): array => static::getProductSearchResults($search, $get))
+                            ->getOptionLabelUsing(fn ($value): ?string => static::getProductOptionLabel($value))
+                            ->afterStateUpdated(function ($state, Get $get, Set $set): void {
+                                if (! $state) {
+                                    return;
+                                }
+
+                                $product = WooProduct::query()
+                                    ->select(['id', 'name', 'sku', 'price', 'unit'])
+                                    ->find((int) $state);
+
+                                if ($product) {
+                                    $items = $get('items') ?? [];
+                                    $items[(string) \Illuminate\Support\Str::uuid()] = [
+                                        'woo_product_id'   => $product->id,
+                                        'product_name'     => $product->decoded_name,
+                                        'sku'              => $product->sku,
+                                        'quantity'         => 1,
+                                        'unit'             => $product->unit ?: 'buc',
+                                        'unit_price'       => (float) ($product->price ?? 0),
+                                        'discount_percent' => 0,
+                                        'vat_rate'         => Offer::defaultVatRate(),
+                                        'position'         => count($items) + 1,
+                                    ];
+                                    $set('items', $items);
+                                }
+
+                                $set('_quick_add', null);
+                            }),
                         Repeater::make('items')
                             ->relationship()
+                            ->hiddenLabel()
                             ->orderColumn('position')
                             ->live()
                             ->defaultItems(0)
                             ->minItems(1)
-                            ->addActionLabel('Adaugă produs')
-                            ->reorderable(false)
-                            ->reorderableWithButtons(false)
+                            ->addActionLabel('Adaugă rând gol')
                             ->reorderableWithDragAndDrop(false)
-                            ->extraAttributes([
-                                'class' => 'offer-items-repeater',
+                            ->table([
+                                TableColumn::make('Produs')->markAsRequired(),
+                                TableColumn::make('Cant.')->width('96px')->alignEnd()->markAsRequired(),
+                                TableColumn::make('Preț unitar')->width('150px')->alignEnd()->markAsRequired(),
+                                TableColumn::make('Disc.')->width('120px')->alignEnd(),
+                                TableColumn::make('Total')->width('180px')->alignEnd(),
                             ])
-                            ->columns(6)
-                            ->addAction(fn (FormAction $action): FormAction => $action
-                                ->extraAttributes([
-                                    'data-offer-add-item' => '1',
-                                ])
-                            )
                             ->schema([
-                                Placeholder::make('thumbnail')
-                                    ->label('Imagine')
-                                    ->hiddenLabel()
-                                    ->content(fn (Get $get): HtmlString => static::productThumbnail($get))
-                                    ->extraAttributes(['class' => 'w-16']),
                                 Select::make('woo_product_id')
-                                    ->label('Produs')
+                                    ->hiddenLabel()
                                     ->required()
                                     ->searchable()
                                     ->live()
-                                    ->placeholder('Alege produs')
+                                    ->placeholder('Caută produs după nume sau cod...')
                                     ->getSearchResultsUsing(fn (string $search, Get $get): array => static::getProductSearchResults($search, $get))
                                     ->getOptionLabelUsing(fn ($value): ?string => static::getProductOptionLabel($value))
                                     ->afterStateUpdated(function ($state, Set $set): void {
@@ -357,7 +395,7 @@ class OfferResource extends Resource
                                         }
 
                                         $product = WooProduct::query()
-                                            ->select(['id', 'name', 'sku', 'price'])
+                                            ->select(['id', 'name', 'sku', 'price', 'unit'])
                                             ->find((int) $state);
 
                                         if (! $product) {
@@ -366,39 +404,36 @@ class OfferResource extends Resource
 
                                         $set('product_name', $product->decoded_name);
                                         $set('sku', $product->sku);
+                                        $set('unit', $product->unit ?: 'buc');
+                                        $set('vat_rate', Offer::defaultVatRate());
 
                                         if ($product->price !== null) {
                                             $set('unit_price', (float) $product->price);
                                         }
                                     })
-                                    ->columnSpan(5),
+                                    ->helperText(fn (Get $get): ?HtmlString => static::productQuickLink($get)),
                                 TextInput::make('quantity')
-                                    ->label('Cantitate')
                                     ->hiddenLabel()
                                     ->numeric()
                                     ->default(1)
                                     ->minValue(0.001)
                                     ->step(0.001)
                                     ->required()
-                                    ->live()
-                                    ->columnSpan(2)
+                                    ->live(onBlur: true)
                                     ->inputMode('decimal')
                                     ->extraInputAttributes(['class' => 'text-right']),
                                 TextInput::make('unit_price')
-                                    ->label('Preț unitar')
                                     ->hiddenLabel()
                                     ->numeric()
                                     ->default(0)
                                     ->minValue(0)
                                     ->step(0.0001)
                                     ->required()
-                                    ->prefix('RON')
-                                    ->live()
-                                    ->columnSpan(2)
+                                    ->suffix('RON')
+                                    ->live(onBlur: true)
                                     ->inputMode('decimal')
                                     ->extraInputAttributes(['class' => 'text-right']),
                                 TextInput::make('discount_percent')
-                                    ->label('Discount %')
                                     ->hiddenLabel()
                                     ->numeric()
                                     ->default(0)
@@ -406,39 +441,89 @@ class OfferResource extends Resource
                                     ->maxValue(100)
                                     ->step(0.01)
                                     ->suffix('%')
-                                    ->live()
-                                    ->columnSpan(1)
+                                    ->live(onBlur: true)
+                                    ->helperText(fn (Get $get): ?HtmlString => static::discountCapHint($get))
+                                    ->rules([
+                                        fn (Get $get): \Closure => function (string $attribute, $value, \Closure $fail) use ($get): void {
+                                            $cap = static::absoluteDiscountCap($get);
+                                            if ($cap !== null && (float) $value > $cap + 0.001) {
+                                                $capFmt = rtrim(rtrim(number_format($cap, 2, '.', ''), '0'), '.');
+                                                $fail("Discount peste plafonul maxim admis ({$capFmt}%) — nu poate fi acordat nici cu aprobare.");
+                                            }
+                                        },
+                                    ])
                                     ->inputMode('decimal')
-                                    ->extraInputAttributes([
-                                        'class' => 'text-right',
-                                        'x-on:keydown.tab' => "if (! \$event.shiftKey) { const row = \$el.closest('tr.table-repeater-row'); if (! row || row.nextElementSibling) { return; } const wrapper = \$el.closest('.table-repeater-component'); const addButton = wrapper?.querySelector('[data-offer-add-item]'); if (! addButton) { return; } \$event.preventDefault(); addButton.click(); setTimeout(() => { const rows = wrapper.querySelectorAll('tr.table-repeater-row'); const lastRow = rows[rows.length - 1]; const productInput = lastRow?.querySelector('input[role=combobox], input[type=text], input[type=search]'); productInput?.focus(); }, 180); }",
-                                    ]),
+                                    ->extraInputAttributes(['class' => 'text-right']),
                                 Placeholder::make('line_total_preview')
-                                    ->label('Total linie')
                                     ->hiddenLabel()
-                                    ->content(fn (Get $get): string => static::linePreview($get))
-                                    ->columnSpan(3)
+                                    ->content(fn (Get $get): HtmlString => static::linePreview($get))
                                     ->extraAttributes(['class' => 'text-right font-semibold']),
                                 Hidden::make('sku'),
                                 Hidden::make('product_name'),
+                                Hidden::make('unit')->default('buc'),
+                                Hidden::make('vat_rate')->default(fn (): float => Offer::defaultVatRate()),
                                 Hidden::make('position'),
-                            ])
+                            ]),
+                    ]),
+                Section::make('Condiții ofertă')
+                    ->description('Apar în secțiunea „Condiții" din PDF-ul trimis clientului.')
+                    ->columnSpanFull()
+                    ->columns(2)
+                    ->collapsible()
+                    ->schema([
+                        Select::make('discount_condition')
+                            ->label('Aplicare discount')
+                            ->options(Offer::discountConditionOptions())
+                            ->default(fn (): string => \App\Models\AppSetting::get(\App\Models\AppSetting::KEY_OFFER_DEF_DISCOUNT_COND, Offer::DISCOUNT_PER_LINE))
+                            ->native(false)
+                            ->required(),
+                        Select::make('transport_mode')
+                            ->label('Transport')
+                            ->options(Offer::transportModeOptions())
+                            ->default(fn (): string => \App\Models\AppSetting::get(\App\Models\AppSetting::KEY_OFFER_DEF_TRANSPORT, Offer::TRANSPORT_NOT_INCLUDED))
+                            ->native(false)
+                            ->required()
+                            ->live(),
+                        TextInput::make('transport_free_over')
+                            ->label('Transport gratuit peste')
+                            ->numeric()
+                            ->minValue(0)
+                            ->step(0.01)
+                            ->suffix('RON')
+                            ->visible(fn (Get $get): bool => $get('transport_mode') === Offer::TRANSPORT_FREE_OVER)
+                            ->required(fn (Get $get): bool => $get('transport_mode') === Offer::TRANSPORT_FREE_OVER),
+                        TextInput::make('payment_terms')
+                            ->label('Termen de plată')
+                            ->placeholder('ex: 100% la livrare / 30 zile')
+                            ->default(fn (): ?string => \App\Models\AppSetting::get(\App\Models\AppSetting::KEY_OFFER_DEF_PAYMENT))
+                            ->maxLength(255),
+                        TextInput::make('delivery_terms')
+                            ->label('Termen de livrare')
+                            ->placeholder('ex: 3-5 zile lucrătoare din stoc')
+                            ->default(fn (): ?string => \App\Models\AppSetting::get(\App\Models\AppSetting::KEY_OFFER_DEF_DELIVERY))
+                            ->maxLength(255),
+                        Textarea::make('extra_terms')
+                            ->label('Alte condiții (o linie = un punct)')
+                            ->rows(3)
                             ->columnSpanFull(),
                     ]),
                 Section::make('Totaluri')
                     ->columnSpanFull()
-                    ->columns(3)
+                    ->columns(4)
                     ->schema([
-                        Placeholder::make('subtotal_live')
-                            ->label('Subtotal')
-                            ->content(fn (Get $get): string => static::formatCurrency(static::offerTotals($get)['subtotal'])),
+                        Placeholder::make('net_live')
+                            ->label('Valoare fără TVA')
+                            ->content(fn (Get $get): string => static::formatCurrency(static::offerTotals($get)['net'])),
                         Placeholder::make('discount_total_live')
                             ->label('Discount total')
                             ->content(fn (Get $get): string => static::formatCurrency(static::offerTotals($get)['discount_total'])),
+                        Placeholder::make('vat_live')
+                            ->label('TVA')
+                            ->content(fn (Get $get): string => static::formatCurrency(static::offerTotals($get)['vat'])),
                         Placeholder::make('total_live')
-                            ->label('Total')
+                            ->label('Total cu TVA')
                             ->content(fn (Get $get): string => static::formatCurrency(static::offerTotals($get)['total']))
-                            ->extraAttributes(['class' => 'font-bold']),
+                            ->extraAttributes(['class' => 'font-bold text-lg']),
                     ]),
             ]);
     }
@@ -460,6 +545,10 @@ class OfferResource extends Resource
                     ->label('Magazin')
                     ->sortable()
                     ->toggleable(),
+                Tables\Columns\TextColumn::make('user.name')
+                    ->label('Operator')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status')
                     ->badge()
@@ -469,6 +558,18 @@ class OfferResource extends Resource
                         Offer::STATUS_ACCEPTED => 'success',
                         Offer::STATUS_REJECTED => 'danger',
                         Offer::STATUS_EXPIRED => 'warning',
+                        default => 'gray',
+                    }),
+                Tables\Columns\TextColumn::make('approval_status')
+                    ->label('Aprobare')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => $state === Offer::APPROVAL_NOT_REQUIRED
+                        ? '—'
+                        : (Offer::approvalLabels()[$state] ?? '—'))
+                    ->color(fn (?string $state): string => match ($state) {
+                        Offer::APPROVAL_PENDING => 'warning',
+                        Offer::APPROVAL_APPROVED => 'success',
+                        Offer::APPROVAL_REJECTED => 'danger',
                         default => 'gray',
                     }),
                 Tables\Columns\TextColumn::make('total')
@@ -488,6 +589,9 @@ class OfferResource extends Resource
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Status')
                     ->options(Offer::statusOptions()),
+                Tables\Filters\SelectFilter::make('approval_status')
+                    ->label('Aprobare discount')
+                    ->options(Offer::approvalLabels()),
                 Tables\Filters\SelectFilter::make('location_id')
                     ->label('Magazin')
                     ->options(function (): array {
@@ -506,18 +610,25 @@ class OfferResource extends Resource
             ])
             ->deferFilters(false)
             ->recordActions([
+                Actions\Action::make('download_pdf')
+                    ->label('PDF')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('gray')
+                    ->action(function (Offer $record): \Symfony\Component\HttpFoundation\StreamedResponse {
+                        \App\Services\Offers\OfferPdf::invalidate($record);
+                        $content  = \App\Services\Offers\OfferPdf::get($record);
+                        $filename = \App\Services\Offers\OfferPdf::filename($record);
+
+                        return response()->streamDownload(
+                            fn () => print($content),
+                            $filename,
+                            ['Content-Type' => 'application/pdf'],
+                        );
+                    }),
                 Actions\Action::make('preview')
                     ->label('Preview')
                     ->icon('heroicon-o-eye')
                     ->url(fn (Offer $record): string => static::getUrl('view', ['record' => $record]))
-                    ->openUrlInNewTab(),
-                Actions\Action::make('print')
-                    ->label('Print')
-                    ->icon('heroicon-o-printer')
-                    ->url(fn (Offer $record): string => static::getUrl('print', [
-                        'record' => $record,
-                        'auto_print' => 1,
-                    ]))
                     ->openUrlInNewTab(),
                 Actions\EditAction::make(),
             ])
@@ -540,6 +651,22 @@ class OfferResource extends Resource
                             ->label('Status')
                             ->badge()
                             ->formatStateUsing(fn (string $state): string => Offer::statusOptions()[$state] ?? $state),
+                        TextEntry::make('approval_status')
+                            ->label('Aprobare discount')
+                            ->badge()
+                            ->formatStateUsing(fn (?string $state): string => Offer::approvalLabels()[$state] ?? '—')
+                            ->color(fn (?string $state): string => match ($state) {
+                                Offer::APPROVAL_PENDING => 'warning',
+                                Offer::APPROVAL_APPROVED => 'success',
+                                Offer::APPROVAL_REJECTED => 'danger',
+                                default => 'gray',
+                            })
+                            ->visible(fn (Offer $record): bool => $record->approval_status !== Offer::APPROVAL_NOT_REQUIRED),
+                        TextEntry::make('approval_note')
+                            ->label('Notă aprobare')
+                            ->placeholder('-')
+                            ->visible(fn (Offer $record): bool => filled($record->approval_note))
+                            ->columnSpan(2),
                         TextEntry::make('valid_until')
                             ->label('Valabilă până la')
                             ->date('d.m.Y'),
@@ -584,18 +711,56 @@ class OfferResource extends Resource
                             ->columns(6),
                     ]),
                 InfolistSection::make('Totaluri')
-                    ->columns(3)
+                    ->columns(4)
                     ->schema([
-                        TextEntry::make('subtotal')
-                            ->label('Subtotal')
+                        TextEntry::make('subtotal_without_vat')
+                            ->label('Valoare fără TVA')
                             ->formatStateUsing(fn ($state): string => static::formatCurrency((float) $state)),
                         TextEntry::make('discount_total')
                             ->label('Discount total')
                             ->formatStateUsing(fn ($state): string => static::formatCurrency((float) $state)),
+                        TextEntry::make('vat_total')
+                            ->label('TVA')
+                            ->formatStateUsing(fn ($state): string => static::formatCurrency((float) $state)),
                         TextEntry::make('total')
-                            ->label('Total')
+                            ->label('Total cu TVA')
                             ->weight('bold')
                             ->formatStateUsing(fn ($state): string => static::formatCurrency((float) $state)),
+                    ]),
+                InfolistSection::make('Profitabilitate (intern)')
+                    ->description('Estimare pe baza prețurilor de achiziție în RON. Nu apare pe documentul clientului.')
+                    ->columns(3)
+                    ->schema([
+                        TextEntry::make('margin_cost')
+                            ->label('Cost estimat')
+                            ->state(fn (Offer $record): string => static::formatCurrency(static::marginSummary($record)['cost'])),
+                        TextEntry::make('margin_value')
+                            ->label('Marjă')
+                            ->state(fn (Offer $record): string => static::formatCurrency(static::marginSummary($record)['margin'])),
+                        TextEntry::make('margin_pct')
+                            ->label('Marjă %')
+                            ->state(function (Offer $record): string {
+                                $s = static::marginSummary($record);
+                                $txt = number_format($s['pct'], 1, '.', '') . '%';
+                                if (! $s['complete']) {
+                                    $txt .= " (parțial — cost cunoscut pt {$s['known']}/{$s['total']})";
+                                }
+                                return $txt;
+                            })
+                            ->color(fn (Offer $record): string => match (true) {
+                                static::marginSummary($record)['margin'] < 0 => 'danger',
+                                static::marginSummary($record)['pct'] < 10 => 'warning',
+                                default => 'success',
+                            })
+                            ->weight('bold'),
+                    ]),
+                InfolistSection::make('Condiții')
+                    ->schema([
+                        TextEntry::make('conditions')
+                            ->hiddenLabel()
+                            ->state(fn (Offer $record): array => $record->conditionLines())
+                            ->bulleted()
+                            ->listWithLineBreaks(),
                     ]),
             ]);
     }
@@ -697,7 +862,7 @@ class OfferResource extends Resource
         $locationId = static::resolveSelectedLocationId($get);
 
         $query = WooProduct::query()
-            ->select(['id', 'name', 'sku', 'price'])
+            ->select(['id', 'name', 'sku', 'price', 'unit'])
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $like = '%'.str_replace(['%', '_'], ['\\%', '\\_'], trim($search)).'%';
                 $query->where(function (Builder $searchQuery) use ($like): void {
@@ -706,6 +871,10 @@ class OfferResource extends Resource
                         ->orWhere('sku', 'like', $like);
                 });
             });
+
+        if ($locationId) {
+            $query->withSum(['stocks as loc_stock' => fn (Builder $q) => $q->where('location_id', $locationId)], 'quantity');
+        }
 
         static::applyProductScope($query, $locationId);
 
@@ -726,7 +895,7 @@ class OfferResource extends Resource
         }
 
         $product = WooProduct::query()
-            ->select(['id', 'name', 'sku', 'price'])
+            ->select(['id', 'name', 'sku', 'price', 'unit'])
             ->find((int) $value);
 
         return $product ? static::formatProductOption($product) : null;
@@ -738,7 +907,14 @@ class OfferResource extends Resource
         $sku = $product->sku ?: '-';
         $name = $product->decoded_name;
 
-        return "{$name} [{$sku}] - {$price} RON";
+        $label = "{$name} [{$sku}] · {$price} RON";
+
+        if (isset($product->loc_stock) && $product->loc_stock !== null) {
+            $stock = rtrim(rtrim(number_format((float) $product->loc_stock, 3, '.', ''), '0'), '.');
+            $label .= " · stoc {$stock} " . ($product->unit ?: 'buc');
+        }
+
+        return $label;
     }
 
     private static function applyProductScope(Builder $query, ?int $locationId): void
@@ -793,50 +969,112 @@ class OfferResource extends Resource
         return (int) $candidate;
     }
 
-    private static function productThumbnail(Get $get): HtmlString
+    /**
+     * Linkuri rapide sub câmpul de produs: pe site (dacă e publicat) + în ERP.
+     */
+    private static function productQuickLink(Get $get): ?HtmlString
     {
         $productId = (int) ($get('woo_product_id') ?? 0);
 
         if ($productId <= 0) {
-            return new HtmlString('<span style="display:inline-flex;height:2rem;width:2rem;align-items:center;justify-content:center;border-radius:0.25rem;background:#f3f4f6;color:#9ca3af;font-size:9px;">No Img</span>');
+            return null;
         }
 
-        static $imageCache = [];
+        $product = WooProduct::query()
+            ->select(['id', 'status', 'woo_id', 'data'])
+            ->find($productId);
 
-        if (! array_key_exists($productId, $imageCache)) {
-            $imageCache[$productId] = WooProduct::query()
-                ->whereKey($productId)
-                ->value('main_image_url');
+        if (! $product) {
+            return null;
         }
 
-        $imageUrl = $imageCache[$productId];
+        $links = [];
 
-        $resolvedImage = filled($imageUrl)
-            ? e((string) $imageUrl)
-            : 'https://placehold.co/56x56?text=No+Img';
+        if ($siteUrl = $product->site_url) {
+            $links[] = '<a href="'.e($siteUrl).'" target="_blank" style="color:#c01722;font-weight:600;text-decoration:none;">↗ Vezi pe site</a>';
+        }
 
-        return new HtmlString(
-            '<img src="'.$resolvedImage.'" alt="Produs" style="height:2rem;width:2rem;border-radius:0.25rem;object-fit:cover;border:1px solid #e5e7eb;" />'
-        );
+        try {
+            $erpUrl = WooProductResource::getUrl('view', ['record' => $productId]);
+            $links[] = '<a href="'.e($erpUrl).'" target="_blank" style="color:#2563eb;text-decoration:none;">↗ Detalii în ERP</a>';
+        } catch (\Throwable) {
+            // ruta indisponibilă — ignoră
+        }
+
+        if (! $links) {
+            return null;
+        }
+
+        return new HtmlString('<span style="display:inline-flex;gap:0.75rem;">'.implode('', $links).'</span>');
     }
 
     /**
-     * @return array{subtotal: float, discount_total: float, total: float}
+     * Sumar de profitabilitate (intern) — cost estimat vs valoare netă.
+     *
+     * @return array{cost: float, net: float, margin: float, pct: float, complete: bool, known: int, total: int}
+     */
+    private static function marginSummary(Offer $offer): array
+    {
+        $offer->loadMissing('items');
+
+        $cost = 0.0;
+        $known = 0;
+        $total = $offer->items->count();
+
+        foreach ($offer->items as $item) {
+            $c = $item->woo_product_id ? static::productCost((int) $item->woo_product_id) : null;
+            if ($c !== null) {
+                $cost += $c * (float) $item->quantity;
+                $known++;
+            }
+        }
+
+        $net = (float) $offer->subtotal_without_vat;
+        $margin = $net - $cost;
+
+        return [
+            'cost'     => $cost,
+            'net'      => $net,
+            'margin'   => $margin,
+            'pct'      => $net > 0 ? $margin / $net * 100 : 0.0,
+            'complete' => $total > 0 && $known === $total,
+            'known'    => $known,
+            'total'    => $total,
+        ];
+    }
+
+    /**
+     * Plafonul maxim ABSOLUT de discount pentru produsul liniei (peste el se blochează).
+     * = pragul cu aprobare dacă există, altfel pragul fără aprobare. Null = fără politică.
+     */
+    private static function absoluteDiscountCap(Get $get): ?float
+    {
+        $productId = (int) ($get('woo_product_id') ?? 0);
+        $user = static::currentUser();
+
+        if ($productId <= 0 || ! $user) {
+            return null;
+        }
+
+        $caps = static::resolver()->resolve($user, $productId);
+
+        return $caps['approval'] ?? $caps['max'];
+    }
+
+    /**
+     * @return array{subtotal: float, discount_total: float, net: float, vat: float, total: float}
      */
     private static function offerTotals(Get $get): array
     {
         $items = $get('items');
 
         if (! is_array($items)) {
-            return [
-                'subtotal' => 0.0,
-                'discount_total' => 0.0,
-                'total' => 0.0,
-            ];
+            return ['subtotal' => 0.0, 'discount_total' => 0.0, 'net' => 0.0, 'vat' => 0.0, 'total' => 0.0];
         }
 
         $subtotal = 0.0;
         $total = 0.0;
+        $net = 0.0;
 
         foreach ($items as $item) {
             if (! is_array($item)) {
@@ -846,19 +1084,62 @@ class OfferResource extends Resource
             $quantity = max(0, (float) ($item['quantity'] ?? 0));
             $unitPrice = max(0, (float) ($item['unit_price'] ?? 0));
             $discountPercent = min(100, max(0, (float) ($item['discount_percent'] ?? 0)));
+            $vatRate = max(0, (float) ($item['vat_rate'] ?? 0)) ?: Offer::defaultVatRate();
 
             $lineSubtotal = $quantity * $unitPrice;
             $lineTotal = $lineSubtotal * (1 - ($discountPercent / 100));
+            $lineNet = $vatRate > 0 ? $lineTotal / (1 + $vatRate / 100) : $lineTotal;
 
             $subtotal += $lineSubtotal;
             $total += $lineTotal;
+            $net += $lineNet;
         }
 
         return [
             'subtotal' => $subtotal,
             'discount_total' => max(0, $subtotal - $total),
+            'net' => $net,
+            'vat' => max(0, $total - $net),
             'total' => $total,
         ];
+    }
+
+    /**
+     * Hint sub câmpul de discount: arată plafonul permis operatorului pentru produsul liniei.
+     * Avertizare soft (roșu) când e depășit; portocaliu când intră la aprobare.
+     */
+    private static function discountCapHint(Get $get): ?HtmlString
+    {
+        $productId = (int) ($get('woo_product_id') ?? 0);
+        $user = static::currentUser();
+
+        if ($productId <= 0 || ! $user) {
+            return null;
+        }
+
+        $caps = static::resolver()->resolve($user, $productId);
+        $max = $caps['max'];
+
+        if ($max === null) {
+            return null;
+        }
+
+        $approval = $caps['approval'];
+        $current = (float) ($get('discount_percent') ?? 0);
+        $maxFmt = rtrim(rtrim(number_format($max, 2, '.', ''), '0'), '.');
+
+        if ($current > $max + 0.001) {
+            if ($approval !== null && $current <= $approval + 0.001) {
+                return new HtmlString('<span style="color:#d97706;font-weight:600;">⚠ Peste plafonul tău ('.$maxFmt.'%) — necesită aprobare manager.</span>');
+            }
+
+            $ceiling = $approval ?? $max;
+            $ceilFmt = rtrim(rtrim(number_format($ceiling, 2, '.', ''), '0'), '.');
+
+            return new HtmlString('<span style="color:#dc2626;font-weight:600;">⛔ Peste plafonul maxim ('.$ceilFmt.'%) — nu se poate salva.</span>');
+        }
+
+        return new HtmlString('<span style="color:#16a34a;">Plafon: '.$maxFmt.'% fără aprobare.</span>');
     }
 
     private static function formatCurrency(float $value): string
@@ -866,15 +1147,58 @@ class OfferResource extends Resource
         return number_format($value, 2, '.', ',').' RON';
     }
 
-    private static function linePreview(Get $get): string
+    private static function linePreview(Get $get): HtmlString
     {
         $quantity = max(0, (float) ($get('quantity') ?? 0));
         $unitPrice = max(0, (float) ($get('unit_price') ?? 0));
         $discountPercent = min(100, max(0, (float) ($get('discount_percent') ?? 0)));
+        $vatRate = max(0, (float) ($get('vat_rate') ?? 0)) ?: Offer::defaultVatRate();
 
         $lineTotal = $quantity * $unitPrice * (1 - ($discountPercent / 100));
+        $total = '<span>'.number_format($lineTotal, 2, '.', '').' RON</span>';
 
-        return number_format($lineTotal, 2, '.', '').' RON';
+        // Garda de marjă: preț net (fără TVA) după discount vs cost.
+        $productId = (int) ($get('woo_product_id') ?? 0);
+        $cost = $productId > 0 ? static::productCost($productId) : null;
+
+        $margin = '';
+        if ($cost !== null && $cost > 0 && $unitPrice > 0) {
+            $netUnitAfter = ($vatRate > 0 ? $unitPrice / (1 + $vatRate / 100) : $unitPrice) * (1 - $discountPercent / 100);
+            $marginPct = $netUnitAfter > 0 ? ($netUnitAfter - $cost) / $netUnitAfter * 100 : -100;
+
+            if ($netUnitAfter < $cost) {
+                $margin = '<div style="color:#dc2626;font-weight:600;font-size:11px;">⚠ Sub cost ('.number_format($cost, 2, '.', '').' RON)</div>';
+            } elseif ($marginPct < 10) {
+                $margin = '<div style="color:#d97706;font-size:11px;">Marjă '.number_format($marginPct, 1, '.', '').'%</div>';
+            } else {
+                $margin = '<div style="color:#16a34a;font-size:11px;">Marjă '.number_format($marginPct, 1, '.', '').'%</div>';
+            }
+        }
+
+        return new HtmlString($total.$margin);
+    }
+
+    /**
+     * Cost estimat (RON, fără TVA) — cel mai mic preț de achiziție în RON cunoscut de la furnizori.
+     * Ignorăm prețurile în altă monedă (ex. EUR) ca să nu dăm alerte greșite de marjă.
+     */
+    private static function productCost(int $productId): ?float
+    {
+        static $cache = [];
+
+        if (! array_key_exists($productId, $cache)) {
+            $val = \Illuminate\Support\Facades\DB::table('product_suppliers')
+                ->where('woo_product_id', $productId)
+                ->where('purchase_price', '>', 0)
+                ->where(function ($q): void {
+                    $q->whereNull('currency')->orWhereIn('currency', ['RON', 'LEI', '']);
+                })
+                ->min('purchase_price');
+
+            $cache[$productId] = $val !== null ? (float) $val : null;
+        }
+
+        return $cache[$productId];
     }
 
     public static function getPages(): array

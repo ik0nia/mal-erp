@@ -52,6 +52,9 @@ class WorkersHealthCheckCommand extends Command
         $lastSeenId = Cache::get(self::CACHE_LAST_FAILED_JOB_ID, 0);
         $newFailed  = DB::table('failed_jobs')
             ->where('id', '>', $lastSeenId)
+            // Plasă de siguranță: dacă pointerul din cache se resetează (ex. cache:clear),
+            // raportăm doar eșuările recente, nu reînviem cadavre vechi deja rezolvate.
+            ->where('failed_at', '>=', now()->subHours(48))
             ->orderBy('id')
             ->get(['id', 'payload', 'exception', 'failed_at']);
 

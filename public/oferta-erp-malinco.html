@@ -1,538 +1,255 @@
 <!DOCTYPE html>
 <html lang="ro">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ofertă Comercială — ERP Malinco</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ofertă Comercială — Platformă ERP Malinco</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #F5F0E8; color: #2c2c2c; font-size: 14px; line-height: 1.5; }
+  .page { max-width: 980px; margin: 40px auto; background: #fff; border-radius: 6px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.10); }
+  .header { background: #B81C24; color: #fff; padding: 20px 40px 16px; display: flex; align-items: center; justify-content: space-between; }
+  .header-logo { font-size: 26px; font-weight: 800; letter-spacing: 1px; }
+  .header-logo span { color: #ffcdd0; }
+  .header-meta { text-align: right; font-size: 13px; opacity: .9; }
+  .header-meta strong { display: block; font-size: 20px; font-weight: 700; margin-bottom: 2px; }
+  .info-row { background: #f9f4ec; border-bottom: 1px solid #e8dfd0; padding: 9px 40px; display: flex; gap: 26px; font-size: 13px; flex-wrap: wrap; }
+  .info-block strong { display: block; color: #888; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px; }
+  .section { padding: 11px 40px 2px; }
+  .section-h { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: #B81C24; margin-bottom: 7px; border-left: 4px solid #B81C24; padding-left: 12px; }
+  .lead { font-size: 13px; line-height: 1.55; color: #333; }
 
-    body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: #F5F0E8;
-      color: #2c2c2c;
-      font-size: 14px;
-      line-height: 1.55;
-    }
+  .market { margin: 2px 40px 11px; border: 1px solid #e8dfd0; border-radius: 8px; overflow: hidden; }
+  .market-head { background: #2c2c2c; color: #fff; padding: 8px 20px; font-size: 13px; font-weight: 700; }
+  .market table { width: 100%; border-collapse: collapse; }
+  .market td { padding: 7px 18px; border-bottom: 1px solid #ede8df; font-size: 13px; vertical-align: top; }
+  .market tr:last-child td { border-bottom: none; }
+  .market .who { font-weight: 700; color: #1a1a1a; width: 32%; }
+  .market .val { text-align: right; font-weight: 700; color: #B81C24; white-space: nowrap; width: 20%; }
+  .market .row-hi { background: #fdf3f3; }
+  .market .row-us { background: #eef7ee; }
+  .market .val-us { color: #1d7a34; }
 
-    .page {
-      max-width: 960px;
-      margin: 40px auto;
-      background: #fff;
-      border-radius: 6px;
-      overflow: hidden;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.10);
-    }
+  .options { display: flex; gap: 16px; padding: 2px 40px 8px; align-items: stretch; }
+  .option { flex: 1; border: 2px solid #e8dfd0; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; position: relative; }
+  .option.rec { border-color: #B81C24; }
+  .rec-badge { position: absolute; top: 12px; right: 12px; background: #B81C24; color: #fff; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: .5px; }
+  .opt-head { padding: 11px 20px 7px; background: #fdfaf6; border-bottom: 1px solid #e8dfd0; }
+  .opt-num { font-size: 11px; font-weight: 700; color: #B81C24; letter-spacing: 1px; }
+  .opt-title { font-size: 17px; font-weight: 800; color: #1a1a1a; margin: 4px 0 6px; }
+  .opt-sub { font-size: 12.5px; color: #666; line-height: 1.5; }
+  .opt-price { padding: 9px 20px 2px; }
+  .opt-price .strike { font-size: 14px; color: #aaa; text-decoration: line-through; }
+  .opt-price .main { font-size: 25px; font-weight: 800; color: #B81C24; }
+  .opt-price .main small { font-size: 15px; font-weight: 600; color: #888; }
+  .opt-price .tva { font-size: 12px; color: #888; margin-top: 2px; }
+  .opt-price .plus { font-size: 15px; color: #444; margin-top: 10px; font-weight: 700; }
+  .opt-body { padding: 4px 20px 12px; flex: 1; }
+  .opt-body ul { list-style: none; }
+  .opt-body li { font-size: 12px; color: #333; padding: 3px 0 3px 22px; position: relative; border-bottom: 1px dashed #eee; }
+  .opt-body li:before { content: "✓"; position: absolute; left: 0; color: #1d7a34; font-weight: 800; }
+  .opt-body li.no:before { content: "—"; color: #bbb; }
 
-    /* ── Header ── */
-    .header {
-      background: #B81C24;
-      color: #fff;
-      padding: 32px 40px 28px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .header-logo { font-size: 26px; font-weight: 800; letter-spacing: 1px; }
-    .header-logo span { color: #ffcdd0; }
-    .header-meta { text-align: right; font-size: 13px; opacity: .9; }
-    .header-meta strong { display: block; font-size: 20px; font-weight: 700; margin-bottom: 2px; }
+  .buyout { margin: 2px 40px 11px; }
+  .buyout table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .buyout th { background: #2c2c2c; color: #fff; padding: 6px 14px; text-align: right; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+  .buyout th:first-child { text-align: left; }
+  .buyout td { padding: 6px 14px; border-bottom: 1px solid #ede8df; text-align: right; }
+  .buyout td:first-child { text-align: left; font-weight: 700; color: #B81C24; }
+  .buyout tr:nth-child(even) { background: #faf8f5; }
 
-    /* ── Info row ── */
-    .info-row {
-      background: #f9f4ec;
-      border-bottom: 1px solid #e8dfd0;
-      padding: 16px 40px;
-      display: flex;
-      gap: 40px;
-      font-size: 13px;
-    }
-    .info-block strong { display: block; color: #888; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px; }
+  .wm { margin: 2px 40px 11px; border: 2px solid #2c2c2c; border-radius: 10px; padding: 12px 20px; background: #fbfbfb; }
+  .wm h3 { color: #2c2c2c; font-size: 16px; margin-bottom: 6px; }
+  .wm p { font-size: 12px; color: #555; line-height: 1.5; margin-bottom: 6px; }
+  .wm .wm-prices { display: flex; gap: 24px; flex-wrap: wrap; }
+  .wm .wm-p { font-size: 12px; color:#888; }
+  .wm .wm-p b { display: block; font-size: 20px; color: #B81C24; }
+  .wm a { color: #B81C24; font-weight: 700; text-decoration: none; }
 
-    /* ── Deviz ref ── */
-    .deviz-ref {
-      margin: 28px 40px 0;
-      background: #f9f4ec;
-      border: 1px solid #e0d8cc;
-      border-radius: 8px;
-      padding: 16px 24px;
-      display: flex;
-      align-items: center;
-      gap: 24px;
-      font-size: 13px;
-      color: #555;
-    }
-    .deviz-ref-label {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .5px;
-      color: #999;
-      white-space: nowrap;
-    }
-    .deviz-ref-amount {
-      font-size: 22px;
-      font-weight: 800;
-      color: #333;
-      white-space: nowrap;
-    }
-    .deviz-ref-amount sup { font-size: 12px; vertical-align: super; }
-
-    /* ── Intro ── */
-    .intro {
-      padding: 20px 40px;
-      font-size: 13.5px;
-      color: #444;
-      line-height: 1.75;
-      border-bottom: 1px solid #ede8df;
-    }
-
-    /* ── Options ── */
-    .options {
-      padding: 28px 40px 36px;
-      display: flex;
-      flex-direction: column;
-      gap: 28px;
-    }
-
-    .option {
-      border: 1.5px solid #e0d8cc;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    .option.recommended {
-      border-color: #B81C24;
-      box-shadow: 0 2px 16px rgba(184,28,36,0.10);
-    }
-
-    .option-header {
-      padding: 16px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: #f9f4ec;
-      border-bottom: 1px solid #e0d8cc;
-    }
-    .option.recommended .option-header {
-      background: #B81C24;
-      color: #fff;
-      border-bottom-color: #9e171e;
-    }
-    .option-number {
-      width: 28px; height: 28px;
-      border-radius: 50%;
-      background: #2c2c2c;
-      color: #fff;
-      font-size: 13px; font-weight: 800;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .option.recommended .option-number { background: rgba(255,255,255,.25); }
-    .option-title { flex: 1; padding-left: 12px; }
-    .option-title strong { display: block; font-size: 16px; font-weight: 700; }
-    .option-title span { font-size: 12px; opacity: .7; }
-    .option.recommended .option-title span { opacity: .85; }
-    .rec-badge {
-      background: #fff; color: #B81C24;
-      font-size: 10px; font-weight: 800;
-      padding: 4px 10px; border-radius: 20px;
-      text-transform: uppercase; letter-spacing: .5px;
-    }
-
-    /* ── Option body ── */
-    .option-body {
-      padding: 20px 24px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
-    .option-body.single { grid-template-columns: 220px 1fr; align-items: start; }
-
-    /* ── Price block ── */
-    .price-block {
-      background: #fdfaf6;
-      border: 1px solid #ede8df;
-      border-radius: 6px;
-      padding: 16px 18px;
-    }
-    .price-block-label {
-      font-size: 11px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .5px;
-      color: #999; margin-bottom: 4px;
-    }
-    .price-main {
-      font-size: 30px; font-weight: 800;
-      color: #B81C24; line-height: 1.1;
-    }
-    .price-main sup { font-size: 14px; font-weight: 600; vertical-align: super; }
-    .price-sub { font-size: 12px; color: #777; margin-top: 4px; }
-    .price-tva { font-size: 11px; color: #aaa; margin-top: 2px; }
-
-    /* ── Includes ── */
-    .includes-label {
-      font-size: 11px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .5px;
-      color: #999; margin-bottom: 8px;
-    }
-    .includes ul { list-style: none; padding: 0; }
-    .includes ul li {
-      font-size: 13px; color: #333;
-      padding: 5px 0 5px 18px;
-      position: relative;
-      border-bottom: 1px solid #f0ebe1;
-    }
-    .includes ul li:last-child { border-bottom: none; }
-    .includes ul li::before { content: '✓'; position: absolute; left: 0; color: #B81C24; font-weight: 700; font-size: 12px; }
-    .includes ul li.no::before { content: '—'; color: #ccc; }
-    .includes ul li.no { color: #aaa; }
-
-    /* ── Buyout section ── */
-    .buyout-section {
-      padding: 0 24px 24px;
-    }
-    .buyout-title {
-      font-size: 11px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .5px;
-      color: #999; margin-bottom: 14px;
-      padding-top: 4px;
-      border-top: 1px solid #ede8df;
-    }
-    .buyout-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-    }
-    .buyout-item {
-      border: 1px solid #e0d8cc;
-      border-radius: 6px;
-      padding: 14px 12px;
-      background: #fdfaf6;
-      text-align: center;
-    }
-    .buyout-item.highlight {
-      border-color: #B81C24;
-      background: #fff5f5;
-    }
-    .bi-period {
-      font-size: 11px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .4px;
-      color: #888; margin-bottom: 6px;
-    }
-    .bi-paid {
-      font-size: 11px; color: #666;
-      margin-bottom: 8px; line-height: 1.5;
-    }
-    .bi-price {
-      font-size: 18px; font-weight: 800;
-      color: #B81C24; line-height: 1;
-    }
-    .bi-price.free { color: #2a7a3b; font-size: 15px; }
-    .bi-label { font-size: 10px; color: #999; margin-top: 3px; }
-    .bi-total {
-      font-size: 11px; font-weight: 700;
-      color: #333; margin-top: 8px;
-      padding-top: 8px;
-      border-top: 1px solid #ede8df;
-    }
-    .bi-total span { font-weight: 400; color: #888; }
-
-    /* ── Comparison ── */
-    .comparison { padding: 0 40px 32px; }
-    .comparison-title {
-      font-size: 11px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .6px;
-      color: #B81C24;
-      border-left: 4px solid #B81C24;
-      padding-left: 10px; margin-bottom: 14px;
-    }
-    .comp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .comp-table th {
-      background: #2c2c2c; color: #fff;
-      padding: 9px 14px;
-      font-size: 11px; font-weight: 600;
-      text-transform: uppercase; letter-spacing: .5px;
-      text-align: center;
-    }
-    .comp-table th:first-child { text-align: left; }
-    .comp-table td { padding: 9px 14px; border-bottom: 1px solid #ede8df; text-align: center; color: #444; }
-    .comp-table td:first-child { text-align: left; font-weight: 500; color: #222; }
-    .comp-table tr:nth-child(even) td { background: #faf8f5; }
-    .comp-table .yes { color: #155724; font-weight: 700; }
-    .comp-table .no  { color: #aaa; }
-    .comp-table .partial { color: #856404; font-weight: 600; }
-
-    /* ── Note ── */
-    .note {
-      background: #f9f4ec;
-      border-top: 1px solid #e8dfd0;
-      padding: 18px 40px;
-      font-size: 12px; color: #666; line-height: 1.8;
-    }
-    .note strong { color: #333; }
-
-    /* ── Footer ── */
-    .footer {
-      background: #B81C24;
-      color: rgba(255,255,255,.7);
-      text-align: center;
-      padding: 12px 40px; font-size: 11px;
-    }
-    .footer strong { color: #fff; }
-
-    @media print {
-      body { background: #fff; }
-      .page { box-shadow: none; margin: 0; }
-    }
-  </style>
+  .note { background: #f9f4ec; border-top: 1px solid #e8dfd0; padding: 10px 40px; font-size: 11px; color: #666; line-height: 1.5; }
+  .note strong { color: #333; }
+  .note ul { margin-top: 6px; padding-left: 18px; }
+  .footer { background: #B81C24; color: rgba(255,255,255,.8); text-align: center; padding: 12px 40px; font-size: 11px; }
+  .footer strong { color: #fff; }
+  @page { size: A4 portrait; margin: 10mm; }
+  @media print {
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { background: #fff; font-size: 10.5px; }
+    .page { box-shadow: none; margin: 0; max-width: none; width: 100%; border-radius: 0; overflow: visible !important; }
+    .header { padding: 12px 24px 9px; }
+    .info-row { padding: 6px 24px; gap: 18px; }
+    .section { padding: 8px 24px 2px; }
+    .section-h { margin-left: 24px !important; margin-right: 24px !important; break-after: avoid; }
+    .market, .buyout, .wm { margin-left: 24px !important; margin-right: 24px !important; margin-bottom: 7px !important; }
+    .market td { padding: 5px 18px; }
+    .options { padding: 2px 24px 7px; display: flex !important; flex-direction: row !important; align-items: stretch; }
+    .note { padding: 9px 24px; }
+    .footer { padding: 9px 24px; break-before: avoid; }
+    .opt-head { padding: 8px 18px 5px; }
+    .opt-title { font-size: 14px; margin: 2px 0 4px; }
+    .opt-price { padding: 6px 18px 2px; }
+    .opt-price .main { font-size: 20px; }
+    .opt-price .plus { margin-top: 6px; }
+    .opt-body { padding: 2px 18px 8px; }
+    .opt-body li { padding: 2px 0 2px 20px; }
+    .option, .buyout, .wm, .note, .market { break-inside: avoid; }
+    table tr { break-inside: avoid; }
+    thead { display: table-header-group; }
+  }
+  @media screen and (max-width: 760px) { .options { flex-direction: column; } }
+</style>
 </head>
 <body>
-
 <div class="page">
 
-  <!-- HEADER -->
   <div class="header">
     <div>
       <div class="header-logo">MALINCO<span>.RO</span></div>
-      <div style="font-size:13px; opacity:.85; margin-top:4px;">Platformă ERP Internă — Ofertă Comercială</div>
+      <div style="font-size:13px; opacity:.85; margin-top:4px;">Platformă ERP — Ofertă Comercială</div>
     </div>
     <div class="header-meta">
-      <strong>OFERTĂ NR. 2026-001</strong>
-      Data emiterii: 21 Aprilie 2026<br>
-      Valabilitate: 30 zile
+      <strong>OFERTĂ NR. 2026-002</strong>
+      Data emiterii: 22 Iunie 2026<br>
+      Valabilă 30 de zile
     </div>
   </div>
 
-  <!-- INFO ROW -->
   <div class="info-row">
-    <div class="info-block">
-      <strong>Beneficiar</strong>
-      Malinco Prodex S.R.L.<br>
-      erp.malinco.ro
-    </div>
-    <div class="info-block">
-      <strong>Prestator</strong>
-      Ikonia Agency S.R.L.
-    </div>
-    <div class="info-block">
-      <strong>Obiect</strong>
-      Platformă ERP custom<br>
-      Laravel 13 · Filament 4
-    </div>
-    <div class="info-block">
-      <strong>Referință deviz</strong>
-      Deviz nr. 2026-001<br>
-      582 ore · 40.740 EUR
-    </div>
+    <div class="info-block"><strong>Prestator</strong> Ikonia Agency S.R.L.<br>Dezvoltare software custom</div>
+    <div class="info-block"><strong>Produs</strong> Platformă ERP completă<br>18 module · 81.000+ linii cod</div>
+    <div class="info-block"><strong>Valoare conform deviz</strong> 124.180 EUR fără TVA<br>(deviz nr. 2026-002, 1.774h)</div>
+    <div class="info-block"><strong>Cost rebuild de la zero</strong> 200.000 – 280.000 €<br>(echivalent agenție software)</div>
   </div>
 
-  <!-- DEVIZ REF -->
-  <div class="deviz-ref">
-    <div>
-      <div class="deviz-ref-label">Bază de calcul — Deviz nr. 2026-001</div>
-      <div class="deviz-ref-amount"><sup>€</sup>40.740 <small style="font-size:13px; font-weight:400; color:#888;">fără TVA &nbsp;/&nbsp; 49.295,40 EUR cu TVA</small></div>
-    </div>
-    <div style="flex:1; font-size:13px; color:#666; padding-left:12px; border-left:1px solid #e0d8cc;">
-      Prezenta ofertă propune două modalități de achiziție. <strong>Opțiunea 1</strong> acoperă integral devizul printr-o plată unică și transferă imediat drepturile asupra codului sursă. <strong>Opțiunea 2</strong> permite accesul la platformă printr-un abonament lunar, cu posibilitatea de a achiziționa codul sursă oricând după luna 12, la un preț care scade în timp.
-    </div>
-  </div>
 
-  <!-- OPTIONS -->
-  <div class="options">
-
-    <!-- ── Opțiunea 1 ── -->
-    <div class="option">
-      <div class="option-header">
-        <div class="option-number">1</div>
-        <div class="option-title">
-          <strong>Achiziție cod sursă — plată unică</strong>
-          <span>Proprietate completă și imediată · fără costuri recurente</span>
-        </div>
-      </div>
-      <div class="option-body single">
-        <div class="price-block">
-          <div class="price-block-label">Preț ERP — drepturi pe codul sursă</div>
-          <div class="price-main"><sup>€</sup>40.740</div>
-          <div class="price-sub">fără TVA</div>
-          <div class="price-tva">49.295,40 EUR cu TVA 21%</div>
-        </div>
-        <div class="includes">
-          <div class="includes-label">Ce include</div>
-          <ul>
-            <li>Cod sursă complet, proprietate permanentă și necondiționată</li>
-            <li>Instalare și configurare completă pe serverul clientului</li>
-            <li>Instruire echipă — 2 sesiuni × 2h</li>
-            <li>Documentație tehnică avansată (arhitectură, module, API, ghid extindere)</li>
-            <li>3 luni suport post-livrare — bug-uri critice și securitate</li>
-            <li class="no">Actualizări funcționale după 3 luni</li>
-            <li class="no">Suport tehnic continuu după 3 luni</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── Opțiunea 2 ── -->
-    <div class="option recommended">
-      <div class="option-header">
-        <div class="option-number">2</div>
-        <div class="option-title">
-          <strong>Abonament lunar cu opțiune de achiziție cod sursă</strong>
-          <span>Investiție inițială redusă · suport și actualizări incluse · cod achizițonabil oricând după luna 12</span>
-        </div>
-        <span class="rec-badge">Recomandat</span>
-      </div>
-
-      <div class="option-body">
-        <div style="display:flex; flex-direction:column; gap:12px;">
-          <div class="price-block">
-            <div class="price-block-label">Taxă de instalare (o singură dată)</div>
-            <div class="price-main"><sup>€</sup>5.000</div>
-            <div class="price-sub">fără TVA</div>
-            <div class="price-tva">6.050 EUR cu TVA 21%</div>
-          </div>
-          <div class="price-block">
-            <div class="price-block-label">Abonament lunar</div>
-            <div class="price-main"><sup>€</sup>890</div>
-            <div class="price-sub">/ lună, fără TVA</div>
-            <div class="price-tva">1.076,90 EUR / lună cu TVA · contract minim 12 luni</div>
-          </div>
-        </div>
-        <div class="includes">
-          <div class="includes-label">Ce include lunar</div>
-          <ul>
-            <li>Acces la platforma completă și toate modulele</li>
-            <li>Mentenanță funcționalitate existentă</li>
-            <li>Corecții bug-uri și patches de securitate</li>
-            <li>Suport tehnic — <strong>8 ore/lună</strong> incluse</li>
-            <li>Monitorizare disponibilitate și intervenție rapidă</li>
-            <li>Backup verificat și documentat lunar</li>
-            <li>Drept de achiziție cod sursă după minimum <strong>12 luni</strong></li>
-            <li class="no">Codul sursă rămâne al prestatorului până la achiziție</li>
-            <li class="no">Nu include funcționalități sau module noi</li>
-          </ul>
-        </div>
-      </div>
-
-      <!-- BUYOUT -->
-      <div class="buyout-section">
-        <div class="buyout-title" style="padding-top:16px; margin-bottom:14px;">Prețuri achiziție cod sursă — se pot activa oricând după luna 12 · prețuri fixe garantate</div>
-        <div class="buyout-grid">
-
-          <div class="buyout-item">
-            <div class="bi-period">După 12 luni</div>
-            <div class="bi-paid">Plătit: 5.000 + 12 × 890<br>= <strong>15.680 EUR</strong></div>
-            <div class="bi-price">33.000 EUR</div>
-            <div class="bi-label">cost achiziție cod</div>
-            <div class="bi-total">Total: ~48.680 EUR <span>fără TVA</span></div>
-          </div>
-
-          <div class="buyout-item">
-            <div class="bi-period">După 24 luni</div>
-            <div class="bi-paid">Plătit: 5.000 + 24 × 890<br>= <strong>26.360 EUR</strong></div>
-            <div class="bi-price">26.000 EUR</div>
-            <div class="bi-label">cost achiziție cod</div>
-            <div class="bi-total">Total: ~52.360 EUR <span>fără TVA</span></div>
-          </div>
-
-          <div class="buyout-item highlight">
-            <div class="bi-period">După 36 luni</div>
-            <div class="bi-paid">Plătit: 5.000 + 36 × 890<br>= <strong>37.040 EUR</strong></div>
-            <div class="bi-price">18.000 EUR</div>
-            <div class="bi-label">cost achiziție cod</div>
-            <div class="bi-total">Total: ~55.040 EUR <span>fără TVA</span></div>
-          </div>
-
-          <div class="buyout-item">
-            <div class="bi-period">După 48 luni</div>
-            <div class="bi-paid">Plătit: 5.000 + 48 × 890<br>= <strong>47.720 EUR</strong></div>
-            <div class="bi-price">9.900 EUR</div>
-            <div class="bi-label">cost achiziție cod</div>
-            <div class="bi-total">Total: ~57.620 EUR <span>fără TVA</span></div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- COMPARISON -->
-  <div class="comparison">
-    <div class="comparison-title">Comparație opțiuni</div>
-    <table class="comp-table">
-      <thead>
-        <tr>
-          <th style="width:36%">Criteriu</th>
-          <th>Opț. 1<br><span style="font-weight:400;font-size:10px;opacity:.7">Achiziție directă</span></th>
-          <th>Opț. 2 — 12 luni</th>
-          <th>Opț. 2 — 24 luni</th>
-          <th>Opț. 2 — 36 luni</th>
-          <th>Opț. 2 — 48 luni</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Total plătit (fără TVA)</td>
-          <td><strong>40.740 EUR</strong></td>
-          <td>~48.680 EUR</td>
-          <td>~52.360 EUR</td>
-          <td>~55.040 EUR</td>
-          <td>~57.620 EUR</td>
-        </tr>
-        <tr>
-          <td>Proprietate cod sursă</td>
-          <td class="yes">Imediat</td>
-          <td class="partial">Opțional</td>
-          <td class="partial">Opțional</td>
-          <td class="partial">Opțional</td>
-          <td class="partial">Opțional</td>
-        </tr>
-        <tr>
-          <td>Suport tehnic inclus</td>
-          <td class="partial">3 luni</td>
-          <td class="yes">12 luni × 8h</td>
-          <td class="yes">24 luni × 8h</td>
-          <td class="yes">36 luni × 8h</td>
-          <td class="yes">48 luni × 8h</td>
-        </tr>
-        <tr>
-          <td>Funcționalități noi</td>
-          <td colspan="5" class="partial" style="font-size:11px;">Pe bază de deviz separat — achiziție unică sau addon lunar</td>
-        </tr>
-        <tr>
-          <td>Investiție inițială</td>
-          <td>40.740 EUR</td>
-          <td colspan="4" style="color:#555;">5.000 EUR · apoi 890 EUR/lună</td>
-        </tr>
-        <tr>
-          <td>Risc la reziliere</td>
-          <td class="yes">Zero</td>
-          <td colspan="4" class="partial">Pierdere acces dacă nu s-a activat achiziția codului</td>
-        </tr>
-      </tbody>
+  <div class="section-h" style="margin:2px 40px 7px;">Cât valorează, de fapt, această platformă</div>
+  <div class="market">
+    <div class="market-head">Cât ar costa o platformă echivalentă, obținută de pe piață</div>
+    <table>
+      <tr class="row-hi">
+        <td class="who">Dezvoltare custom la o agenție</td>
+        <td>Construită de la zero de o agenție, cu echipă, management de proiect și testare.</td>
+        <td class="val">200.000 – 280.000 €</td>
+      </tr>
+      <tr>
+        <td class="who">SaaS ERP (Dynamics / Odoo) + integrări, pe 3 ani</td>
+        <td>Licențe recurente + implementare + dezvoltarea custom a integrărilor cu WinMentor și WooCommerce — costuri care continuă și după 3 ani, fără a deține soluția.</td>
+        <td class="val">280.000 – 420.000 €</td>
+      </tr>
+      <tr class="row-us">
+        <td class="who">Valoarea acestei platforme (conform deviz)</td>
+        <td>Costul real de dezvoltare al platformei deja livrate.</td>
+        <td class="val val-us">124.180 €</td>
+      </tr>
     </table>
   </div>
 
-  <!-- NOTE -->
+  <div class="section-h" style="margin:3px 40px 7px;">Oferta dumneavoastră — două modalități</div>
+  <div class="options">
+
+    <div class="option rec">
+      <div class="rec-badge">Cel mai bun preț</div>
+      <div class="opt-head">
+        <div class="opt-num">OPȚIUNEA 1</div>
+        <div class="opt-title">Achiziție platformă — plată unică</div>
+        <div class="opt-sub">Proprietate permanentă asupra întregului cod sursă și a drepturilor de utilizare. Platformă finită, testată în producție.</div>
+      </div>
+      <div class="opt-price">
+        <div class="strike">Valoare deviz: 124.180 €</div>
+        <div class="main">€ 49.900 <small>fără TVA</small></div>
+        <div class="tva">60.379 EUR cu TVA 21%</div>
+      </div>
+      <div class="opt-body">
+        <ul>
+          <li>Cod sursă complet — proprietate permanentă</li>
+          <li>Transfer imediat al drepturilor de proprietate intelectuală</li>
+          <li>Punere în funcțiune + configurare conexiuni</li>
+          <li>Documentație tehnică + manual de utilizare</li>
+          <li>3 luni suport post-livrare (bug-uri critice, securitate)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="option">
+      <div class="opt-head">
+        <div class="opt-num">OPȚIUNEA 2</div>
+        <div class="opt-title">Abonament lunar + opțiune de achiziție</div>
+        <div class="opt-sub">Investiție inițială mică, cost predictibil, suport și actualizări incluse. Cod achiziționabil oricând după luna 12.</div>
+      </div>
+      <div class="opt-price">
+        <div class="main">€ 1.990 <small>/ lună</small></div>
+        <div class="tva">2.407,90 EUR/lună cu TVA · contract minim 12 luni · găzduire inclusă</div>
+        <div class="plus">+ € 4.900 setup <small style="color:#888;font-weight:400;">(5.929 € cu TVA), o singură dată</small></div>
+      </div>
+      <div class="opt-body">
+        <ul>
+          <li>Găzduire pe 2 servere dedicate (ERP + magazin online), partiții separate de backup, monitorizare</li>
+          <li>Integrare WinMentor API inclusă (valoare ~100 €/lună)</li>
+          <li>Suport tehnic — <strong>8 ore/lună</strong> incluse</li>
+          <li>Actualizări de securitate și mentenanță incluse</li>
+          <li>Drept de achiziție cod sursă după luna 12 (preț degresiv)</li>
+          <li class="no">Codul rămâne al prestatorului până la achiziție</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="section-h" style="margin:3px 40px 7px;">Opțiunea 2 — preț de achiziție cod sursă (degresiv)</div>
+  <div class="buyout">
+    <table>
+      <thead><tr><th>Moment activare</th><th>Plătit abonament (fără TVA)</th><th>Preț achiziție cod</th><th>Total ca să dețineți codul</th></tr></thead>
+      <tbody>
+        <tr><td>După luna 12</td><td>4.900 + 12 × 1.990 = 28.780 €</td><td>44.000 €</td><td>~72.780 € fără TVA</td></tr>
+        <tr><td>După luna 24</td><td>4.900 + 24 × 1.990 = 52.660 €</td><td>38.000 €</td><td>~90.660 € fără TVA</td></tr>
+        <tr><td>După luna 36</td><td>4.900 + 36 × 1.990 = 76.540 €</td><td>32.000 €</td><td>~108.540 € fără TVA</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:11.5px;color:#888;margin-top:8px;">Ca la orice plată în rate, achiziția prin abonament este, în total, mai scumpă decât plata unică — <strong>Opțiunea 1 (49.900 €) rămâne cea mai avantajoasă</strong> dacă achiziționați acum. Abonamentul oferă intrare cu cost redus, suport și actualizări incluse, iar prețul de achiziție scade doar ușor în timp (credit parțial din abonament), astfel încât investiția vă este protejată. Prețurile de achiziție sunt fixe și garantate pe durata contractului.</p>
+  </div>
+
+  <div class="section-h" style="margin:3px 40px 7px;">Tehnologie, găzduire & cod sursă</div>
+  <div class="section" style="padding-top:0;">
+    <div style="display:flex;gap:16px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:240px;background:#fdfaf6;border:1px solid #e8dfd0;border-radius:8px;padding:14px 16px;">
+        <div style="font-weight:700;color:#B81C24;font-size:13px;margin-bottom:6px;">Tehnologie</div>
+        <p style="font-size:12.5px;color:#444;line-height:1.6;margin:0;">Platforma este construită pe un stack modern și matur, întreținut activ și cu o comunitate largă — PHP 8.3 / Laravel, interfață Filament, servicii dedicate în Go pentru integrarea cu WinMentor, baze de date MySQL și cozi Redis. Fără tehnologii exotice sau abandonate: sistemul rămâne ușor de întreținut și de extins în timp.</p>
+      </div>
+      <div style="flex:1;min-width:240px;background:#fdfaf6;border:1px solid #e8dfd0;border-radius:8px;padding:14px 16px;">
+        <div style="font-weight:700;color:#B81C24;font-size:13px;margin-bottom:6px;">Cod sursă & găzduire</div>
+        <p style="font-size:12.5px;color:#444;line-height:1.6;margin:0;">Cod sursă curat, organizat și documentat, livrat integral la achiziție (Opțiunea 1) — fără dependență de furnizor (vendor lock-in). Găzduirea (inclusă în abonament) rulează pe <strong>2 servere dedicate</strong> — unul pentru platforma ERP, unul pentru site/magazinul online — cu <strong>partiții separate de backup</strong>, monitorizare și actualizări de securitate. Pentru Opțiunea 1, o putem asigura opțional, de la 200 €/lună.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-h" style="margin:3px 40px 7px;">Produs separat — WinMentor API (MentorAPI)</div>
+  <div class="wm">
+    <h3>Strat REST/JSON modern peste WinMentor — vandabil separat</h3>
+    <p>Bridge-ul de integrare contabilă (195 endpoint-uri REST, import structurat a 8 tipuri de documente, documentație OpenAPI) transformă WinMentor — sistem accesibil doar prin DLL COM 32-bit — într-o platformă deschisă pe care orice aplicație o citește și scrie prin HTTP. <strong>În platforma ERP este deja inclus</strong> (integrarea WinMentor face parte din abonament). Poate fi oferit și ca <strong>produs de sine stătător</strong> către alte firme care folosesc WinMentor.</p>
+    <div class="wm-prices">
+      <div class="wm-p">Licență cod (one-time)<b>9.500 €</b>11.495 € cu TVA · 280h</div>
+      <div class="wm-p">Abonament SaaS găzduit<b>100 € / lună</b>+ setup 900 € · suport SLA</div>
+    </div>
+    <p style="margin-top:12px;margin-bottom:0;"><a href="/oferta-winmentor-api.html">▸ Vezi oferta detaliată WinMentor API</a></p>
+  </div>
+
   <div class="note">
-    <strong>Condiții generale:</strong>
-    <ul style="margin-top:6px; padding-left:18px;">
+    <strong>Note contractuale:</strong>
+    <ul>
       <li>Toate prețurile sunt în EUR, fără TVA dacă nu se specifică altfel. TVA 21% se aplică conform legislației în vigoare.</li>
-      <li>Taxa de instalare (Opț. 2) de 5.000 EUR acoperă: configurare server, deploy, configurare conexiuni (WooCommerce, WinMentor, email), instruire echipă (2 sesiuni × 2h).</li>
-      <li>Orele de suport neutilizate într-o lună <strong>nu se reportează</strong> în luna următoare.</li>
-      <li>Funcționalitățile noi (module sau feature-uri suplimentare) nu sunt incluse în nicio opțiune. Acestea se dezvoltă pe baza unui <strong>deviz separat</strong>, agreat în prealabil, și pot fi achitate fie ca <strong>achiziție unică</strong> (proprietate imediată), fie ca <strong>addon lunar</strong> adăugat la abonamentul existent.</li>
-      <li>Prețurile de achiziție cod sursă sunt <strong>fixe și garantate</strong> pe toată durata contractului — nu se modifică indiferent când se activează opțiunea.</li>
-      <li>Achiziția codului se poate activa oricând după luna 12, printr-o notificare scrisă cu 30 de zile înainte.</li>
-      <li>Contractul de abonament se poate rezilia cu preaviz de <strong>60 de zile</strong>. La reziliere fără achiziție cod, accesul la platformă încetează iar codul rămâne proprietatea prestatorului.</li>
-      <li>Oferta este valabilă <strong>30 de zile</strong> de la data emiterii.</li>
+      <li>Prețul de <strong>49.900 €</strong> (Opțiunea 1) este pentru o platformă deja dezvoltată și testată — sub valoarea de deviz și sub costul unei dezvoltări de la zero.</li>
+      <li>Taxa de setup (Opțiunea 2) acoperă: configurare server, deploy, configurare conexiuni (WooCommerce, WinMentor, email), migrare date și instruire echipă.</li>
+      <li><strong>Platforma este un sistem integrat</strong> și se livrează complet — modulele partajează aceleași date și fluxuri și nu se vând separat.</li>
+      <li>Abonamentul (Opțiunea 2) <strong>include găzduirea pe 2 servere dedicate</strong> (ERP + site), cu backup pe partiții separate, monitorizare, suport și actualizări. Nu include licențe terțe sau API externe (Sameday etc.).</li>
+      <li>Funcționalitățile noi se dezvoltă pe baza unui deviz separat (70 €/oră) și pot fi achitate ca achiziție unică sau ca addon lunar la abonament.</li>
+      <li>Abonamentul se poate rezilia cu preaviz de 60 de zile. La reziliere fără achiziție cod, accesul încetează, iar codul rămâne al prestatorului.</li>
     </ul>
   </div>
 
-  <!-- FOOTER -->
   <div class="footer">
-    <strong>Ikonia Agency S.R.L.</strong> &nbsp;·&nbsp; Ofertă pentru Malinco Prodex S.R.L. &nbsp;·&nbsp; 21 Aprilie 2026
+    <strong>ERP Malinco</strong> &nbsp;·&nbsp; Ofertă comercială · 22 Iunie 2026 &nbsp;·&nbsp; valoare de referință: deviz nr. 2026-002
   </div>
 
 </div>
-
 </body>
 </html>

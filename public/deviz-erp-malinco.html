@@ -1,866 +1,1121 @@
 <!DOCTYPE html>
 <html lang="ro">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Deviz Lucrări — ERP Malinco</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: #F5F0E8;
-      color: #2c2c2c;
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
-    .page {
-      max-width: 960px;
-      margin: 40px auto;
-      background: #fff;
-      border-radius: 6px;
-      overflow: hidden;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.10);
-    }
-
-    /* ── Header ── */
-    .header {
-      background: #B81C24;
-      color: #fff;
-      padding: 32px 40px 28px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .header-logo {
-      font-size: 26px;
-      font-weight: 800;
-      letter-spacing: 1px;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deviz Lucrări — ERP Malinco</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #F5F0E8; color: #2c2c2c; font-size: 14px; line-height: 1.5; }
+    .page { max-width: 980px; margin: 40px auto; background: #fff; border-radius: 6px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.10); }
+    .header { background: #B81C24; color: #fff; padding: 32px 40px 28px; display: flex; align-items: center; justify-content: space-between; }
+    .header-logo { font-size: 26px; font-weight: 800; letter-spacing: 1px; }
     .header-logo span { color: #ffcdd0; }
-    .header-meta {
-      text-align: right;
-      font-size: 13px;
-      opacity: .9;
-    }
-    .header-meta strong {
-      display: block;
-      font-size: 20px;
-      font-weight: 700;
-      margin-bottom: 2px;
-    }
-
-    /* ── Sub-header info ── */
-    .info-row {
-      background: #f9f4ec;
-      border-bottom: 1px solid #e8dfd0;
-      padding: 16px 40px;
-      display: flex;
-      gap: 40px;
-      font-size: 13px;
-    }
+    .header-meta { text-align: right; font-size: 13px; opacity: .9; }
+    .header-meta strong { display: block; font-size: 20px; font-weight: 700; margin-bottom: 2px; }
+    .info-row { background: #f9f4ec; border-bottom: 1px solid #e8dfd0; padding: 16px 40px; display: flex; gap: 40px; font-size: 13px; flex-wrap: wrap; }
     .info-block strong { display: block; color: #888; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px; }
-
-    /* ── Section title ── */
-    .section-title {
-      background: #f0ebe1;
-      border-left: 4px solid #B81C24;
-      padding: 10px 40px;
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .8px;
-      color: #B81C24;
-      margin-top: 0;
-    }
-
-    /* ── Table ── */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    thead th {
-      background: #2c2c2c;
-      color: #fff;
-      padding: 10px 12px;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: .6px;
-      font-weight: 600;
-    }
+    .intro-section { padding: 32px 40px 8px; }
+    .intro-lead { font-size: 14.5px; line-height: 1.75; color: #333; margin-bottom: 22px; border-left: 4px solid #B81C24; padding-left: 16px; }
+    /* price structure */
+    .pstruct { display:flex; gap:16px; margin-bottom:26px; flex-wrap:wrap; }
+    .pstruct .pbox { flex:1; min-width:200px; border:1px solid #e8dfd0; border-radius:8px; padding:16px 18px; background:#fdfaf6; }
+    .pstruct .pbox.found { border:2px solid #B81C24; background:#fdf3f3; }
+    .pstruct .pbox .lbl { font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:#888; font-weight:700; }
+    .pstruct .pbox.found .lbl { color:#B81C24; }
+    .pstruct .pbox .amt { font-size:24px; font-weight:800; color:#1a1a1a; margin-top:4px; }
+    .pstruct .pbox .sub { font-size:12px; color:#777; margin-top:2px; }
+    .oblig { background:#B81C24; color:#fff; font-size:9px; font-weight:700; padding:1px 8px; border-radius:20px; letter-spacing:.5px; margin-left:6px; vertical-align:middle; }
+    .modules-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 26px; }
+    .module-card { border: 1px solid #e8dfd0; border-radius: 6px; padding: 14px 16px; background: #fdfaf6; }
+    .module-card.foundation { border:2px solid #B81C24; background:#fdf3f3; grid-column: 1 / -1; }
+    .module-card-title { font-size: 13px; font-weight: 700; color: #B81C24; margin-bottom: 7px; display: flex; align-items: center; gap: 8px; }
+    .module-card-title .icon { width:22px; height:22px; background:#B81C24; border-radius:4px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:12px; color:#fff; font-weight:800; }
+    .module-card p { font-size: 12px; color: #444; line-height: 1.55; margin-bottom: 8px; }
+    .module-pills { display: flex; flex-wrap: wrap; gap: 5px; }
+    .pill { font-size: 10.5px; padding: 3px 9px; border-radius: 20px; font-weight: 600; }
+    .pill-green { background: #d4edda; color: #155724; }
+    .pill-blue { background: #d1ecf1; color: #0c5460; }
+    .pill-red { background: #f8d7da; color: #842029; }
+    .intro-divider { border: none; border-top: 1px solid #e8dfd0; margin: 4px 0 0; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { background: #2c2c2c; color: #fff; padding: 10px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: .6px; font-weight: 600; }
     thead th:first-child { padding-left: 40px; }
-    thead th:last-child  { padding-right: 40px; text-align: right; }
+    thead th:last-child { padding-right: 40px; text-align: right; }
     thead th.right { text-align: right; }
     thead th.center { text-align: center; }
-
     tbody tr:nth-child(even) { background: #faf8f5; }
-    tbody tr:hover { background: #fff5f5; }
-
-    td {
-      padding: 9px 12px;
-      border-bottom: 1px solid #ede8df;
-      vertical-align: top;
-    }
+    td { padding: 9px 12px; border-bottom: 1px solid #ede8df; vertical-align: top; }
     td:first-child { padding-left: 40px; }
-    td:last-child  { padding-right: 40px; text-align: right; font-weight: 600; }
+    td:last-child { padding-right: 40px; text-align: right; font-weight: 600; }
     td.right { text-align: right; }
     td.center { text-align: center; }
-
     .item-name { font-weight: 600; color: #1a1a1a; }
     .item-desc { font-size: 12px; color: #666; margin-top: 3px; }
-    .badge {
-      display: inline-block;
-      font-size: 10px;
-      font-weight: 700;
-      padding: 2px 7px;
-      border-radius: 20px;
-      text-transform: uppercase;
-      letter-spacing: .4px;
-      margin-left: 6px;
-      vertical-align: middle;
-    }
-    .badge-done  { background: #d4edda; color: #155724; }
-    .badge-progress { background: #fff3cd; color: #856404; }
-
-    /* ── Category header row ── */
-    tr.cat-row td {
-      background: #f0ebe1;
-      border-left: 4px solid #B81C24;
-      padding: 7px 12px 7px 36px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .6px;
-      color: #B81C24;
-      border-bottom: none;
-    }
-
-    /* ── Totals ── */
-    .totals {
-      padding: 20px 40px 28px;
-      display: flex;
-      justify-content: flex-end;
-    }
-    .totals-box {
-      min-width: 340px;
-    }
-    .totals-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 6px 0;
-      border-bottom: 1px solid #ede8df;
-      font-size: 14px;
-    }
-    .totals-row.grand {
-      border-bottom: none;
-      border-top: 2px solid #B81C24;
-      margin-top: 6px;
-      padding-top: 12px;
-      font-size: 18px;
-      font-weight: 800;
-      color: #B81C24;
-    }
+    .badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; text-transform: uppercase; letter-spacing: .4px; }
+    .badge-done { background: #d4edda; color: #155724; }
+    tr.cat-row td { background: #f0ebe1; border-left: 4px solid #B81C24; padding: 8px 12px 8px 36px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: #B81C24; border-bottom: none; }
+    tr.cat-row.mandatory td { background: #B81C24; color: #fff; border-left-color: #7a1218; }
+    tr.subtotal-row td { background:#2c2c2c; color:#fff; font-weight:700; font-size:12px; padding:7px 12px; text-align:right; border-bottom:2px solid #fff; }
+    tr.subtotal-row td:first-child { padding-left:40px; text-align:left; text-transform:uppercase; letter-spacing:.4px; }
+    tr.subtotal-row td:last-child { padding-right:40px; color:#ffcdd0; }
+    .totals { padding: 22px 40px 28px; display: flex; justify-content: flex-end; }
+    .totals-box { min-width: 360px; }
+    .totals-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #ede8df; font-size: 14px; }
+    .totals-row.grand { border-bottom: none; border-top: 2px solid #B81C24; margin-top: 6px; padding-top: 12px; font-size: 18px; font-weight: 800; color: #B81C24; }
     .totals-row .label { color: #555; }
-    .totals-row .value { font-weight: 600; }
-
-    /* ── Note ── */
-    .note {
-      background: #f9f4ec;
-      border-top: 1px solid #e8dfd0;
-      padding: 18px 40px;
-      font-size: 12px;
-      color: #666;
-      line-height: 1.7;
-    }
+    .note { background: #f9f4ec; border-top: 1px solid #e8dfd0; padding: 18px 40px; font-size: 12px; color: #666; line-height: 1.7; }
     .note strong { color: #333; }
-
-    /* ── Footer ── */
-    .footer {
-      background: #B81C24;
-      color: rgba(255,255,255,.7);
-      text-align: center;
-      padding: 12px 40px;
-      font-size: 11px;
-    }
+    .footer { background: #B81C24; color: rgba(255,255,255,.8); text-align: center; padding: 12px 40px; font-size: 11px; }
     .footer strong { color: #fff; }
-
-    /* ── Intro page ── */
-    .intro-section {
-      padding: 32px 40px 8px;
-    }
-    .intro-lead {
-      font-size: 15px;
-      line-height: 1.75;
-      color: #333;
-      margin-bottom: 28px;
-      border-left: 4px solid #B81C24;
-      padding-left: 16px;
-    }
-    .modules-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 28px;
-    }
-    .module-card {
-      border: 1px solid #e8dfd0;
-      border-radius: 6px;
-      padding: 16px 18px;
-      background: #fdfaf6;
-    }
-    .module-card-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: #B81C24;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .module-card-title .icon {
-      width: 22px;
-      height: 22px;
-      background: #B81C24;
-      border-radius: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      font-size: 12px;
-      color: #fff;
-      font-weight: 800;
-    }
-    .module-card p {
-      font-size: 12.5px;
-      color: #444;
-      line-height: 1.6;
-      margin-bottom: 8px;
-    }
-    .module-pills {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-      margin-top: 6px;
-    }
-    .pill {
-      font-size: 10.5px;
-      padding: 3px 9px;
-      border-radius: 20px;
-      font-weight: 600;
-    }
-    .pill-green  { background: #d4edda; color: #155724; }
-    .pill-blue   { background: #d1ecf1; color: #0c5460; }
-    .pill-orange { background: #fff3cd; color: #856404; }
-    .intro-divider {
-      border: none;
-      border-top: 1px solid #e8dfd0;
-      margin: 4px 0 28px;
-    }
+    @page { size: A4 portrait; margin: 10mm; }
     @media print {
-      body { background: #fff; }
-      .page { box-shadow: none; margin: 0; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      body { background: #fff; font-size: 9.5px; }
+      .page { box-shadow: none; margin: 0; max-width: none; width: 100%; border-radius: 0; overflow: visible !important; }
+      .header { padding: 16px 24px 12px; }
+      .header-logo { font-size: 22px; }
+      .intro-section { padding: 14px 24px 4px; }
+      .info-row { padding: 9px 24px; gap: 22px; }
+      .note, .totals { padding-left: 24px; padding-right: 24px; }
+      .intro-lead { margin-bottom: 12px; font-size: 11px; }
+      .pstruct { margin-bottom: 14px; }
+      .pstruct, .pbox { break-inside: avoid; }
+      .modules-grid, .intro-divider { display: none !important; }
+      thead { display: table-header-group; }
+      td { padding: 4px 10px; }
+      td:first-child { padding-left: 24px; }
+      td:last-child { padding-right: 24px; }
+      tr.cat-row td { padding: 5px 10px 5px 24px; }
+      .item-name { font-size: 10px; }
+      .item-desc { font-size: 8.5px; line-height: 1.28; margin-top: 1px; }
+      td { padding: 3px 10px; }
+      tr { break-inside: avoid; }
+      tr.cat-row, tr.cat-row td { break-after: avoid; }
+      tr.subtotal-row, tr.subtotal-row td { break-before: avoid; }
+      .totals, .note { break-inside: avoid; }
+      .footer { padding: 9px 24px; }
     }
-  </style>
+    @media (max-width: 760px){ .modules-grid{ grid-template-columns:1fr; } }
+</style>
 </head>
 <body>
-
 <div class="page">
 
-  <!-- HEADER -->
   <div class="header">
     <div>
       <div class="header-logo">MALINCO<span>.RO</span></div>
       <div style="font-size:13px; opacity:.85; margin-top:4px;">Platformă ERP Internă — Deviz Lucrări</div>
     </div>
     <div class="header-meta">
-      <strong>DEVIZ NR. 2026-001</strong>
-      Data emiterii: 21 Aprilie 2026<br>
-      Perioadă: Feb 2026 – Apr 2026
+      <strong>DEVIZ NR. 2026-002</strong>
+      Data emiterii: 22 Iunie 2026<br>
+      Perioadă: Feb 2026 – Iun 2026
     </div>
   </div>
 
-  <!-- INFO ROW -->
   <div class="info-row">
-    <div class="info-block">
-      <strong>Beneficiar</strong>
-      Malinco Prodex S.R.L.<br>
-      erp.malinco.ro
-    </div>
-    <div class="info-block">
-      <strong>Prestator</strong>
-      Ikonia Agency S.R.L.<br>
-      Laravel / Filament / WooCommerce
-    </div>
-    <div class="info-block">
-      <strong>Rata oră</strong>
-      70 EUR / oră<br>
-      (Senior Full-Stack)
-    </div>
-    <div class="info-block">
-      <strong>Stack tehnic</strong>
-      PHP 8.3 · Laravel 13 · Filament 4<br>
-      MySQL · Redis · Fabric.js · AI Integration
-    </div>
+    <div class="info-block"><strong>Beneficiar</strong> Malinco Prodex S.R.L.<br>erp.malinco.ro</div>
+    <div class="info-block"><strong>Prestator</strong> Ikonia Agency S.R.L.<br>Laravel / Filament / WooCommerce</div>
+    <div class="info-block"><strong>Rata oră</strong> 70 EUR / oră<br>(Senior Full-Stack)</div>
+    <div class="info-block"><strong>Stack tehnic</strong> PHP 8.3 · Laravel 13 · Filament 4 · Go<br>MySQL · Redis · WinMentor · AI</div>
   </div>
 
-  <!-- INTRO PAGE -->
   <div class="intro-section">
+    <p class="intro-lead">Platforma ERP Malinco centralizează într-un singur sistem toate operațiunile companiei: achiziții, stocuri, comenzi online, relația cu furnizorii, integrarea contabilă WinMentor și raportarea de business. Prezentul deviz este structurat pe o <strong>fundație de arhitectură obligatorie</strong> și <strong>16 module funcționale</strong>, fiecare cu prețul evidențiat separat. Orele reflectă efortul real de dezvoltare livrat (analiză, implementare, testare, documentație). Fundația de infrastructură este <strong>necesară pentru funcționarea oricărui modul</strong> și se facturează o singură dată.</p>
 
-    <p class="intro-lead">
-      Platforma ERP dezvoltată pentru Malinco Prodex S.R.L. centralizează într-un singur sistem toate operațiunile critice ale companiei: achiziții, stocuri, comenzi online, relația cu furnizorii și raportarea de business. Scopul principal a fost eliminarea muncii manuale repetitive, reducerea erorilor umane și oferirea unui tablou de bord complet în timp real — astfel încât fiecare angajat să aibă la dispoziție exact informațiile de care are nevoie, exact când are nevoie de ele.
-    </p>
+    <div class="pstruct">
+      <div class="pbox found">
+        <div class="lbl">Fundație obligatorie <span class="oblig">OBLIGATORIU</span></div>
+        <div class="amt">28.000 €</div>
+        <div class="sub">400h · arhitectura fără de care niciun modul nu funcționează</div>
+      </div>
+      <div class="pbox">
+        <div class="lbl">Platformă integrată</div>
+        <div class="amt">16 module</div>
+        <div class="sub">sistem unitar · modulele partajează date și fluxuri</div>
+      </div>
+      <div class="pbox">
+        <div class="lbl">Total platformă (fără TVA)</div>
+        <div class="amt" style="color:#B81C24;">124.180 €</div>
+        <div class="sub">1774h · 150.257,80 € cu TVA 21%</div>
+      </div>
+    </div>
+
+    <div style="background:#fdf3f3;border-left:4px solid #B81C24;border-radius:4px;padding:12px 16px;margin-bottom:22px;font-size:13px;color:#7a1218;">
+      <strong>Platformă integrată — vândută ca întreg.</strong> Modulele de mai jos nu sunt componente independente: ele partajează aceleași date și fluxuri de business (ex: comandă online → necesar → comandă furnizor → recepție → stoc → preț pe site). Defalcarea pe module arată unde s-a investit efortul, dar platforma funcționează doar ca sistem unitar și se livrează complet — nu à la carte.
+    </div>
 
     <div class="modules-grid">
-
-      <div class="module-card">
-        <div class="module-card-title"><span class="icon">1</span> Infrastructură &amp; Arhitectură</div>
-        <p>Platforma este construită pe o arhitectură multi-tenant cu control de acces granular per locație și rol. Fiecare utilizator vede exclusiv datele relevante pentru locația sa, fără risc de expunere accidentală. Sistemul de cozi Redis cu autoscaling garantează că joburile grele (sincronizări, rapoarte, notificări) nu blochează interfața utilizatorilor.</p>
-        <div class="module-pills">
-          <span class="pill pill-green">Zero acces neautorizat</span>
-          <span class="pill pill-blue">Joburi asincrone — UI mereu rapid</span>
-        </div>
+      <div class="module-card foundation">
+        <div class="module-card-title"><span class="icon">★</span> Arhitectură, Infrastructură, Securitate & DevOps <span class="oblig">OBLIGATORIU</span></div>
+        <p>Fundația obligatorie a întregii platforme: două panel-uri Filament cu temă custom, sistem multi-tenant per locație, permisiuni granulare per rol, autentificare + PIN, cozi Redis/Horizon, securitate (CSP) și DevOps, plus layerul de servicii partajate folosit de toate modulele. Fără această fundație, niciun modul nu poate funcționa.</p>
+        <div class="module-pills"><span class="pill pill-red">Fundație obligatorie — facturată o singură dată</span><span class="pill pill-blue">400h</span><span class="pill pill-green">28.000 €</span></div>
       </div>
 
       <div class="module-card">
-        <div class="module-card-title"><span class="icon">2</span> Sincronizare WooCommerce</div>
-        <p>Produsele, stocurile și prețurile sunt sincronizate automat între ERP și magazinul online. Nu mai există discrepanțe între stocul afișat pe site și cel real din depozit. Plugin-ul WordPress dedicat elimină dependența de soluții terțe și permite actualizări controlate direct din ERP.</p>
-        <div class="module-pills">
-          <span class="pill pill-green">Stoc corect pe site în timp real</span>
-          <span class="pill pill-orange">Economie: ~2h/zi reconciliere manuală</span>
-        </div>
+        <div class="module-card-title"><span class="icon">1</span> Sincronizare WooCommerce</div>
+        <p>Integrare bidirecțională completă ERP ↔ WooCommerce: import produse + categorii (paginat, cu deduplicare după woo_id/SKU și reutilizare placeholder), sincronizare stoc și preț de vânzare din WinMentor Bridge spre site,</p>
+        <div class="module-pills"><span class="pill pill-blue">85h efort</span></div>
       </div>
 
       <div class="module-card">
-        <div class="module-card-title"><span class="icon">3</span> Comenzi Online &amp; Livrări Sameday</div>
-        <p>Comenzile WooCommerce sunt importate automat în ERP și pot fi procesate fără a deschide alt sistem. AWB-urile Sameday se generează cu un singur click direct din comandă, statusul se actualizează automat, iar clientul primește notificarea corespunzătoare.</p>
-        <div class="module-pills">
-          <span class="pill pill-green">Procesare comenzi fără comutare de sistem</span>
-          <span class="pill pill-orange">Economie: ~3 min/comandă × volum zilnic</span>
-        </div>
+        <div class="module-card-title"><span class="icon">2</span> Plugin WordPress Bridge (malinco-erp-bridge)</div>
+        <p>Plugin WordPress/WooCommerce custom (863 linii) care realizează comunicare bidirecțională ERP ↔ site: API REST cu 8 endpoint-uri (version, citire/scriere meta produs, bulk-meta, recalculate, cache/flush, options/{key},</p>
+        <div class="module-pills"><span class="pill pill-blue">45h efort</span></div>
       </div>
 
       <div class="module-card">
-        <div class="module-card-title"><span class="icon">4</span> Modul Achiziții Complet</div>
-        <p>Fluxul de achiziții — de la necesarul de marfă până la recepția fizică — este acum complet trasat și auditabil. Necesarul se generează automat din comenzile cu deficit de stoc. Comenzile de aprovizionare trec printr-un flux de aprobare configurat per furnizor și valoare. La recepție, depozitarul înregistrează cantitățile efectiv primite, iar orice discrepanță față de comandă este documentată și notificată automat. PDF-ul comenzii se generează instant pentru comunicarea cu furnizorul.</p>
-        <div class="module-pills">
-          <span class="pill pill-green">Trasabilitate completă achiziție→recepție</span>
-          <span class="pill pill-green">Aprobare fluxuri fără email/telefon</span>
-          <span class="pill pill-orange">Economie: ~4h/săpt. coordonare manuală</span>
-        </div>
+        <div class="module-card-title"><span class="icon">3</span> Comenzi WooCommerce + Sameday</div>
+        <p>Modul de sincronizare comenzi WooCommerce în ERP plus integrare completă curierat Sameday (creare AWB, estimare cost, anulare).</p>
+        <div class="module-pills"><span class="pill pill-blue">70h efort</span></div>
       </div>
 
       <div class="module-card">
-        <div class="module-card-title"><span class="icon">5</span> Aplicație Mobilă Recepție</div>
-        <p>Depozitarii lucrează direct de pe telefon: aplicația se instalează pe ecranul de pornire, se autentifică cu PIN și afișează comenzile de recepționat. Cantitățile introduse ajung instant în ERP, fără hârtii, fără transcrieri și fără risc de pierdere a datelor. Notificările push anunță automat sosirea unei noi comenzi aprobate.</p>
-        <div class="module-pills">
-          <span class="pill pill-green">Recepție fără hârtie, zero transcrieri</span>
-          <span class="pill pill-orange">Economie: ~1h/zi per depozitar</span>
-        </div>
+        <div class="module-card-title"><span class="icon">4</span> Modul Achiziții (PR/PO)</div>
+        <p>Sistem complet de achiziții cu două entități principale: Necesar de Marfă (PurchaseRequest/PNR) și Comandă Furnizor (PurchaseOrder/PO).</p>
+        <div class="module-pills"><span class="pill pill-blue">139h efort</span></div>
       </div>
 
       <div class="module-card">
-        <div class="module-card-title"><span class="icon">6</span> Modul Email + Inteligență Furnizori</div>
-        <p>Cele peste 10.000 de emailuri cu furnizorii sunt importate și analizate automat. Prețurile oferite în emailuri sunt extrase și comparate cu prețul actual din catalog — cumpărătorul vede imediat dacă un furnizor a oferit recent un preț mai bun. Contactele furnizorilor sunt descoperite și asociate automat, fără introducere manuală.</p>
-        <div class="module-pills">
-          <span class="pill pill-green">Prețuri din emailuri comparate automat</span>
-          <span class="pill pill-blue">95 contacte descoperite automat</span>
-          <span class="pill pill-orange">Economie: ~3h/săpt. căutare manuală emailuri</span>
-        </div>
+        <div class="module-card-title"><span class="icon">5</span> Modul Ofertare B2B</div>
+        <p>Sistem complet de ofertare comercială B2B în Filament: creare ofertă cu căutare/quick-add produse (cu stoc per locație), lookup client existent + creare client nou cu preluare automată date firmă din CUI,</p>
+        <div class="module-pills"><span class="pill pill-blue">63h efort</span></div>
       </div>
 
       <div class="module-card">
-        <div class="module-card-title"><span class="icon">7</span> Catalog Toya — Import &amp; Recategorizare</div>
-        <p>Cele 12.533 de produse Toya au fost importate, recategorizate și publicate pe WooCommerce. Recategorizarea s-a făcut printr-un sistem de propuneri automate revizuite de administrator, nu manual produs cu produs. Prețurile Toya se actualizează zilnic automat, cu alertă când apare o modificare semnificativă.</p>
-        <div class="module-pills">
-          <span class="pill pill-green">12.533 produse publicate</span>
-          <span class="pill pill-orange">Economie: sute de ore categorizare manuală</span>
-        </div>
+        <div class="module-card-title"><span class="icon">6</span> Email + AI Inteligență furnizori</div>
+        <p>Modul complet de captură și inteligență a comunicărilor cu furnizorii: sincronizare IMAP a inbox-ului (~10.6k emailuri, multi-folder, RAM-safe via UID SEARCH + fetch individual), auto-asociere expeditor→furnizor,</p>
+        <div class="module-pills"><span class="pill pill-blue">83h efort</span></div>
       </div>
 
       <div class="module-card">
-        <div class="module-card-title"><span class="icon">8</span> Integrare WinMentor</div>
-        <p>ERP-ul comunică direct cu WinMentor prin bridge dedicat. Rapoartele de vânzări și cumpărări din WinMentor sunt vizibile în ERP fără a deschide aplicația contabilă. Sincronizarea stocurilor și recepțiilor este automatizată, eliminând dublul-introducere a datelor între cele două sisteme.</p>
-        <div class="module-pills">
-          <span class="pill pill-green">Date WinMentor vizibile în ERP</span>
-          <span class="pill pill-orange">Economie: eliminare introducere dublă date</span>
-        </div>
+        <div class="module-card-title"><span class="icon">7</span> Catalog Toya</div>
+        <p>Modul complet de catalog pentru furnizorul Toya Romania: import produse din API-ul Toya Pimcore (prețuri/stocuri RO bulk + getData per produs, ~12.500 produse importate ca draft),</p>
+        <div class="module-pills"><span class="pill pill-blue">85h efort</span></div>
       </div>
 
       <div class="module-card">
-        <div class="module-card-title"><span class="icon">9</span> Business Intelligence (BI)</div>
-        <p>Managementul are acces la un dashboard complet cu indicatori cheie: care produse se vând repede, care stagnează, unde este risc de ruptură de stoc, care este marja reală per categorie. Alertele automate P0/P1/P2 semnalează situațiile critice înainte să devină probleme. Rapoartele săptămânale și lunare se generează și se trimit pe email automat, fără nicio intervenție manuală.</p>
-        <div class="module-pills">
-          <span class="pill pill-green">Decizii bazate pe date, nu pe intuiție</span>
-          <span class="pill pill-blue">Rapoarte automate — zero timp de pregătire</span>
-          <span class="pill pill-orange">Economie: ~6h/lună raportare manuală</span>
-        </div>
+        <div class="module-card-title"><span class="icon">8</span> WinMentor integrare PHP</div>
+        <p>Integrare bidirecțională ERP ↔ WinMentor (prin bridge-ul Go MentorAPI pe port 9500). Acoperă: client HTTP robust (WinmentorBridgeClient) cu selecție firmă/lună, căutare/creare/update articole,</p>
+        <div class="module-pills"><span class="pill pill-blue">140h efort</span></div>
       </div>
 
       <div class="module-card">
-        <div class="module-card-title"><span class="icon">10</span> Generare Conținut Produse</div>
-        <p>Descrierile, atributele și titlurile produselor sunt generate automat după nomenclatura standard a companiei. Conținutul existent este evaluat și îmbunătățit sistematic. Acest lucru este esențial atât pentru SEO (vizibilitate în Google), cât și pentru experiența clientului pe site — fără a ocupa timp din echipa de marketing.</p>
-        <div class="module-pills">
-          <span class="pill pill-green">Conținut SEO consistent pe tot catalogul</span>
-          <span class="pill pill-orange">Economie: ore întregi de redactare manuală</span>
-        </div>
+        <div class="module-card-title"><span class="icon">9</span> MentorAPI Bridge Go propriu</div>
+        <p>Serviciu standalone Go (10.460 linii, exe Windows pe port 9500) care expune contabilitatea WinMentor printr-un REST API. Bridge-ul vorbește cu serverul COM Delphi DocImpServer (dual-interface) prin manipulare la nivel jos de vtable,</p>
+        <div class="module-pills"><span class="pill pill-blue">135h efort</span></div>
       </div>
 
+      <div class="module-card">
+        <div class="module-card-title"><span class="icon">10</span> Business Intelligence</div>
+        <p>Modul complet de Business Intelligence pentru stocuri/vânzări: pipeline zilnic de agregare (KPI inventar, velocity 7/30/90 zile, clasificare ABC, marje cu rezolvare preț achiziție pe 3 nivele + normalizare TVA,</p>
+        <div class="module-pills"><span class="pill pill-blue">99h efort</span></div>
+      </div>
+
+      <div class="module-card">
+        <div class="module-card-title"><span class="icon">11</span> Generare Conținut AI Produse</div>
+        <p>Pipeline complet de îmbogățire automată a produselor placeholder importate din WinMentor (CSV), folosind Claude (Haiku) în batch.</p>
+        <div class="module-pills"><span class="pill pill-blue">91h efort</span></div>
+      </div>
+
+      <div class="module-card">
+        <div class="module-card-title"><span class="icon">12</span> PWA Mobil (Recepție /wh, Inventar /inv, Hub unificat /app, Dispecerizare)</div>
+        <p>Trei aplicații PWA mobile pe același origin, refolosind auth Laravel + gate PIN (sessionStorage partajat 30 min). /wh = recepție cantitativă comenzi furnizori (parțial/final cu revert lipsuri în coada de achiziții,</p>
+        <div class="module-pills"><span class="pill pill-blue">107h efort</span></div>
+      </div>
+
+      <div class="module-card">
+        <div class="module-card-title"><span class="icon">13</span> Rapoarte, Metrici &amp; pagini App</div>
+        <p>Set de rapoarte și metrici în panel-ul Filament App: Raport Magazin Online (venit/comenzi pe an/lună/all-time, breakdown pe categorii rădăcină, top furnizori, top branduri, status comenzi),</p>
+        <div class="module-pills"><span class="pill pill-blue">39h efort</span></div>
+      </div>
+
+      <div class="module-card">
+        <div class="module-card-title"><span class="icon">14</span> Furnizori &amp; Date de Bază (Master Data)</div>
+        <p>Modul funcțional dedicat.</p>
+        <div class="module-pills"><span class="pill pill-blue">107h efort</span></div>
+      </div>
+
+      <div class="module-card">
+        <div class="module-card-title"><span class="icon">15</span> Integrări Specifice per Furnizor</div>
+        <p>Modul funcțional dedicat.</p>
+        <div class="module-pills"><span class="pill pill-blue">49h efort</span></div>
+      </div>
+
+      <div class="module-card">
+        <div class="module-card-title"><span class="icon">16</span> Sincronizare Real-Time &amp; Monitorizare</div>
+        <p>Modul funcțional dedicat.</p>
+        <div class="module-pills"><span class="pill pill-blue">37h efort</span></div>
+      </div>
     </div>
-
     <hr class="intro-divider">
-
   </div>
-  <!-- TABLE -->
+
   <table>
     <thead>
       <tr>
         <th style="width:46%">Descriere lucrare</th>
         <th class="center" style="width:10%">Ore</th>
-        <th class="right" style="width:16%">Tarif (EUR)</th>
+        <th class="right" style="width:14%">Tarif (EUR)</th>
         <th class="right" style="width:16%">Total (EUR)</th>
-        <th class="right" style="width:12%">Status</th>
+        <th class="right" style="width:14%">Status</th>
       </tr>
     </thead>
     <tbody>
-
-      <!-- ── 1. Arhitectură & Infrastructură ── -->
-      <tr class="cat-row"><td colspan="5">1. Arhitectură &amp; Infrastructură de Bază</td></tr>
-
+      <tr class="cat-row mandatory"><td colspan="5">Arhitectură, Infrastructură, Securitate &amp; DevOps <span class="oblig">OBLIGATORIU</span></td></tr>
       <tr>
-        <td>
-          <div class="item-name">Setup platformă Laravel + Filament dual-panel</div>
-          <div class="item-desc">Arhitecturarea celor două panel-uri Filament (Admin + App), sistem multi-tenant cu izolare completă a datelor per locație, control de acces granular per rol și locație, trait EnforcesLocationScope aplicat consistent pe toate resursele, sistem de permisiuni configurabil per rol din interfață (RolePermissionsPage)</div>
-        </td>
-        <td class="center">25</td>
+        <td><div class="item-name">Setup dual-panel Filament + temă custom</div><div class="item-desc">Configurare AdminPanelProvider + AppPanelProvider, brand/logo din settings, navigation groups dinamice din DB…</div></td>
+        <td class="center">22</td>
         <td class="right">70</td>
-        <td>1.750</td>
+        <td>1.540</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Multi-tenant location scoping</div><div class="item-desc">Model Location cu ierarhie store→warehouse, traits HasLocationScope (scopeVisibleToUser) + EnforcesLocationScope pentru Filament…</div></td>
+        <td class="center">14</td>
+        <td class="right">70</td>
+        <td>980</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Sistem permisiuni per rol (RolePermission + UI)</div><div class="item-desc">Model RolePermission cu cache per-rol și invalidare, logica default-deny + super_admin bypass, trait ChecksRolePermissions…</div></td>
+        <td class="center">20</td>
+        <td class="right">70</td>
+        <td>1.400</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Autentificare + PIN PWA + sesiuni</div><div class="item-desc">Override Login Filament cu redirect forțat, canAccessPanel per panel, flux autentificare secundară pe PIN pentru depozit (Hash verify/change, lock screen…</div></td>
+        <td class="center">12</td>
+        <td class="right">70</td>
+        <td>840</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Bootstrap routing, middleware &amp; excepții</div><div class="item-desc">Configurare bootstrap/app.php: grupuri rute web/webhooks/warehouse cu middleware dedicat, redirect guests diferențiat pe zone (wh/app vs admin)…</div></td>
+        <td class="center">8</td>
+        <td class="right">70</td>
+        <td>560</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Security headers (CSP) + AppSetting criptat</div><div class="item-desc">Middleware SecurityHeaders cu CSP complet calibrat (unsafe-inline/eval pentru Filament+Alpine, CDN-uri whitelisted…</div></td>
+        <td class="center">9</td>
+        <td class="right">70</td>
+        <td>630</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Infrastructură cozi Horizon/Redis</div><div class="item-desc">Instalare/configurare Redis + Horizon sub supervisor, config autoscaling (min/max processes, balance auto, strategy time), environments prod/local…</div></td>
+        <td class="center">11</td>
+        <td class="right">70</td>
+        <td>770</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Health-check workeri + monitorizare MentorAPI/COM</div><div class="item-desc">WorkersHealthCheckCommand: poll failed_jobs cu dedup pe cache + plasă siguranță 48h, watch-uri SyncRun cu logică ore-de-program (L-S 08:00-17:30)…</div></td>
+        <td class="center">18</td>
+        <td class="right">70</td>
+        <td>1.260</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Flush cache nginx+Redis (job coalescing + fix incident purge)</div><div class="item-desc">FlushWooCacheJob ShouldBeUnique cu uniqueFor pentru coalescing rafale + WooDirectSqlService::flushCache via SSH (purge /var/cache/nginx, wp cache flush…</div></td>
+        <td class="center">12</td>
+        <td class="right">70</td>
+        <td>840</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Reconciliere stoc Woo + retry PO + cleanup drafts + arhivare loguri</div><div class="item-desc">ReconcileWooStockCommand (fix produse fantomă, status pe cantitate întreagă, backorders=notify pe feed activ, chunking + dry-run/only)…</div></td>
+        <td class="center">16</td>
+        <td class="right">70</td>
+        <td>1.120</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Scheduler (~30 task-uri) + supervisor/Horizon ops</div><div class="item-desc">routes/console.php cu ~30 comenzi programate, fiecare cu timezone Europe/Bucharest, ferestre L-S 08:00-17:30/18:00, withoutOverlapping, runInBackground…</div></td>
+        <td class="center">12</td>
+        <td class="right">70</td>
+        <td>840</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Hardening HTTP: SecurityHeaders/CSP + exception &amp; routing config</div><div class="item-desc">Middleware SecurityHeaders cu CSP complet calibrat pentru Filament/Alpine/CDN-uri, Permissions-Policy condiționat per /wh (cameră), X-Frame/Referrer…</div></td>
+        <td class="center">14</td>
+        <td class="right">70</td>
+        <td>980</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Fix-uri de incident defensive (CUI dublu, EAN ping-pong, nr_doc)</div><div class="item-desc">Logică CUI dublu în WinmentorBridgeClient (searchParteneriByCui + pickBestPartenerByName cu similar_text, detectare parteneri dezactivați prefix X…</div></td>
+        <td class="center">18</td>
+        <td class="right">70</td>
+        <td>1.260</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Layer de servicii partajate &amp; arhitectură cross-modul</div><div class="item-desc">Servicii partajate (clienți API, formatare, helpers), pattern-uri reutilizate consistent în toate cele 17 module…</div></td>
+        <td class="center">52</td>
+        <td class="right">70</td>
+        <td>3.640</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">CI/CD, deploy automatizat &amp; monitorizare producție</div><div class="item-desc">Pipeline build/deploy, configurare supervisor + Horizon, monitorizare workeri, health checks automate, proceduri rollback, hardening server de producție.</div></td>
+        <td class="center">30</td>
+        <td class="right">70</td>
+        <td>2.100</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Testare &amp; QA transversală + documentație tehnică</div><div class="item-desc">Testare integrată end-to-end, verificare regresii cross-modul la fiecare livrare, documentație tehnică completă și manual de utilizare.</div></td>
+        <td class="center">32</td>
+        <td class="right">70</td>
+        <td>2.240</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Orchestrare &amp; interdependențe între module</div><div class="item-desc">Modulele NU sunt insule — Achiziții, Furnizori, Stoc, WinMentor, WooCommerce și Oferte împart aceleași date și fluxuri…</div></td>
+        <td class="center">100</td>
+        <td class="right">70</td>
+        <td>7.000</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr class="subtotal-row"><td colspan="3">Subtotal — Arhitectură, Infrastructură, Securitate &amp; DevOps</td><td>28.000 €</td><td class="right">400h</td></tr>
+
+      <tr class="cat-row"><td colspan="5">1. Sincronizare WooCommerce</td></tr>
+      <tr>
+        <td><div class="item-name">WooClient (REST v3) + IntegrationConnection</div><div class="item-desc">Client HTTP complet pentru WooCommerce: get/create/update produse, categorii, comenzi, batch operations, price/stock/status updates, image sideload…</div></td>
+        <td class="center">11</td>
+        <td class="right">70</td>
+        <td>770</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Import produse + categorii (Actions + Jobs + comenzi)</div><div class="item-desc">Import paginat cu SyncRun tracking, deduplicare după woo_id apoi SKU, reutilizare placeholder, sync many-to-many categorii…</div></td>
+        <td class="center">13</td>
+        <td class="right">70</td>
+        <td>910</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Sync stoc+preț WinMentor Bridge → ERP → Woo (comanda principală)</div><div class="item-desc">Comanda de 779 linii: fetch paginat din Bridge cu filtrare clasă/gestiune și merge sub-locații, index produse/stocuri/feed-uri…</div></td>
+        <td class="center">21</td>
+        <td class="right">70</td>
+        <td>1.470</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Push direct SQL în WooCommerce (WooDirectSqlService) + flush cache + FiboSearch</div><div class="item-desc">Push preț/stoc direct în wp_postmeta + wp_wc_product_meta_lookup prin SSH/scp/mysql (a se vedea bug-urile istorice rezolvate: cache nginx, &amp;&amp; vs ;)…</div></td>
+        <td class="center">9</td>
+        <td class="right">70</td>
+        <td>630</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Joburi push preț/stoc deferred + observer + gate stoc/first-import</div><div class="item-desc">PushWinmentorPricesToWooJob (push staged cu lock pesimist, progres pe stats, finalizare condiționată + FlushWooCacheJob)…</div></td>
+        <td class="center">11</td>
+        <td class="right">70</td>
+        <td>770</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Comenzi auxiliare: sync prețuri ERP, reconciliere stoc, sync status</div><div class="item-desc">SyncErpPricesToWooCommand (dry-run/push, diff față de data-&gt;regular_price, batch), ReconcileWooStockCommand (baseline fix produse fantomă + backorders…</div></td>
+        <td class="center">8</td>
+        <td class="right">70</td>
+        <td>560</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">UI Filament sync (WooProductResource) + testare/debugging integrare end-to-end</div><div class="item-desc">Butoane resync/import în resource cu access control, afișare synced_at, plus efortul real de testare și debugging al unei integrări bidirecționale cu site…</div></td>
+        <td class="center">12</td>
+        <td class="right">70</td>
+        <td>840</td>
         <td class="right"><span class="badge badge-done">Livrat</span></td>
       </tr>
 
+      <tr class="cat-row"><td colspan="5">2. Plugin WordPress Bridge (malinco-erp-bridge)</td></tr>
       <tr>
-        <td>
-          <div class="item-name">Laravel Horizon + Redis Queue Management</div>
-          <div class="item-desc">Instalare Redis, php8.3-redis, configurare supervisor, autoscaling queues, dashboard access-controlled, snapshot metrics la 5 minute</div>
-        </td>
+        <td><div class="item-name">Schelet plugin WP + REST API + autentificare</div><div class="item-desc">Bootstrap plugin (header, constante, ABSPATH guard), înregistrare 8 rute REST în rest_api_init, funcția de auth pe header cu hash_equals…</div></td>
+        <td class="center">5</td>
+        <td class="right">70</td>
+        <td>350</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Handlere meta produs (read/write/bulk) + helper resolve</div><div class="item-desc">merp_update_product_meta, merp_bulk_update_meta (cu raport updated/failed/errors), merp_read_product_meta (cu filtru)…</div></td>
+        <td class="center">5</td>
+        <td class="right">70</td>
+        <td>350</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Endpoint self-update ZIP + cache flush + options</div><div class="item-desc">merp_self_update (validare upload, verificare MIME ZIP, WP_Filesystem + unzip_file în WP_PLUGIN_DIR, gestionare WP_Error)…</div></td>
+        <td class="center">5</td>
+        <td class="right">70</td>
+        <td>350</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Motor disponibilitate &amp; preț (recalculare centrală)</div><div class="item-desc">merp_recalculate cu arbore de decizie pe wm_stock/wm_price/supplier_price/ever_in_stock, setare regular_price, stock_status, stock_label, pricing_source…</div></td>
+        <td class="center">7</td>
+        <td class="right">70</td>
+        <td>490</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Hook-uri WP + frontend (etichete stoc, timp livrare) + CSS</div><div class="item-desc">save_post_product / updated_post_meta / added_post_meta cu trigger keys; filtre woocommerce_get_availability_text/class…</div></td>
+        <td class="center">6</td>
+        <td class="right">70</td>
+        <td>420</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Admin UI WP: panou produs + meta box furnizor + pagină setări</div><div class="item-desc">Panou disponibilitate pe woocommerce_product_options_general_product_data cu inputuri lead-time + checkbox override și salvare…</div></td>
+        <td class="center">6</td>
+        <td class="right">70</td>
+        <td>420</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Client ERP Laravel (WooPluginClient) + deploy command</div><div class="item-desc">WooPluginClient: construire baseUrl din IntegrationConnection, cheie din AppSetting criptat…</div></td>
+        <td class="center">6</td>
+        <td class="right">70</td>
+        <td>420</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Sync furnizor în meta (Job + comandă) + integrare/end-to-end</div><div class="item-desc">SyncProductSupplierMetaJob (guard placeholder/woo_id sintetic, furnizor preferat, scriere _furnizor_nume/_furnizor_sku via WooClient…</div></td>
+        <td class="center">5</td>
+        <td class="right">70</td>
+        <td>350</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+
+      <tr class="cat-row"><td colspan="5">3. Comenzi WooCommerce + Sameday</td></tr>
+      <tr>
+        <td><div class="item-name">Modele + migrații comenzi &amp; AWB</div><div class="item-desc">WooOrder (cast-uri, status labels/colors, accessors customer name/email/phone, relații items + samedayAwbs), WooOrderItem, SamedayAwb (29 coloane…</div></td>
+        <td class="center">4</td>
+        <td class="right">70</td>
+        <td>280</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Sincronizare comenzi WooCommerce</div><div class="item-desc">WooOrderSyncService (upsert cu calcul subtotal fallback, sync iteme cu safeguard anti-ștergere…</div></td>
+        <td class="center">8</td>
+        <td class="right">70</td>
+        <td>560</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Resource + View comenzi (Filament)</div><div class="item-desc">WooOrderResource: table cu search pe customer name/email prin query custom, filtre status + interval dată…</div></td>
+        <td class="center">7</td>
+        <td class="right">70</td>
+        <td>490</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Acțiuni pagina comandă</div><div class="item-desc">5 header actions: change_status (push Woo), add_note, resync, create_awb (construire URL prefill din shipping/billing + COD)…</div></td>
+        <td class="center">7</td>
+        <td class="right">70</td>
+        <td>490</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Serviciu integrare Sameday SDK</div><div class="item-desc">SamedayAwbService 1265 linii: instanțiere client SDK cu verificare clase, createAwb (recipient/company/parcels/COD/taxe/interval livrare/terț)…</div></td>
+        <td class="center">21</td>
+        <td class="right">70</td>
+        <td>1.470</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Formular &amp; Resource AWB (Filament)</div><div class="item-desc">SamedayAwbResource 819 linii: formular cascadat 3 secțiuni (~30 câmpuri) cu selecturi reactive județ→oraș, pickup→contact, serviciu→taxe/interval…</div></td>
+        <td class="center">18</td>
+        <td class="right">70</td>
+        <td>1.260</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Conexiune, testare integrare &amp; debugging</div><div class="item-desc">SamedayConnectionTester, rezolvare conexiune per-locație, testare end-to-end creare/anulare AWB pe contul real, gestionare erori SDK…</div></td>
+        <td class="center">5</td>
+        <td class="right">70</td>
+        <td>350</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+
+      <tr class="cat-row"><td colspan="5">4. Modul Achiziții (PR/PO)</td></tr>
+      <tr>
+        <td><div class="item-name">Modelare date + migratii + lifecycle modele</div><div class="item-desc">7 modele (PR, PRItem, PO, POItem, Reception, ReceptionItem, ProductPurchasePriceLog) cu ~25 migratii (FK constraints, indexuri compuse, drafts, receptii)…</div></td>
+        <td class="center">18</td>
+        <td class="right">70</td>
+        <td>1.260</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">PurchaseRequestResource + pagini PNR + flux submit</div><div class="item-desc">Resource cu form repeater produse, table cu status colorat, infolist, actiuni submit/edit_quantity/cancel_item…</div></td>
+        <td class="center">14</td>
+        <td class="right">70</td>
+        <td>980</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">PurchaseOrderResource + ViewPurchaseOrder (lifecycle complet)</div><div class="item-desc">Resource 1956 linii (form, table, infolist cu sectiuni WinMentor/factura/receptie) + ViewPurchaseOrder 1214 linii cu ~12 header actions: place, approve…</div></td>
+        <td class="center">27</td>
+        <td class="right">70</td>
+        <td>1.890</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Creare PO din necesare + alocare surse + multi-furnizor</div><div class="item-desc">CreatePurchaseOrder 1082 linii: agregare necesare pe furnizor, alocare sources_json cu allocated_qty + lockForUpdate (race condition)…</div></td>
+        <td class="center">21</td>
+        <td class="right">70</td>
+        <td>1.470</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Receptie marfa: partiala/finala + drafts + batch + discrepante pret</div><div class="item-desc">WarehouseController (receive/receiveStore/draftSave/draftDelete/receiveBatchForm/receiveBatchStore) cu lockForUpdate, receptii multiple numerotate…</div></td>
+        <td class="center">29</td>
+        <td class="right">70</td>
+        <td>2.030</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">NecesarMarfa: forecast cerere + generare necesar</div><div class="item-desc">Pagina cu algoritm propriu de calcul necesar: query stoc agregat + consum 7d/90d din daily_stock_metrics, trend 7d/30d pe baseline 90d, safety stock…</div></td>
+        <td class="center">15</td>
+        <td class="right">70</td>
+        <td>1.050</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">BuyerDashboard + UnassignedItems + widget + PDF/Excel/notificari/email</div><div class="item-desc">BuyerDashboardPage (300) si UnassignedItemsPage (208) cu agregari pe necesare submitted/partially_ordered, PendingPurchaseItemsWidget…</div></td>
+        <td class="center">15</td>
+        <td class="right">70</td>
+        <td>1.050</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+
+      <tr class="cat-row"><td colspan="5">5. Modul Ofertare B2B</td></tr>
+      <tr>
+        <td><div class="item-name">Modele + migrații + schemă date</div><div class="item-desc">3 modele (Offer cu state machine aprobare, OfferItem cu calcul linie/TVA în booted, DiscountPolicy cu specificity), 12 migrații evolutive (TVA, aprobare…</div></td>
+        <td class="center">8</td>
+        <td class="right">70</td>
+        <td>560</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Motor plafoane discount + gardă marjă</div><div class="item-desc">DiscountPolicyService cu rezolvare pe 2 trepte (fără/cu aprobare) și precedență rol/user × toate/categorie/furnizor + cache…</div></td>
+        <td class="center">11</td>
+        <td class="right">70</td>
+        <td>770</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">OfferResource — formular creare/editare ofertă</div><div class="item-desc">Formular complex (1214 linii): quick-add produse cu căutare + stoc per locație, lookup client + modal client nou cu preluare CUI din OpenAPI…</div></td>
+        <td class="center">15</td>
+        <td class="right">70</td>
+        <td>1.050</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">ViewOffer — acțiuni flux ofertă</div><div class="item-desc">Aprobare/respingere discount cu notă + notificare operator, trimitere pe email cu corp prefilat și PDF atașat, descărcare/print PDF…</div></td>
+        <td class="center">8</td>
+        <td class="right">70</td>
+        <td>560</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">PDF + sumă în litere + email + notificări</div><div class="item-desc">OfferPdf (DomPDF, cache/invalidate, vatBreakdown pe cote, logo base64), RoNumberToWords (algoritm RO lei+bani), bladuri pdf/document/mail brandate…</div></td>
+        <td class="center">9</td>
+        <td class="right">70</td>
+        <td>630</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">DiscountPolicyResource + OfferSettingsPage + expirare programată</div><div class="item-desc">Resource configurare politici (subiect/scop condiționate, plafoane, tabel cu badge-uri)…</div></td>
+        <td class="center">6</td>
+        <td class="right">70</td>
+        <td>420</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Integrare + testare end-to-end + debugging</div><div class="item-desc">Integrare cu Customer/WooProduct/Supplier/Location/User, scope per locație, control acces roluri, testare flux complet ofertă→aprobare→email→PDF…</div></td>
+        <td class="center">6</td>
+        <td class="right">70</td>
+        <td>420</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+
+      <tr class="cat-row"><td colspan="5">6. Email + AI Inteligență furnizori</td></tr>
+      <tr>
+        <td><div class="item-name">Schema DB + modele + relatii</div><div class="item-desc">5 tabele principale (email_messages cu ~20 coloane, email_entities, supplier_price_quotes, email_parsed_documents…</div></td>
+        <td class="center">6</td>
+        <td class="right">70</td>
+        <td>420</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Sincronizare IMAP (FetchEmailsJob + ImportEmailHistory)</div><div class="item-desc">Integrare Webklex/PHPIMAP RAM-safe pe ~10.6k emailuri: UID SEARCH SINCE (workaround server care crapa pe -&gt;all()), reconnect per-folder…</div></td>
+        <td class="center">13</td>
+        <td class="right">70</td>
+        <td>910</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Procesare AI email (ProcessEmailAIJob + matching produs)</div><div class="item-desc">Pipeline Claude Haiku: prompt structurat RO, parsare JSON robusta (markdown stripping)…</div></td>
+        <td class="center">12</td>
+        <td class="right">70</td>
+        <td>840</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Auto-descoperire contacte + auto-match domenii furnizori</div><div class="item-desc">DiscoverSupplierContactsCommand (3 pass-uri: supplier_id explicit, domain match, backfill contact_id chunked)…</div></td>
+        <td class="center">11</td>
+        <td class="right">70</td>
+        <td>770</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Parsare atasamente PDF/XLSX + reconciliere WinMentor</div><div class="item-desc">ParseEmailAttachmentJob: re-download din IMAP, extragere text PDF (Smalot, fallback per-pagina + metadate scanate) si XLSX (PhpSpreadsheet), parse Claude…</div></td>
+        <td class="center">20</td>
+        <td class="right">70</td>
+        <td>1.400</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Pagini Filament (Inbox, Price Intelligence, Stats)</div><div class="item-desc">EmailInboxPage cu filtre pe JSON agent_actions (tip/urgenta/needs_reply via JSON_EXTRACT), foldere prietenoase, header actions (sync, nota…</div></td>
+        <td class="center">13</td>
+        <td class="right">70</td>
+        <td>910</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Schedule, integrare + testare end-to-end</div><div class="item-desc">Wiring scheduler (FetchEmailsJob 5min, email:process-ai 30min, discover-contacts zilnic), config mail.imap (since_days, skip_folders)…</div></td>
+        <td class="center">8</td>
+        <td class="right">70</td>
+        <td>560</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+
+      <tr class="cat-row"><td colspan="5">7. Catalog Toya</td></tr>
+      <tr>
+        <td><div class="item-name">Import produse din Toya Pimcore API</div><div class="item-desc">ImportToyaProductsCommand (504 linii): integrare API bulk getPricesRo/getStocksRo + getData per produs, mapare denumiri RO/EN, dimensiuni HE/MC mm→cm…</div></td>
+        <td class="center">18</td>
+        <td class="right">70</td>
+        <td>1.260</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Sincronizare prețuri/stocuri + push WooCommerce</div><div class="item-desc">SyncToyaPricesJob (398 linii): calcul discount/adaos/TVA, bulk CASE-WHEN UPDATE, gating produse cu stoc WinMentor, push direct-SQL prețuri+stoc…</div></td>
+        <td class="center">16</td>
+        <td class="right">70</td>
+        <td>1.120</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Recategorizare AI + pagină review</div><div class="item-desc">CategoryReviewProposal model + migrație, CategoryReviewPage (307 linii: aprobă/respinge/undo/bulk + sync pivot + push categorie la Woo)…</div></td>
+        <td class="center">15</td>
+        <td class="right">70</td>
+        <td>1.050</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Matching înlocuitori Toya (AI)</div><div class="item-desc">ProposeProductSubstitutionJob (196 linii: keyword candidate search + Claude Haiku prompt, validare proposed_toya_id, recordUsage)…</div></td>
+        <td class="center">11</td>
+        <td class="right">70</td>
+        <td>770</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Generare descrieri AI + import status</div><div class="item-desc">GenerateToyaDescriptionsJob (159 linii Claude Haiku, prompt HTML description/short_description, avertizări siguranță)…</div></td>
+        <td class="center">6</td>
+        <td class="right">70</td>
+        <td>420</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Pipeline imagini Toya</div><div class="item-desc">Import imagini suplimentare în product_images, download imagini, push imagini la Woo (one-by-one + batch + published-only): 5 comenzi + 3 joburi…</div></td>
+        <td class="center">9</td>
+        <td class="right">70</td>
+        <td>630</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">PDF proposal + integrare/glue + testare</div><div class="item-desc">Template PDF toya-proposal.blade.php (517 linii), FixToyaSupplierSkuJob, blade-uri pagini Filament, access control per rol, badge-uri navigație…</div></td>
         <td class="center">10</td>
         <td class="right">70</td>
         <td>700</td>
         <td class="right"><span class="badge badge-done">Livrat</span></td>
       </tr>
 
+      <tr class="cat-row"><td colspan="5">8. WinMentor integrare PHP</td></tr>
       <tr>
-        <td>
-          <div class="item-name">Curățare automată logs + rotație daily</div>
-          <div class="item-desc">Configurare rotație zilnică loguri, comandă arhivare loguri WinMentor, curățare automată tabel sync_runs (retenție 30 zile) — previne creșterea nelimitată a bazei de date și menține performanța sistemului pe termen lung</div>
-        </td>
+        <td><div class="item-name">WinmentorBridgeClient — client HTTP + protocol bridge</div><div class="item-desc">Client cu ~40 metode: selecție firmă/lună cu cache, căutare/creare/update articole (string pozițional 19 câmpuri AddProduct), fetch paginat articole…</div></td>
+        <td class="center">41</td>
+        <td class="right">70</td>
+        <td>2.870</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">PushComenziFurnizoriService — push comenzi + recepții furnizori</div><div class="item-desc">Push PO → comenzi furnizori, push batch (multi-PO), push recepție per-recepție, creare partener nou, rezolvare SKU/UM per furnizor, build linii document…</div></td>
+        <td class="center">20</td>
+        <td class="right">70</td>
+        <td>1.400</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">SyncStockFromBridge + ReconcileWooStock — sincronizare stoc</div><div class="item-desc">Comandă mare (779 linii): fetch articole paginat, index produse/stocuri ERP, creare placeholder produse lipsă, upsert stocuri…</div></td>
+        <td class="center">21</td>
+        <td class="right">70</td>
+        <td>1.470</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Procesare intrări + match PO recepție + anomalii preț</div><div class="item-desc">ProcessWinmentorIntrari: parsare recepții/facturi, detectare anomalii preț, rezolvare furnizor, recordare SKU nematchat, update product_suppliers…</div></td>
+        <td class="center">18</td>
+        <td class="right">70</td>
+        <td>1.260</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">VanzariAzi + dispecerizare + comenzi non-CM/livrări CM</div><div class="item-desc">VanzariAziService: agregare vânzări live (facturi/avize/bonuri POS prin emulare + GetInfoBon/Ext), caching multi-nivel…</div></td>
+        <td class="center">22</td>
+        <td class="right">70</td>
+        <td>1.540</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Pagini Filament + modele + migrații</div><div class="item-desc">WinmentorVanzariPage (25k), LivrariPage, ComenziPage, CumparariPage, ReceptionQueuePage, DispecerVanzari/DePredat pages…</div></td>
+        <td class="center">18</td>
+        <td class="right">70</td>
+        <td>1.260</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+
+      <tr class="cat-row"><td colspan="5">9. MentorAPI Bridge Go propriu</td></tr>
+      <tr>
+        <td><div class="item-name">Reverse-engineering protocol COM Delphi + layer vtable/SAFEARRAY</div><div class="item-desc">Cea mai grea parte: descifrarea interfetei duale nedocumentate DocImpServer, maparea offset-urilor vtable prin ITypeInfo…</div></td>
+        <td class="center">34</td>
+        <td class="right">70</td>
+        <td>2.380</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Wrappere pentru 161 metode COM + parsing tipizat</div><div class="item-desc">Implementarea fiecarei metode COM (GetStocuri, GetVanzari, GetParteneri, GetReceptii etc.) cu helper-ele callMethodInt/String/callWithOutError…</div></td>
+        <td class="center">27</td>
+        <td class="right">70</td>
+        <td>1.890</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Layer REST API: 160+ endpoint-uri, middleware, paginare</div><div class="item-desc">Routing pentru toate cele 160+ rute, maparea fiecarui query COM la JSON, paginare, lant de 5 middleware (auth constant-time, CORS, recovery, body-limit…</div></td>
+        <td class="center">21</td>
+        <td class="right">70</td>
+        <td>1.470</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Import structurat 8 tipuri documente (JSON→INI) + validate/import/preview</div><div class="item-desc">Generatorul de pachete INI pentru comenzi furnizori, facturi intrare/iesire, comenzi client, transferuri, bonuri consum, modificari pret…</div></td>
+        <td class="center">19</td>
+        <td class="right">70</td>
+        <td>1.330</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Serviciu Windows, config, cache, auth, build cross-compile</div><div class="item-desc">Rulare ca serviciu Windows (svc), auto-generare config + API key, layer cache, build cross-compile GOOS=windows GOARCH=386…</div></td>
+        <td class="center">8</td>
+        <td class="right">70</td>
+        <td>560</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Documentatie OpenAPI/Swagger + audit/docs UI</div><div class="item-desc">Spec OpenAPI de 11.746 linii (manual/semi-manual pentru 160+ endpoint-uri), Swagger UI embedat, pagini audit/docs.</div></td>
+        <td class="center">11</td>
+        <td class="right">70</td>
+        <td>770</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Testare integrare end-to-end, debugging, hardening</div><div class="item-desc">Testare contra unei instante WinMentor reale (ruleaza interactiv pe PC), debugging crash-uri COM, validare mapari, edge-cases de campuri, stabilizare…</div></td>
+        <td class="center">15</td>
+        <td class="right">70</td>
+        <td>1.050</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+
+      <tr class="cat-row"><td colspan="5">10. Business Intelligence</td></tr>
+      <tr>
+        <td><div class="item-name">Schema BI + model + config</div><div class="item-desc">~13 migrații (bi_inventory_kpi_daily, bi_product_velocity_current, bi_inventory_alert_candidates_daily, bi_product_margin_current…</div></td>
+        <td class="center">8</td>
+        <td class="right">70</td>
+        <td>560</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Pipeline agregare KPI + Velocity + ABC</div><div class="item-desc">Comenzi compute-kpi (agregare valoare/qty/in-out stock), compute-velocity (ferestre 7/30/90 zile cu conditional SUM single-pass…</div></td>
+        <td class="center">13</td>
+        <td class="right">70</td>
+        <td>910</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Motor alerte P0/P1/P2</div><div class="item-desc">compute-alerts: praguri dinamice pe lead_days furnizor, days_left_estimate, detectare price_spike/dead_stock/out_of_stock/no_consumption cu reason flags…</div></td>
+        <td class="center">10</td>
+        <td class="right">70</td>
+        <td>700</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Marje + Reaprovizionare</div><div class="item-desc">compute-margin (rezolvare preț achiziție pe 3 nivele: price_log→preferred→fallback, normalizare TVA…</div></td>
+        <td class="center">14</td>
+        <td class="right">70</td>
+        <td>980</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Orchestrator zilnic + Watchdog self-healing + Backfill</div><div class="item-desc">compute-daily (lanț 5 pași cu propagare erori), bi:health-check (detectare zile lipsă pe 7 zile, backfill automat…</div></td>
+        <td class="center">7</td>
+        <td class="right">70</td>
+        <td>490</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Rapoarte automate AI (săptămânal/lunar/perioadă) + analiză on-demand</div><div class="item-desc">3 generatoare mari (783/858/1006 linii) cu prompt engineering Claude, gather-metrics multi-tabel, comparație cu rapoarte istorice anti-repetiție…</div></td>
+        <td class="center">29</td>
+        <td class="right">70</td>
+        <td>2.030</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Pagini Filament + widget-uri + blade</div><div class="item-desc">BiDashboardPage (tab-uri KPI/alerte/velocity/marje/breakdown furnizori, 397 + blade 477 linii), BiAnalysisPage (modal generare AI, listare/ștergere…</div></td>
+        <td class="center">18</td>
+        <td class="right">70</td>
+        <td>1.260</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+
+      <tr class="cat-row"><td colspan="5">11. Generare Conținut AI Produse</td></tr>
+      <tr>
+        <td><div class="item-name">Comenzi generare text AI (descrieri, atribute, titluri, normalizare)</div><div class="item-desc">4 comenzi cu batching Claude, prompt-engineering RO detaliat per categorie, multi-strategy JSON parsing (full + per-produs regex fallback)…</div></td>
+        <td class="center">24</td>
+        <td class="right">70</td>
+        <td>1.680</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Atribuire categorii AI</div><div class="item-desc">Construire arbore categorii recursiv pe 3 niveluri, prompt cu paths full, validare categorie returnată + fallback, reassign, insertOrIgnore…</div></td>
+        <td class="center">7</td>
+        <td class="right">70</td>
+        <td>490</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Îmbogățire din web prin EAN (Claude web_search)</div><div class="item-desc">Integrare tool web_search Claude, confidence gating, salvare titlu/descriere/atribute condiționată, mapare brand→furnizor cu upsert, dry-run diff…</div></td>
+        <td class="center">11</td>
+        <td class="right">70</td>
+        <td>770</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Pipeline imagini: căutare Bing + evaluare Claude Vision</div><div class="item-desc">Scraper Bing Images (parse m="{json}" din HTML, cookie jar, warmup sesiune, gzip), traducere RO→EN via Google Translate public…</div></td>
+        <td class="center">21</td>
+        <td class="right">70</td>
+        <td>1.470</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Populare winmentor_name din CSV cu workeri paraleli</div><div class="item-desc">Descărcare + parse CSV (header map, delimiter, sanitize), dispatch joburi în chunks, orchestrare workeri queue:work cu progress bar pe baza cozii…</div></td>
+        <td class="center">6</td>
+        <td class="right">70</td>
+        <td>420</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Logare cost AI + UI Filament (usage log + dashboard progres)</div><div class="item-desc">Model AiUsageLog cu tabel prețuri per model, calcul cost, record(); migrații (image_candidates, attributes, ai_usage_logs)…</div></td>
+        <td class="center">12</td>
+        <td class="right">70</td>
+        <td>840</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Integrare, testare end-to-end, debugging acuratețe AI</div><div class="item-desc">Testare batch-uri reale pe mii de produse, ajustare iterativă prompturi pentru a reduce halucinații, gestionare răspunsuri AI malformate/trunchiate…</div></td>
+        <td class="center">10</td>
+        <td class="right">70</td>
+        <td>700</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+
+      <tr class="cat-row"><td colspan="5">12. PWA Mobil (Recepție /wh, Inventar /inv, Hub unificat /app, Dispecerizare)</td></tr>
+      <tr>
+        <td><div class="item-name">Recepție marfă /wh — controller + logică server</div><div class="item-desc">WarehouseController 688 linii: auth + PIN (verify, lock, change), recepție parțială/finală cu numerotare atomică sub lock…</div></td>
+        <td class="center">22</td>
+        <td class="right">70</td>
+        <td>1.540</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Recepție /wh — frontend mobil (blade + JS)</div><div class="item-desc">receive.blade 1455 linii + receive-batch 1099 + orders/history/layout: UI mobil recepție cu input cantități, poziție factură, motive lipsă…</div></td>
+        <td class="center">25</td>
+        <td class="right">70</td>
+        <td>1.750</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Inventar /inv — lookup + EAN + necesar</div><div class="item-desc">InventoryController 251 linii: findProduct cu 4 nivele de matching (SKU/ean_carton/pivot/EAN association), stoc per locație, comenzi PO active…</div></td>
+        <td class="center">18</td>
+        <td class="right">70</td>
+        <td>1.260</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Dispecerizare — VanzariAziService (integrare LIVE WinMentor)</div><div class="item-desc">VanzariAziService 396 linii: agregare facturi+avize+bonuri POS live din Bridge (GetInfoBon/Ext, emulare), cache transient…</div></td>
+        <td class="center">20</td>
+        <td class="right">70</td>
+        <td>1.400</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Dispecerizare + Hub /app — frontend</div><div class="item-desc">HubController grilă icoane filtrabilă per rol, dispecer.blade + de-predat.blade + home + layout app: UI alocare pe surse, filtre tip/sursă/căutare…</div></td>
+        <td class="center">11</td>
+        <td class="right">70</td>
+        <td>770</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Infrastructură PWA + Push VAPID</div><div class="item-desc">2 service workers (network-first HTML, cache static, push handler, notificationclick cu navigare), 2 manifest…</div></td>
+        <td class="center">11</td>
+        <td class="right">70</td>
+        <td>770</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+
+      <tr class="cat-row"><td colspan="5">13. Rapoarte, Metrici &amp; pagini App</td></tr>
+      <tr>
+        <td><div class="item-name">Raport Magazin Online (pagină + blade + agregări SQL)</div><div class="item-desc">OnlineShopReport: filtre an/lună/all-time cu dispatch evenimente Livewire; stat cards venit/comenzi/medie/finalizate/procesare…</div></td>
+        <td class="center">8</td>
+        <td class="right">70</td>
+        <td>560</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Raport Mișcări Stocuri (pagină + tabel Filament + blade)</div><div class="item-desc">StockMovementsReport: stat cards (intrări/ieșiri qty+valoare, produse cu mișcare, produse cu schimbare preț)…</div></td>
+        <td class="center">9</td>
+        <td class="right">70</td>
+        <td>630</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Raport Discrepanțe SKU + Prețuri din Emailuri</div><div class="item-desc">SkuDiscrepancyReport: 3 taburi (placeholder/fără-SKU/pe-site-fără-Mentor) cu stat cards și tabel Filament filtrat pe connection scope per utilizator…</div></td>
+        <td class="center">6</td>
+        <td class="right">70</td>
+        <td>420</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">5 chart widget-uri (Chart.js + sync Livewire)</div><div class="item-desc">SalesChartWidget (bar, an/lună/zi, mod venit/comenzi, view custom cu dropdown propriu)…</div></td>
+        <td class="center">8</td>
+        <td class="right">70</td>
+        <td>560</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Access control, BaseReportPage, comanda warm cache, integrare nav</div><div class="item-desc">BaseReportPage abstract cu loadData/refresh poll; HasDynamicNavSort + EnforcesLocationScope…</div></td>
+        <td class="center">4</td>
+        <td class="right">70</td>
+        <td>280</td>
+        <td class="right"><span class="badge badge-done">Livrat</span></td>
+      </tr>
+      <tr>
+        <td><div class="item-name">Testare, debugging agregări, calibrare vizuală</div><div class="item-desc">Verificarea corectitudinii agregărilor multi-join (rollup categorii pe 3 niveluri, excludere status anulate/rambursate)…</div></td>
         <td class="center">4</td>
         <td class="right">70</td>
         <td>280</td>
         <td class="right"><span class="badge badge-done">Livrat</span></td>
       </tr>
 
-      <!-- ── 2. Sincronizare WooCommerce ── -->
-      <tr class="cat-row"><td colspan="5">2. Sincronizare WooCommerce</td></tr>
-
+      <tr class="cat-row"><td colspan="5">14. Furnizori &amp; Date de Bază (Master Data)</td></tr>
       <tr>
-        <td>
-          <div class="item-name">Sync produse, stocuri, prețuri, categorii</div>
-          <div class="item-desc">WooProductResource, WooCategoryResource, ProductStock, SyncRun, IntegrationConnection decuplată de locații; logică first-import și gate stoc</div>
-        </td>
-        <td class="center">40</td>
+        <td><div class="item-name">Modul Furnizori + motor asociere produs-furnizor</div><div class="item-desc">SupplierResource (1036 linii) cu RelationManagers (Contacts, Emails, Feeds, Products), trepte de preț, plafoane PO…</div></td>
+        <td class="center">62</td>
         <td class="right">70</td>
-        <td>2.800</td>
+        <td>4.340</td>
         <td class="right"><span class="badge badge-done">Livrat</span></td>
       </tr>
-
       <tr>
-        <td>
-          <div class="item-name">Plugin WordPress malinco-erp-bridge</div>
-          <div class="item-desc">Plugin custom PHP (v1.1.0), autentificare X-ERP-Api-Key, 6 endpoint-uri REST, self-update prin ZIP, deploy artisan <code>woo:deploy-plugin</code>, sync meta furnizori</div>
-        </td>
-        <td class="center">20</td>
+        <td><div class="item-name">Date de bază Clienți + lookup firmă din CUI (ANAF/OpenAPI)</div><div class="item-desc">CustomerResource, OpenApiCompanyLookupService — normalizare CUI + preluare automată date firmă (denumire, reg…</div></td>
+        <td class="center">21</td>
         <td class="right">70</td>
-        <td>1.400</td>
+        <td>1.470</td>
         <td class="right"><span class="badge badge-done">Livrat</span></td>
       </tr>
-
       <tr>
-        <td>
-          <div class="item-name">WooProductResource — îmbunătățiri UI/UX</div>
-          <div class="item-desc">Slug redenumit /produse, redirect 301, buton coș icon-only, search global cu badge (nepublicat), toggle status cu verificare răspuns WooCommerce</div>
-        </td>
-        <td class="center">8</td>
+        <td><div class="item-name">Asociere EAN scanat la produs (auto-detecție + aprobare)</div><div class="item-desc">EanAssociationRequest + Resource + logică InventoryController: flux cerere/aprobare la scanarea unui cod necunoscut în depozit</div></td>
+        <td class="center">12</td>
         <td class="right">70</td>
-        <td>560</td>
+        <td>840</td>
         <td class="right"><span class="badge badge-done">Livrat</span></td>
       </tr>
-
-      <!-- ── 3. Comenzi WooCommerce ── -->
-      <tr class="cat-row"><td colspan="5">3. Comenzi WooCommerce &amp; Livrări</td></tr>
-
       <tr>
-        <td>
-          <div class="item-name">Modul WooOrderResource complet</div>
-          <div class="item-desc">Sync local WooOrder + WooOrderItem, ViewWooOrder cu header actions (schimbă status, notă, resync), grup "Comenzi", integrare AWB</div>
-        </td>
-        <td class="center">20</td>
-        <td class="right">70</td>
-        <td>1.400</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
-      <tr>
-        <td>
-          <div class="item-name">Integrare Sameday Courier (AWB-uri)</div>
-          <div class="item-desc">SamedayAwb model, creare AWB direct din comandă, tracking status, SamedayAwbResource în panel</div>
-        </td>
-        <td class="center">15</td>
-        <td class="right">70</td>
-        <td>1.050</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
-      <!-- ── 4. Modul Achiziții ── -->
-      <tr class="cat-row"><td colspan="5">4. Modul Achiziții (Purchase Orders)</td></tr>
-
-      <tr>
-        <td>
-          <div class="item-name">PurchaseRequest — flow complet</div>
-          <div class="item-desc">Model PNR-Ymd-XXXX, statusuri draft→submitted→partially_ordered/fully_ordered/cancelled, UnassignedItemsPage, BuyerDashboard, index compound pe items</div>
-        </td>
-        <td class="center">30</td>
-        <td class="right">70</td>
-        <td>2.100</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
-      <tr>
-        <td>
-          <div class="item-name">PurchaseOrder — flow complet cu aprobare</div>
-          <div class="item-desc">Model PO-Ymd-XXXX, statusuri draft→pending_approval→approved/rejected→sent/received/cancelled, needsApproval() per plafon furnizor + cantitate max, race condition fix cu DB::transaction + lockForUpdate, sequence MAX+1</div>
-        </td>
-        <td class="center">35</td>
-        <td class="right">70</td>
-        <td>2.450</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
-      <tr>
-        <td>
-          <div class="item-name">PO — Recepție marfă cu discrepanțe</div>
-          <div class="item-desc">Input cantități recepționate (default 0), salvare motiv discrepanță per item, triunghi obs pe step Recepționat, coloane Preț PO / Preț WM / Total linie / Δ%, butoane email/WhatsApp gri după trimitere</div>
-        </td>
-        <td class="center">20</td>
-        <td class="right">70</td>
-        <td>1.400</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
-      <tr>
-        <td>
-          <div class="item-name">PO — PDF export + Email comunicare furnizor</div>
-          <div class="item-desc">Template blade dompdf, buton "Descarcă PDF", secțiune emailuri ±30/+60 zile pe ViewPurchaseOrder și ViewPurchaseRequest</div>
-        </td>
+        <td><div class="item-name">Curs valutar BNR (EUR) + serii documente</div><div class="item-desc">BnrExchangeRateService (preluare/cache curs BNR pentru furnizori EUR), DocumentSeriesSettingsPage, generare serii OFF/PNR/PO</div></td>
         <td class="center">12</td>
         <td class="right">70</td>
         <td>840</td>
         <td class="right"><span class="badge badge-done">Livrat</span></td>
       </tr>
 
+      <tr class="cat-row"><td colspan="5">15. Integrări Specifice per Furnizor</td></tr>
       <tr>
-        <td>
-          <div class="item-name">PO — Notificări (DB + Email)</div>
-          <div class="item-desc">4 clase notificări: submit→buyers, pending_approval→manageri, rejected→buyer, recepție parțială→consultanți; layout email brand Malinco (header roșu, fundal bej)</div>
-        </td>
-        <td class="center">10</td>
+        <td><div class="item-name">Integrări Fischer, Temad, Cemacon</div><div class="item-desc">Trei integrări custom one-off, distincte de Toya: parsing feed propriu per furnizor, mapare coduri și prețuri…</div></td>
+        <td class="center">49</td>
         <td class="right">70</td>
-        <td>700</td>
+        <td>3.430</td>
         <td class="right"><span class="badge badge-done">Livrat</span></td>
       </tr>
 
+      <tr class="cat-row"><td colspan="5">16. Sincronizare Real-Time &amp; Monitorizare</td></tr>
       <tr>
-        <td>
-          <div class="item-name">Pagina Necesar Marfă — deficit în timp real</div>
-          <div class="item-desc">NecesarMarfa — vizualizare centralizată a deficitului de stoc per produs (cantitate comandată − stoc ERP), grupare per furnizor, creare rapidă PurchaseRequest din deficit, filtrare per locație</div>
-        </td>
-        <td class="center">10</td>
+        <td><div class="item-name">Webhook-uri WooCommerce în timp real</div><div class="item-desc">WooWebhookController (271 linii) — sincronizare push live (HMAC), produse + comenzi actualizate instant, distinct de sync-ul programat</div></td>
+        <td class="center">16</td>
         <td class="right">70</td>
-        <td>700</td>
+        <td>1.120</td>
         <td class="right"><span class="badge badge-done">Livrat</span></td>
       </tr>
-
       <tr>
-        <td>
-          <div class="item-name">Creare Necesar automat din comandă WooCommerce</div>
-          <div class="item-desc">Buton "Creare Necesar" pe ViewWooOrder, calculează deficit (cantitate comandată − stoc ERP), setează furnizor preferat, creează PurchaseRequest cu source_type='woo_order'</div>
-        </td>
-        <td class="center">8</td>
+        <td><div class="item-name">Monitorizare modificări articole WinMentor + anomalii preț</div><div class="item-desc">DetectWinmentorArticleChanges — detecție SKU/denumire schimbate în WinMentor + sincronizare ERP/Woo, detecție anomalii preț achiziție</div></td>
+        <td class="center">21</td>
         <td class="right">70</td>
-        <td>560</td>
+        <td>1.470</td>
         <td class="right"><span class="badge badge-done">Livrat</span></td>
       </tr>
-
-      <!-- ── 5. Rapoarte & Metrici ── -->
-      <tr class="cat-row"><td colspan="5">5. Rapoarte &amp; Metrici</td></tr>
-
-      <tr>
-        <td>
-          <div class="item-name">Rapoarte cu grafice interactive</div>
-          <div class="item-desc">SkuDiscrepancyReport, StockMovementsReport, StockMovementChartWidget, PriceMovementChartWidget, toggle qty/valoare, stat cards, access control per rol</div>
-        </td>
-        <td class="center">30</td>
-        <td class="right">70</td>
-        <td>2.100</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
-      <tr>
-        <td>
-          <div class="item-name">Daily stock metrics — snapshot orar + backfill</div>
-          <div class="item-desc">Model DailyStockMetric, comandă snapshot orar (L-S 07:00–17:00), snapshot dedicat la 17:30, backfill date istorice. Aceste date alimentează graficele de evoluție stoc și sunt baza pentru rapoartele BI — fără ele, graficele ar fi goale</div>
-        </td>
-        <td class="center">8</td>
-        <td class="right">70</td>
-        <td>560</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
-      <!-- ── 6. Oferte & Clienți ── -->
-      <tr class="cat-row"><td colspan="5">6. Oferte &amp; Clienți</td></tr>
-
-      <tr>
-        <td>
-          <div class="item-name">Modul Oferte + Clienți</div>
-          <div class="item-desc">Offer, OfferItem, Customer, CustomerDeliveryAddress, OfferResource, CustomerResource în App panel</div>
-        </td>
-        <td class="center">20</td>
-        <td class="right">70</td>
-        <td>1.400</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
-      <!-- ── 7. Modul Email + AI ── -->
-      <tr class="cat-row"><td colspan="5">7. Modul Email + Inteligență Artificială Comunicări</td></tr>
-
-      <tr>
-        <td>
-          <div class="item-name">Import IMAP + procesare AI emailuri</div>
-          <div class="item-desc">10.651 emailuri importate (INBOX 9426 + Sent 1175), EmailMessage model, FetchEmailsJob (SINCE-based, nu SEARCH ALL), ProcessEmailAIJob cu model AI, EmailEntity, SupplierPriceQuote</div>
-        </td>
-        <td class="center">30</td>
-        <td class="right">70</td>
-        <td>2.100</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
-      <tr>
-        <td>
-          <div class="item-name">Descoperire automată contacte furnizori</div>
-          <div class="item-desc">SupplierContact (source: manual/email_discovery/domain_match), AutoMatchSupplierDomainsCommand cu analiză AI, 95 contacte auto-descoperite, 17 furnizori cu email setat</div>
-        </td>
-        <td class="center">15</td>
-        <td class="right">70</td>
-        <td>1.050</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
-      <tr>
-        <td>
-          <div class="item-name">Price Intelligence — comparație prețuri email vs catalog</div>
-          <div class="item-desc">SupplierPriceIntelligencePage: prețuri extrase automat din emailuri furnizori, comparate cu prețul curent din catalog, calcul Δ% (mai ieftin/mai scump), filtru per furnizor/produs — instrument de negociere și monitorizare piață</div>
-        </td>
-        <td class="center">8</td>
-        <td class="right">70</td>
-        <td>560</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
-      <tr>
-        <td>
-          <div class="item-name">Pagini admin Email: Inbox + Stats</div>
-          <div class="item-desc">EmailInboxPage + EmailCommunicationStatsPage, super_admin only, statistici 2.760 emailuri asociate la 23 furnizori</div>
-        </td>
-        <td class="center">10</td>
-        <td class="right">70</td>
-        <td>700</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
-      <!-- ── 8. Aplicație Mobilă Recepție ── -->
-      <tr class="cat-row"><td colspan="5">8. Aplicație Mobilă Recepție Cantitativă</td></tr>
-
-      <tr>
-        <td>
-          <div class="item-name">Aplicație mobilă recepție marfă (/wh)</div>
-          <div class="item-desc">Interfață optimizată mobil (manifest, service worker, iconiță home screen), autentificare cu PIN per utilizator, listă comenzi de recepționat, recepție individuală și batch, istoricul recepțiilor cu detalii per comandă</div>
-        </td>
-        <td class="center">30</td>
-        <td class="right">70</td>
-        <td>2.100</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
-      <tr>
-        <td>
-          <div class="item-name">Notificări push + integrare PurchaseOrder</div>
-          <div class="item-desc">Abonare/dezabonare notificări push (VAPID), notificare automată la PO aprobat, schimbare PIN, sincronizare cantități recepționate cu modulul Achiziții</div>
-        </td>
-        <td class="center">12</td>
-        <td class="right">70</td>
-        <td>840</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
-      <!-- ── 10. Modul Toya ── -->
-      <tr class="cat-row"><td colspan="5">10. Modul Toya (Catalog Produse Furnizor)</td></tr>
-
-      <tr>
-        <td>
-          <div class="item-name">Recategorizare produse Toya cu propuneri AI</div>
-          <div class="item-desc">Sistem complet de recategorizare: asignare automată categorie WooCommerce per produs prin analiză AI în batch-uri, import propuneri din CSV, pagină CategoryReviewPage (aprobare/respingere per propunere, bulk actions, filtre), push categorie finală în WooCommerce</div>
-        </td>
-        <td class="center">25</td>
-        <td class="right">70</td>
-        <td>1.750</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
-      <tr>
-        <td>
-          <div class="item-name">Import catalog Toya + push WooCommerce</div>
-          <div class="item-desc">ToyaImportPage, 12.533 produse publicate pe WooCommerce, suport --min-id/--max-id pentru paralelizare, ProductSubstitutionMatchingPage</div>
-        </td>
-        <td class="center">25</td>
-        <td class="right">70</td>
-        <td>1.750</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
-      <tr>
-        <td>
-          <div class="item-name">Push imagini Toya + sincronizare prețuri</div>
-          <div class="item-desc">PushToyaImagesSyncCommand cu suport --offset (paralelizare), SyncToyaPricesJob zilnic 07:00, AlertPriceChangesCommand, fix WooClient 503 fără retry, sleep(5) după FAIL</div>
-        </td>
-        <td class="center">25</td>
-        <td class="right">70</td>
-        <td>1.750</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
-      <!-- ── 9. WinMentor Bridge ── -->
-      <tr class="cat-row"><td colspan="5">11. Integrare WinMentor Bridge</td></tr>
-
-      <tr>
-        <td>
-          <div class="item-name">WinmentorBridgeClient + pagină log admin</div>
-          <div class="item-desc">Client HTTP complet (WinmentorBridgeClient), logging cu prefix [WinMentor Bridge], pagina WinmentorBridgeLogPage în Admin panel, IntegrationConnection ID=5</div>
-        </td>
-        <td class="center">20</td>
-        <td class="right">70</td>
-        <td>1.400</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
-      <!-- ── 12. Rapoarte WinMentor ── -->
-      <tr class="cat-row"><td colspan="5">12. Rapoarte WinMentor (Vânzări &amp; Cumpărări)</td></tr>
-
-      <tr>
-        <td>
-          <div class="item-name">Pagini Vânzări, Cumpărări, Oferte WinMentor</div>
-          <div class="item-desc">Rapoarte interactive cu filtre dată: WinmentorVanzariPage + detaliu per document, WinmentorCumparariPage + detaliu, WinmentorOferetePage, produse noi din WinMentor (NewWinmentorProducts), coadă recepție WinMentor (WinmentorReceptionQueuePage)</div>
-        </td>
-        <td class="center">20</td>
-        <td class="right">70</td>
-        <td>1.400</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
-      <!-- ── 13. Modul BI ── -->
-      <tr class="cat-row"><td colspan="5">13. Modul Business Intelligence (BI)</td></tr>
-
-      <tr>
-        <td>
-          <div class="item-name">Dashboard BI — KPI, Velocity, Alerte stoc</div>
-          <div class="item-desc">BiDashboardPage cu KPIs de performanță, clasificare ABC a produselor (A=vânzători rapizi, B=medii, C=lente), velocity (viteza de rotație a stocului), sistem de alerte pe 3 niveluri de urgență (P0/P1/P2) pentru stoc critic, calcul marjă per produs și categorie, propuneri de reaprovizionare bazate pe consum istoric</div>
-        </td>
-        <td class="center">30</td>
-        <td class="right">70</td>
-        <td>2.100</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
-      <tr>
-        <td>
-          <div class="item-name">Rapoarte automate săptămânale, lunare, pe perioadă</div>
-          <div class="item-desc">Trei generatoare de rapoarte (săptămânal, lunar, pe perioadă personalizată) — fiecare cu logică proprie de agregare, comparații față de perioada anterioară, evoluție vânzări/stoc/marjă, trimise automat pe email fără intervenție manuală. BiAnalysisPage pentru rapoarte la cerere, BiReplenishmentPage cu propuneri cantitative de reaprovizionare per produs</div>
-        </td>
-        <td class="center">35</td>
-        <td class="right">70</td>
-        <td>2.450</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
-      <!-- ── 14. Conținut AI Produse ── -->
-      <tr class="cat-row"><td colspan="5">14. Generare Conținut AI pentru Produse</td></tr>
-
-      <tr>
-        <td>
-          <div class="item-name">Descrieri, atribute și titluri generate automat</div>
-          <div class="item-desc">7 comenzi dedicate: generare descrieri SEO, generare atribute structurate (greutate, dimensiuni, material, culoare), reformatare titluri după nomenclatura standard a companiei, normalizare nume produse, îmbogățire date din surse web, evaluare și scoring calitate conținut existent — procesate în batch pe întregul catalog</div>
-        </td>
-        <td class="center">28</td>
-        <td class="right">70</td>
-        <td>1.960</td>
-        <td class="right"><span class="badge badge-done">Livrat</span></td>
-      </tr>
-
     </tbody>
   </table>
 
-  <!-- TOTALS -->
   <div class="totals">
     <div class="totals-box">
-      <div class="totals-row">
-        <span class="label">Total ore lucrate</span>
-        <span class="value">582 ore</span>
-      </div>
-      <div class="totals-row">
-        <span class="label">Subtotal (582 × 70 EUR)</span>
-        <span class="value">40.740 EUR</span>
-      </div>
-      <div class="totals-row">
-        <span class="label">Total fără TVA</span>
-        <span class="value">40.740 EUR</span>
-      </div>
-      <div class="totals-row">
-        <span class="label">TVA 21%</span>
-        <span class="value">8.555,40 EUR</span>
-      </div>
-      <div class="totals-row grand">
-        <span class="label">TOTAL CU TVA</span>
-        <span class="value">49.295,40 EUR</span>
-      </div>
+      <div class="totals-row"><span class="label">Fundație obligatorie (400h)</span><span class="value">28.000 EUR</span></div>
+      <div class="totals-row"><span class="label">Total ore lucrate</span><span class="value">1774 ore</span></div>
+      <div class="totals-row"><span class="label">Total platformă (fără TVA)</span><span class="value">124.180 EUR</span></div>
+      <div class="totals-row"><span class="label">TVA 21%</span><span class="value">26.077,80 EUR</span></div>
+      <div class="totals-row grand"><span class="label">TOTAL CU TVA</span><span class="value">150.257,80 EUR</span></div>
     </div>
   </div>
 
-  <!-- NOTE -->
   <div class="note">
     <strong>Note:</strong>
     <ul style="margin-top:6px; padding-left:18px;">
-      <li>Tariful de <strong>70 EUR/oră</strong> reflectă rata pentru <strong>senior full-stack development</strong> (PHP/Laravel/Filament + JS + integrări AI + DevOps).</li>
-      <li>Estimările de ore includ: analiză, implementare, testare, debug și documentație tehnică.</li>
-      <li>Prețurile sunt exprimate în EUR. TVA 21% este inclusă în totalul final.</li>
-      <li>Devizul acoperă exclusiv lucrările de <strong>dezvoltare software custom</strong> — nu include hosting, licențe software terțe sau costuri API externe (Sameday etc.).</li>
+      <li>Tariful de <strong>70 EUR/oră</strong> reflectă rata pentru senior full-stack development (PHP/Laravel/Filament + Go + integrări AI + DevOps).</li>
+      <li><strong>Fundația de arhitectură este obligatorie</strong> — fără ea niciun modul nu poate funcționa (panel-uri, multi-tenant, autentificare, permisiuni, cozi, orchestrarea fluxurilor între module).</li>
+      <li><strong>Platforma este un sistem integrat</strong> și se livrează complet. Modulele partajează date și fluxuri și nu se vând à la carte; defalcarea de mai sus arată distribuția efortului de dezvoltare, nu pachete independente.</li>
+      <li>Estimările de ore includ analiză, implementare, testare, debugging și documentație, la efort real de livrare.</li>
+      <li>Devizul reflectă valoarea de dezvoltare a platformei. Găzduirea, suportul și mentenanța sunt acoperite de oferta comercială (abonament) — vezi oferta separată.</li>
     </ul>
   </div>
 
-  <!-- FOOTER -->
   <div class="footer">
-    <strong>ERP Malinco</strong> &nbsp;·&nbsp; Generat automat pe baza modulelor implementate &nbsp;·&nbsp; 21 Aprilie 2026
+    <strong>ERP Malinco</strong> &nbsp;·&nbsp; Deviz pe baza codului sursă real &nbsp;·&nbsp; 22 Iunie 2026
   </div>
 
 </div>
-
 </body>
 </html>

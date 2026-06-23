@@ -249,7 +249,7 @@ type partnerRequest struct {
 	CodExtern             string `json:"codExtern"`
 	SimbolAutoJudetLivr   string `json:"judetLivrare"`
 	SimbolAutoJudetSediu  string `json:"judetSediu"`
-	FlagPF                string `json:"flagPF"`
+	FlagPF                string `json:"flagPF"` // "PF" = persoană fizică; gol = juridică (confirmat live 2026-06-23). NU "PJ"/"D".
 	ScadentaImplicita     string `json:"scadentaImplicita"`
 	SimbolTipContabil     string `json:"simbolTipContabil"`
 	FlagProducator        string `json:"flagProducator"`

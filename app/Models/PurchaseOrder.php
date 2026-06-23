@@ -9,7 +9,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PurchaseOrder extends Model
 {
+    use \App\Models\Concerns\Auditable;
     use HasStatusEnum;
+
+    /** Câmpuri tehnice de sincronizare WinMentor — excluse din audit (zgomot, modificate automat). */
+    protected array $auditExcept = [
+        'winmentor_sync_status', 'winmentor_sync_error', 'winmentor_order_nr', 'winmentor_synced_at',
+        'winmentor_receptie_nr', 'winmentor_receptie_nrs', 'winmentor_receptie_date',
+        'winmentor_receptie_score', 'winmentor_receptie_matched_at',
+    ];
+
     public const WINMENTOR_PENDING = 'pending';
     public const WINMENTOR_SYNCED  = 'synced';
     public const WINMENTOR_FAILED  = 'failed';
@@ -106,11 +115,10 @@ class PurchaseOrder extends Model
             }
 
             if ($record->wasChanged('status') && $record->status === self::STATUS_SENT) {
-                if (! $record->winmentor_sync_status) {
-                    $record->winmentor_sync_status = self::WINMENTOR_PENDING;
-                    $record->saveQuietly();
-                    \App\Jobs\PushComenziFurnizoriToWinmentorJob::dispatch($record->id)->afterCommit();
-                }
+                // NU împingem la WinMentor la trimiterea comenzii: nu există încă nimic
+                // recepționat (received_quantity = 0), iar comanda furnizori în WinMentor
+                // se creează din recepție (PushReceptionToWinmentorJob). Push-ul pe SENT
+                // pica mereu cu „Niciun produs cu cantitate recepționată > 0".
 
                 $supplier = $record->supplier?->name ?? 'Furnizor necunoscut';
                 \App\Jobs\SendWhPushNotificationJob::dispatch(

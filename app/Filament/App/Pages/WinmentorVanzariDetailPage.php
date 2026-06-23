@@ -16,6 +16,13 @@ class WinmentorVanzariDetailPage extends Page
     public int    $an   = 0;
     public int    $luna = 0;
 
+    /**
+     * Implicit true: sare peste apelurile live Bridge/COM (încasări, lookup SKU) ca pagina
+     * să se încarce instant (COM-ul e single-threaded → se bloca sub contenție). Statusul de
+     * plată se vede pe fișa clientului. Pune false explicit doar dacă chiar vrei încasările live.
+     */
+    public bool $skipBridge = true;
+
     protected $queryString = ['nr', 'an', 'luna'];
 
     public static function canAccess(): bool
@@ -26,6 +33,30 @@ class WinmentorVanzariDetailPage extends Page
     public function getTitle(): string
     {
         return $this->nr ? "Document #{$this->nr}" : 'Document Vânzare';
+    }
+
+    /**
+     * Comanda WooCommerce asociată (determinist: nr. comandă din observații, ex. "#156627").
+     * Returnează ['number','url'] sau null.
+     */
+    public function getLinkedOrder(): ?array
+    {
+        $doc = $this->getDocument();
+        if (! $doc || empty($doc->observatii)) {
+            return null;
+        }
+        if (! preg_match('/#(\d+)/', (string) $doc->observatii, $m)) {
+            return null;
+        }
+        $order = \App\Models\WooOrder::where('number', $m[1])->first();
+        if (! $order) {
+            return null;
+        }
+
+        return [
+            'number' => $m[1],
+            'url'    => \App\Filament\App\Resources\WooOrderResource::getUrl('view', ['record' => $order->id]),
+        ];
     }
 
     public function getDocument(): ?object
@@ -115,8 +146,8 @@ class WinmentorVanzariDetailPage extends Page
             ? sprintf('%02d.%02d.%d', $row->zi, $row->luna, $row->an)
             : sprintf('%02d.%d', $row->luna, $row->an);
 
-        // Încasări legate de acest document
-        $row->incasari = $this->getIncasari($row->nr_factura, $row->serie_document);
+        // Încasări legate de acest document (apel Bridge — sărit la print)
+        $row->incasari = $this->skipBridge ? [] : $this->getIncasari($row->nr_factura, $row->serie_document);
 
         // is_cash din încasări (BF/CH = cash)
         if ($row->tip_doc !== 'Bon casă') {
@@ -216,7 +247,7 @@ class WinmentorVanzariDetailPage extends Page
             ->values();
 
         $bridgeNames = [];
-        if ($unknownSkus->isNotEmpty() && $unknownSkus->count() <= 10) {
+        if (! $this->skipBridge && $unknownSkus->isNotEmpty() && $unknownSkus->count() <= 10) {
             try {
                 $bridge = app(WinmentorBridgeClient::class);
                 foreach ($unknownSkus as $sku) {

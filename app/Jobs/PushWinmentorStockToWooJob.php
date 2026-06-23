@@ -39,6 +39,7 @@ class PushWinmentorStockToWooJob implements ShouldQueue
         }
 
         $batch = [];
+        $shouldFlush = false;
         foreach ($this->updates as $wooId => $data) {
             $batch[] = [
                 'id' => (int) $wooId,
@@ -47,6 +48,12 @@ class PushWinmentorStockToWooJob implements ShouldQueue
                 'manage_stock' => ($data['manage_stock'] ?? false) === true || ($data['manage_stock'] ?? '') === 'yes',
                 'backorders' => $data['backorders'] ?? 'no',
             ];
+
+            // Flush cache nginx doar dacă cel puțin un produs și-a schimbat disponibilitatea
+            // (status). Modificările doar de cantitate nu cer flush — coșul citește _stock live.
+            if (($data['flush'] ?? true) === true) {
+                $shouldFlush = true;
+            }
         }
 
         try {
@@ -59,8 +66,10 @@ class PushWinmentorStockToWooJob implements ShouldQueue
                 'failed' => $result['failed'],
             ]);
 
-            if ($result['updated'] > 0) {
-                // Delay mic + ShouldBeUnique: batch-urile multiple → un singur flush
+            if ($result['updated'] > 0 && $shouldFlush) {
+                // Delay mic + ShouldBeUnique: batch-urile multiple → un singur flush.
+                // Doar la schimbare de disponibilitate (status), nu la fiecare modificare
+                // de cantitate — altfel cache-ul nginx s-ar goli aproape la fiecare sync.
                 FlushWooCacheJob::dispatch()->onQueue('default')->delay(now()->addSeconds(10));
             }
 

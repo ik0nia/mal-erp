@@ -156,6 +156,12 @@ class SyncStockFromBridgeCommand extends Command
             // Snapshot zilnic — colectat din datele Bridge pentru daily_stock_metrics
             $dailySnapshots = [];
 
+            // Cereri de asociere EAN deschise (pending) — se auto-aprobă când sync-ul
+            // detectează că EAN-ul cerut a fost deja schimbat în WinMentor. Cheie: "productId:ean".
+            $pendingEanRequests = \App\Models\EanAssociationRequest::where('status', \App\Models\EanAssociationRequest::STATUS_PENDING)
+                ->get()
+                ->keyBy(fn ($r) => $r->woo_product_id . ':' . $r->ean);
+
             foreach ($items as $item) {
                 $sku     = $item['codExtern'] ?? null;
                 $product = $products->get($sku);
@@ -196,15 +202,12 @@ class SyncStockFromBridgeCommand extends Command
                                     }
                                 }
 
-                                // Creăm EAN request ca evidență
-                                \App\Models\EanAssociationRequest::create([
-                                    'ean'            => $sku,
-                                    'woo_product_id' => $existingByName->id,
-                                    'requested_by'   => 1,
-                                    'status'         => \App\Models\EanAssociationRequest::STATUS_APPROVED,
-                                    'processed_at'   => now(),
-                                    'notes'          => "Auto-aplicat la sync stoc: {$oldSku} → {$sku}",
-                                ]);
+                                // Evidența rămâne doar în logul de sync — NU mai creăm
+                                // EanAssociationRequest (aglomera tabelul de cereri cu mii de
+                                // log-uri auto; tabelul e doar pentru fluxul manual de scanare).
+                                Log::channel('winmentor_sync')->info(
+                                    "[BridgeStockSync] EAN schimbat automat: \"{$existingByName->name}\" {$oldSku} → {$sku}"
+                                );
 
                                 $this->eanRenames++;
                                 $this->info("  EAN schimbat automat: {$existingByName->name} ({$oldSku} → {$sku})");
@@ -236,6 +239,26 @@ class SyncStockFromBridgeCommand extends Command
                 $stats['matched']++;
 
                 afterMatch:
+
+                // Auto-aprobare cerere asociere EAN: dacă există o cerere pending pentru acest
+                // produs cu EAN-ul cerut și EAN-ul a fost deja schimbat în WinMentor (= a venit
+                // pe item-ul curent), o marcăm aprobată automat. Nu mai e nevoie de aprobare manuală.
+                if (! $dryRun && $sku) {
+                    $reqKey = $product->id . ':' . $sku;
+                    if ($pendingReq = $pendingEanRequests->get($reqKey)) {
+                        $pendingReq->update([
+                            'status'       => \App\Models\EanAssociationRequest::STATUS_APPROVED,
+                            'processed_by' => 1,
+                            'processed_at' => now(),
+                            'notes'        => trim(($pendingReq->notes ? $pendingReq->notes . "\n" : '')
+                                . 'Auto-aprobat: schimbarea EAN detectată în WinMentor la sync stoc.'),
+                        ]);
+                        $pendingEanRequests->forget($reqKey);
+                        Log::channel('winmentor_sync')->info(
+                            "[BridgeStockSync] Cerere asociere EAN auto-aprobată: \"{$product->name}\" → {$sku}"
+                        );
+                    }
+                }
 
                 // Populăm winmentor_name dacă lipsește (pentru match viitor la schimbare EAN)
                 $bridgeName = trim($item['denumire'] ?? '');
@@ -301,20 +324,49 @@ class SyncStockFromBridgeCommand extends Command
                         $newStatus = 'outofstock';
                     }
 
-                    if ((string) ($product->stock_status ?? '') !== $newStatus) {
+                    $statusChanged = (string) ($product->stock_status ?? '') !== $newStatus;
+                    if ($statusChanged) {
                         $stockStatusUpdates[$product->id] = $newStatus;
                     }
 
-                    // Push stoc la WooCommerce când se schimbă statusul
-                    if ((string) ($product->stock_status ?? '') !== $newStatus) {
-                        foreach ($wooConnections as $wooConn) {
-                            if ($product->woo_id && ($product->status ?? '') === 'publish') {
-                                $siteStocks[$wooConn->id][$product->woo_id] = [
-                                    'manage_stock'   => true,
-                                    'stock_quantity' => max(0, (int) $newQty),
-                                    'backorders'     => $newStatus === 'onbackorder' ? 'notify' : 'no',
-                                ];
-                            }
+                    // Cantitatea pe care WooCommerce o stochează e ÎNTREAGĂ; un stoc
+                    // sub-unitar (ex. 0.46 kg) ar deveni 0 buc pe site. De aceea statusul
+                    // de pe SITE urmează cantitatea întreagă — altfel ar fi instock + 0 buc
+                    // = coș blocat (fantomă). ERP păstrează statusul fin (din WinMentor).
+                    $siteQty = max(0, (int) $newQty);
+                    $siteStatus = $siteQty > 0
+                        ? 'instock'
+                        : (isset($productIdsWithActiveFeed[$product->id]) ? 'onbackorder' : 'outofstock');
+                    $oldSiteQty = max(0, (int) $oldQty);
+                    $siteStatusChanged = ($oldSiteQty > 0) !== ($siteQty > 0);
+
+                    // Push stoc la WooCommerce ori de câte ori se schimbă cantitatea (nu doar
+                    // statusul). Site-ul gestionează stocul (manage_stock=yes) cu cantitatea
+                    // REALĂ din ERP → WooCommerce blochează comenzile peste stoc la coș/checkout.
+                    //
+                    // backorders:
+                    //   - produse cu feed furnizor activ → 'notify' = clientul poate comanda peste
+                    //     stoc, iar diferența apare clar ca „precomandă / pe bază de comandă";
+                    //   - produse fără feed → 'no' = nu se poate comanda mai mult decât avem.
+                    //
+                    // Fix bug-uri istorice:
+                    //   1) push-ul nu trimitea 'stock_status' → job-ul default-a pe 'instock',
+                    //      deci produse epuizate ajungeau instock+0buc = coș blocat (fantomă);
+                    //   2) cantitatea se trimitea doar la schimbare de status → _stock pe site
+                    //      driftează la 0 prin comenzi online și produsul rămânea blocat.
+                    //
+                    // Flush cache nginx DOAR la schimbare de disponibilitate (status), nu la
+                    // fiecare modificare de cantitate (altfel cache-ul s-ar goli mereu, iar
+                    // enforcement-ul la coș citește oricum _stock live din DB).
+                    foreach ($wooConnections as $wooConn) {
+                        if ($product->woo_id && ($product->status ?? '') === 'publish') {
+                            $siteStocks[$wooConn->id][$product->woo_id] = [
+                                'manage_stock'   => true,
+                                'stock_quantity' => $siteQty,
+                                'stock_status'   => $siteStatus,
+                                'backorders'     => isset($productIdsWithActiveFeed[$product->id]) ? 'notify' : 'no',
+                                'flush'          => $statusChanged || $siteStatusChanged,
+                            ];
                         }
                     }
                 }

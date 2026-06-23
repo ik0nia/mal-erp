@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ofertă Centralizatoare — Ecosistem Software Malinco</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #F5F0E8; color: #2c2c2c; font-size: 14px; line-height: 1.5; }
+  .page { max-width: 980px; margin: 36px auto; background: #fff; border-radius: 6px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.10); }
+  .header { background: #D9730D; color: #fff; padding: 26px 40px 22px; display: flex; align-items: center; justify-content: space-between; }
+  .header-logo { font-size: 26px; font-weight: 800; letter-spacing: 1px; }
+  .header-logo span { color: #ffe2bf; }
+  .header-meta { text-align: right; font-size: 13px; opacity: .92; }
+  .header-meta strong { display: block; font-size: 19px; font-weight: 700; margin-bottom: 2px; }
+  .info-row { background: #f9f4ec; border-bottom: 1px solid #e8dfd0; padding: 11px 40px; display: flex; gap: 30px; font-size: 13px; flex-wrap: wrap; }
+  .info-block strong { display: block; color: #888; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px; }
+  .section-h { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: #D9730D; margin: 18px 40px 12px; border-left: 4px solid #D9730D; padding-left: 12px; }
+  .lead { font-size: 14px; line-height: 1.7; color: #333; margin: 16px 40px 4px; border-left: 4px solid #D9730D; padding-left: 16px; }
+
+  table.plat { width: calc(100% - 80px); margin: 0 40px 6px; border-collapse: collapse; font-size: 13px; }
+  table.plat th { background: #2c2c2c; color: #fff; padding: 9px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+  table.plat th.r { text-align: right; }
+  table.plat td { padding: 10px 14px; border-bottom: 1px solid #ede8df; vertical-align: top; }
+  table.plat td.r { text-align: right; font-weight: 700; color: #D9730D; white-space: nowrap; }
+  table.plat .nm { font-weight: 700; color: #1a1a1a; }
+  table.plat .ds { font-size: 12px; color: #777; margin-top: 2px; }
+  table.plat tr.tot td { background: #fdf4ea; font-weight: 800; color: #D9730D; }
+  table.plat tr:nth-child(even):not(.tot) td { background: #faf8f5; }
+
+  .market { margin: 0 40px 8px; border: 1px solid #e8dfd0; border-radius: 8px; overflow: hidden; }
+  .market table { width: 100%; border-collapse: collapse; }
+  .market td { padding: 9px 16px; border-bottom: 1px solid #ede8df; font-size: 13px; }
+  .market tr:last-child td { border-bottom: none; }
+  .market .who { font-weight: 700; color: #1a1a1a; width: 42%; }
+  .market .val { text-align: right; font-weight: 800; color: #D9730D; white-space: nowrap; }
+  .market tr.us td { background: #fdf4ea; }
+
+  .options { display: flex; gap: 18px; padding: 4px 40px 12px; align-items: stretch; }
+  .option { flex: 1; border: 2px solid #e8dfd0; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
+  .option.rec { border-color: #D9730D; }
+  .opt-head { padding: 14px 20px 10px; background: #fdfaf6; border-bottom: 1px solid #e8dfd0; }
+  .opt-num { font-size: 11px; font-weight: 700; color: #D9730D; letter-spacing: 1px; }
+  .opt-title { font-size: 16px; font-weight: 800; color: #1a1a1a; margin: 3px 0 5px; }
+  .opt-sub { font-size: 12px; color: #666; line-height: 1.5; }
+  .opt-price { padding: 12px 20px 4px; }
+  .opt-price .main { font-size: 27px; font-weight: 800; color: #D9730D; }
+  .opt-price .main small { font-size: 14px; font-weight: 600; color: #888; }
+  .opt-price .tva { font-size: 12px; color: #888; margin-top: 2px; }
+  .opt-price .plus { font-size: 14px; color: #444; margin-top: 8px; font-weight: 700; }
+  .opt-body { padding: 6px 20px 18px; flex: 1; }
+  .opt-body ul { list-style: none; }
+  .opt-body li { font-size: 12.5px; color: #333; padding: 5px 0 5px 22px; position: relative; border-bottom: 1px dashed #eee; }
+  .opt-body li:before { content: "✓"; position: absolute; left: 0; color: #1d7a34; font-weight: 800; }
+
+  .links { margin: 4px 40px 8px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .links a { font-size: 12px; color: #D9730D; font-weight: 700; text-decoration: none; border: 1px solid #f0d9bb; border-radius: 6px; padding: 6px 12px; background: #fdf4ea; }
+  .note { background: #f9f4ec; border-top: 1px solid #e8dfd0; padding: 14px 40px; font-size: 11.5px; color: #666; line-height: 1.6; }
+  .note strong { color: #333; }
+  .note ul { margin-top: 5px; padding-left: 18px; }
+  .footer { background: #D9730D; color: rgba(255,255,255,.85); text-align: center; padding: 11px 40px; font-size: 11px; }
+  .footer strong { color: #fff; }
+
+  @page { size: A4 portrait; margin: 10mm; }
+  @media print {
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { background: #fff; font-size: 11px; }
+    .page { box-shadow: none; margin: 0; max-width: none; width: 100%; border-radius: 0; overflow: visible !important; }
+    .header { padding: 16px 24px 12px; }
+    .info-row { padding: 8px 24px; gap: 22px; }
+    .section-h { margin: 10px 24px 8px; }
+    .lead { margin: 10px 24px 4px; font-size: 11.5px; line-height: 1.5; }
+    table.plat, .market, .links { margin-left: 24px; margin-right: 24px; }
+    table.plat { width: calc(100% - 48px); }
+    table.plat td, .market td { padding: 6px 14px; }
+    .options { padding: 2px 24px 8px; display: flex !important; flex-direction: row !important; }
+    .opt-head { padding: 10px 18px 7px; }
+    .opt-price { padding: 8px 18px 3px; }
+    .opt-price .main { font-size: 22px; }
+    .opt-body { padding: 4px 18px 12px; }
+    .opt-body li { padding: 3px 0 3px 20px; }
+    .note { padding: 10px 24px; }
+    .footer { padding: 9px 24px; }
+    .section-h { break-after: avoid; }
+    .option, .market, table.plat, .note, .redbox { break-inside: avoid; }
+    table tr { break-inside: avoid; }
+    thead { display: table-header-group; }
+  }
+  @media screen and (max-width: 760px) { .options { flex-direction: column; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div>
+      <div class="header-logo">MALINCO<span>.RO</span></div>
+      <div style="font-size:13px; opacity:.85; margin-top:4px;">Ofertă Centralizatoare — Întreg Ecosistemul Software</div>
+    </div>
+    <div class="header-meta">
+      <strong>OFERTĂ NR. 2026-100</strong>
+      Data emiterii: 22 Iunie 2026<br>
+      Valabilă 30 de zile
+    </div>
+  </div>
+
+  <div class="info-row">
+    <div class="info-block"><strong>Beneficiar</strong> Malinco Prodex S.R.L.<br>erp.malinco.ro · stoc.maxcl.ro</div>
+    <div class="info-block"><strong>Prestator</strong> Ikonia Agency S.R.L.<br>Dezvoltare software custom</div>
+    <div class="info-block"><strong>Valoare totală (deviz)</strong> 146.680 € fără TVA<br>177.482,80 € cu TVA 21%</div>
+    <div class="info-block"><strong>Cuprinde</strong> 2 platforme ERP + API<br>46 module · 2.224 ore</div>
+  </div>
+
+  <p class="lead">
+    Această ofertă consolidează <strong>întregul ecosistem software</strong> dezvoltat pentru Malinco Prodex — două platforme ERP complete și integrarea contabilă — cu valoarea fiecărei componente și două modalități de achiziție pentru tot, într-un singur contract.
+  </p>
+
+  <div class="section-h">Ce ați primit — componentele ecosistemului</div>
+  <table class="plat">
+    <thead><tr><th>Platformă</th><th class="r">Efort</th><th class="r">Valoare (deviz)</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><div class="nm">ERP Malinco — erp.malinco.ro</div><div class="ds">Achiziții, stocuri, comenzi online, integrare WinMentor, business intelligence, aplicații mobile · Laravel / Filament · 18 module · deviz 2026-002</div></td>
+        <td class="r" style="color:#555;">1.774 h</td>
+        <td class="r">124.180 €</td>
+      </tr>
+      <tr>
+        <td><div class="nm">ERP maxCL — stoc.maxcl.ro</div><div class="ds">Producție mobilier: catalog materiale, gestiune plăci HPL + offcuts, magazie accesorii, ofertare B2B pe cost, management proiecte · framework MVC propriu · 28 module · deviz 2026-003</div></td>
+        <td class="r" style="color:#555;">450 h</td>
+        <td class="r">22.500 €</td>
+      </tr>
+      <tr>
+        <td><div class="nm">WinMentor API (MentorAPI)</div><div class="ds">Strat REST/JSON peste WinMentor — inclus în platforma ERP Malinco; vandabil și separat către alte firme (9.500 € licență / 100 €/lună)</div></td>
+        <td class="r" style="color:#555;">inclus</td>
+        <td class="r">inclus</td>
+      </tr>
+      <tr class="tot"><td>Total valoare ecosistem (fără TVA)</td><td class="r">2.224 h</td><td class="r">146.680 €</td></tr>
+    </tbody>
+  </table>
+
+  <div class="section-h">Cât ar costa același ecosistem de pe piață</div>
+  <div class="market">
+    <table>
+      <tr><td class="who">Dezvoltare custom la o agenție</td><td>Ambele platforme, construite de la zero cu echipă, management și testare.</td><td class="val">250.000 – 380.000 €</td></tr>
+      <tr><td class="who">SaaS ERP + integrări, pe 3 ani</td><td>Licențe recurente + implementare + dezvoltarea custom obligatorie a integrărilor.</td><td class="val">320.000 – 480.000 €</td></tr>
+      <tr class="us"><td class="who">Valoarea acestui ecosistem (deviz)</td><td>Două platforme deja construite, testate și funcționale în producție.</td><td class="val">146.680 €</td></tr>
+    </table>
+  </div>
+
+  <div class="section-h">Oferta consolidată — două modalități, un singur contract</div>
+  <div class="options">
+
+    <div class="option rec">
+      <div class="opt-head">
+        <div class="opt-num">OPȚIUNEA 1</div>
+        <div class="opt-title">Achiziție cod — ambele platforme</div>
+        <div class="opt-sub">Proprietate permanentă asupra întregului cod sursă, ambele ERP-uri + WinMentor API. Preț de pachet.</div>
+      </div>
+      <div class="opt-price">
+        <div class="main">€ 54.900 <small>fără TVA</small></div>
+        <div class="tva">66.429 € cu TVA 21% · economie 2.500 € față de achiziția separată</div>
+      </div>
+      <div class="opt-body">
+        <ul>
+          <li>ERP Malinco — cod sursă complet (separat: 49.900 €)</li>
+          <li>ERP maxCL — cod sursă complet (separat: 7.500 €)</li>
+          <li>WinMentor API inclus în ERP Malinco</li>
+          <li>Transfer imediat al drepturilor de proprietate</li>
+          <li>Punere în funcțiune + 3 luni suport post-livrare</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="option">
+      <div class="opt-head">
+        <div class="opt-num">OPȚIUNEA 2</div>
+        <div class="opt-title">Abonament total — tot inclus</div>
+        <div class="opt-sub">Acces la ambele platforme, găzduire, suport și actualizări, într-un singur abonament.</div>
+      </div>
+      <div class="opt-price">
+        <div class="main">€ 2.090 <small>/ lună</small></div>
+        <div class="tva">2.528,90 €/lună cu TVA · contract minim 12 luni</div>
+        <div class="plus">+ € 5.900 setup <small style="color:#888;font-weight:400;">(7.139 € cu TVA), o singură dată</small></div>
+      </div>
+      <div class="opt-body">
+        <ul>
+          <li>Ambele platforme ERP, complet funcționale</li>
+          <li>Găzduire pe servere dedicate (ERP + site + maxCL), backup, monitorizare</li>
+          <li>WinMentor API inclus</li>
+          <li><strong>12 ore/lună</strong> suport și mentenanță incluse (extra: 70 €/oră)</li>
+          <li>Actualizări de securitate și mentenanță incluse</li>
+          <li>Drept de achiziție cod oricând după luna 12 (preț degresiv)</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="redbox" style="margin: 4px 40px 10px; background:#fdecec; border:2px solid #c0392b; border-radius:8px; padding:13px 18px; color:#7a1d12; font-size:13px; line-height:1.6;">
+    <strong style="color:#c0392b; font-size:13.5px;">⚠ IMPORTANT — nu include dezvoltarea de funcționalități noi.</strong><br>
+    Prezenta ofertă acoperă exclusiv platformele deja dezvoltate și livrate, conform devizelor. Orice <strong>funcționalitate, modul sau modificare nouă</strong> se dezvoltă separat, pe bază de deviz agreat în prealabil, la un tarif de <strong>minimum 70 €/oră</strong> — fie ca achiziție unică, fie ca addon lunar adăugat la abonament.
+  </div>
+
+  <div class="section-h">Documente detaliate</div>
+  <div class="links">
+    <a href="/deviz-erp-malinco.html">▸ Deviz ERP Malinco (2026-002)</a>
+    <a href="/oferta-erp-malinco.html">▸ Ofertă ERP Malinco</a>
+    <a href="https://stoc.maxcl.ro/deviz-erp-maxcl.html">▸ Deviz ERP maxCL (2026-003)</a>
+    <a href="/oferta-winmentor-api.html">▸ Ofertă WinMentor API</a>
+  </div>
+
+  <div class="note">
+    <strong>Condiții contractuale:</strong>
+    <ul>
+      <li>Prețurile sunt în EUR, fără TVA dacă nu se specifică; TVA 21% conform legislației.</li>
+      <li><strong>Mentenanță &amp; suport:</strong> abonamentul include <strong>12 ore/lună</strong> (corectare erori, securitate, mici ajustări) pentru ambele platforme; orele suplimentare la <strong>70 €/oră</strong>. Nu include dezvoltarea de funcționalități noi.</li>
+      <li><strong>Găzduire</strong> (Opțiunea 2): servere dedicate, backup zilnic și monitorizare incluse; disponibilitate țintă ~99% lunar.</li>
+      <li><strong>Plată &amp; indexare:</strong> facturare lunară, în avans; întârzierea peste 15 zile poate suspenda accesul; tarifele se pot indexa anual, cu preaviz de 30 de zile.</li>
+      <li><strong>Proprietate &amp; răspundere:</strong> codul rămâne al prestatorului până la achiziție; răspunderea e limitată la valoarea facturată în ultimele 6 luni; nu include licențe terțe sau API externe, facturate la consum.</li>
+      <li>Platformele se livrează ca sisteme integrate; reziliere cu preaviz de 60 de zile, la care accesul încetează dacă nu s-a achiziționat codul.</li>
+    </ul>
+  </div>
+
+  <div class="footer">
+    <strong>Ecosistem software Malinco</strong> &nbsp;·&nbsp; Ofertă centralizatoare nr. 2026-100 &nbsp;·&nbsp; Ikonia Agency S.R.L. pentru Malinco Prodex S.R.L. &nbsp;·&nbsp; 22 Iunie 2026
+  </div>
+
+</div>
+</body>
+</html>

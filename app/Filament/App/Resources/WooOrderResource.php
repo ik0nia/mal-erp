@@ -110,6 +110,53 @@ class WooOrderResource extends Resource
                     ->label('Data')
                     ->dateTime('d.m.Y H:i')
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('winmentor_sync_status')
+                    ->label('WinMentor')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'synced' => 'Trimisă',
+                        'failed' => 'Eșuat',
+                        default  => 'Netrimisă',
+                    })
+                    ->color(fn (?string $state): string => match ($state) {
+                        'synced' => 'success',
+                        'failed' => 'danger',
+                        default  => 'gray',
+                    }),
+                Tables\Columns\TextColumn::make('winmentor_invoice_nr')
+                    ->label('Facturat')
+                    ->badge()
+                    ->placeholder('—')
+                    ->formatStateUsing(function (?string $state, WooOrder $record): string {
+                        if (! $state) {
+                            return '—';
+                        }
+                        $serie = $record->winmentor_invoice_serie ?: $state;
+                        $diff = abs((float) $record->total - (float) $record->winmentor_invoice_total);
+                        if ($diff > 0.05) {
+                            return '⚠ ' . $serie;
+                        }
+                        return $record->winmentor_invoice_estimat ? '≈ ' . $serie : $serie;
+                    })
+                    ->color(function (?string $state, WooOrder $record): string {
+                        if (! $state) {
+                            return 'gray';
+                        }
+                        $diff = abs((float) $record->total - (float) $record->winmentor_invoice_total);
+                        return $diff > 0.05 ? 'danger' : 'success';
+                    })
+                    ->tooltip(fn (WooOrder $record): ?string => $record->winmentor_invoice_nr
+                        ? ($record->winmentor_invoice_estimat ? 'Asociere estimată (euristic: total+dată+localitate)' : 'Asociere confirmată (ștampilă ERP)')
+                        : null)
+                    ->url(fn (WooOrder $record): ?string => $record->winmentor_invoice_nr
+                        ? \App\Filament\App\Pages\WinmentorVanzariDetailPage::getUrl([
+                            'nr'   => $record->winmentor_invoice_nr,
+                            'an'   => $record->winmentor_invoice_an,
+                            'luna' => $record->winmentor_invoice_luna,
+                        ])
+                        : null)
+                    ->openUrlInNewTab(),
             ])
             ->defaultSort('order_date', 'desc')
             ->filters([
@@ -195,6 +242,40 @@ class WooOrderResource extends Resource
                             ->placeholder('-')
                             ->columnSpanFull()
                             ->hidden(fn (WooOrder $record): bool => empty($record->customer_note)),
+                    ]),
+
+                Section::make('WinMentor')
+                    ->columnSpanFull()
+                    ->columns(4)
+                    ->schema([
+                        TextEntry::make('winmentor_sync_status')
+                            ->label('Status import')
+                            ->badge()
+                            ->getStateUsing(fn (WooOrder $record): string => match ($record->winmentor_sync_status) {
+                                'synced' => 'Trimisă în WinMentor',
+                                'failed' => 'Eșuat',
+                                default  => 'Netrimisă',
+                            })
+                            ->color(fn (WooOrder $record): string => match ($record->winmentor_sync_status) {
+                                'synced' => 'success',
+                                'failed' => 'danger',
+                                default  => 'gray',
+                            }),
+                        TextEntry::make('winmentor_synced_at')
+                            ->label('Data trimiterii')
+                            ->dateTime('d.m.Y H:i')
+                            ->placeholder('-'),
+                        TextEntry::make('synced_by_name')
+                            ->label('Trimisă de')
+                            ->getStateUsing(fn (WooOrder $record): string => $record->syncedBy?->name ?? '-'),
+                        TextEntry::make('winmentor_client_id')
+                            ->label('ID client WinMentor')
+                            ->placeholder('-'),
+                        TextEntry::make('winmentor_sync_error')
+                            ->label('Motiv eșec')
+                            ->columnSpanFull()
+                            ->color('danger')
+                            ->visible(fn (WooOrder $record): bool => $record->winmentor_sync_status === 'failed' && ! empty($record->winmentor_sync_error)),
                     ]),
 
                 Section::make('Client')

@@ -107,6 +107,18 @@ class WooProduct extends Model
     public const PROCUREMENT_STOCK     = 'stock';
     public const PROCUREMENT_ON_DEMAND = 'on_demand';
 
+    /** URL public al produsului pe site, doar dacă e publicat și are permalink. */
+    public function getSiteUrlAttribute(): ?string
+    {
+        if ($this->status !== 'publish' || ! $this->woo_id) {
+            return null;
+        }
+
+        $permalink = $this->data['permalink'] ?? null;
+
+        return is_string($permalink) && $permalink !== '' ? $permalink : null;
+    }
+
     protected function casts(): array
     {
         return [

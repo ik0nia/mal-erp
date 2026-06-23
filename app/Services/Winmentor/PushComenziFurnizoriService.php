@@ -55,7 +55,7 @@ class PushComenziFurnizoriService
         [$items, $skuMap] = $this->resolveItemsForWinmentor($receivedItems, $po->supplier_id);
 
         if (empty($items)) {
-            return $this->fail($po, 'Niciun produs cu cantitate recepționată > 0.');
+            return $this->skipNothingReceived($po);
         }
 
         $articoleResult = $this->bridge->ensureArticoleExist($items);
@@ -195,7 +195,7 @@ class PushComenziFurnizoriService
     private function buildLines(PurchaseOrder $po, array $partener, ?\App\Models\IntegrationConnection $conn, array $umMap = [], array $skuMap = []): array
     {
         $idPartener = $partener['idPartener'] ?? '';
-        $data       = $po->received_at?->format('d.m.Y') ?? now()->format('d.m.Y');
+        $data       = $this->documentDateForWorkingMonth($po->received_at)->format('d.m.Y');
         $an         = $conn?->bridgeAn() ?? now()->year;
         $luna       = $conn?->bridgeLuna() ?? now()->month;
         $moneda     = strtoupper($po->currency ?? 'RON') === 'EUR' ? 'EUR' : 'LEI';
@@ -271,7 +271,12 @@ class PushComenziFurnizoriService
         [$allItems, $skuMap] = $this->resolveItemsForWinmentor($receivedItems, $first->supplier_id);
 
         if (empty($allItems)) {
-            return $this->failBatch($orders, 'Niciun produs cu cantitate recepționată > 0.');
+            $this->log('info', "BATCH fără cantitate recepționată > 0 — skip push WinMentor.");
+            $orders->each(fn ($o) => $o->updateQuietly([
+                'winmentor_sync_status' => null,
+                'winmentor_sync_error'  => null,
+            ]));
+            return ['success' => false, 'skipped' => true, 'error' => null, 'orderNr' => null];
         }
 
         $articoleResult = $this->bridge->ensureArticoleExist($allItems);
@@ -330,7 +335,13 @@ class PushComenziFurnizoriService
         // Construim items din recepția curentă (nu din tot PO-ul)
         $receptionItems = $reception->items->filter(fn ($ri) => (float) $ri->received_quantity > 0);
         if ($receptionItems->isEmpty()) {
-            return $this->failReception($reception, 'Niciun produs cu cantitate recepționată > 0.');
+            $this->log('info', "Recepție #{$reception->reception_number} fără cantitate > 0 — skip push WinMentor.");
+            // coloana e NOT NULL; marcăm SYNCED = nicio acțiune rămasă (nimic de trimis)
+            $reception->updateQuietly([
+                'winmentor_sync_status' => PurchaseOrderReception::WINMENTOR_SYNCED,
+                'winmentor_sync_error'  => null,
+            ]);
+            return ['success' => false, 'skipped' => true, 'error' => null, 'orderNr' => null];
         }
 
         // Map reception items → PO items pentru SKU resolution
@@ -409,7 +420,7 @@ class PushComenziFurnizoriService
         array $skuMap = [],
     ): array {
         $idPartener = $partener['idPartener'] ?? '';
-        $data       = $reception->received_at->format('d.m.Y');
+        $data       = $this->documentDateForWorkingMonth($reception->received_at)->format('d.m.Y');
         $an         = $conn?->bridgeAn() ?? now()->year;
         $luna       = $conn?->bridgeLuna() ?? now()->month;
         $moneda     = strtoupper($po->currency ?? 'RON') === 'EUR' ? 'EUR' : 'LEI';
@@ -481,7 +492,7 @@ class PushComenziFurnizoriService
     {
         $first      = $orders->first();
         $idPartener = $partener['idPartener'] ?? '';
-        $data       = $first->received_at?->format('d.m.Y') ?? now()->format('d.m.Y');
+        $data       = $this->documentDateForWorkingMonth($first->received_at)->format('d.m.Y');
         $an         = $conn?->bridgeAn() ?? now()->year;
         $luna       = $conn?->bridgeLuna() ?? now()->month;
         $moneda     = strtoupper($first->currency ?? 'RON') === 'EUR' ? 'EUR' : 'LEI';
@@ -671,6 +682,22 @@ class PushComenziFurnizoriService
 
     // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+    /**
+     * Nu e o eroare: PO fără nimic recepționat > 0 nu se trimite la WinMentor
+     * (nu trimitem produse cu 0). Marcăm neutru ca să nu intre în bucla de retry.
+     */
+    private function skipNothingReceived(PurchaseOrder $po): array
+    {
+        $this->log('info', "PO [{$po->number}] fără cantitate recepționată > 0 — skip push WinMentor.");
+
+        $po->update([
+            'winmentor_sync_status' => null,
+            'winmentor_sync_error'  => null,
+        ]);
+
+        return ['success' => false, 'skipped' => true, 'error' => null, 'orderNr' => null];
+    }
+
     private function fail(PurchaseOrder $po, string $error): array
     {
         $this->log('error', "Eroare import PO [{$po->number}]: {$error}");
@@ -700,5 +727,30 @@ class PushComenziFurnizoriService
     private function log(string $level, string $message, array $context = []): void
     {
         Log::channel('daily')->{$level}('[WinMentor ComenziFurnizori] ' . $message, $context);
+    }
+
+    /**
+     * Data documentului TREBUIE să cadă în luna de lucru a Bridge-ului (mereu luna curentă —
+     * vezi IntegrationConnection::bridgeLuna/bridgeAn, care returnează now()).
+     *
+     * Dacă recepția e dintr-o lună anterioară (ex. PO recepționat la final de lună și
+     * trimis/retrimis luna următoare), WinMentor respinge cu eroarea
+     * „217 Neconcordanță Dată document - Luna de lucru !". În acest caz folosim data curentă,
+     * astfel documentul intră în luna de lucru deschisă. Nu comutăm luna de lucru a firmei
+     * (stare partajată între joburi) — doar aliniem data documentului.
+     */
+    private function documentDateForWorkingMonth(mixed $receivedAt): \Illuminate\Support\Carbon
+    {
+        $now = now();
+
+        $date = $receivedAt instanceof \Illuminate\Support\Carbon
+            ? $receivedAt
+            : ($receivedAt ? \Illuminate\Support\Carbon::parse($receivedAt) : null);
+
+        if ($date && $date->year === $now->year && $date->month === $now->month) {
+            return $date;
+        }
+
+        return $now;
     }
 }

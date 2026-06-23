@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="Recepție">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="manifest" href="/wh-manifest.json?v=2">
+    <link rel="manifest" href="/wh-manifest.json?v=3">
     <link rel="apple-touch-icon" href="/wh-icon-192.png">
     <title>@yield('title', 'Recepție Marfă')</title>
     <style>

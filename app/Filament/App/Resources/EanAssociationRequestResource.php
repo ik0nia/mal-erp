@@ -28,7 +28,9 @@ class EanAssociationRequestResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        $count = static::getModel()::whereIn('status', ['pending', 'auto_detected'])->count();
+        // Numărăm doar cererile încă deschise (pending) — cele auto_detected/approved
+        // sunt deja rezolvate automat și nu cer nicio acțiune.
+        $count = static::getModel()::where('status', 'pending')->count();
 
         return $count > 0 ? (string) $count : null;
     }

@@ -261,6 +261,15 @@ class AppPanelProvider extends PanelProvider
         font-size: 0.9rem !important;
     }
 }
+
+/* ── Formular oferte: compact ── */
+.fi-resource-offers .fi-fo-table-repeater table { font-size: 0.8rem; }
+.fi-resource-offers .fi-fo-table-repeater td { padding-top: 0.3rem !important; padding-bottom: 0.3rem !important; }
+.fi-resource-offers .fi-fo-table-repeater .fi-input-wrp,
+.fi-resource-offers .fi-fo-table-repeater .fi-input { min-height: 2.1rem !important; }
+.fi-resource-offers .fi-fo-table-repeater .fi-fo-field-wrp-helper-text { font-size: 0.7rem !important; line-height: 1.1 !important; margin-top: 0.1rem !important; }
+.fi-resource-offers .fi-section-content { padding: 1rem !important; }
+.fi-resource-offers .fi-section-header { padding-bottom: 0.5rem !important; }
 </style>'),
             )
             ->renderHook(

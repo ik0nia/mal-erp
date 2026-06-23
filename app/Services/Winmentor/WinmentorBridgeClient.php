@@ -397,6 +397,86 @@ class WinmentorBridgeClient
     }
 
     /**
+     * Sold curent al unui partener (READ-ONLY). GET /api/solduri/partener/{id}
+     * Nu modifică nimic în WinMentor.
+     */
+    public function getSoldPartener(string $id): array
+    {
+        $this->selectFirma();
+        $this->setIdPartField('CodIntern'); // $id = wm_id (ID intern partener)
+        $result = $this->get('/api/solduri/partener/' . rawurlencode($id), timeout: 60);
+        return $result['data'] ?? [];
+    }
+
+    /**
+     * Sold detaliat pe facturi/avansuri — facturi de încasat (READ-ONLY).
+     * GET /api/solduri/partener/{id}/detaliat — $id = wm_id (ID intern partener).
+     */
+    public function getSoldDetaliat(string $id): array
+    {
+        $this->selectFirma();
+        $this->setIdPartField('CodIntern');
+        $result = $this->get('/api/solduri/partener/' . rawurlencode($id) . '/detaliat', timeout: 60);
+        return $result['data'] ?? [];
+    }
+
+    /**
+     * Încasări ale unui client pe interval (READ-ONLY). GET /api/incasari/ext
+     * $id = wm_id (ID intern partener). Câmpuri: data, documentRef, suma, detaliiFacturi.
+     */
+    public function getIncasariClient(string $id, int $an1, int $luna1, int $an2, int $luna2): array
+    {
+        $this->selectFirma();
+        $this->setIdPartField('CodIntern');
+        $result = $this->get('/api/incasari/ext', [
+            'partId' => $id,
+            'an1'    => $an1,
+            'luna1'  => $luna1,
+            'an2'    => $an2,
+            'luna2'  => $luna2,
+        ], timeout: 60);
+        return $result['data'] ?? [];
+    }
+
+    /**
+     * Sediile de livrare alternative ale unui partener (READ-ONLY, 1 apel via search).
+     * Returnează listă [['denumire','localitate','cod_postal'], ...].
+     */
+    public function getSediiLivrare(string $cui, ?string $wmId = null): array
+    {
+        $this->selectFirma();
+        $result = $this->get('/api/parteneri', ['search' => $cui, 'pageSize' => 20, 'page' => 1], timeout: 30);
+        $items = $result['data']['items'] ?? [];
+        $item = null;
+        if ($wmId !== null) {
+            foreach ($items as $it) {
+                if (($it['idPartener'] ?? '') === $wmId) {
+                    $item = $it;
+                    break;
+                }
+            }
+        }
+        $item ??= $items[0] ?? null;
+        if (! $item) {
+            return [];
+        }
+
+        $den = $item['denumiriSedii'] ?? [];
+        $loc = array_values(array_filter(explode('~', (string) ($item['localitatiSedii'] ?? ''))));
+        $cp  = array_values(array_filter(explode('~', (string) ($item['codPostalSedii'] ?? ''))));
+        $sedii = [];
+        $count = max(count($den), count($loc));
+        for ($i = 0; $i < $count; $i++) {
+            $sedii[] = [
+                'denumire'   => $den[$i] ?? '',
+                'localitate' => $loc[$i] ?? '',
+                'cod_postal' => $cp[$i] ?? '',
+            ];
+        }
+        return $sedii;
+    }
+
+    /**
      * Caută un partener în WinMentor după ID-ul intern (idPartener / codExtern).
      * Returnează array-ul partenerului sau null dacă nu există.
      */

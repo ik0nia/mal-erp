@@ -24,6 +24,8 @@ class SalesChartWidget extends ChartWidget
 
     public ?int $month = null;
 
+    public bool $allTime = false;
+
     public function mount(): void
     {
         $this->year = now()->year;
@@ -31,10 +33,11 @@ class SalesChartWidget extends ChartWidget
     }
 
     #[On('onlineShopSetPeriod')]
-    public function syncPeriod(int $year, ?int $month): void
+    public function syncPeriod(int $year, ?int $month, bool $allTime = false): void
     {
-        $this->year  = $year;
-        $this->month = $month;
+        $this->year    = $year;
+        $this->month   = $month;
+        $this->allTime = $allTime;
         $this->cachedData = null;
         $this->updateChartData();
     }
@@ -75,7 +78,25 @@ class SalesChartWidget extends ChartWidget
     {
         $excluded = ['cancelled', 'refunded', 'failed'];
 
-        if ($this->month) {
+        if ($this->allTime) {
+            $rows = DB::table('woo_orders')
+                ->whereNotIn('status', $excluded)
+                ->whereNotNull('order_date')
+                ->selectRaw('YEAR(order_date) as yr, COUNT(*) as cnt, SUM(total) as revenue')
+                ->groupBy('yr')
+                ->orderBy('yr')
+                ->get();
+
+            $labels = [];
+            $data   = [];
+
+            foreach ($rows as $row) {
+                $labels[] = (string) $row->yr;
+                $data[]   = $this->mode === 'revenue'
+                    ? round((float) $row->revenue, 2)
+                    : (int) $row->cnt;
+            }
+        } elseif ($this->month) {
             $daysInMonth = (int) date('t', mktime(0, 0, 0, $this->month, 1, $this->year));
 
             $rows = DB::table('woo_orders')
@@ -118,9 +139,11 @@ class SalesChartWidget extends ChartWidget
         }
 
         $total       = array_sum($data);
-        $periodLabel = $this->month
-            ? str_pad((string) $this->month, 2, '0', STR_PAD_LEFT) . '.' . $this->year
-            : (string) $this->year;
+        $periodLabel = $this->allTime
+            ? 'toată perioada'
+            : ($this->month
+                ? str_pad((string) $this->month, 2, '0', STR_PAD_LEFT) . '.' . $this->year
+                : (string) $this->year);
 
         $datasetLabel = $this->mode === 'revenue'
             ? 'Vânzări ' . $periodLabel . ' (' . number_format(round($total, 2), 2, ',', '.') . ' lei)'
