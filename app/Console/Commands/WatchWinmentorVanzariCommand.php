@@ -66,7 +66,8 @@ class WatchWinmentorVanzariCommand extends Command
             $sku       = trim($row['nrDoc'] ?? '');
             $partId    = trim($row['partID'] ?? '');
             $zi        = is_numeric($row['zi'] ?? '') ? (int) $row['zi'] : null;
-            $cantStr   = trim($row['artID'] ?? '');
+            // WinMentor trimite zecimalele cu virgulă ("5,5") — normalizăm înainte de is_numeric
+            $cantStr   = str_replace(',', '.', trim($row['artID'] ?? ''));
             $pretStr   = trim($row['denUM'] ?? '');
             $valStr    = trim($row['valAchizitie'] ?? '');
 
@@ -231,7 +232,9 @@ class WatchWinmentorVanzariCommand extends Command
                     'zi'                  => (string) $zi,
                     'prefixDoc'           => $idBon,              // nr bon global
                     'nrDoc'               => $row['codArticol'] ?? '',
-                    'artID'               => $row['cantitate'] ?? '',
+                    // ATENȚIE semantică emulare (verificat 2026-07-12): cantitatea reală
+                    // vândută e în 'cantVanduta'; câmpul 'cantitate' conține poziția pe bon.
+                    'artID'               => $row['cantVanduta'] ?? '',
                     'cant'                => '',
                     'denUM'               => $row['pret'] ?? '',
                     'pret'                => $row['denGestiune'] ?? '',
@@ -255,6 +258,18 @@ class WatchWinmentorVanzariCommand extends Command
                 if (isset($lunaKeys[$key])) continue;
                 $result[] = $row;
             }
+
+            return $result;
+        }
+
+        // 3. Bonuri native Mentor (seria 2xxxxx) din /ext — flux SEPARAT de emulare
+        //    (casa din Mentor, nu casa Magazin Practic). Fără acest bloc se pierdeau
+        //    complet începând cu mai 2026 (~500 linii/lună).
+        foreach ($extData as $row) {
+            if (($row['tipDocument'] ?? '') !== 'S') continue;
+            $nr = trim($row['prefixDoc'] ?? '');
+            if (! preg_match('/^2\d{5}$/', $nr)) continue;
+            $result[] = $row;
         }
 
         return $result;

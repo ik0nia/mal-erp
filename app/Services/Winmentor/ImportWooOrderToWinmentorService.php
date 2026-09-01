@@ -34,7 +34,7 @@ class ImportWooOrderToWinmentorService
     /**
      * Articol serviciu pentru costul de livrare. Contabilitatea îl trece pe factură ca
      * „SERVICII MANIPULARE MARFA" (codExtern 9007767532752, UM=Lei, TVA 21%).
-     * ATENȚIE la reactivare: UM=Lei → de verificat convenția cantitate/preț (qty=valoare vs qty=1).
+     * Convenție confirmată (20.08.2026): cantitate = 1, preț = valoarea livrării în lei.
      */
     private const TRANSPORT_COD = '9007767532752';
     private const TRANSPORT_UM = 'Lei';
@@ -417,15 +417,15 @@ class ImportWooOrderToWinmentorService
         $obs   = 'Comandă online #'.$order->number.' (WooCommerce)';
 
         // Serviciul de manipulare/transport — valoarea de livrare din comandă (fără TVA).
-        // Articolul are UM=Lei → cantitate = valoarea în lei, preț unitar = 1.
+        // Convenție WinMentor: cantitate = 1, preț unitar = valoarea în lei.
         $allItems = $items;
         $shipping = (float) $order->shipping_total;
         if ($shipping > 0) {
             $allItems[] = [
                 'cod'  => self::TRANSPORT_COD,
                 'um'   => self::TRANSPORT_UM,
-                'cant' => number_format($shipping, 4, ',', ''),
-                'pret' => '1',
+                'cant' => '1',
+                'pret' => number_format($shipping, 4, ',', ''),
             ];
         }
 

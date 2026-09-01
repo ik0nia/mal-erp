@@ -236,20 +236,18 @@ class ComputeAbcClassificationCommand extends Command
             }
 
             if (! empty($rows)) {
-                $existingIds = DB::table('woo_products')
-                    ->whereIn('id', array_column($rows, 'id'))
-                    ->pluck('id')
-                    ->flip();
-
-                $rows = array_filter($rows, fn ($row) => isset($existingIds[$row['id']]));
-
-                if (! empty($rows)) {
+                // UPDATE-only: ABC clasifică doar produse care există deja. Un UPDATE pe id
+                // inexistent (ex. produs șters între timp) afectează 0 rânduri — nu poate
+                // insera un rând parțial fără `name` (cauza erorii 1364 nocturne).
+                foreach ($rows as $row) {
                     DB::table('woo_products')
-                        ->upsert(
-                            array_values($rows),
-                            ['id'],
-                            ['abc_classification', 'xyz_classification', 'avg_daily_consumption', 'reorder_qty']
-                        );
+                        ->where('id', $row['id'])
+                        ->update([
+                            'abc_classification'    => $row['abc_classification'],
+                            'xyz_classification'    => $row['xyz_classification'],
+                            'avg_daily_consumption' => $row['avg_daily_consumption'],
+                            'reorder_qty'           => $row['reorder_qty'],
+                        ]);
                 }
             }
 

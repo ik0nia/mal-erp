@@ -13,8 +13,9 @@
 <h2 style="margin:0 0 6px;font-size:20px;color:#B91C1C;font-weight:700;">
   &#128260;&nbsp; Modificări detectate în WinMentor
 </h2>
+@php $appliedCount = count($changes) - count($withErrors); @endphp
 <p style="margin:0 0 28px;font-size:14px;color:#6B7280;">
-  <strong>{{ count($changes) }}</strong> modificare(i) aplicate automat în ERP și WooCommerce.
+  <strong>{{ $appliedCount }}</strong> modificare(i) aplicate automat în ERP și WooCommerce{{ count($withErrors) ? ', ' . count($withErrors) . ' NEAPLICATE din cauza erorilor de mai jos' : '' }}.
 </p>
 
 {{-- SKU changes --}}
@@ -39,6 +40,12 @@
     </td>
     <td style="padding:10px 12px;font-size:12px;font-family:monospace;color:#059669;font-weight:700;border-bottom:1px solid #F3F4F6;">
       {{ $c['sku_nou'] }}
+      @if(!empty($c['duplicat']))
+      <span style="color:#B91C1C;font-family:sans-serif;font-weight:700;">— NEAPLICAT (SKU duplicat)</span>
+      @endif
+      @if(!empty($c['auto_merge']))
+      <br><span style="color:#2563EB;font-family:sans-serif;font-weight:400;font-size:11px;">{{ $c['auto_merge'] }}</span>
+      @endif
     </td>
   </tr>
   @endforeach

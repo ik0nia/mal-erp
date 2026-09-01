@@ -265,11 +265,13 @@ class WinmentorOferetePage extends Page
 
         $conditii = collect();
         foreach ($raw as $row) {
+            $partId = $row[0] ?? null;
+            $artId  = $row[1] ?? null;
             $conditii->push([
-                'part_id'  => $row[0] ?? '',
-                'client'   => $parteneri[$row[0]] ?? $row[0],
-                'art_id'   => $row[1] ?? '',
-                'produs'   => $produse[$row[1]] ?? $row[1],
+                'part_id'  => $partId ?? '',
+                'client'   => ($partId !== null ? ($parteneri[$partId] ?? $partId) : ''),
+                'art_id'   => $artId ?? '',
+                'produs'   => ($artId !== null ? ($produse[$artId] ?? $artId) : ''),
                 'moneda'   => $row[8] ?? '',
                 'conditie' => $row[9] ?? '',
             ]);

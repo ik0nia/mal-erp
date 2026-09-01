@@ -191,7 +191,9 @@ class FetchEmailsJob implements ShouldQueue
         }
 
         // ── PASS 2: Fetch individual per UID ────────────────────────────────────
-        $folder = $client->getFolder($folderPath);
+        // getFolder() face match exact pe NUME și pică pe foldere cu delimiter '.'
+        // (ex. 'INBOX.Sent' pe Courier/Dovecot). getFolderByPath() rezolvă corect path-ul.
+        $folder = $client->getFolderByPath($folderPath);
         if (! $folder) {
             Log::warning("FetchEmailsJob: folder '{$folderPath}' nu s-a găsit.");
             return 0;

@@ -73,14 +73,6 @@ class SyncWooOrdersCommand extends Command
                 break;
             }
 
-            // SAFEGUARD: Dacă totalul returnat pe prima pagină e cu >50% mai mic decât localCount, alertăm.
-            if ($page === 1 && $localCount > 0 && count($orders) < $localCount * 0.5 && $status === '') {
-                $message = "WooOrderSyncService: discrepanță mare — remote prima pagină: " . count($orders) . ", local total: {$localCount}. Verifică sincronizarea.";
-                $this->warn("  {$message}");
-                Log::warning($message, ['connection_id' => $connection->id]);
-                // Nu blocăm — discrepanța e normală când localCount include mai multe pagini
-            }
-
             foreach ($orders as $raw) {
                 $service->upsertOrder($connection->id, $locationId, $raw);
                 $totalSynced++;

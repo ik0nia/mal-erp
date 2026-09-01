@@ -82,7 +82,7 @@ class SmAccountsPage extends Page implements HasTable
                     ->icon(fn (SmAccount $r) => $r->is_active ? 'heroicon-o-x-circle' : 'heroicon-o-check-circle')
                     ->action(fn (SmAccount $r) => $r->update(['is_active' => ! $r->is_active])),
 
-                \Filament\Tables\Actions\DeleteAction::make(),
+                \Filament\Actions\DeleteAction::make(),
             ]);
     }
 }

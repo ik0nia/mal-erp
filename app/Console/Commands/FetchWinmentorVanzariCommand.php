@@ -184,7 +184,8 @@ class FetchWinmentorVanzariCommand extends Command
             // label marcaAgent= marca_agent   ✓
             // label valAchizitie = valoare_totala
 
-            $cantStr = trim($row['artID'] ?? '');
+            // WinMentor trimite zecimalele cu virgulă ("5,5") — normalizăm înainte de is_numeric
+            $cantStr = str_replace(',', '.', trim($row['artID'] ?? ''));
             $pretStr = trim($row['denUM'] ?? '');
             $valStr  = trim($row['valAchizitie'] ?? '');
 

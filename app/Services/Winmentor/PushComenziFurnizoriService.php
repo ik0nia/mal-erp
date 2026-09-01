@@ -545,10 +545,19 @@ class PushComenziFurnizoriService
                     'um'   => $umMap[$resolvedSku] ?? $item->product?->unit ?? 'Buc',
                     'cant' => 0.0,
                     'pret' => (float) $item->unit_price,
+                    'pos'  => null,
                 ];
             }
             $merged[$mergeKey]['cant'] += (float) $item->received_quantity;
+            // Poziția pe factura furnizorului (1 per SKU comasat) — reținem prima valoare non-null
+            if ($merged[$mergeKey]['pos'] === null && $item->invoice_position !== null) {
+                $merged[$mergeKey]['pos'] = (int) $item->invoice_position;
+            }
         }
+
+        // Ordonăm liniile după poziția de pe factură (fără poziție → la final).
+        // WinMentor nu are câmp de poziție în linie → singurul vector e ordinea Item_N.
+        uasort($merged, fn ($a, $b) => ($a['pos'] ?? PHP_INT_MAX) <=> ($b['pos'] ?? PHP_INT_MAX));
 
         $i = 1;
         foreach ($merged as $row) {

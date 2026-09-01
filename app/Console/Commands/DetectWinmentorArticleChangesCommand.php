@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\IntegrationConnection;
 use App\Models\WinmentorArticleSnapshot;
 use App\Models\WooProduct;
+use App\Services\ProductMergeService;
 use App\Services\Winmentor\WinmentorBridgeClient;
 use App\Services\WooCommerce\WooClient;
 use Illuminate\Console\Command;
@@ -86,6 +87,16 @@ class DetectWinmentorArticleChangesCommand extends Command
 
         // ── 4a. Detectare articole WinMentor lipsă din ERP (toate articolele, nu doar cu stoc) ─
         $allWmArticole = $bridge->fetchAllArticoleSkuMap();
+
+        // Câte articole WM poartă fiecare denumire — folosit la rezolvarea automată a
+        // duplicatelor: merge doar când WM are EXACT un articol cu denumirea respectivă.
+        $wmNameCounts = [];
+        foreach ($allWmArticole as $article) {
+            $den = trim($article['denumire'] ?? '');
+            if ($den !== '') {
+                $wmNameCounts[$den] = ($wmNameCounts[$den] ?? 0) + 1;
+            }
+        }
         $existingSkus  = WooProduct::pluck('sku')->map(fn ($s) => strtolower(trim($s)))->flip();
 
         foreach ($allWmArticole as $skuLower => $article) {
@@ -170,7 +181,7 @@ class DetectWinmentorArticleChangesCommand extends Command
                             ];
                         }
                     } else {
-                        $change = $this->applySkuChange($oldSku, $sku, $denumire, $wooConnections, $dryRun);
+                        $change = $this->applySkuChange($oldSku, $sku, $denumire, $wooConnections, $dryRun, $wmNameCounts[$denumire] ?? 0);
                         if ($change) {
                             $changes[] = $change;
                             // Snapshot-ul se actualizează DOAR dacă schimbarea a fost aplicată cu succes
@@ -272,7 +283,8 @@ class DetectWinmentorArticleChangesCommand extends Command
         string $newSku,
         string $denumire,
         $wooConnections,
-        bool $dryRun
+        bool $dryRun,
+        int $wmNameCount = 0
     ): ?array {
         $product = WooProduct::where('sku', $oldSku)->first();
 
@@ -292,16 +304,64 @@ class DetectWinmentorArticleChangesCommand extends Command
         ];
 
         if ($existing) {
-            $change['duplicat'] = true;
-            $change['duplicat_id'] = $existing->id;
-            $change['duplicat_woo_id'] = $existing->woo_id;
-            $change['duplicat_name'] = $existing->name;
-            $change['woo_error'] = "SKU duplicat — \"{$newSku}\" există deja pe produsul #{$existing->id} ({$existing->name}, woo_id={$existing->woo_id}). Schimbarea de SKU nu a fost aplicată.";
+            // Fișa care ocupă noul SKU e duplicat al ACELUIAȘI articol WinMentor doar dacă:
+            //   - WM are exact un articol cu această denumire (altfel sunt două articole reale),
+            //   - fișa nu e publicată pe site (nu retragem automat produse live),
+            //   - e legată de același articol WM sau de niciunul.
+            $canAutoMerge = $wmNameCount === 1
+                && $existing->status !== 'publish'
+                && (empty($existing->winmentor_name) || $existing->winmentor_name === $denumire);
 
-            $this->warn("  [SKU DUPLICAT] \"{$denumire}\": {$oldSku} → {$newSku} — CONFLICT cu #{$existing->id} ({$existing->name})");
-            Log::warning('[DetectArticleChanges] SKU duplicat detectat, schimbare NEALICATĂ', $change);
+            if ($canAutoMerge) {
+                $parkedSku = "DUP-{$existing->id}-{$existing->sku}";
+                $this->line("  [AUTO-MERGE] \"{$denumire}\": duplicat #{$existing->id} ({$existing->name}) — istoric migrat pe #{$product->id}, SKU parcat ca {$parkedSku}");
 
-            return $change;
+                if (! $dryRun) {
+                    // Eliberăm SKU-ul și pe site, altfel WooCommerce refuză mutarea lui pe produsul păstrat
+                    foreach ($wooConnections as $wooConn) {
+                        if ($existing->woo_id) {
+                            try {
+                                (new WooClient($wooConn))->updateProduct($existing->woo_id, ['sku' => $parkedSku]);
+                            } catch (\Throwable $e) {
+                                // fișă fără produs real pe site (woo_id sintetic) sau produs șters — continuăm
+                                Log::info("[DetectArticleChanges] Woo SKU park eșuat pentru duplicat #{$existing->id} (woo_id={$existing->woo_id}): " . $e->getMessage());
+                            }
+                        }
+                    }
+
+                    $merge = app(ProductMergeService::class);
+                    $stats = $merge->mergeHistory($existing, $product, false);
+                    $merge->parkDuplicate($existing, false);
+
+                    Log::channel('winmentor_sync')->info('[DetectArticleChanges] Duplicat rezolvat automat (istoric migrat)', [
+                        'duplicat' => $existing->id, 'pastrat' => $product->id, 'stats' => $stats,
+                    ]);
+                }
+
+                $change['auto_merge'] = "Fișa duplicat #{$existing->id} ({$existing->name}) a fost rezolvată automat: istoricul migrat pe #{$product->id}, SKU parcat ca {$parkedSku}.";
+                // continuă mai jos cu aplicarea normală a schimbării de SKU
+            } else {
+                // Conflictul persistă până e rezolvat manual (snapshot-ul nu se actualizează),
+                // deci comanda l-ar re-detecta la fiecare rulare — alertăm o dată la 24h.
+                $cacheKey = "wm_sku_conflict_{$oldSku}_{$newSku}";
+                if (Cache::has($cacheKey)) {
+                    return null;
+                }
+                if (! $dryRun) {
+                    Cache::put($cacheKey, true, now()->addHours(24));
+                }
+
+                $change['duplicat'] = true;
+                $change['duplicat_id'] = $existing->id;
+                $change['duplicat_woo_id'] = $existing->woo_id;
+                $change['duplicat_name'] = $existing->name;
+                $change['woo_error'] = "SKU duplicat — \"{$newSku}\" există deja pe produsul #{$existing->id} ({$existing->name}, woo_id={$existing->woo_id}). Schimbarea de SKU nu a fost aplicată.";
+
+                $this->warn("  [SKU DUPLICAT] \"{$denumire}\": {$oldSku} → {$newSku} — CONFLICT cu #{$existing->id} ({$existing->name})");
+                Log::warning('[DetectArticleChanges] SKU duplicat detectat, schimbare NEALICATĂ', $change);
+
+                return $change;
+            }
         }
 
         $this->line("  [SKU] \"{$denumire}\": {$oldSku} → {$newSku}");

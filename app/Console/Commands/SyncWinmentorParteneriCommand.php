@@ -73,6 +73,13 @@ class SyncWinmentorParteneriCommand extends Command
                 $wmId = $p['idPartener'] ?? null;
                 if (! $wmId) continue;
 
+                // wm_id e VARCHAR(20) unique. Un id anormal de lung (probabil câmp Bridge mapat
+                // greșit la acel rând) ar pica tot chunk-ul de 500 cu eroarea 1406 — îl sărim.
+                if (mb_strlen((string) $wmId) > 20) {
+                    $this->warn("  Partener sărit: idPartener prea lung ('{$wmId}', " . mb_strlen((string) $wmId) . ' car.)');
+                    continue;
+                }
+
                 $agent = trim(($p['numeAgent'] ?? '') . ' ' . ($p['prenumeAgent'] ?? ''));
 
                 $rows[] = [
