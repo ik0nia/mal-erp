@@ -10,9 +10,14 @@ import (
 
 // handleHealth returns service status (no auth required).
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	status := "running"
+	if s.maintenance {
+		status = "maintenance"
+	}
 	Success(w, map[string]interface{}{
-		"status":       "running",
+		"status":       status,
 		"comConnected": s.connected,
+		"maintenance":  s.maintenance,
 		"uptime":       time.Since(s.startTime).String(),
 		"version":      Version,
 		"goVersion":    runtime.Version(),
@@ -29,6 +34,7 @@ func (s *Server) handleDiagnostics(w http.ResponseWriter, r *http.Request) {
 	Success(w, map[string]interface{}{
 		"comProgId":      s.cfg.ComProgId,
 		"comConnected":   s.connected,
+		"maintenance":    s.maintenance,
 		"comIdleTimeout": s.cfg.ComIdleTimeoutSeconds,
 		"cacheMinutes":   s.cfg.CacheDurationMinutes,
 		"port":           s.cfg.Port,
@@ -157,6 +163,44 @@ func (s *Server) handleLogOn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	Success(w, map[string]interface{}{"method": "LogOn", "result": rows})
+}
+
+// handleComDisconnect closes the COM connection and enters maintenance mode.
+// WinMentor month-end closing requires all users disconnected; while in
+// maintenance every COM-backed endpoint returns 503 until /api/com/connect.
+func (s *Server) handleComDisconnect(w http.ResponseWriter, r *http.Request) {
+	s.comMu.Lock()
+	s.maintenance = true
+	if s.wm != nil {
+		s.wm.Close()
+		s.wm = nil
+		s.connected = false
+	}
+	s.comMu.Unlock()
+
+	log.Println("[COM] Disconnected — maintenance mode ON")
+	Success(w, map[string]interface{}{
+		"maintenance":  true,
+		"comConnected": false,
+	})
+}
+
+// handleComConnect leaves maintenance mode and reconnects COM.
+func (s *Server) handleComConnect(w http.ResponseWriter, r *http.Request) {
+	s.comMu.Lock()
+	s.maintenance = false
+	s.comMu.Unlock()
+
+	if err := s.EnsureConnected(); err != nil {
+		Error(w, http.StatusInternalServerError, "COM reconnect failed: "+err.Error())
+		return
+	}
+
+	log.Println("[COM] Maintenance mode OFF — reconnected")
+	Success(w, map[string]interface{}{
+		"maintenance":  false,
+		"comConnected": true,
+	})
 }
 
 // handleComReset closes the current COM connection and forces a fresh reconnect.

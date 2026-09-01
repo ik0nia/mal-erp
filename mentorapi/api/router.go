@@ -249,6 +249,8 @@ func (s *Server) SetupRoutes() http.Handler {
 	mux.HandleFunc("GET /api/com/methods", s.handleComMethods)
 	mux.HandleFunc("POST /api/com/call", s.handleComCall)
 	mux.HandleFunc("POST /api/com/reset", s.handleComReset)
+	mux.HandleFunc("POST /api/com/disconnect", s.handleComDisconnect)
+	mux.HandleFunc("POST /api/com/connect", s.handleComConnect)
 
 	// Apply middleware chain (outermost first)
 	var handler http.Handler = mux

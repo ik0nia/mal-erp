@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"log"
 	"strconv"
 	"sync"
@@ -12,16 +13,21 @@ import (
 	"github.com/rayone121/libWMEdcom/winmentor"
 )
 
-const Version = "1.3.0"
+const Version = "1.4.0"
+
+// ErrMaintenance is returned while COM is intentionally disconnected
+// (WinMentor month-end closing requires all users disconnected).
+var ErrMaintenance = errors.New("COM deconectat pentru mentenanță (închidere de lună). Reconectare: POST /api/com/connect")
 
 // Server holds all dependencies for the HTTP API.
 type Server struct {
-	cfg       config.MentorAPIConfig
-	wm        *winmentor.Client
-	cache     *cache.Cache
-	startTime time.Time
-	connected bool
-	comMu     sync.Mutex // protects wm + connected
+	cfg         config.MentorAPIConfig
+	wm          *winmentor.Client
+	cache       *cache.Cache
+	startTime   time.Time
+	connected   bool
+	maintenance bool
+	comMu       sync.Mutex // protects wm + connected + maintenance
 }
 
 func NewServer(cfg config.MentorAPIConfig) *Server {
@@ -37,6 +43,10 @@ func NewServer(cfg config.MentorAPIConfig) *Server {
 func (s *Server) EnsureConnected() error {
 	s.comMu.Lock()
 	defer s.comMu.Unlock()
+
+	if s.maintenance {
+		return ErrMaintenance
+	}
 
 	if s.connected && s.wm != nil {
 		return nil

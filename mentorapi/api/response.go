@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"time"
@@ -64,6 +65,10 @@ func Error(w http.ResponseWriter, statusCode int, errors ...string) {
 }
 
 func ErrorInternal(w http.ResponseWriter, err error) {
+	if errors.Is(err, ErrMaintenance) {
+		Error(w, http.StatusServiceUnavailable, err.Error())
+		return
+	}
 	log.Printf("[ERROR] %v", err)
 	Error(w, http.StatusInternalServerError, err.Error())
 }
