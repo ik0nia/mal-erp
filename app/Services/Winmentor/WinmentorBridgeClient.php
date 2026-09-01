@@ -48,6 +48,34 @@ class WinmentorBridgeClient
         }
     }
 
+    // ─── Mentenanță (închidere de lună) ─────────────────────────────────────────
+
+    /**
+     * Deconectează COM-ul de la WinMentor și intră în mod mentenanță.
+     * Folosit la închiderea de lună — Mentor cere toți utilizatorii deconectați.
+     * Cât timp e activ, toate apelurile COM primesc HTTP 503.
+     */
+    public function comDisconnect(): array
+    {
+        return $this->post('/api/com/disconnect');
+    }
+
+    /**
+     * Iese din mod mentenanță și reconectează COM-ul.
+     * Conexiunea nouă pierde firma selectată, deci o re-selectăm imediat.
+     * Prima conectare după disconnect e lentă (logon COM complet, ~60s),
+     * de-aia timeout mare — a nu se apela sincron dintr-un request web.
+     */
+    public function comConnect(): array
+    {
+        $result = $this->post('/api/com/connect', timeout: 180);
+
+        Cache::forget("winmentor_firma_selected_{$this->firma}_{$this->an}_{$this->luna}");
+        $this->selectFirma();
+
+        return $result;
+    }
+
     // ─── Firma/Luna ─────────────────────────────────────────────────────────────
 
     /**
@@ -393,6 +421,20 @@ class WinmentorBridgeClient
     public function getVanzariEmulare(): array
     {
         $result = $this->get('/api/vanzari/emulare', timeout: 60);
+        return $result['data'] ?? [];
+    }
+
+    /**
+     * Istoric vânzări agent (READ-ONLY). GET /api/vanzari/istoric/all
+     * GetIstoricVanzari(marca, anInceput, lunaInceput) + iterare GetListRecord.
+     * marca=0 pare să însemne toți agenții; formatul recordurilor e brut (string-uri).
+     */
+    public function getIstoricVanzariAll(int $marca, int $an, int $luna, int $limit = 200): array
+    {
+        $result = $this->get('/api/vanzari/istoric/all', [
+            'marca' => $marca, 'an' => $an, 'luna' => $luna, 'limit' => $limit,
+        ], timeout: 120);
+
         return $result['data'] ?? [];
     }
 
@@ -1109,9 +1151,9 @@ class WinmentorBridgeClient
         }
     }
 
-    private function post(string $path, array $body = [], array $query = []): array
+    private function post(string $path, array $body = [], array $query = [], int $timeout = 60): array
     {
-        $request = Http::timeout(60)
+        $request = Http::timeout($timeout)
             ->withoutVerifying()
             ->withHeaders(['X-API-Key' => $this->apiKey]);
 
