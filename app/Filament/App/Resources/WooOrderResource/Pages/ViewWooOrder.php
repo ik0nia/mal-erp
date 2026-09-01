@@ -68,9 +68,61 @@ class ViewWooOrder extends ViewRecord
         return $this->facturaDiferenta() <= 0.05;
     }
 
+    /** Statusuri în care conținutul comenzii mai poate fi editat. */
+    private const EDITABLE_STATUSES = ['pending', 'processing', 'on-hold'];
+
+    public function isOrderEditable(): bool
+    {
+        return in_array((string) $this->record->status, self::EDITABLE_STATUSES, true)
+            && $this->record->woo_id;
+    }
+
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('edit_items')
+                ->label('Editează produse')
+                ->icon('heroicon-o-pencil-square')
+                ->color('primary')
+                ->visible(fn (): bool => $this->isOrderEditable())
+                ->modalHeading(fn (): string => 'Editare produse — comanda #'.$this->record->number)
+                ->modalDescription('Modificările se trimit în WooCommerce (site), care recalculează totalurile și TVA-ul, apoi comanda se resincronizează în ERP. Ștergerea unui rând elimină produsul din comandă. Prețul modificat aici afectează DOAR această comandă, nu prețul produsului de pe site.')
+                ->modalSubmitActionLabel('Salvează în WooCommerce')
+                ->modalWidth('4xl')
+                ->form(fn (): array => [
+                    \Filament\Forms\Components\Repeater::make('items')
+                        ->label('Produse')
+                        ->addable(false)
+                        ->reorderable(false)
+                        ->deletable(true)
+                        ->columns(12)
+                        ->default($this->buildEditableItems())
+                        ->schema([
+                            \Filament\Forms\Components\Hidden::make('woo_item_id'),
+                            \Filament\Forms\Components\Hidden::make('vat_rate'),
+                            \Filament\Forms\Components\TextInput::make('name')
+                                ->label('Produs')
+                                ->disabled()
+                                ->dehydrated()
+                                ->columnSpan(7),
+                            \Filament\Forms\Components\TextInput::make('quantity')
+                                ->label('Cantitate')
+                                ->numeric()
+                                ->minValue(1)
+                                ->required()
+                                ->columnSpan(2),
+                            \Filament\Forms\Components\TextInput::make('price_gross')
+                                ->label('Preț cu TVA')
+                                ->numeric()
+                                ->minValue(0)
+                                ->step('0.01')
+                                ->suffix('RON')
+                                ->required()
+                                ->columnSpan(3),
+                        ]),
+                ])
+                ->action(fn (array $data) => $this->saveOrderItems($data)),
+
             Action::make('factura_winmentor')
                 ->label(function (): string {
                     $inv = $this->winmentorInvoice();
@@ -280,6 +332,98 @@ class ViewWooOrder extends ViewRecord
                         ->send();
                 }),
         ];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function buildEditableItems(): array
+    {
+        return $this->record->items->map(function ($item) {
+            // cota TVA reală a itemului, dedusă din valorile Woo (net + tax)
+            $rate = 21;
+            if ((float) $item->subtotal > 0 && (float) $item->tax >= 0) {
+                $computed = (int) round(((float) $item->tax / (float) $item->subtotal) * 100);
+                if (in_array($computed, [0, 5, 9, 19, 21], true)) {
+                    $rate = $computed;
+                }
+            }
+
+            return [
+                'woo_item_id' => $item->woo_item_id,
+                'vat_rate'    => $rate,
+                'name'        => $item->name.' ('.($item->sku ?: 'fără SKU').')',
+                'quantity'    => (int) $item->quantity,
+                'price_gross' => round((float) $item->price * (1 + $rate / 100), 2),
+            ];
+        })->values()->all();
+    }
+
+    private function saveOrderItems(array $data): void
+    {
+        /** @var WooOrder $order */
+        $order = $this->record;
+
+        if (! $this->isOrderEditable()) {
+            Notification::make()->danger()->title('Comanda nu mai poate fi editată')->send();
+            return;
+        }
+
+        $original = $order->items->keyBy('woo_item_id');
+        $lines    = [];
+
+        foreach ($data['items'] ?? [] as $row) {
+            $itemId = (int) ($row['woo_item_id'] ?? 0);
+            $orig   = $original->get($itemId);
+            if (! $orig) {
+                continue;
+            }
+
+            $qty   = max(1, (int) $row['quantity']);
+            $rate  = (float) ($row['vat_rate'] ?? 21);
+            $net   = round((float) $row['price_gross'] / (1 + $rate / 100), 4);
+            $line  = number_format(round($net * $qty, 2), 2, '.', '');
+
+            $origGross = round((float) $orig->price * (1 + $rate / 100), 2);
+            $changed   = $qty !== (int) $orig->quantity
+                || abs((float) $row['price_gross'] - $origGross) >= 0.01;
+
+            if ($changed) {
+                $lines[] = ['id' => $itemId, 'quantity' => $qty, 'subtotal' => $line, 'total' => $line];
+            }
+
+            $original->forget($itemId);
+        }
+
+        // rândurile șterse din repeater = eliminate din comandă (Woo: quantity 0)
+        foreach ($original as $removed) {
+            $lines[] = ['id' => (int) $removed->woo_item_id, 'quantity' => 0];
+        }
+
+        if (empty($lines)) {
+            Notification::make()->info()->title('Nicio modificare')->body('Cantitățile și prețurile sunt neschimbate.')->send();
+            return;
+        }
+
+        try {
+            $client = new WooClient($order->connection);
+            $client->updateOrder((int) $order->woo_id, ['line_items' => $lines]);
+
+            $this->syncOrderFromWoo();
+
+            $body = count($lines).' modificare(ări) trimise. Totalurile au fost recalculate de WooCommerce.';
+            if ($order->winmentor_sync_status === 'synced') {
+                $body .= ' ATENȚIE: comanda a fost deja trimisă în WinMentor — corectează manual și acolo!';
+            }
+
+            \Log::info('WooOrder editată din ERP', [
+                'order' => $order->number, 'user' => auth()->user()?->email, 'lines' => $lines,
+            ]);
+
+            Notification::make()->success()->title('Comandă actualizată în WooCommerce')->body($body)->persistent()->send();
+
+            $this->redirect(WooOrderResource::getUrl('view', ['record' => $order]));
+        } catch (Throwable $e) {
+            Notification::make()->danger()->title('Eroare la actualizare')->body($e->getMessage())->persistent()->send();
+        }
     }
 
     private function syncOrderFromWoo(): bool

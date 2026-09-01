@@ -345,6 +345,28 @@ class WooClient
     /**
      * @return array<string, mixed>
      */
+    /**
+     * Update generic pe o comandă (line_items, shipping_lines etc.).
+     * Când payload-ul conține line_items, WooCommerce recalculează automat
+     * totalurile și TVA-ul comenzii (calculate_totals).
+     *
+     * @return array<string, mixed>
+     */
+    public function updateOrder(int $orderId, array $payload): array
+    {
+        $response = $this->retryRequest(
+            fn () => $this->http->put(
+                $this->apiBase.'/orders/'.max(1, $orderId),
+                $payload,
+            )
+        );
+        $response->throw();
+
+        $data = $response->json();
+
+        return is_array($data) ? $data : [];
+    }
+
     public function updateOrderStatus(int $orderId, string $status): array
     {
         $response = $this->retryRequest(
