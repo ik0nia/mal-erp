@@ -42,3 +42,8 @@ node-renderer/node_modules/
 /storage/filebrowser.db
 /storage/temad_*.sql
 /storage/wordpress-theme/
+
+# Artefacte generate (nu sunt cod sursă)
+/public/downloads/
+/public/reports/
+/storage/fonts/
