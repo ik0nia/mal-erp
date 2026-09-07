@@ -27,6 +27,8 @@ class ImportWinmentorParteneriClientiCommand extends Command
 
         $parteneri = DB::table('winmentor_parteneri')
             ->whereIn(DB::raw('TRIM(clasa)'), self::CLASE_REALE)
+            // convenție Mentor: prefixul „x" pe denumire = partener DEZACTIVAT
+            ->where('denumire', 'NOT LIKE', 'x%')
             ->get(['wm_id', 'denumire', 'cod_fiscal', 'localitate', 'adresa', 'telefon', 'clasa']);
 
         $this->info('Parteneri reali în WinMentor: '.$parteneri->count());

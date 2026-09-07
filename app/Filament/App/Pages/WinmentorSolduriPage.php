@@ -129,8 +129,10 @@ class WinmentorSolduriPage extends Page
 
             $p = $wmNames->get($partId);
 
-            // Conturile interne (clasa Mentor) nu sunt creanțe/datorii reale — total separat
-            if (in_array(trim((string) ($p->clasa ?? '')), $claseInterne, true)) {
+            // Conturile interne (clasa Mentor) + partenerii DEZACTIVAȚI (prefix „x")
+            // nu sunt creanțe/datorii reale — total separat
+            if (in_array(trim((string) ($p->clasa ?? '')), $claseInterne, true)
+                || str_starts_with(mb_strtolower(trim((string) ($p->denumire ?? ''))), 'x')) {
                 $totalInterne += $netRecent + $netVechi;
                 continue;
             }
