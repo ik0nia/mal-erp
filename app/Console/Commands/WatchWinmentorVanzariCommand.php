@@ -169,7 +169,7 @@ class WatchWinmentorVanzariCommand extends Command
      * /ext dă tipDocument =/S — S = bonuri de casă.
      * Rezultat: format unificat compatibil cu consumer-ul existent (chei shifted).
      */
-    private function mergeVanzariSources(array $lunaData, array $extData, WinmentorBridgeClient $bridge): array
+    protected function mergeVanzariSources(array $lunaData, array $extData, WinmentorBridgeClient $bridge): array
     {
         $result = [];
 
@@ -220,6 +220,12 @@ class WatchWinmentorVanzariCommand extends Command
         // 2. Bonuri de casă din /vanzari/emulare (date bogate: denArticol, numeClient, nr bon zilnic)
         try {
             $emulare = $bridge->getVanzariEmulare();
+
+            // Luni istorice fără emulare (pre-2025): [] fără eroare → altfel am pierde
+            // bonurile native; fallback-ul pe /ext le păstrează
+            if (empty($emulare)) {
+                throw new \RuntimeException('emulare gol — fallback pe bonurile din /ext');
+            }
 
             // Grupăm per (data, idBon) ca să calculăm nr bon zilnic
             $byDay = [];
