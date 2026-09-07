@@ -33,6 +33,23 @@ class WatchWinmentorVanzariCommand extends Command
             return self::SUCCESS;
         }
 
+        // Lock propriu: comanda poate fi pornită și manual (buton pe pagina Vânzări) —
+        // două rulări simultane ar șterge+reinsera luna concurent (dubluri)
+        $lock = Cache::lock("winmentor_watch_vanzari_{$firma}", 240);
+        if (! $lock->get()) {
+            return self::SUCCESS;
+        }
+
+        try {
+            return $this->runWatch($bridge, $firma);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    private function runWatch(WinmentorBridgeClient $bridge, string $firma): int
+    {
+
         $conn = \App\Models\IntegrationConnection::find(5);
         $an   = $conn->bridgeAn();
         $luna = $conn->bridgeLuna();

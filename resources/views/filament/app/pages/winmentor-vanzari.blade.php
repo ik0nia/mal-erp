@@ -96,8 +96,8 @@
 @endif
 @endif
 
-{{-- Navigare rapida --}}
-<div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem;align-items:center;">
+{{-- Navigare rapida (wire:poll = reîmprospătare automată din DB la 60s, prinde ce aduce cron-ul) --}}
+<div wire:poll.60s style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem;align-items:center;">
   <div style="display:flex;gap:2px;">
     <button wire:click="goPrevMonth" class="wm-page-btn" title="Luna anterioara">&laquo;</button>
     <button wire:click="goPrevDay" class="wm-page-btn" title="Ziua anterioara">&lsaquo;</button>
@@ -110,6 +110,12 @@
     <button wire:click="goNextDay" class="wm-page-btn" title="Ziua urmatoare">&rsaquo;</button>
     <button wire:click="goNextMonth" class="wm-page-btn" title="Luna urmatoare">&raquo;</button>
   </div>
+  <button wire:click="refreshFromWinmentor" wire:loading.attr="disabled" class="wm-page-btn"
+          style="background:#dcfce7;border-color:#22c55e;color:#15803d;font-weight:600;"
+          title="Interogheaza WinMentor acum si aduce documentele noi">
+    <span wire:loading.remove wire:target="refreshFromWinmentor">&#8635; Actualizeaza din WinMentor</span>
+    <span wire:loading wire:target="refreshFromWinmentor">Verific in WinMentor...</span>
+  </button>
   <span style="font-size:.875rem;font-weight:600;color:#374151;margin-left:.5rem;">
     @if($this->dateFrom === $this->dateTo)
       {{ \Carbon\Carbon::parse($this->dateFrom)->translatedFormat('d F Y') }}

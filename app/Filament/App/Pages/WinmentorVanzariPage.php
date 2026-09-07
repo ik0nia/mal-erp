@@ -45,6 +45,45 @@ class WinmentorVanzariPage extends Page
         $this->dateTo   = now()->format('Y-m-d');
     }
 
+    /**
+     * Buton „Actualizează din WinMentor" — rulează watch-ul la cerere (~5-10s)
+     * și raportează câte linii noi au apărut. Lock-ul din comandă previne
+     * suprapunerea cu rularea din cron.
+     */
+    public function refreshFromWinmentor(): void
+    {
+        $bridge = new \App\Services\Winmentor\WinmentorBridgeClient;
+
+        if (! ($bridge->health()['data']['comConnected'] ?? false)) {
+            \Filament\Notifications\Notification::make()
+                ->title('WinMentor indisponibil')
+                ->body('Conexiunea COM nu e activă — încearcă mai târziu.')
+                ->warning()->send();
+            return;
+        }
+
+        $start = now();
+
+        try {
+            \Illuminate\Support\Facades\Artisan::call('winmentor:watch-vanzari', ['--firma' => 'MAL2019']);
+        } catch (\Throwable $e) {
+            \Filament\Notifications\Notification::make()
+                ->title('Eroare la actualizare')
+                ->body($e->getMessage())
+                ->danger()->send();
+            return;
+        }
+
+        // created_at e păstrat la reinserare pentru rândurile existente,
+        // deci tot ce e >= $start sunt linii cu adevărat noi
+        $newLines = DB::table('winmentor_vanzari_raw')->where('created_at', '>=', $start)->count();
+
+        \Filament\Notifications\Notification::make()
+            ->title($newLines > 0 ? "{$newLines} linii noi aduse din WinMentor" : 'Nimic nou în WinMentor')
+            ->{$newLines > 0 ? 'success' : 'info'}()
+            ->send();
+    }
+
     public function updatedSearch(): void   { $this->page = 1; }
     public function updatedDateFrom(): void  { $this->page = 1; }
     public function updatedDateTo(): void    { $this->page = 1; }
