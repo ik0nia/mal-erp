@@ -445,10 +445,31 @@ class ViewWooOrder extends ViewRecord
         }
     }
 
-    public function buildAddressForm(): array
+    public function buildBillingForm(): array
+    {
+        $b = (array) ($this->record->billing ?? []);
+
+        return [
+            \Filament\Schemas\Components\Section::make('Date de facturare')
+                ->columns(12)
+                ->schema([
+                    \Filament\Forms\Components\TextInput::make('b_first_name')->label('Prenume')->default($b['first_name'] ?? '')->columnSpan(3),
+                    \Filament\Forms\Components\TextInput::make('b_last_name')->label('Nume')->default($b['last_name'] ?? '')->columnSpan(3),
+                    \Filament\Forms\Components\TextInput::make('b_company')->label('Companie')->default($b['company'] ?? '')->columnSpan(6),
+                    \Filament\Forms\Components\TextInput::make('b_address_1')->label('Adresă')->default($b['address_1'] ?? '')->columnSpan(8),
+                    \Filament\Forms\Components\TextInput::make('b_address_2')->label('Detalii (bl/sc/ap)')->default($b['address_2'] ?? '')->columnSpan(4),
+                    \Filament\Forms\Components\TextInput::make('b_city')->label('Localitate')->default($b['city'] ?? '')->columnSpan(4),
+                    \Filament\Forms\Components\TextInput::make('b_state')->label('Județ (cod)')->default($b['state'] ?? '')->helperText('ex: BH, CJ, B')->columnSpan(3),
+                    \Filament\Forms\Components\TextInput::make('b_postcode')->label('Cod poștal')->default($b['postcode'] ?? '')->columnSpan(3),
+                    \Filament\Forms\Components\TextInput::make('b_phone')->label('Telefon')->default($b['phone'] ?? '')->columnSpan(2),
+                    \Filament\Forms\Components\TextInput::make('b_email')->label('Email')->email()->default($b['email'] ?? '')->columnSpan(6),
+                ]),
+        ];
+    }
+
+    public function buildShippingForm(): array
     {
         $shipping = (array) ($this->record->shipping ?? []);
-        $billing  = (array) ($this->record->billing ?? []);
         $shipLine = collect($this->record->data['shipping_lines'] ?? [])->first();
 
         $grossShipping = round((float) $this->record->shipping_total * 1.21, 2);
@@ -467,24 +488,6 @@ class ViewWooOrder extends ViewRecord
                     \Filament\Forms\Components\TextInput::make('s_postcode')->label('Cod poștal')->default($shipping['postcode'] ?? '')->columnSpan(3),
                     \Filament\Forms\Components\TextInput::make('s_phone')->label('Telefon livrare')->default($shipping['phone'] ?? '')->columnSpan(2),
                 ]),
-            \Filament\Schemas\Components\Section::make('Contact client (facturare)')
-                ->columns(12)
-                ->schema([
-                    \Filament\Forms\Components\TextInput::make('b_phone')->label('Telefon')->default($billing['phone'] ?? '')->columnSpan(4),
-                    \Filament\Forms\Components\TextInput::make('b_email')->label('Email')->email()->default($billing['email'] ?? '')->columnSpan(8),
-                ]),
-            \Filament\Schemas\Components\Section::make('Transport')
-                ->columns(12)
-                ->schema([
-                    \Filament\Forms\Components\TextInput::make('ship_method')->label('Metodă transport')
-                        ->default($shipLine['method_title'] ?? '')->columnSpan(7),
-                    \Filament\Forms\Components\TextInput::make('ship_cost_gross')->label('Cost transport (cu TVA)')
-                        ->numeric()->minValue(0)->step('0.01')->suffix('RON')
-                        ->default($grossShipping)
-                        ->helperText($shipLine ? 'Modificarea recalculează totalul comenzii în WooCommerce.' : 'Comanda nu are linie de transport — costul nu poate fi editat.')
-                        ->disabled(! $shipLine)
-                        ->columnSpan(5),
-                ]),
             \Filament\Schemas\Components\Section::make('Notă client')
                 ->schema([
                     \Filament\Forms\Components\Textarea::make('customer_note')->label('')->rows(2)
@@ -493,7 +496,7 @@ class ViewWooOrder extends ViewRecord
         ];
     }
 
-    public function saveOrderAddress(array $data): void
+    public function saveBilling(array $data): void
     {
         /** @var WooOrder $order */
         $order = $this->record;
@@ -503,9 +506,39 @@ class ViewWooOrder extends ViewRecord
             return;
         }
 
-        $shipping = (array) ($order->shipping ?? []);
-        $billing  = (array) ($order->billing ?? []);
+        $billing    = (array) ($order->billing ?? []);
+        $newBilling = array_merge($billing, [
+            'first_name' => trim($data['b_first_name'] ?? ''),
+            'last_name'  => trim($data['b_last_name'] ?? ''),
+            'company'    => trim($data['b_company'] ?? ''),
+            'address_1'  => trim($data['b_address_1'] ?? ''),
+            'address_2'  => trim($data['b_address_2'] ?? ''),
+            'city'       => trim($data['b_city'] ?? ''),
+            'state'      => strtoupper(trim($data['b_state'] ?? '')),
+            'postcode'   => trim($data['b_postcode'] ?? ''),
+            'phone'      => trim($data['b_phone'] ?? ''),
+            'email'      => trim($data['b_email'] ?? ''),
+        ]);
 
+        if ($newBilling == $billing) {
+            Notification::make()->info()->title('Nicio modificare')->send();
+            return;
+        }
+
+        $this->pushOrderPayload(['billing' => $newBilling], ['billing' => $billing], 'Editat: date facturare');
+    }
+
+    public function saveShipping(array $data): void
+    {
+        /** @var WooOrder $order */
+        $order = $this->record;
+
+        if (! $this->isOrderEditable()) {
+            Notification::make()->danger()->title('Comanda nu mai poate fi editată')->send();
+            return;
+        }
+
+        $shipping    = (array) ($order->shipping ?? []);
         $newShipping = array_merge($shipping, [
             'first_name' => trim($data['s_first_name'] ?? ''),
             'last_name'  => trim($data['s_last_name'] ?? ''),
@@ -518,30 +551,17 @@ class ViewWooOrder extends ViewRecord
             'phone'      => trim($data['s_phone'] ?? ''),
         ]);
 
-        $newBilling = array_merge($billing, [
-            'phone' => trim($data['b_phone'] ?? ''),
-            'email' => trim($data['b_email'] ?? ''),
-        ]);
-
         $payload = [];
-        if ($newShipping != $shipping)                                  $payload['shipping'] = $newShipping;
-        if ($newBilling != $billing)                                    $payload['billing'] = $newBilling;
-        if (trim($data['customer_note'] ?? '') !== (string) $order->customer_note) {
-            $payload['customer_note'] = trim($data['customer_note'] ?? '');
+        $before  = [];
+
+        if ($newShipping != $shipping) {
+            $payload['shipping'] = $newShipping;
+            $before['shipping']  = $shipping;
         }
 
-        // Transport: linia de shipping se editează prin id + total (fără TVA — Woo recalculează taxa)
-        $shipLine = collect($order->data['shipping_lines'] ?? [])->first();
-        if ($shipLine) {
-            $newGross = round((float) ($data['ship_cost_gross'] ?? 0), 2);
-            $oldGross = round((float) $order->shipping_total * 1.21, 2);
-            $newTitle = trim($data['ship_method'] ?? '');
-
-            if (abs($newGross - $oldGross) >= 0.01 || ($newTitle !== '' && $newTitle !== ($shipLine['method_title'] ?? ''))) {
-                $line = ['id' => $shipLine['id'], 'total' => number_format(round($newGross / 1.21, 2), 2, '.', '')];
-                if ($newTitle !== '') $line['method_title'] = $newTitle;
-                $payload['shipping_lines'] = [$line];
-            }
+        if (trim($data['customer_note'] ?? '') !== (string) $order->customer_note) {
+            $payload['customer_note'] = trim($data['customer_note'] ?? '');
+            $before['customer_note']  = (string) $order->customer_note;
         }
 
         if (empty($payload)) {
@@ -549,36 +569,29 @@ class ViewWooOrder extends ViewRecord
             return;
         }
 
+        $this->pushOrderPayload($payload, $before, 'Editat: livrare/transport');
+    }
+
+    /** Trimite payload-ul în WooCommerce, loghează cu snapshot pentru undo și resincronizează. */
+    private function pushOrderPayload(array $payload, array $before, string $label): void
+    {
+        /** @var WooOrder $order */
+        $order = $this->record;
+
         try {
             $client = new WooClient($order->connection);
             $client->updateOrder((int) $order->woo_id, $payload);
 
-            // Snapshot „before" pentru undo — doar câmpurile modificate
-            $before = [];
-            if (isset($payload['shipping']))       $before['shipping'] = $shipping;
-            if (isset($payload['billing']))        $before['billing'] = $billing;
-            if (isset($payload['customer_note']))  $before['customer_note'] = (string) $order->customer_note;
-            if (isset($payload['shipping_lines'])) {
-                $before['shipping_lines'] = [[
-                    'id'           => $shipLine['id'],
-                    'total'        => number_format((float) $order->shipping_total, 2, '.', ''),
-                    'method_title' => $shipLine['method_title'] ?? '',
-                ]];
-            }
-            $this->logEdit('edit_address', 'Editat: '.implode(', ', array_keys($payload)), $before, $payload);
-
+            $this->logEdit('edit_address', $label, $before, $payload);
             $this->syncOrderFromWoo();
 
-            $body = 'Modificări salvate: '.implode(', ', array_keys($payload)).'.';
+            $body = 'Salvat în WooCommerce: '.implode(', ', array_keys($payload)).'.';
             if ($order->winmentor_sync_status === 'synced') {
-                $body .= ' ATENȚIE: comanda a fost deja trimisă în WinMentor — verifică dacă adresa contează și acolo!';
+                $body .= ' ATENȚIE: comanda a fost deja trimisă în WinMentor — verifică dacă modificarea contează și acolo!';
             }
 
-            \Log::info('WooOrder adresă/transport editate din ERP', [
-                'order' => $order->number, 'user' => auth()->user()?->email, 'campuri' => array_keys($payload),
-            ]);
-
-            Notification::make()->success()->title('Comandă actualizată în WooCommerce')->body($body)->persistent()->send();
+            \Log::info('WooOrder editată din ERP', ['order' => $order->number, 'user' => auth()->user()?->email, 'campuri' => array_keys($payload)]);
+            Notification::make()->success()->title('Comandă actualizată în WooCommerce')->body($body)->send();
 
             $this->redirect(WooOrderResource::getUrl('view', ['record' => $order]));
         } catch (Throwable $e) {
@@ -805,16 +818,28 @@ class ViewWooOrder extends ViewRecord
             });
     }
 
-    public function editAddressAction(): Action
+    public function editBillingAction(): Action
     {
-        return Action::make('editAddress')
-            ->label('Editează livrare & client')
-            ->modalHeading(fn (): string => 'Livrare & date client — comanda #'.$this->record->number)
-            ->modalDescription('Modificările se salvează în WooCommerce (site) și se resincronizează în ERP. Costul de transport modificat recalculează totalul comenzii.')
+        return Action::make('editBilling')
+            ->label('Editează facturarea')
+            ->modalHeading(fn (): string => 'Date facturare — comanda #'.$this->record->number)
+            ->modalDescription('Modificările se salvează direct în WooCommerce și se resincronizează în ERP.')
             ->modalSubmitActionLabel('Salvează în WooCommerce')
             ->modalWidth('3xl')
-            ->form(fn (): array => $this->buildAddressForm())
-            ->action(fn (array $data) => $this->saveOrderAddress($data));
+            ->form(fn (): array => $this->buildBillingForm())
+            ->action(fn (array $data) => $this->saveBilling($data));
+    }
+
+    public function editShippingAction(): Action
+    {
+        return Action::make('editShipping')
+            ->label('Editează livrarea')
+            ->modalHeading(fn (): string => 'Livrare & transport — comanda #'.$this->record->number)
+            ->modalDescription('Modificările se salvează direct în WooCommerce; costul de transport modificat recalculează totalul comenzii.')
+            ->modalSubmitActionLabel('Salvează în WooCommerce')
+            ->modalWidth('3xl')
+            ->form(fn (): array => $this->buildShippingForm())
+            ->action(fn (array $data) => $this->saveShipping($data));
     }
 
     public function addProductAction(): Action
@@ -887,5 +912,131 @@ class ViewWooOrder extends ViewRecord
         })->values()->all();
 
         $this->saveOrderItems(['items' => $items]);
+    }
+
+    /** Căsuța Easybox curentă a comenzii (meta _sameday_shipping_locker_id) sau null. */
+    public function currentLocker(): ?array
+    {
+        $meta = collect($this->record->data['meta_data'] ?? [])
+            ->firstWhere('key', '_sameday_shipping_locker_id');
+
+        $val = $meta['value'] ?? null;
+        if (is_string($val) && $val !== '') {
+            $decoded = json_decode($val, true);
+            return is_array($decoded) ? $decoded : null;
+        }
+        return is_array($val) ? $val : null;
+    }
+
+    /** Editorul de transport (rândul 🚚 de sub produse): metodă, cost, căsuță Easybox. */
+    public function editTransportAction(): Action
+    {
+        return Action::make('editTransport')
+            ->label('Editează transportul')
+            ->modalHeading(fn (): string => 'Transport — comanda #'.$this->record->number)
+            ->modalDescription('Modificările se salvează direct în WooCommerce. Schimbarea căsuței Easybox actualizează și pluginul Sameday de pe site.')
+            ->modalSubmitActionLabel('Salvează în WooCommerce')
+            ->modalWidth('2xl')
+            ->form(function (): array {
+                $shipLine = collect($this->record->data['shipping_lines'] ?? [])->first();
+                $locker   = $this->currentLocker();
+
+                return array_filter([
+                    \Filament\Forms\Components\TextInput::make('ship_method')
+                        ->label('Metodă transport')
+                        ->default($shipLine['method_title'] ?? ''),
+                    \Filament\Forms\Components\TextInput::make('ship_cost_gross')
+                        ->label('Cost transport (cu TVA)')
+                        ->numeric()->minValue(0)->step('0.01')->suffix('RON')
+                        ->default(round((float) $this->record->shipping_total * 1.21, 2))
+                        ->helperText($shipLine ? 'Recalculează totalul comenzii.' : 'Comanda nu are linie de transport.')
+                        ->disabled(! $shipLine),
+                    Select::make('locker_id')
+                        ->label($locker ? 'Căsuță Easybox (curentă: '.($locker['name'] ?? $locker['lockerId'] ?? '?').')' : 'Căsuță Easybox (opțional — transformă livrarea în Easybox)')
+                        ->searchable()
+                        ->default($locker['lockerId'] ?? null)
+                        ->getSearchResultsUsing(fn (string $search) => \Illuminate\Support\Facades\DB::table('sameday_lockers')
+                            ->where(fn ($q) => $q->where('name', 'like', "%{$search}%")
+                                ->orWhere('city', 'like', "%{$search}%")
+                                ->orWhere('address', 'like', "%{$search}%"))
+                            ->limit(30)->get()
+                            ->mapWithKeys(fn ($l) => [$l->locker_id => $l->name.' — '.$l->address.', '.$l->city.' ('.$l->county.')'])
+                            ->all())
+                        ->getOptionLabelUsing(function ($value) {
+                            $l = \Illuminate\Support\Facades\DB::table('sameday_lockers')->where('locker_id', $value)->first();
+                            return $l ? $l->name.' — '.$l->address.', '.$l->city : (string) $value;
+                        })
+                        ->helperText('Caută după nume, oraș sau adresă. Golește câmpul pentru livrare la adresă (fără Easybox).'),
+                ]);
+            })
+            ->action(fn (array $data) => $this->saveTransport($data));
+    }
+
+    public function saveTransport(array $data): void
+    {
+        /** @var WooOrder $order */
+        $order = $this->record;
+
+        if (! $this->isOrderEditable()) {
+            Notification::make()->danger()->title('Comanda nu mai poate fi editată')->send();
+            return;
+        }
+
+        $payload = [];
+        $before  = [];
+
+        $shipLine = collect($order->data['shipping_lines'] ?? [])->first();
+        if ($shipLine) {
+            $newGross = round((float) ($data['ship_cost_gross'] ?? 0), 2);
+            $oldGross = round((float) $order->shipping_total * 1.21, 2);
+            $newTitle = trim($data['ship_method'] ?? '');
+
+            if (abs($newGross - $oldGross) >= 0.01 || ($newTitle !== '' && $newTitle !== ($shipLine['method_title'] ?? ''))) {
+                $line = ['id' => $shipLine['id'], 'total' => number_format(round($newGross / 1.21, 2), 2, '.', '')];
+                if ($newTitle !== '') $line['method_title'] = $newTitle;
+                $payload['shipping_lines'] = [$line];
+                $before['shipping_lines']  = [[
+                    'id'           => $shipLine['id'],
+                    'total'        => number_format((float) $order->shipping_total, 2, '.', ''),
+                    'method_title' => $shipLine['method_title'] ?? '',
+                ]];
+            }
+        }
+
+        // Easybox: schimbarea/eliminarea căsuței prin meta pluginului Sameday
+        $locker    = $this->currentLocker();
+        $currentId = (string) ($locker['lockerId'] ?? '');
+        $newId     = (string) ($data['locker_id'] ?? '');
+
+        if ($newId !== $currentId) {
+            if ($newId === '') {
+                $newMeta = '';
+            } else {
+                $l = \Illuminate\Support\Facades\DB::table('sameday_lockers')->where('locker_id', $newId)->first();
+                if (! $l) {
+                    Notification::make()->danger()->title('Căsuța selectată nu există')->send();
+                    return;
+                }
+                // Format compatibil cu pluginul Sameday (păstrăm câmpurile pe care le avem)
+                $newMeta = json_encode([
+                    'lockerId' => (string) $l->locker_id,
+                    'oohType'  => $locker['oohType'] ?? '0',
+                    'name'     => $l->name,
+                    'address'  => $l->address,
+                    'city'     => $l->city,
+                    'county'   => $l->county,
+                ] + array_diff_key($locker ?? [], array_flip(['lockerId', 'name', 'address', 'city', 'county'])), JSON_UNESCAPED_UNICODE);
+            }
+
+            $payload['meta_data'] = [['key' => '_sameday_shipping_locker_id', 'value' => $newMeta]];
+            $before['meta_data']  = [['key' => '_sameday_shipping_locker_id', 'value' => $locker ? json_encode($locker, JSON_UNESCAPED_UNICODE) : '']];
+        }
+
+        if (empty($payload)) {
+            Notification::make()->info()->title('Nicio modificare')->send();
+            return;
+        }
+
+        $this->pushOrderPayload($payload, $before, 'Editat: transport'.(isset($payload['meta_data']) ? ' + căsuță Easybox' : ''));
     }
 }

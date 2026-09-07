@@ -217,6 +217,20 @@ Schedule::command('winmentor:fetch-solduri')
     ->withoutOverlapping(60)
     ->runInBackground();
 
+// Sameday — căsuțe Easybox de pe site (zilnic) + AWB-uri create pe site (30 min).
+Schedule::command('sameday:sync-lockers')
+    ->dailyAt('06:50')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping(30)
+    ->runInBackground();
+
+Schedule::command('sameday:sync-awbs-from-site')
+    ->everyThirtyMinutes()
+    ->timezone('Europe/Bucharest')
+    ->between('08:00', '20:00')
+    ->withoutOverlapping(15)
+    ->runInBackground();
+
 // WinMentor — încasări clienți + plăți furnizori (orar, luna de lucru curentă).
 Schedule::command('winmentor:fetch-incasari-plati')
     ->hourlyAt(40)

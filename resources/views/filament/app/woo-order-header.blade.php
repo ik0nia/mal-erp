@@ -55,7 +55,7 @@
   <div class="oh-col">
     <h4>Facturare
       @if($editable)
-        <button type="button" class="oh-pencil" title="Editează datele clientului" wire:click="mountAction('editAddress')">✎</button>
+        <button type="button" class="oh-pencil" title="Editează datele de facturare" wire:click="mountAction('editBilling')">✎</button>
       @endif
     </h4>
     @forelse($bLines as $i => $line)
@@ -71,7 +71,7 @@
   <div class="oh-col">
     <h4>Livrare
       @if($editable)
-        <button type="button" class="oh-pencil" title="Editează adresa de livrare și transportul" wire:click="mountAction('editAddress')">✎</button>
+        <button type="button" class="oh-pencil" title="Editează adresa de livrare" wire:click="mountAction('editShipping')">✎</button>
       @endif
     </h4>
     @if($sLines)
@@ -81,6 +81,16 @@
       @if(!empty($s['phone']))<p class="oh-muted">☎ {{ $s['phone'] }}</p>@endif
     @else
       <p class="oh-muted">La fel ca facturarea</p>
+    @endif
+    @php $locker = $this->currentLocker(); @endphp
+    @if($locker)
+      <p style="margin-top:.4rem;">
+        <span style="display:inline-block;padding:.15rem .55rem;border-radius:.4rem;font-size:.75rem;font-weight:700;background:#ede9fe;color:#6d28d9;">📦 EASYBOX</span>
+        <span style="font-size:.83rem;color:#374151;"> {{ $locker['name'] ?? '' }} — {{ $locker['address'] ?? '' }}, {{ $locker['city'] ?? '' }}</span>
+        @if($editable)
+          <button type="button" class="oh-pencil" title="Schimbă căsuța Easybox / metoda" wire:click="mountAction('editTransport')">✎</button>
+        @endif
+      </p>
     @endif
     @if($shipLine)
       <p class="oh-muted" style="margin-top:.4rem;">🚚 {{ $shipLine['method_title'] ?? '' }} — {{ number_format((float) $record->shipping_total * 1.21, 2) }} lei</p>

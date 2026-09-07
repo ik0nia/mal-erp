@@ -85,8 +85,8 @@
           <td style="text-align:right;">{{ number_format((float) $record->shipping_total * 1.21, 2) }}</td>
           @if($editable)
             <td style="text-align:right;">
-              <button type="button" class="oie-icon" title="Editează transportul (în Livrare & client)"
-                      wire:click="mountAction('editAddress')">✎</button>
+              <button type="button" class="oie-icon" title="Editează transportul / căsuța Easybox"
+                      wire:click="mountAction('editTransport')">✎</button>
             </td>
           @endif
         </tr>
