@@ -71,6 +71,9 @@ class WinmentorSolduriPage extends Page
     {
         $cutoff = now()->subMonths($this->luniOperational)->toDateString();
 
+        // Clase interne Mentor: M=magazin/consum, ZZZ/Special/...=conturi istorice/tehnice
+        $claseInterne = ['M', 'ZZZ', 'Special', '...', 'PRESCURTARI'];
+
         $docs = DB::table('winmentor_solduri_raw')
             ->where('directie', $directie)
             ->whereRaw('ABS(rest_de_plata) >= 0.01')
@@ -80,7 +83,7 @@ class WinmentorSolduriPage extends Page
             ->groupBy('part_id');
 
         $partIds  = $docs->keys()->filter()->values()->all();
-        $wmNames  = DB::table('winmentor_parteneri')->whereIn('wm_id', $partIds)->get(['wm_id', 'denumire', 'cod_fiscal'])->keyBy('wm_id');
+        $wmNames  = DB::table('winmentor_parteneri')->whereIn('wm_id', $partIds)->get(['wm_id', 'denumire', 'cod_fiscal', 'clasa'])->keyBy('wm_id');
 
         $suppliers = $directie === 'furnizor'
             ? \App\Models\Supplier::whereIn('winmentor_id', $partIds)->pluck('id', 'winmentor_id')
@@ -91,11 +94,12 @@ class WinmentorSolduriPage extends Page
             ? \App\Models\Customer::whereIn('winmentor_id', $cuis)->pluck('id', 'winmentor_id')
             : collect();
 
-        $azi        = now()->startOfDay();
-        $totalNet   = 0.0;
-        $totalVechi = 0.0;
-        $totalAvans = 0.0;
-        $rows       = [];
+        $azi          = now()->startOfDay();
+        $totalNet     = 0.0;
+        $totalVechi   = 0.0;
+        $totalAvans   = 0.0;
+        $totalInterne = 0.0;
+        $rows         = [];
 
         foreach ($docs as $partId => $partDocs) {
             // FIFO: pool-ul de minusuri acoperă plusurile în ordine cronologică
@@ -123,13 +127,20 @@ class WinmentorSolduriPage extends Page
 
             if ($netRecent < 1 && $netVechi < 1 && $avans < 1) continue;
 
+            $p = $wmNames->get($partId);
+
+            // Conturile interne (clasa Mentor) nu sunt creanțe/datorii reale — total separat
+            if (in_array(trim((string) ($p->clasa ?? '')), $claseInterne, true)) {
+                $totalInterne += $netRecent + $netVechi;
+                continue;
+            }
+
             $totalNet   += $netRecent;
             $totalVechi += $netVechi;
             $totalAvans += $avans;
 
             if ($netRecent < 1 && $netVechi < 1) continue; // doar avans — apare în total, nu în listă
 
-            $p   = $wmNames->get($partId);
             $url = null;
             if ($directie === 'furnizor' && ($sid = $suppliers->get($partId))) {
                 $url = \App\Filament\App\Resources\SupplierResource::getUrl('view', ['record' => $sid]);
@@ -159,7 +170,7 @@ class WinmentorSolduriPage extends Page
 
         usort($rows, fn ($a, $b) => $b->net_recent <=> $a->net_recent);
 
-        return ['rows' => $rows, 'total_net' => $totalNet, 'total_vechi' => $totalVechi, 'total_avans' => $totalAvans];
+        return ['rows' => $rows, 'total_net' => $totalNet, 'total_vechi' => $totalVechi, 'total_avans' => $totalAvans, 'total_interne' => $totalInterne];
     }
 
     /** Documentele deschise ale unui partener (pentru expandare în UI). */

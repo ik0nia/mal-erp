@@ -35,6 +35,7 @@
     <span>{{ $this->tab === 'clienti' ? 'De încasat (documente < ' . $this->luniOperational . ' luni)' : 'De plătit (documente < ' . $this->luniOperational . ' luni)' }}<b>{{ number_format($data['total_net'], 0, ',', '.') }} lei</b></span>
     <span>Sold istoric necompensat (mai vechi — de verificat în contabilitate)<b style="color:#9ca3af;">{{ number_format($data['total_vechi'], 0, ',', '.') }} lei</b></span>
     <span>{{ $this->tab === 'clienti' ? 'Avansuri / solduri în favoarea clienților' : 'Avansuri plătite furnizorilor (marfă nerecepționată)' }}<b style="color:#b45309;">{{ number_format($data['total_avans'], 0, ',', '.') }} lei</b></span>
+    <span>Conturi interne (consum/istoric — clasa Mentor)<b style="color:#9ca3af;">{{ number_format($data['total_interne'] ?? 0, 0, ',', '.') }} lei</b></span>
     <span>Parteneri cu sold<b>{{ count($data['rows']) }}</b></span>
   </div>
 
