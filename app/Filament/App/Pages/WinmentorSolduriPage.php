@@ -16,7 +16,7 @@ class WinmentorSolduriPage extends Page
 {
     protected string $view = 'filament.app.pages.winmentor-solduri';
 
-    protected static ?string $navigationLabel = 'Scadențar';
+    protected static ?string $navigationLabel = 'Scadențar (beta)';
     protected static string|\UnitEnum|null $navigationGroup = 'WinMentor';
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-banknotes';
     protected static ?int    $navigationSort  = 93;
@@ -65,6 +65,19 @@ class WinmentorSolduriPage extends Page
             ->groupBy('document_ref')
             ->pluck('suma', 'document_ref');
 
+        // Facturi încasate CASH la casă: apar ca rânduri S (bon) pe numărul facturii
+        // în vânzări — NU trec prin modulul de încasări bancare. Fără verificarea asta,
+        // orice factură achitată pe loc ar rămâne veșnic „restantă".
+        $nrFacturi = $facturi->pluck('nr_factura')->filter()->unique()->values()->all();
+        $cashPaid  = DB::table('winmentor_vanzari_raw')
+            ->where('firma', 'MAL2019')
+            ->where('tip_document', 'S')
+            ->whereIn('nr_factura', $nrFacturi)
+            ->whereRaw("nr_factura NOT REGEXP '^2[0-9]{5}$'") // excludem seriile native de bon
+            ->select('nr_factura', DB::raw('MAX(CONCAT(an, LPAD(luna,2,"0"))) as perioada'))
+            ->groupBy('nr_factura')
+            ->pluck('perioada', 'nr_factura');
+
         // Nume partener: Customer (winmentor_id = CUI) sau winmentor_parteneri
         $partIds  = $facturi->pluck('part_id')->filter()->unique()->values()->all();
         $wmNames  = DB::table('winmentor_parteneri')->whereIn('wm_id', $partIds)->pluck('denumire', 'wm_id');
@@ -78,6 +91,15 @@ class WinmentorSolduriPage extends Page
             $inc  = (float) ($incasat[$f->serie_document] ?? 0);
             $sold = round((float) $f->valoare - $inc, 2);
             if ($sold < 1) continue;
+
+            // Încasată cash prin bon (în aceeași lună sau ulterior emiterii) → nu e restantă
+            $cashPeriod = $cashPaid[$f->nr_factura] ?? null;
+            if ($cashPeriod !== null) {
+                $emisaPeriod = $f->emisa ? substr(str_replace('-', '', (string) $f->emisa), 0, 6) : null;
+                if ($emisaPeriod === null || $cashPeriod >= $emisaPeriod) {
+                    continue;
+                }
+            }
 
             $customer = $f->cui ? ($custByCui[$f->cui] ?? null) : null;
             $scadenta = $f->scadenta ? Carbon::parse($f->scadenta) : null;

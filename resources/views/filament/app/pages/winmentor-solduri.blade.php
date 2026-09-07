@@ -17,6 +17,15 @@
 .sc-note{padding:.5rem 1.25rem;font-size:.75rem;color:#9ca3af;background:#fffbeb;border-bottom:1px solid #fef3c7;}
 </style>
 
+@php
+  $backfillIncomplet = \Illuminate\Support\Facades\DB::table('winmentor_incasari_raw')->where('an', '<', now()->year)->count() === 0;
+@endphp
+@if($backfillIncomplet)
+<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:.75rem;padding:.75rem 1.25rem;margin-bottom:1rem;color:#b91c1c;font-size:.85rem;font-weight:600;">
+  ⚠ Istoricul încasărilor/plăților încă se descarcă din WinMentor — soldurile afișate sunt SUPRAEVALUATE până la finalizare. Nu lua decizii pe baza acestor cifre încă.
+</div>
+@endif
+
 <div class="sc-card">
   <div class="sc-header">
     <span class="sc-title">Scadențar — calculat local din facturi vs încasări/plăți</span>
