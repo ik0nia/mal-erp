@@ -1026,6 +1026,13 @@ class CreatePurchaseOrder extends CreateRecord
 
             $daysUntilStockout = $adjustedDaily > 0 ? round($stock / $adjustedDaily, 1) : null;
 
+            // Produse LENTE cu stoc mic: formula liniară dă 0 („o bucată ajunge"),
+            // dar dacă stocul moare în interiorul a 2 cicluri de comandă, sugerăm
+            // completarea până la 2 cicluri — tot faci comanda la furnizor acum.
+            if ($recommended <= 0 && $daysUntilStockout !== null && $daysUntilStockout <= 2 * $coverDays) {
+                $recommended = (int) ceil($adjustedDaily * 2 * $coverDays - $stock - $onOrder);
+            }
+
             $items[$row->woo_product_id] = [
                 'hint'              => max(0, $recommended),
                 'on_order'          => $onOrder,

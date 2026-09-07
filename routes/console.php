@@ -171,6 +171,13 @@ Schedule::command('toya:sync-prices')
 //     ->timezone('Europe/Bucharest')
 //     ->withoutOverlapping(360);
 
+// Produse cu rulaj rămase fără furnizor → asociere din istoricul de recepții (săptămânal).
+Schedule::command('erp:associate-suppliers-from-receptions')
+    ->weeklyOn(1, '05:30')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping(60)
+    ->runInBackground();
+
 // Sezonalitate lunară per produs (istoric multi-anual) — luna 1 la 01:15.
 Schedule::command('bi:compute-seasonality')
     ->monthlyOn(1, '01:15')
