@@ -40,8 +40,11 @@ class RefetchWinmentorVanzariIstoricCommand extends WatchWinmentorVanzariCommand
         $anFiltru   = $this->option('an') ? (int) $this->option('an') : null;
         $lunaFiltru = $this->option('luna') ? (int) $this->option('luna') : null;
 
-        if ($anFiltru !== null && ($anFiltru < 2019 || $anFiltru > 2024)) {
-            $this->error('Doar anii 2019-2024 sunt permiși — 2025+ sunt deja tipizați (ștergerea ar pierde emularea îmbinată).');
+        // 2025 permis explicit (cu --an): mergeVanzariSources re-aduce emularea per lună
+        // (fallback pe /ext), deci nu se pierde nimic; datele 2025 populate sub vechiul
+        // format au bonurile S sub-reprezentate ~10× (constatat 2026-09-08).
+        if ($anFiltru !== null && ($anFiltru < 2019 || $anFiltru > 2025)) {
+            $this->error('Doar anii 2019-2025 sunt permiși (2025 doar cu --an explicit; 2026 e luna live).');
             return self::FAILURE;
         }
 
