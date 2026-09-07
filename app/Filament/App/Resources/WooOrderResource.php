@@ -281,6 +281,20 @@ class WooOrderResource extends Resource
                 Section::make('Client')
                     ->columnSpanFull()
                     ->columns(4)
+                    ->headerActions([
+                        Actions\Action::make('edit_address')
+                            ->label('Editează livrare & client')
+                            ->icon('heroicon-o-map-pin')
+                            ->color('info')
+                            ->size('sm')
+                            ->visible(fn ($livewire): bool => $livewire->isOrderEditable())
+                            ->modalHeading(fn (WooOrder $record): string => 'Livrare & date client — comanda #'.$record->number)
+                            ->modalDescription('Modificările se salvează în WooCommerce (site) și se resincronizează în ERP. Costul de transport modificat recalculează totalul comenzii.')
+                            ->modalSubmitActionLabel('Salvează în WooCommerce')
+                            ->modalWidth('3xl')
+                            ->form(fn ($livewire): array => $livewire->buildAddressForm())
+                            ->action(fn (array $data, $livewire) => $livewire->saveOrderAddress($data)),
+                    ])
                     ->schema([
                         TextEntry::make('customer_name')
                             ->label('Nume')
@@ -330,6 +344,86 @@ class WooOrderResource extends Resource
 
                 Section::make('Produse')
                     ->columnSpanFull()
+                    ->headerActions([
+                        Actions\Action::make('edit_items')
+                            ->label('Editează')
+                            ->icon('heroicon-o-pencil-square')
+                            ->color('primary')
+                            ->size('sm')
+                            ->visible(fn ($livewire): bool => $livewire->isOrderEditable())
+                            ->modalHeading(fn (WooOrder $record): string => 'Editare produse — comanda #'.$record->number)
+                            ->modalDescription('Modificările se trimit în WooCommerce (site), care recalculează totalurile și TVA-ul, apoi comanda se resincronizează în ERP. Prețul modificat aici afectează DOAR această comandă.')
+                            ->modalSubmitActionLabel('Salvează în WooCommerce')
+                            ->modalWidth('4xl')
+                            ->form(fn ($livewire): array => [
+                                \Filament\Forms\Components\Repeater::make('items')
+                                    ->label('Produse')
+                                    ->addable(false)
+                                    ->reorderable(false)
+                                    ->deletable(false)
+                                    ->columns(12)
+                                    ->default($livewire->buildEditableItems())
+                                    ->schema([
+                                        \Filament\Forms\Components\Hidden::make('woo_item_id'),
+                                        \Filament\Forms\Components\Hidden::make('vat_rate'),
+                                        \Filament\Forms\Components\TextInput::make('name')->label('Produs')->disabled()->dehydrated()->columnSpan(7),
+                                        \Filament\Forms\Components\TextInput::make('quantity')->label('Cantitate')->numeric()->minValue(1)->required()->columnSpan(2),
+                                        \Filament\Forms\Components\TextInput::make('price_gross')->label('Preț cu TVA')->numeric()->minValue(0)->step('0.01')->suffix('RON')->required()->columnSpan(3),
+                                    ]),
+                            ])
+                            ->action(fn (array $data, $livewire) => $livewire->saveOrderItems($data)),
+
+                        Actions\Action::make('add_product')
+                            ->label('Adaugă')
+                            ->icon('heroicon-o-plus-circle')
+                            ->color('success')
+                            ->size('sm')
+                            ->visible(fn ($livewire): bool => $livewire->isOrderEditable())
+                            ->modalHeading(fn (WooOrder $record): string => 'Adaugă produs — comanda #'.$record->number)
+                            ->modalDescription('Produsul se adaugă în comandă în WooCommerce, cu recalcularea totalurilor. Lasă prețul gol pentru prețul curent de pe site.')
+                            ->modalSubmitActionLabel('Adaugă în comandă')
+                            ->form([
+                                \Filament\Forms\Components\Select::make('product_id')
+                                    ->label('Produs')
+                                    ->required()
+                                    ->searchable()
+                                    ->getSearchResultsUsing(fn (string $search) => WooProduct::query()
+                                        ->whereNotNull('woo_id')->where('is_placeholder', false)
+                                        ->where('status', 'publish')
+                                        ->where(fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('sku', 'like', "%{$search}%"))
+                                        ->limit(30)
+                                        ->get()
+                                        ->mapWithKeys(fn ($p) => [$p->id => $p->decoded_name.' — '.$p->sku.' ('.number_format((float) $p->regular_price, 2).' lei)'])
+                                        ->all())
+                                    ->getOptionLabelUsing(fn ($value) => WooProduct::find($value)?->decoded_name),
+                                \Filament\Forms\Components\TextInput::make('quantity')
+                                    ->label('Cantitate')->numeric()->minValue(1)->default(1)->required(),
+                                \Filament\Forms\Components\TextInput::make('price_gross')
+                                    ->label('Preț cu TVA (opțional — implicit prețul de pe site)')
+                                    ->numeric()->minValue(0)->step('0.01')->suffix('RON'),
+                            ])
+                            ->action(fn (array $data, $livewire) => $livewire->addOrderProduct($data)),
+
+                        Actions\Action::make('delete_product')
+                            ->label('Șterge')
+                            ->icon('heroicon-o-trash')
+                            ->color('danger')
+                            ->size('sm')
+                            ->visible(fn ($livewire, WooOrder $record): bool => $livewire->isOrderEditable() && $record->items->count() > 1)
+                            ->modalHeading(fn (WooOrder $record): string => 'Șterge produs — comanda #'.$record->number)
+                            ->modalDescription('Produsul se elimină din comandă în WooCommerce (totalurile se recalculează). Poți reveni oricând din Istoricul modificărilor.')
+                            ->modalSubmitActionLabel('Șterge din comandă')
+                            ->requiresConfirmation()
+                            ->form(fn (WooOrder $record): array => [
+                                \Filament\Forms\Components\Select::make('woo_item_id')
+                                    ->label('Produsul de șters')
+                                    ->required()
+                                    ->options($record->items->mapWithKeys(fn ($i) => [
+                                        $i->woo_item_id => $i->name.' — '.$i->quantity.' × '.number_format((float) $i->price, 2).' lei',
+                                    ])->all()),
+                            ])
+                            ->action(fn (array $data, $livewire) => $livewire->deleteOrderProduct((int) $data['woo_item_id'])),
+                    ])
                     ->schema([
                         RepeatableEntry::make('items')
                             ->label('')
@@ -423,7 +517,15 @@ class WooOrderResource extends Resource
 
                 Section::make('AWB-uri Sameday')
                     ->columnSpanFull()
-                    ->hidden(fn (WooOrder $record): bool => $record->samedayAwbs->isEmpty())
+                    ->headerActions([
+                        Actions\Action::make('create_awb')
+                            ->label('Creare AWB')
+                            ->icon('heroicon-o-truck')
+                            ->color('success')
+                            ->size('sm')
+                            ->url(fn ($livewire): string => $livewire->buildCreateAwbUrl())
+                            ->openUrlInNewTab(false),
+                    ])
                     ->schema([
                         RepeatableEntry::make('samedayAwbs')
                             ->label('')

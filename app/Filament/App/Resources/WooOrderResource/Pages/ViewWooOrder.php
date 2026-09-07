@@ -80,110 +80,6 @@ class ViewWooOrder extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            Action::make('edit_items')
-                ->label('Editează produse')
-                ->icon('heroicon-o-pencil-square')
-                ->color('primary')
-                ->visible(fn (): bool => $this->isOrderEditable())
-                ->modalHeading(fn (): string => 'Editare produse — comanda #'.$this->record->number)
-                ->modalDescription('Modificările se trimit în WooCommerce (site), care recalculează totalurile și TVA-ul, apoi comanda se resincronizează în ERP. Ștergerea unui rând elimină produsul din comandă. Prețul modificat aici afectează DOAR această comandă, nu prețul produsului de pe site.')
-                ->modalSubmitActionLabel('Salvează în WooCommerce')
-                ->modalWidth('4xl')
-                ->form(fn (): array => [
-                    \Filament\Forms\Components\Repeater::make('items')
-                        ->label('Produse')
-                        ->addable(false)
-                        ->reorderable(false)
-                        ->deletable(true)
-                        ->columns(12)
-                        ->default($this->buildEditableItems())
-                        ->schema([
-                            \Filament\Forms\Components\Hidden::make('woo_item_id'),
-                            \Filament\Forms\Components\Hidden::make('vat_rate'),
-                            \Filament\Forms\Components\TextInput::make('name')
-                                ->label('Produs')
-                                ->disabled()
-                                ->dehydrated()
-                                ->columnSpan(7),
-                            \Filament\Forms\Components\TextInput::make('quantity')
-                                ->label('Cantitate')
-                                ->numeric()
-                                ->minValue(1)
-                                ->required()
-                                ->columnSpan(2),
-                            \Filament\Forms\Components\TextInput::make('price_gross')
-                                ->label('Preț cu TVA')
-                                ->numeric()
-                                ->minValue(0)
-                                ->step('0.01')
-                                ->suffix('RON')
-                                ->required()
-                                ->columnSpan(3),
-                        ]),
-                ])
-                ->action(fn (array $data) => $this->saveOrderItems($data)),
-
-            Action::make('add_product')
-                ->label('Adaugă produs')
-                ->icon('heroicon-o-plus-circle')
-                ->color('success')
-                ->visible(fn (): bool => $this->isOrderEditable())
-                ->modalHeading(fn (): string => 'Adaugă produs — comanda #'.$this->record->number)
-                ->modalDescription('Produsul se adaugă în comandă în WooCommerce, cu recalcularea totalurilor. Lasă prețul gol pentru prețul curent de pe site.')
-                ->modalSubmitActionLabel('Adaugă în comandă')
-                ->form([
-                    \Filament\Forms\Components\Select::make('product_id')
-                        ->label('Produs')
-                        ->required()
-                        ->searchable()
-                        ->getSearchResultsUsing(fn (string $search) => \App\Models\WooProduct::query()
-                            ->whereNotNull('woo_id')->where('is_placeholder', false)
-                            ->where('status', 'publish')
-                            ->where(fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('sku', 'like', "%{$search}%"))
-                            ->limit(30)
-                            ->get()
-                            ->mapWithKeys(fn ($p) => [$p->id => $p->decoded_name.' — '.$p->sku.' ('.number_format((float) $p->regular_price, 2).' lei)'])
-                            ->all())
-                        ->getOptionLabelUsing(fn ($value) => \App\Models\WooProduct::find($value)?->decoded_name),
-                    \Filament\Forms\Components\TextInput::make('quantity')
-                        ->label('Cantitate')->numeric()->minValue(1)->default(1)->required(),
-                    \Filament\Forms\Components\TextInput::make('price_gross')
-                        ->label('Preț cu TVA (opțional — implicit prețul de pe site)')
-                        ->numeric()->minValue(0)->step('0.01')->suffix('RON'),
-                ])
-                ->action(fn (array $data) => $this->addOrderProduct($data)),
-
-            Action::make('delete_product')
-                ->label('Șterge produs')
-                ->icon('heroicon-o-trash')
-                ->color('danger')
-                ->visible(fn (): bool => $this->isOrderEditable() && $this->record->items->count() > 1)
-                ->modalHeading(fn (): string => 'Șterge produs — comanda #'.$this->record->number)
-                ->modalDescription('Produsul se elimină din comandă în WooCommerce (totalurile se recalculează). Poți reveni oricând din Istoricul modificărilor.')
-                ->modalSubmitActionLabel('Șterge din comandă')
-                ->requiresConfirmation()
-                ->form(fn (): array => [
-                    \Filament\Forms\Components\Select::make('woo_item_id')
-                        ->label('Produsul de șters')
-                        ->required()
-                        ->options($this->record->items->mapWithKeys(fn ($i) => [
-                            $i->woo_item_id => $i->name.' — '.$i->quantity.' × '.number_format((float) $i->price, 2).' lei',
-                        ])->all()),
-                ])
-                ->action(fn (array $data) => $this->deleteOrderProduct((int) $data['woo_item_id'])),
-
-            Action::make('edit_address')
-                ->label('Editează livrare & client')
-                ->icon('heroicon-o-map-pin')
-                ->color('info')
-                ->visible(fn (): bool => $this->isOrderEditable())
-                ->modalHeading(fn (): string => 'Livrare & date client — comanda #'.$this->record->number)
-                ->modalDescription('Modificările se salvează în WooCommerce (site) și se resincronizează în ERP. Costul de transport modificat recalculează totalul comenzii.')
-                ->modalSubmitActionLabel('Salvează în WooCommerce')
-                ->modalWidth('3xl')
-                ->form(fn (): array => $this->buildAddressForm())
-                ->action(fn (array $data) => $this->saveOrderAddress($data)),
-
             Action::make('factura_winmentor')
                 ->label(function (): string {
                     $inv = $this->winmentorInvoice();
@@ -328,13 +224,6 @@ class ViewWooOrder extends ViewRecord
                     }
                 }),
 
-            Action::make('create_awb')
-                ->label('Creare AWB Sameday')
-                ->icon('heroicon-o-truck')
-                ->color('success')
-                ->url(fn (): string => $this->buildCreateAwbUrl())
-                ->openUrlInNewTab(false),
-
             Action::make('create_purchase_request')
                 ->label('Creare Necesar')
                 ->icon('heroicon-o-clipboard-document-list')
@@ -396,7 +285,7 @@ class ViewWooOrder extends ViewRecord
     }
 
     /** @return array<int, array<string, mixed>> */
-    private function buildEditableItems(): array
+    public function buildEditableItems(): array
     {
         return $this->record->items->map(function ($item) {
             // cota TVA reală a itemului, dedusă din valorile Woo (net + tax)
@@ -445,7 +334,7 @@ class ViewWooOrder extends ViewRecord
         ]);
     }
 
-    private function deleteOrderProduct(int $wooItemId): void
+    public function deleteOrderProduct(int $wooItemId): void
     {
         /** @var WooOrder $order */
         $order = $this->record;
@@ -471,7 +360,7 @@ class ViewWooOrder extends ViewRecord
         }
     }
 
-    private function addOrderProduct(array $data): void
+    public function addOrderProduct(array $data): void
     {
         /** @var WooOrder $order */
         $order   = $this->record;
@@ -585,7 +474,7 @@ class ViewWooOrder extends ViewRecord
         }
     }
 
-    private function buildAddressForm(): array
+    public function buildAddressForm(): array
     {
         $shipping = (array) ($this->record->shipping ?? []);
         $billing  = (array) ($this->record->billing ?? []);
@@ -633,7 +522,7 @@ class ViewWooOrder extends ViewRecord
         ];
     }
 
-    private function saveOrderAddress(array $data): void
+    public function saveOrderAddress(array $data): void
     {
         /** @var WooOrder $order */
         $order = $this->record;
@@ -726,7 +615,7 @@ class ViewWooOrder extends ViewRecord
         }
     }
 
-    private function saveOrderItems(array $data): void
+    public function saveOrderItems(array $data): void
     {
         /** @var WooOrder $order */
         $order = $this->record;
@@ -891,7 +780,7 @@ class ViewWooOrder extends ViewRecord
         return $result;
     }
 
-    private function buildCreateAwbUrl(): string
+    public function buildCreateAwbUrl(): string
     {
         /** @var WooOrder $order */
         $order = $this->record;
