@@ -66,7 +66,7 @@ class WooProductResource extends Resource
 
     public static function canCreate(): bool
     {
-        return false;
+        return auth()->check();
     }
 
     public static function canView(Model $record): bool
@@ -762,8 +762,9 @@ class WooProductResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListWooProducts::route('/'),
-            'view'  => Pages\ViewWooProduct::route('/{record}'),
+            'index'  => Pages\ListWooProducts::route('/'),
+            'create' => Pages\CreateWooProduct::route('/create'),
+            'view'   => Pages\ViewWooProduct::route('/{record}'),
             'edit'  => Pages\EditWooProduct::route('/{record}/edit'),
         ];
     }

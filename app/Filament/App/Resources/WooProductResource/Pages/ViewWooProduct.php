@@ -95,6 +95,14 @@ class ViewWooProduct extends ViewRecord
         }
     }
 
+    /** Sincronizarea galeriei pe site — după orice modificare, dacă produsul există în Woo. */
+    private function dispatchImageSync(): void
+    {
+        if ($this->record->woo_id && ! $this->record->is_placeholder) {
+            \App\Jobs\SyncProductImagesToWooJob::dispatch($this->record->id)->onQueue('default');
+        }
+    }
+
     protected function getHeaderActions(): array
     {
         return [
@@ -339,6 +347,57 @@ class ViewWooProduct extends ViewRecord
                 }),
 
             // ── Gallery: setează poza principală ─────────────────────────
+            // ── Gallery: UPLOAD imagini de pe calculator ───────────────────
+            Actions\Action::make('gallery_upload')
+                ->label('Urcă imagini')
+                ->icon('heroicon-o-arrow-up-tray')
+                ->color('primary')
+                ->modalHeading('Urcă imagini pentru produs')
+                ->modalDescription('Imaginile se salvează în ERP și se sincronizează automat pe site (prima urcată devine principală dacă produsul nu are deja una).')
+                ->modalSubmitActionLabel('Urcă și sincronizează')
+                ->form([
+                    \Filament\Forms\Components\FileUpload::make('files')
+                        ->label('Imagini')
+                        ->image()
+                        ->multiple()
+                        ->maxFiles(10)
+                        ->maxSize(8192)
+                        ->disk('public')
+                        ->directory(fn (): string => 'product-images/'.$this->record->id)
+                        ->imageEditor()
+                        ->required(),
+                ])
+                ->action(function (array $data): void {
+                    /** @var WooProduct $product */
+                    $product  = $this->record;
+                    $maxOrder = ProductImage::where('woo_product_id', $product->id)->max('sort_order') ?? -1;
+                    $hadNone  = $product->images()->count() === 0;
+                    $added    = 0;
+
+                    foreach ((array) ($data['files'] ?? []) as $path) {
+                        $url = rtrim(config('app.url'), '/').'/storage/'.ltrim($path, '/');
+
+                        $image = ProductImage::create([
+                            'woo_product_id' => $product->id,
+                            'url'            => $url,
+                            'local_path'     => $path,
+                            'sort_order'     => ++$maxOrder,
+                            'is_primary'     => false,
+                            'source'         => ProductImage::SOURCE_MANUAL,
+                        ]);
+
+                        if ($hadNone && $added === 0) {
+                            $image->setAsPrimary();
+                        }
+                        $added++;
+                    }
+
+                    $this->dispatchImageSync();
+                    Notification::make()->success()->title($added.' imagine(i) urcate')
+                        ->body('Sincronizarea cu site-ul rulează în fundal (câteva secunde).')->send();
+                    $this->redirect($this->getResource()::getUrl('view', ['record' => $product->getRouteKey()]));
+                }),
+
             Actions\Action::make('gallery_set_primary')
                 ->label('Setează ca principală')
                 ->hidden()
@@ -361,8 +420,9 @@ class ViewWooProduct extends ViewRecord
 
                     $image->setAsPrimary();
                     $this->record->refresh();
+                    $this->dispatchImageSync();
 
-                    Notification::make()->success()->title('Imaginea principală a fost actualizată.')->send();
+                    Notification::make()->success()->title('Imaginea principală a fost actualizată — se sincronizează pe site.')->send();
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record->getRouteKey()]));
                 }),
 
@@ -404,7 +464,8 @@ class ViewWooProduct extends ViewRecord
                         }
                     }
 
-                    Notification::make()->success()->title('Imaginea a fost ștearsă.')->send();
+                    $this->dispatchImageSync();
+                    Notification::make()->success()->title('Imaginea a fost ștearsă — se sincronizează pe site.')->send();
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record->getRouteKey()]));
                 }),
 
@@ -453,7 +514,8 @@ class ViewWooProduct extends ViewRecord
                         $image->setAsPrimary();
                     }
 
-                    Notification::make()->success()->title('Imaginea a fost adăugată.')->send();
+                    $this->dispatchImageSync();
+                    Notification::make()->success()->title('Imaginea a fost adăugată — se sincronizează pe site.')->send();
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $product->getRouteKey()]));
                 }),
 
@@ -484,6 +546,7 @@ class ViewWooProduct extends ViewRecord
                         [$image->sort_order, $prev->sort_order] = [$prev->sort_order, $image->sort_order];
                         $image->save();
                         $prev->save();
+                        $this->dispatchImageSync();
                     }
 
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record->getRouteKey()]));
@@ -516,6 +579,7 @@ class ViewWooProduct extends ViewRecord
                         [$image->sort_order, $next->sort_order] = [$next->sort_order, $image->sort_order];
                         $image->save();
                         $next->save();
+                        $this->dispatchImageSync();
                     }
 
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record->getRouteKey()]));

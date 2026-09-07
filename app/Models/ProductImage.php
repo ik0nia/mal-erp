@@ -14,6 +14,7 @@ class ProductImage extends Model
     protected $fillable = [
         'woo_product_id',
         'url',
+        'woo_media_id',
         'local_path',
         'sort_order',
         'is_primary',
