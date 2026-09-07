@@ -948,7 +948,15 @@ class CreatePurchaseOrder extends CreateRecord
         // --- 4. Adăugăm produse cu rulaje care nu sunt deja în necesare ---
         $velocityOnlyItems = $this->buildVelocityOnlyItems($supplierId, $requestProductIds, $velocityItems);
 
-        return array_merge($items, $velocityOnlyItems);
+        // Urgentele întâi (cu cantitate sugerată), apoi crescător după zilele până la epuizare
+        usort($velocityOnlyItems, function ($a, $b) {
+            $ha = ($a['quantity_hint'] ?? 0) > 0 ? 0 : 1;
+            $hb = ($b['quantity_hint'] ?? 0) > 0 ? 0 : 1;
+            return $ha <=> $hb
+                ?: (($a['info_days_stockout'] ?? 9999) <=> ($b['info_days_stockout'] ?? 9999));
+        });
+
+        return array_merge($items, array_slice($velocityOnlyItems, 0, 300));
     }
 
     /**
@@ -1016,7 +1024,7 @@ class CreatePurchaseOrder extends CreateRecord
             $safetyStock   = $adjustedDaily * 3;
             $recommended   = (int) ceil($adjustedDaily * $coverDays + $safetyStock - $stock - $onOrder);
 
-            $daysUntilStockout = $avg7 > 0 ? round($stock / $avg7, 1) : null;
+            $daysUntilStockout = $adjustedDaily > 0 ? round($stock / $adjustedDaily, 1) : null;
 
             $items[$row->woo_product_id] = [
                 'hint'              => max(0, $recommended),
@@ -1089,11 +1097,28 @@ class CreatePurchaseOrder extends CreateRecord
             ->limit(10)
             ->avg('lead_time_days');
 
-        if ($avgLead === null) {
-            return 10;
+        // Ciclul REAL de comandă: intervalul mediu între PO-urile trimise (12 luni).
+        // La un furnizor comandat la 2 săptămâni, comanda de azi trebuie să acopere
+        // până la URMĂTOAREA comandă — nu doar 7 zile. Clamp 7-45.
+        $sent = \Illuminate\Support\Facades\DB::table('purchase_orders')
+            ->where('supplier_id', $supplierId)
+            ->whereNotNull('sent_at')
+            ->where('sent_at', '>=', now()->subMonths(12))
+            ->orderBy('sent_at')
+            ->pluck('sent_at');
+
+        $cycle = 7;
+        if ($sent->count() >= 3) {
+            $first = \Carbon\Carbon::parse($sent->first());
+            $last  = \Carbon\Carbon::parse($sent->last());
+            $cycle = max(7, min(45, (int) round($first->diffInDays($last) / ($sent->count() - 1))));
         }
 
-        return max(7, (int) ceil((float) $avgLead) + 7);
+        if ($avgLead === null) {
+            return $cycle + 3;
+        }
+
+        return max(7, (int) ceil((float) $avgLead) + $cycle);
     }
 
     /**
@@ -1135,12 +1160,12 @@ class CreatePurchaseOrder extends CreateRecord
     {
         $items = [];
 
+        // TOATE produsele cu rulaj ale furnizorului apar ca propuneri (cerință buyer:
+        // la comandă vrei să vezi sortimentul activ complet și să decizi — franco,
+        // promoții). Cantitatea sugerată doar unde e necesar; sortare după urgență;
+        // plafon 300 (furnizori foarte mari) aplicat în buildItemsForSupplier.
         foreach ($velocityItems as $productId => $data) {
             if (in_array($productId, $excludeProductIds, true)) {
-                continue;
-            }
-
-            if ($data['hint'] <= 0) {
                 continue;
             }
 
