@@ -23,11 +23,11 @@ class ViewCustomer extends ViewRecord
                 ->color('gray')
                 ->action(function (): void {
                     Cache::forget("cust_wm_{$this->record->id}");
-                    $data = CustomerResource::loadWmFinance($this->record);
+                    $data = CustomerResource::wmFinanceCached($this->record);
                     Notification::make()
-                        ->title(empty($data['eroare']) ? 'Date WinMentor încărcate' : 'Eroare WinMentor')
-                        ->body($data['eroare'] ?? ('Sold: ' . ($data['sold'] ?? '—')))
-                        ->{empty($data['eroare']) ? 'success' : 'danger'}()
+                        ->title($data !== null ? 'Date reîmprospătate (local)' : 'Client neasociat în WinMentor')
+                        ->body($data !== null ? ('Sold: ' . ($data['sold'] ?? '—')) : null)
+                        ->{$data !== null ? 'success' : 'warning'}()
                         ->send();
                     $this->redirect(CustomerResource::getUrl('view', ['record' => $this->record]));
                 }),

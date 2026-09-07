@@ -487,14 +487,22 @@ class CustomerResource extends Resource
             return self::$salesMemo[$record->id] = [];
         }
 
-        // Match după CUI (PJ) SAU part_id (ID intern, prinde și PF fără cod fiscal).
+        // ID-ul legacy (cod_extern) — documentele 2025+ îl folosesc adesea ca part_id
+        $codExtern = $wmId
+            ? (string) (DB::table('winmentor_parteneri')->where('wm_id', $wmId)->value('cod_extern') ?? '')
+            : '';
+
+        // Match după CUI (PJ) SAU part_id (ID intern SAU legacy — prinde și PF fără cod fiscal).
         $rows = DB::table('winmentor_vanzari_raw')
-            ->where(function ($q) use ($cui, $wmId) {
+            ->where(function ($q) use ($cui, $wmId, $codExtern) {
                 if ($cui !== '') {
                     $q->orWhere('cod_fiscal_client', $cui);
                 }
                 if ($wmId) {
                     $q->orWhere('part_id', $wmId);
+                }
+                if ($codExtern !== '') {
+                    $q->orWhere('part_id', $codExtern);
                 }
             })
             ->select('serie_document', 'nr_factura', 'data_emitere', 'data_scadenta', 'tip_document', 'valoare_factura', 'an', 'luna', 'zi')
@@ -524,7 +532,70 @@ class CustomerResource extends Resource
      */
     public static function wmFinanceCached(Customer $record): ?array
     {
-        return Cache::get("cust_wm_{$record->id}");
+        // Calcul LOCAL instant din tabelele sincronizate (solduri/încasări/sedii) —
+        // fără COM la randare; butonul din fișă doar golește cache-ul (10 min).
+        return Cache::remember("cust_wm_v2_{$record->id}", 600, function () use ($record) {
+            $link = self::wmLink($record);
+            if (! ($link['asociat'] ?? false)) {
+                return null;
+            }
+
+            $wmId      = (string) $link['wm_id'];
+            $codExtern = (string) (DB::table('winmentor_parteneri')->where('wm_id', $wmId)->value('cod_extern') ?? '');
+            $partIds   = array_values(array_filter([$wmId, $codExtern]));
+
+            $fmtDate = fn ($d) => $d ? \Carbon\Carbon::parse($d)->format('d.m.Y') : '';
+            $fmtNum  = fn ($v) => number_format((float) $v, 2, ',', '.');
+
+            // Facturi de încasat + sold: din scadențarul oficial (rest > 0)
+            $solduri = DB::table('winmentor_solduri_raw')
+                ->where('directie', 'client')
+                ->whereIn('part_id', $partIds)
+                ->whereRaw('ABS(rest_de_plata) >= 0.01')
+                ->orderByDesc('data_factura')
+                ->get();
+
+            $facturi = $solduri->where('rest_de_plata', '>', 0)->map(fn ($f) => [
+                'tip'          => $f->tip_document,
+                'nrDocument'   => $f->nr_factura,
+                'dataDocument' => $fmtDate($f->data_factura),
+                'rest'         => $fmtNum($f->rest_de_plata),
+                'dataScadenta' => $fmtDate($f->termen_plata),
+            ])->values()->all();
+
+            // Încasări (toate, cele mai recente primele)
+            $incasari = DB::table('winmentor_incasari_raw')
+                ->whereIn('part_id', $partIds)
+                ->orderByDesc('data')
+                ->limit(60)
+                ->get()
+                ->map(fn ($i) => [
+                    'data'           => $fmtDate($i->data),
+                    'documentRef'    => $i->document_ref,
+                    'suma'           => $fmtNum($i->suma),
+                    'detaliiFacturi' => '',
+                ])->all();
+
+            // Sedii / puncte de livrare
+            $sedii = DB::table('winmentor_sedii')
+                ->where('partener_wm_id', $wmId)
+                ->orderBy('pozitie')
+                ->get()
+                ->map(fn ($sd) => [
+                    'denumire'   => $sd->denumire,
+                    'localitate' => $sd->localitate,
+                    'cod_postal' => $sd->cod_postal,
+                ])->all();
+
+            return [
+                'sold'     => $fmtNum($solduri->sum('rest_de_plata')) . ' lei',
+                'facturi'  => $facturi,
+                'incasari' => $incasari,
+                'sedii'    => $sedii,
+                'interval' => 'sincronizat local — istoric complet',
+                'eroare'   => null,
+            ];
+        });
     }
 
     /**
@@ -595,19 +666,39 @@ class CustomerResource extends Resource
         if (empty($sedii)) {
             return '<p class="text-sm text-gray-500">Fără sedii de livrare alternative.</p>';
         }
-        $rows = '';
-        foreach ($sedii as $s) {
-            $rows .= '<tr>'
-                . '<td style="padding:4px 8px">' . e($s['denumire'] ?? '') . '</td>'
-                . '<td style="padding:4px 8px">' . e($s['localitate'] ?? '') . '</td>'
-                . '<td style="padding:4px 8px">' . e($s['cod_postal'] ?? '') . '</td>'
-                . '</tr>';
+
+        // Grupăm sediile identice (nume+localitate) — la constructori aceleași
+        // șantiere apar de mai multe ori în nomenclator
+        $grouped = [];
+        foreach ($sedii as $sd) {
+            $key = mb_strtoupper(trim(($sd['denumire'] ?? '').'|'.($sd['localitate'] ?? '')));
+            if (! isset($grouped[$key])) {
+                $grouped[$key] = $sd + ['nr' => 0];
+            }
+            $grouped[$key]['nr']++;
+            if (! empty($sd['email']) && empty($grouped[$key]['email'])) {
+                $grouped[$key]['email'] = $sd['email'];
+            }
         }
-        return '<table style="width:100%;border-collapse:collapse;font-size:13px">'
-            . '<thead><tr style="text-align:left;border-bottom:1px solid #ddd">'
-            . '<th style="padding:4px 8px">Denumire sediu</th><th style="padding:4px 8px">Localitate</th>'
-            . '<th style="padding:4px 8px">Cod poștal</th>'
-            . '</tr></thead><tbody>' . $rows . '</tbody></table>';
+
+        $cards = '';
+        foreach ($grouped as $sd) {
+            $den = e($sd['denumire'] ?? '');
+            $loc = e($sd['localitate'] ?? '');
+            $extra = array_filter([
+                ($sd['cod_postal'] ?? '') !== '' ? 'CP '.e($sd['cod_postal']) : null,
+                ($sd['email'] ?? '') !== '' ? '✉ '.e($sd['email']) : null,
+                ($sd['nr'] ?? 1) > 1 ? '×'.$sd['nr'].' în nomenclator' : null,
+            ]);
+
+            $cards .= '<div style="border:1px solid #e5e7eb;border-radius:.5rem;padding:.5rem .75rem;background:#fafafa;">'
+                . '<div style="font-weight:600;color:#111827;font-size:.85rem;">📍 '.($den !== '' && $den !== $loc ? $den : $loc).'</div>'
+                . ($den !== '' && $den !== $loc && $loc !== '' ? '<div style="font-size:.78rem;color:#6b7280;">'.$loc.'</div>' : '')
+                . ($extra ? '<div style="font-size:.72rem;color:#9ca3af;margin-top:.15rem;">'.implode(' · ', $extra).'</div>' : '')
+                . '</div>';
+        }
+
+        return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.5rem;">'.$cards.'</div>';
     }
 
     protected static function salesHtml(array $facturi): string

@@ -87,7 +87,7 @@ class SyncWinmentorParteneriCommand extends Command
                     'denumire'         => mb_substr($p['denumire'] ?? '', 0, 255),
                     'cod_fiscal'       => mb_substr($p['codFiscal'] ?? '', 0, 50),
                     'localitate'       => mb_substr($p['localitate'] ?? '', 0, 255),
-                    'adresa'           => mb_substr($p['adresa'] ?? '', 0, 500),
+                    'adresa'           => mb_substr(trim(explode('~', (string) ($p['adresa'] ?? ''))[0] ?? ''), 0, 500),
                     'telefon'          => mb_substr($p['telefon'] ?? '', 0, 100),
                     'persoana_contact' => mb_substr($p['persoanaContact'] ?? '', 0, 255),
                     'clasa'            => mb_substr($p['simbolClasa'] ?? $p['clasaCaract'] ?? '', 0, 100),
@@ -115,6 +115,8 @@ class SyncWinmentorParteneriCommand extends Command
         }
 
         $this->info("Sincronizat: {$upserted} parteneri.");
+
+        $this->syncSedii($all, $now);
 
         // Invalidăm cache-ul vechi
         \Illuminate\Support\Facades\Cache::forget('wm_parteneri_map');
@@ -201,5 +203,63 @@ class SyncWinmentorParteneriCommand extends Command
         } else {
             $this->info('Reconciliere: toate ID-urile sunt la zi.');
         }
+    }
+
+    /**
+     * Extrage sediile/punctele de livrare din câmpurile paralele "~" ale
+     * nomenclatorului (denumiriSedii + localitatiSedii/codPostalSedii/emailSedii/
+     * infoTipSediu) → winmentor_sedii. Full-replace (nomenclatorul e sursa).
+     */
+    private function syncSedii(array $parteneri, string $now): void
+    {
+        $split = fn ($v) => is_array($v) ? array_values($v) : array_values(array_filter(explode('~', (string) $v), fn ($x) => trim($x) !== ''));
+
+        $rows = [];
+        foreach ($parteneri as $p) {
+            $wmId = $p['idPartener'] ?? null;
+            if (! $wmId || mb_strlen((string) $wmId) > 20) continue;
+
+            // denumiriSedii ține de fapt LOCALITĂȚILE ("SANTANDREI BH"); numele real al
+            // sediului/șantierului e în câmpul adresa, "~"-separat, aliniat pozițional
+            $localitati = $split($p['denumiriSedii'] ?? []);
+            if (empty($localitati)) continue;
+
+            $nume    = array_map('trim', explode('~', (string) ($p['adresa'] ?? '')));
+            $coduri  = $split($p['codPostalSedii'] ?? '');
+            $emailuri = $split($p['emailSedii'] ?? '');
+            $tipuri  = $split($p['infoTipSediu'] ?? '');
+
+            foreach ($localitati as $i => $loc) {
+                $loc = trim((string) $loc);
+                $den = trim((string) ($nume[$i] ?? ''));
+                if ($loc === '' && $den === '') continue;
+
+                $rows[] = [
+                    'partener_wm_id' => $wmId,
+                    'pozitie'        => $i,
+                    'denumire'       => mb_substr($den !== '' ? $den : $loc, 0, 255),
+                    'localitate'     => mb_substr($loc, 0, 255) ?: null,
+                    'cod_postal'     => mb_substr(trim((string) ($coduri[$i] ?? '')), 0, 20) ?: null,
+                    'email'          => mb_substr(trim((string) ($emailuri[$i] ?? '')), 0, 255) ?: null,
+                    'tip'            => mb_substr(trim((string) ($tipuri[$i] ?? '')), 0, 50) ?: null,
+                    'created_at'     => $now,
+                    'updated_at'     => $now,
+                ];
+            }
+        }
+
+        if (count($rows) < 100) {
+            $this->warn('Sedii: prea puține ('.count($rows).') — păstrez datele existente.');
+            return;
+        }
+
+        DB::transaction(function () use ($rows) {
+            DB::table('winmentor_sedii')->delete();
+            foreach (array_chunk($rows, 500) as $chunk) {
+                DB::table('winmentor_sedii')->insert($chunk);
+            }
+        });
+
+        $this->info('Sedii sincronizate: '.count($rows));
     }
 }
