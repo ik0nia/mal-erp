@@ -47,7 +47,8 @@ class FetchWinmentorSolduriCommand extends Command
             $directie = $this->option('directie');
 
             if (in_array($directie, ['client', 'ambele'], true)) {
-                $this->fetchDirectie($bridge, $firma, 'client', '/api/solduri/ext');
+                // /api/solduri/ext moare pe server (empty reply) — folosim lista de bază, completă
+                $this->fetchDirectie($bridge, $firma, 'client', '/api/solduri');
             }
             if (in_array($directie, ['furnizor', 'ambele'], true)) {
                 $this->fetchDirectie($bridge, $firma, 'furnizor', '/api/solduri/furnizori');
@@ -93,7 +94,7 @@ class FetchWinmentorSolduriCommand extends Command
                 'nr_factura'      => trim($row['nrFactura'] ?? $row['nrDocument'] ?? '') ?: null,
                 'data_factura'    => $this->parseDate($row['dataFactura'] ?? $row['dataDocument'] ?? null),
                 'termen_plata'    => $this->parseDate($row['termenDePlata'] ?? $row['dataScadenta'] ?? null),
-                'valoare_factura' => $this->parseNum($row['valoareFactura'] ?? $row['valoareDoc'] ?? null),
+                'valoare_factura' => $this->parseNum($row['valoareFactura'] ?? $row['valoareDoc'] ?? $row['valoareDocument'] ?? null),
                 'rest_de_plata'   => $this->parseNum($row['restDePlata'] ?? null),
                 'moneda'          => trim($row['moneda'] ?? '') ?: null,
                 'locatie'         => trim($row['locatiePartener'] ?? $row['sediu'] ?? '') ?: null,
@@ -120,7 +121,9 @@ class FetchWinmentorSolduriCommand extends Command
         $v = trim((string) $v);
         if ($v === '') return null;
         try {
-            return Carbon::createFromFormat('d.m.Y', $v)->toDateString();
+            $d = Carbon::createFromFormat('d.m.Y', $v);
+            // "30.12.1899" = epoch Delphi → fără dată
+            return $d->year < 1990 ? null : $d->toDateString();
         } catch (\Throwable) {
             return null;
         }
