@@ -29,7 +29,7 @@ class WinmentorSolduriPage extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isSuperAdmin() ?? false;
+        return auth()->user()?->email === 'codrut@ikonia.ro';
     }
 
     public static function shouldRegisterNavigation(): bool
