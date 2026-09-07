@@ -454,7 +454,7 @@ class ViewWooOrder extends ViewRecord
         $grossShipping = round((float) $this->record->shipping_total * 1.21, 2);
 
         return [
-            \Filament\Forms\Components\Section::make('Adresa de livrare')
+            \Filament\Schemas\Components\Section::make('Adresa de livrare')
                 ->columns(12)
                 ->schema([
                     \Filament\Forms\Components\TextInput::make('s_first_name')->label('Prenume')->default($shipping['first_name'] ?? '')->columnSpan(3),
@@ -467,13 +467,13 @@ class ViewWooOrder extends ViewRecord
                     \Filament\Forms\Components\TextInput::make('s_postcode')->label('Cod poștal')->default($shipping['postcode'] ?? '')->columnSpan(3),
                     \Filament\Forms\Components\TextInput::make('s_phone')->label('Telefon livrare')->default($shipping['phone'] ?? '')->columnSpan(2),
                 ]),
-            \Filament\Forms\Components\Section::make('Contact client (facturare)')
+            \Filament\Schemas\Components\Section::make('Contact client (facturare)')
                 ->columns(12)
                 ->schema([
                     \Filament\Forms\Components\TextInput::make('b_phone')->label('Telefon')->default($billing['phone'] ?? '')->columnSpan(4),
                     \Filament\Forms\Components\TextInput::make('b_email')->label('Email')->email()->default($billing['email'] ?? '')->columnSpan(8),
                 ]),
-            \Filament\Forms\Components\Section::make('Transport')
+            \Filament\Schemas\Components\Section::make('Transport')
                 ->columns(12)
                 ->schema([
                     \Filament\Forms\Components\TextInput::make('ship_method')->label('Metodă transport')
@@ -485,7 +485,7 @@ class ViewWooOrder extends ViewRecord
                         ->disabled(! $shipLine)
                         ->columnSpan(5),
                 ]),
-            \Filament\Forms\Components\Section::make('Notă client')
+            \Filament\Schemas\Components\Section::make('Notă client')
                 ->schema([
                     \Filament\Forms\Components\Textarea::make('customer_note')->label('')->rows(2)
                         ->default((string) $this->record->customer_note),
