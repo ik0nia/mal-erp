@@ -439,6 +439,26 @@ class WinmentorBridgeClient
     }
 
     /**
+     * Încasările de la clienți din luna de lucru curentă (READ-ONLY).
+     * GET /api/incasari/luna → [{pozitie, dataIncasare, documentRef, idPartener, suma}]
+     */
+    public function getIncasariLuna(): array
+    {
+        $result = $this->get('/api/incasari/luna', timeout: 90);
+        return $result['data'] ?? [];
+    }
+
+    /**
+     * Plățile către furnizori din luna de lucru curentă (READ-ONLY).
+     * GET /api/plati/luna → [{pozitie, data, documentRef, idPartener, suma}]
+     */
+    public function getPlatiLuna(): array
+    {
+        $result = $this->get('/api/plati/luna', timeout: 90);
+        return $result['data'] ?? [];
+    }
+
+    /**
      * Sold curent al unui partener (READ-ONLY). GET /api/solduri/partener/{id}
      * Nu modifică nimic în WinMentor.
      */

@@ -208,6 +208,15 @@ Schedule::command('winmentor:sync-stock-bridge')
     ->withoutOverlapping(30)
     ->runInBackground();
 
+// WinMentor — încasări clienți + plăți furnizori (orar, luna de lucru curentă).
+Schedule::command('winmentor:fetch-incasari-plati')
+    ->hourlyAt(40)
+    ->timezone('Europe/Bucharest')
+    ->days([1, 2, 3, 4, 5, 6])
+    ->between('08:00', '18:00')
+    ->withoutOverlapping(30)
+    ->runInBackground();
+
 // WinMentor Bridge — detectare modificări SKU/denumire articole (la fiecare 5 minute).
 // Când detectează o modificare, actualizează ERP + WooCommerce și trimite e-mail.
 Schedule::command('winmentor:detect-article-changes')
