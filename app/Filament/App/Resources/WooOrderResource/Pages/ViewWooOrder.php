@@ -26,55 +26,10 @@ class ViewWooOrder extends ViewRecord
 {
     protected static string $resource = WooOrderResource::class;
 
-    /** Starea editorului inline de produse (stil WooCommerce) */
-    public array $itemQty   = [];
-    public array $itemPrice = [];
-    public array $itemVat   = [];
-
     public function mount(int|string $record): void
     {
         parent::mount($record);
         $this->syncOrderFromWoo();
-        $this->fillItemEditor();
-    }
-
-    public function fillItemEditor(): void
-    {
-        foreach ($this->buildEditableItems() as $row) {
-            $id = (int) $row['woo_item_id'];
-            $this->itemQty[$id]   = $row['quantity'];
-            $this->itemPrice[$id] = $row['price_gross'];
-            $this->itemVat[$id]   = $row['vat_rate'];
-        }
-    }
-
-    /** Salvarea editorului inline — refolosește fluxul existent (log + undo incluse). */
-    public function saveInlineItems(): void
-    {
-        // Gardă: saveOrderItems tratează itemele lipsă drept ȘTERGERI — dacă starea
-        // editorului e desincronizată de comandă, refuzăm în loc să ștergem din greșeală.
-        $currentIds = $this->record->items->pluck('woo_item_id')->map(fn ($v) => (int) $v)->sort()->values();
-        $editorIds  = collect(array_keys($this->itemQty))->map(fn ($v) => (int) $v)->sort()->values();
-
-        if ($currentIds->toArray() !== $editorIds->toArray()) {
-            $this->fillItemEditor();
-            Notification::make()->warning()
-                ->title('Comanda s-a schimbat între timp')
-                ->body('Am reîncărcat produsele — verifică valorile și salvează din nou.')
-                ->send();
-            return;
-        }
-
-        $items = [];
-        foreach ($this->itemQty as $id => $qty) {
-            $items[] = [
-                'woo_item_id' => $id,
-                'vat_rate'    => $this->itemVat[$id] ?? 21,
-                'quantity'    => $qty,
-                'price_gross' => $this->itemPrice[$id] ?? 0,
-            ];
-        }
-        $this->saveOrderItems(['items' => $items]);
     }
 
     /**
@@ -197,35 +152,6 @@ class ViewWooOrder extends ViewRecord
                             ->send();
 
                         $this->record = $order->fresh();
-                    }
-                }),
-
-            Action::make('change_status')
-                ->label('Schimbă status')
-                ->icon('heroicon-o-arrow-path')
-                ->color('warning')
-                ->form([
-                    Select::make('status')
-                        ->label('Status nou')
-                        ->options(WooOrder::STATUS_LABELS)
-                        ->default(fn (): string => (string) $this->record->status)
-                        ->required()
-                        ->native(false),
-                ])
-                ->action(function (array $data): void {
-                    /** @var WooOrder $order */
-                    $order = $this->record;
-
-                    try {
-                        $client = new WooClient($order->connection);
-                        $client->updateOrderStatus((int) $order->woo_id, $data['status']);
-
-                        $order->update(['status' => $data['status']]);
-
-                        Notification::make()->success()->title('Status actualizat')->send();
-                        $this->refreshFormData(['status']);
-                    } catch (Throwable $e) {
-                        Notification::make()->danger()->title('Eroare')->body($e->getMessage())->send();
                     }
                 }),
 
@@ -844,5 +770,122 @@ class ViewWooOrder extends ViewRecord
         ]);
 
         return route('filament.app.resources.sameday-awbs.create').'?'.http_build_query($params);
+    }
+
+    /* ─── Acțiuni montabile din carduri (creioane, stil WooCommerce) ─────────── */
+
+    public function changeStatusAction(): Action
+    {
+        return Action::make('changeStatus')
+            ->label('Schimbă status')
+            ->modalHeading(fn (): string => 'Schimbă status — comanda #'.$this->record->number)
+            ->form([
+                Select::make('status')
+                    ->label('Status nou')
+                    ->options(WooOrder::STATUS_LABELS)
+                    ->default(fn (): string => (string) $this->record->status)
+                    ->required()
+                    ->native(false),
+            ])
+            ->action(function (array $data): void {
+                /** @var WooOrder $order */
+                $order = $this->record;
+
+                try {
+                    $client = new WooClient($order->connection);
+                    $client->updateOrderStatus((int) $order->woo_id, $data['status']);
+
+                    $order->update(['status' => $data['status']]);
+
+                    Notification::make()->success()->title('Status actualizat')->send();
+                    $this->redirect(WooOrderResource::getUrl('view', ['record' => $order]));
+                } catch (Throwable $e) {
+                    Notification::make()->danger()->title('Eroare')->body($e->getMessage())->send();
+                }
+            });
+    }
+
+    public function editAddressAction(): Action
+    {
+        return Action::make('editAddress')
+            ->label('Editează livrare & client')
+            ->modalHeading(fn (): string => 'Livrare & date client — comanda #'.$this->record->number)
+            ->modalDescription('Modificările se salvează în WooCommerce (site) și se resincronizează în ERP. Costul de transport modificat recalculează totalul comenzii.')
+            ->modalSubmitActionLabel('Salvează în WooCommerce')
+            ->modalWidth('3xl')
+            ->form(fn (): array => $this->buildAddressForm())
+            ->action(fn (array $data) => $this->saveOrderAddress($data));
+    }
+
+    public function addProductAction(): Action
+    {
+        return Action::make('addProduct')
+            ->label('Adaugă produs')
+            ->modalHeading(fn (): string => 'Adaugă produs — comanda #'.$this->record->number)
+            ->modalDescription('Produsul se adaugă în comandă în WooCommerce, cu recalcularea totalurilor. Lasă prețul gol pentru prețul curent de pe site.')
+            ->modalSubmitActionLabel('Adaugă în comandă')
+            ->form([
+                Select::make('product_id')
+                    ->label('Produs')
+                    ->required()
+                    ->searchable()
+                    ->getSearchResultsUsing(fn (string $search) => WooProduct::query()
+                        ->whereNotNull('woo_id')->where('is_placeholder', false)
+                        ->where('status', 'publish')
+                        ->where(fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('sku', 'like', "%{$search}%"))
+                        ->limit(30)
+                        ->get()
+                        ->mapWithKeys(fn ($p) => [$p->id => $p->decoded_name.' — '.$p->sku.' ('.number_format((float) $p->regular_price, 2).' lei)'])
+                        ->all())
+                    ->getOptionLabelUsing(fn ($value) => WooProduct::find($value)?->decoded_name),
+                \Filament\Forms\Components\TextInput::make('quantity')
+                    ->label('Cantitate')->numeric()->minValue(1)->default(1)->required(),
+                \Filament\Forms\Components\TextInput::make('price_gross')
+                    ->label('Preț cu TVA (opțional — implicit prețul de pe site)')
+                    ->numeric()->minValue(0)->step('0.01')->suffix('RON'),
+            ])
+            ->action(fn (array $data) => $this->addOrderProduct($data));
+    }
+
+    /** Editarea unei singure linii (creionul de pe rând): cantitate și/sau preț. */
+    public function editLineAction(): Action
+    {
+        $item = fn (array $arguments) => $this->record->items->firstWhere('woo_item_id', (int) ($arguments['itemId'] ?? 0));
+
+        return Action::make('editLine')
+            ->modalHeading(fn (array $arguments): string => 'Editează: '.($item($arguments)?->name ?? 'produs'))
+            ->modalDescription('Modificarea se trimite în WooCommerce (totaluri și TVA recalculate) și rămâne în Istoricul modificărilor, cu opțiune de revenire.')
+            ->modalSubmitActionLabel('Salvează în WooCommerce')
+            ->modalWidth('md')
+            ->form(function (array $arguments) use ($item): array {
+                $it = $item($arguments);
+                if (! $it) return [];
+                $row = collect($this->buildEditableItems())->firstWhere('woo_item_id', $it->woo_item_id);
+
+                return [
+                    \Filament\Forms\Components\TextInput::make('quantity')
+                        ->label('Cantitate')->numeric()->minValue(1)->required()
+                        ->default($row['quantity'] ?? 1),
+                    \Filament\Forms\Components\TextInput::make('price_gross')
+                        ->label('Preț cu TVA (doar pentru această comandă)')
+                        ->numeric()->minValue(0)->step('0.01')->suffix('RON')->required()
+                        ->default($row['price_gross'] ?? 0),
+                ];
+            })
+            ->action(fn (array $data, array $arguments) => $this->saveSingleLine((int) ($arguments['itemId'] ?? 0), $data));
+    }
+
+    /** Aplică editarea unei singure linii, păstrând restul neschimbat (diff + log în saveOrderItems). */
+    public function saveSingleLine(int $wooItemId, array $data): void
+    {
+        $items = collect($this->buildEditableItems())->map(function (array $row) use ($wooItemId, $data) {
+            if ((int) $row['woo_item_id'] === $wooItemId) {
+                $row['quantity']    = max(1, (int) $data['quantity']);
+                $row['price_gross'] = (float) $data['price_gross'];
+            }
+            return $row;
+        })->values()->all();
+
+        $this->saveOrderItems(['items' => $items]);
     }
 }

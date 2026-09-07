@@ -211,38 +211,10 @@ class WooOrderResource extends Resource
     {
         return $schema
             ->schema([
-                Section::make()
+                \Filament\Infolists\Components\ViewEntry::make('order_header')
+                    ->label('')
                     ->columnSpanFull()
-                    ->columns(6)
-                    ->schema([
-                        TextEntry::make('number')
-                            ->label('Comandă')
-                            ->formatStateUsing(fn (WooOrder $record): string => '#'.$record->number)
-                            ->weight(\Filament\Support\Enums\FontWeight::Bold),
-                        TextEntry::make('status')
-                            ->label('Status')
-                            ->badge()
-                            ->color(fn (string $state): string => WooOrder::STATUS_COLORS[$state] ?? 'gray')
-                            ->formatStateUsing(fn (string $state): string => WooOrder::STATUS_LABELS[$state] ?? $state),
-                        TextEntry::make('order_date')
-                            ->label('Data comenzii')
-                            ->dateTime('d.m.Y H:i'),
-                        TextEntry::make('payment_method_title')
-                            ->label('Metodă plată')
-                            ->placeholder('-'),
-                        TextEntry::make('shipping_method')
-                            ->label('Metodă livrare')
-                            ->getStateUsing(fn (WooOrder $record): string => (string) data_get($record->data, 'shipping_lines.0.method_title', '-') ?: '-'),
-                        TextEntry::make('date_paid')
-                            ->label('Data plății')
-                            ->dateTime('d.m.Y H:i')
-                            ->placeholder('-'),
-                        TextEntry::make('customer_note')
-                            ->label('Notă client')
-                            ->placeholder('-')
-                            ->columnSpanFull()
-                            ->hidden(fn (WooOrder $record): bool => empty($record->customer_note)),
-                    ]),
+                    ->view('filament.app.woo-order-header'),
 
                 Section::make('WinMentor')
                     ->columnSpanFull()
@@ -278,105 +250,8 @@ class WooOrderResource extends Resource
                             ->visible(fn (WooOrder $record): bool => $record->winmentor_sync_status === 'failed' && ! empty($record->winmentor_sync_error)),
                     ]),
 
-                Section::make('Client')
-                    ->columnSpanFull()
-                    ->columns(4)
-                    ->headerActions([
-                        Actions\Action::make('edit_address')
-                            ->label('Editează livrare & client')
-                            ->icon('heroicon-o-map-pin')
-                            ->color('info')
-                            ->size('sm')
-                            ->visible(fn ($livewire): bool => $livewire->isOrderEditable())
-                            ->modalHeading(fn (WooOrder $record): string => 'Livrare & date client — comanda #'.$record->number)
-                            ->modalDescription('Modificările se salvează în WooCommerce (site) și se resincronizează în ERP. Costul de transport modificat recalculează totalul comenzii.')
-                            ->modalSubmitActionLabel('Salvează în WooCommerce')
-                            ->modalWidth('3xl')
-                            ->form(fn ($livewire): array => $livewire->buildAddressForm())
-                            ->action(fn (array $data, $livewire) => $livewire->saveOrderAddress($data)),
-                    ])
-                    ->schema([
-                        TextEntry::make('customer_name')
-                            ->label('Nume')
-                            ->getStateUsing(fn (WooOrder $record): string => $record->customer_name ?: '-'),
-                        TextEntry::make('customer_phone')
-                            ->label('Telefon')
-                            ->getStateUsing(fn (WooOrder $record): string => $record->customer_phone ?: '-'),
-                        TextEntry::make('customer_email')
-                            ->label('Email')
-                            ->getStateUsing(fn (WooOrder $record): string => $record->customer_email ?: '-')
-                            ->columnSpan(2),
-                        TextEntry::make('billing_info')
-                            ->label('Adresă facturare')
-                            ->columnSpan(2)
-                            ->getStateUsing(function (WooOrder $record): string {
-                                $b = $record->billing ?? [];
-                                $company = $b['company'] ?? '';
-                                $addr = implode(', ', array_filter([
-                                    $b['address_1'] ?? '',
-                                    $b['address_2'] ?? '',
-                                    trim(($b['postcode'] ?? '').' '.($b['city'] ?? '')),
-                                    $b['state'] ?? '',
-                                ]));
-
-                                return implode(' — ', array_filter([$company, $addr])) ?: '-';
-                            }),
-                        TextEntry::make('shipping_info')
-                            ->label('Adresă livrare')
-                            ->columnSpan(2)
-                            ->getStateUsing(function (WooOrder $record): string {
-                                $s = $record->shipping ?? [];
-                                $meaningful = array_filter(array_diff_key($s, ['first_name' => 1, 'last_name' => 1, 'company' => 1]));
-                                if (empty(array_filter($meaningful))) {
-                                    return 'La fel ca facturarea';
-                                }
-                                $company = $s['company'] ?? '';
-                                $addr = implode(', ', array_filter([
-                                    $s['address_1'] ?? '',
-                                    $s['address_2'] ?? '',
-                                    trim(($s['postcode'] ?? '').' '.($s['city'] ?? '')),
-                                    $s['state'] ?? '',
-                                ]));
-
-                                return implode(' — ', array_filter([$company, $addr])) ?: '-';
-                            }),
-                    ]),
-
                 Section::make('Produse')
                     ->columnSpanFull()
-                    ->headerActions([
-                        Actions\Action::make('add_product')
-                            ->label('Adaugă')
-                            ->icon('heroicon-o-plus-circle')
-                            ->color('success')
-                            ->size('sm')
-                            ->visible(fn ($livewire): bool => $livewire->isOrderEditable())
-                            ->modalHeading(fn (WooOrder $record): string => 'Adaugă produs — comanda #'.$record->number)
-                            ->modalDescription('Produsul se adaugă în comandă în WooCommerce, cu recalcularea totalurilor. Lasă prețul gol pentru prețul curent de pe site.')
-                            ->modalSubmitActionLabel('Adaugă în comandă')
-                            ->form([
-                                \Filament\Forms\Components\Select::make('product_id')
-                                    ->label('Produs')
-                                    ->required()
-                                    ->searchable()
-                                    ->getSearchResultsUsing(fn (string $search) => WooProduct::query()
-                                        ->whereNotNull('woo_id')->where('is_placeholder', false)
-                                        ->where('status', 'publish')
-                                        ->where(fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('sku', 'like', "%{$search}%"))
-                                        ->limit(30)
-                                        ->get()
-                                        ->mapWithKeys(fn ($p) => [$p->id => $p->decoded_name.' — '.$p->sku.' ('.number_format((float) $p->regular_price, 2).' lei)'])
-                                        ->all())
-                                    ->getOptionLabelUsing(fn ($value) => WooProduct::find($value)?->decoded_name),
-                                \Filament\Forms\Components\TextInput::make('quantity')
-                                    ->label('Cantitate')->numeric()->minValue(1)->default(1)->required(),
-                                \Filament\Forms\Components\TextInput::make('price_gross')
-                                    ->label('Preț cu TVA (opțional — implicit prețul de pe site)')
-                                    ->numeric()->minValue(0)->step('0.01')->suffix('RON'),
-                            ])
-                            ->action(fn (array $data, $livewire) => $livewire->addOrderProduct($data)),
-
-                    ])
                     ->schema([
                         \Filament\Infolists\Components\ViewEntry::make('items_editor')
                             ->label('')
@@ -391,29 +266,6 @@ class WooOrderResource extends Resource
                         \Filament\Infolists\Components\ViewEntry::make('edits_history')
                             ->label('')
                             ->view('filament.app.woo-order-edits-history'),
-                    ]),
-
-                Section::make('Totale')
-                    ->columnSpanFull()
-                    ->columns(5)
-                    ->schema([
-                        TextEntry::make('subtotal')
-                            ->label('Subtotal')
-                            ->formatStateUsing(fn (WooOrder $record): string => number_format((float) $record->subtotal, 2).' '.$record->currency),
-                        TextEntry::make('shipping_total')
-                            ->label('Transport')
-                            ->formatStateUsing(fn (WooOrder $record): string => number_format((float) $record->shipping_total, 2).' '.$record->currency),
-                        TextEntry::make('discount_total')
-                            ->label('Discount')
-                            ->formatStateUsing(fn (WooOrder $record): string => number_format((float) $record->discount_total, 2).' '.$record->currency),
-                        TextEntry::make('tax_total')
-                            ->label('TVA')
-                            ->formatStateUsing(fn (WooOrder $record): string => number_format((float) $record->tax_total, 2).' '.$record->currency),
-                        TextEntry::make('total')
-                            ->label('TOTAL')
-                            ->weight(\Filament\Support\Enums\FontWeight::Bold)
-                            ->size(TextSize::Large)
-                            ->formatStateUsing(fn (WooOrder $record): string => number_format((float) $record->total, 2).' '.$record->currency),
                     ]),
 
                 Section::make('AWB-uri Sameday')
