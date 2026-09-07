@@ -345,34 +345,6 @@ class WooOrderResource extends Resource
                 Section::make('Produse')
                     ->columnSpanFull()
                     ->headerActions([
-                        Actions\Action::make('edit_items')
-                            ->label('Editează')
-                            ->icon('heroicon-o-pencil-square')
-                            ->color('primary')
-                            ->size('sm')
-                            ->visible(fn ($livewire): bool => $livewire->isOrderEditable())
-                            ->modalHeading(fn (WooOrder $record): string => 'Editare produse — comanda #'.$record->number)
-                            ->modalDescription('Modificările se trimit în WooCommerce (site), care recalculează totalurile și TVA-ul, apoi comanda se resincronizează în ERP. Prețul modificat aici afectează DOAR această comandă.')
-                            ->modalSubmitActionLabel('Salvează în WooCommerce')
-                            ->modalWidth('4xl')
-                            ->form(fn ($livewire): array => [
-                                \Filament\Forms\Components\Repeater::make('items')
-                                    ->label('Produse')
-                                    ->addable(false)
-                                    ->reorderable(false)
-                                    ->deletable(false)
-                                    ->columns(12)
-                                    ->default($livewire->buildEditableItems())
-                                    ->schema([
-                                        \Filament\Forms\Components\Hidden::make('woo_item_id'),
-                                        \Filament\Forms\Components\Hidden::make('vat_rate'),
-                                        \Filament\Forms\Components\TextInput::make('name')->label('Produs')->disabled()->dehydrated()->columnSpan(7),
-                                        \Filament\Forms\Components\TextInput::make('quantity')->label('Cantitate')->numeric()->minValue(1)->required()->columnSpan(2),
-                                        \Filament\Forms\Components\TextInput::make('price_gross')->label('Preț cu TVA')->numeric()->minValue(0)->step('0.01')->suffix('RON')->required()->columnSpan(3),
-                                    ]),
-                            ])
-                            ->action(fn (array $data, $livewire) => $livewire->saveOrderItems($data)),
-
                         Actions\Action::make('add_product')
                             ->label('Adaugă')
                             ->icon('heroicon-o-plus-circle')
@@ -404,82 +376,11 @@ class WooOrderResource extends Resource
                             ])
                             ->action(fn (array $data, $livewire) => $livewire->addOrderProduct($data)),
 
-                        Actions\Action::make('delete_product')
-                            ->label('Șterge')
-                            ->icon('heroicon-o-trash')
-                            ->color('danger')
-                            ->size('sm')
-                            ->visible(fn ($livewire, WooOrder $record): bool => $livewire->isOrderEditable() && $record->items->count() > 1)
-                            ->modalHeading(fn (WooOrder $record): string => 'Șterge produs — comanda #'.$record->number)
-                            ->modalDescription('Produsul se elimină din comandă în WooCommerce (totalurile se recalculează). Poți reveni oricând din Istoricul modificărilor.')
-                            ->modalSubmitActionLabel('Șterge din comandă')
-                            ->requiresConfirmation()
-                            ->form(fn (WooOrder $record): array => [
-                                \Filament\Forms\Components\Select::make('woo_item_id')
-                                    ->label('Produsul de șters')
-                                    ->required()
-                                    ->options($record->items->mapWithKeys(fn ($i) => [
-                                        $i->woo_item_id => $i->name.' — '.$i->quantity.' × '.number_format((float) $i->price, 2).' lei',
-                                    ])->all()),
-                            ])
-                            ->action(fn (array $data, $livewire) => $livewire->deleteOrderProduct((int) $data['woo_item_id'])),
                     ])
                     ->schema([
-                        RepeatableEntry::make('items')
+                        \Filament\Infolists\Components\ViewEntry::make('items_editor')
                             ->label('')
-                            ->schema([
-                                TextEntry::make('name')->label('Produs'),
-                                TextEntry::make('sku')->label('SKU')->placeholder('-'),
-                                TextEntry::make('quantity')
-                                    ->label('Cant.')
-                                    ->formatStateUsing(fn ($state) => $state !== null ? (floor($state) == $state ? number_format($state, 0, '.', '') : number_format($state, 2, '.', '')) : '—'),
-                                TextEntry::make('erp_stock')
-                                    ->label('Stoc ERP')
-                                    ->getStateUsing(function (\App\Models\WooOrderItem $record): string {
-                                        if (! $record->woo_product_id) {
-                                            return '–';
-                                        }
-                                        $locationId = (int) $record->order->location_id;
-                                        $localId    = WooProduct::where('woo_id', $record->woo_product_id)->value('id');
-                                        if (! $localId) {
-                                            return '–';
-                                        }
-                                        $qty = ProductStock::where('woo_product_id', $localId)
-                                            ->when($locationId > 0, fn ($q) => $q->where('location_id', $locationId))
-                                            ->value('quantity');
-
-                                        if ($qty === null) return '–';
-                                        $qtyVal = (float) $qty;
-                                        return floor($qtyVal) == $qtyVal ? number_format($qtyVal, 0, '.', '') : number_format($qtyVal, 2, '.', '');
-                                    })
-                                    ->badge()
-                                    ->color(function (\App\Models\WooOrderItem $record): string {
-                                        if (! $record->woo_product_id) {
-                                            return 'gray';
-                                        }
-                                        $locationId = (int) $record->order->location_id;
-                                        $localId    = WooProduct::where('woo_id', $record->woo_product_id)->value('id');
-                                        if (! $localId) {
-                                            return 'gray';
-                                        }
-                                        $qty = ProductStock::where('woo_product_id', $localId)
-                                            ->when($locationId > 0, fn ($q) => $q->where('location_id', $locationId))
-                                            ->value('quantity');
-
-                                        if ($qty === null) {
-                                            return 'gray';
-                                        }
-
-                                        return (float) $qty >= (int) $record->quantity ? 'success' : 'danger';
-                                    }),
-                                TextEntry::make('price')
-                                    ->label('Preț')
-                                    ->formatStateUsing(fn (mixed $state): string => number_format((float) $state, 2)),
-                                TextEntry::make('total')
-                                    ->label('Total')
-                                    ->formatStateUsing(fn (mixed $state): string => number_format((float) $state, 2)),
-                            ])
-                            ->columns(6),
+                            ->view('filament.app.woo-order-items-editor'),
                     ]),
 
                 Section::make('Istoric modificări (din ERP)')

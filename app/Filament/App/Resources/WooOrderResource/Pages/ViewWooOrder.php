@@ -26,10 +26,55 @@ class ViewWooOrder extends ViewRecord
 {
     protected static string $resource = WooOrderResource::class;
 
+    /** Starea editorului inline de produse (stil WooCommerce) */
+    public array $itemQty   = [];
+    public array $itemPrice = [];
+    public array $itemVat   = [];
+
     public function mount(int|string $record): void
     {
         parent::mount($record);
         $this->syncOrderFromWoo();
+        $this->fillItemEditor();
+    }
+
+    public function fillItemEditor(): void
+    {
+        foreach ($this->buildEditableItems() as $row) {
+            $id = (int) $row['woo_item_id'];
+            $this->itemQty[$id]   = $row['quantity'];
+            $this->itemPrice[$id] = $row['price_gross'];
+            $this->itemVat[$id]   = $row['vat_rate'];
+        }
+    }
+
+    /** Salvarea editorului inline — refolosește fluxul existent (log + undo incluse). */
+    public function saveInlineItems(): void
+    {
+        // Gardă: saveOrderItems tratează itemele lipsă drept ȘTERGERI — dacă starea
+        // editorului e desincronizată de comandă, refuzăm în loc să ștergem din greșeală.
+        $currentIds = $this->record->items->pluck('woo_item_id')->map(fn ($v) => (int) $v)->sort()->values();
+        $editorIds  = collect(array_keys($this->itemQty))->map(fn ($v) => (int) $v)->sort()->values();
+
+        if ($currentIds->toArray() !== $editorIds->toArray()) {
+            $this->fillItemEditor();
+            Notification::make()->warning()
+                ->title('Comanda s-a schimbat între timp')
+                ->body('Am reîncărcat produsele — verifică valorile și salvează din nou.')
+                ->send();
+            return;
+        }
+
+        $items = [];
+        foreach ($this->itemQty as $id => $qty) {
+            $items[] = [
+                'woo_item_id' => $id,
+                'vat_rate'    => $this->itemVat[$id] ?? 21,
+                'quantity'    => $qty,
+                'price_gross' => $this->itemPrice[$id] ?? 0,
+            ];
+        }
+        $this->saveOrderItems(['items' => $items]);
     }
 
     /**
