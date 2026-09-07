@@ -13,11 +13,30 @@ class WinmentorCumparariDetailPage extends Page
     protected static ?string $title = 'Document Cumpărare';
 
     public string $nr      = '';
-    public string $part_id = '';
+    public string $nir     = '';
+    public string $part_id = ''; // compatibilitate link-uri vechi
     public int    $an      = 0;
     public int    $luna    = 0;
 
-    protected $queryString = ['nr', 'part_id', 'an', 'luna'];
+    protected $queryString = ['nr', 'nir', 'part_id', 'an', 'luna'];
+
+    /**
+     * Filtrele comune document: nr + an + luna + NIR (dacă e cunoscut).
+     * part_id doar dacă e nenul (link-uri vechi) — un document poate avea
+     * linii cu part_id NULL sau cu mai multe formate ale aceluiași furnizor.
+     */
+    private function applyDocFilters($query, string $prefix = ''): void
+    {
+        $query->where("{$prefix}nr_doc", $this->nr)
+            ->where("{$prefix}an", $this->an)
+            ->where("{$prefix}luna", $this->luna);
+
+        if ($this->nir !== '') {
+            $query->where("{$prefix}nr_receptie", $this->nir);
+        } elseif ($this->part_id !== '') {
+            $query->where("{$prefix}part_id", $this->part_id);
+        }
+    }
 
     public static function canAccess(): bool
     {
@@ -33,30 +52,37 @@ class WinmentorCumparariDetailPage extends Page
     {
         if (! $this->nr || ! $this->an || ! $this->luna) return null;
 
-        $row = DB::table('winmentor_intrari_raw')
-            ->where('firma', 'MAL2019')
-            ->where('nr_doc', $this->nr)
-            ->where('an', $this->an)
-            ->where('luna', $this->luna)
-            ->where('part_id', $this->part_id)
+        $query = DB::table('winmentor_intrari_raw')->where('firma', 'MAL2019');
+        $this->applyDocFilters($query);
+
+        $row = $query
             ->selectRaw("
                 nr_doc, an, luna,
-                MIN(part_id) as part_id,
+                GROUP_CONCAT(DISTINCT part_id) as all_part_ids,
                 MIN(den_furnizor) as den_furnizor,
                 MIN(nr_receptie) as nr_receptie,
                 MIN(data_intrare) as data_intrare,
                 COUNT(*) as nr_linii,
-                ROUND(SUM(cantitate * pret), 2) as total
+                ROUND(SUM(cantitate * pret * COALESCE(curs_bnr, 1)), 2) as total,
+                MAX(CASE WHEN moneda = 'EUR' THEN 1 ELSE 0 END) as are_eur
             ")
             ->groupBy('nr_doc', 'an', 'luna')
             ->first();
 
         if (! $row) return null;
 
-        $partnerName = \App\Models\Supplier::where('winmentor_id', $row->part_id)->value('name')
-            ?? ($row->den_furnizor ?: ($row->part_id ?: '—'));
+        // Furnizorul poate apărea cu mai multe formate de part_id — încercăm toate
+        $partIds  = array_filter(explode(',', $row->all_part_ids ?? ''));
+        $supplier = empty($partIds) ? null
+            : \App\Models\Supplier::whereIn('winmentor_id', $partIds)->first(['id', 'name']);
 
-        $row->partner_name = $partnerName;
+        $row->partner_name = $supplier?->name
+            ?? ($row->den_furnizor ?: (implode(', ', $partIds) ?: '—'));
+        $row->supplier_id  = $supplier?->id;
+        $row->supplier_url = $supplier
+            ? \App\Filament\App\Resources\SupplierResource::getUrl('view', ['record' => $supplier->id])
+            : null;
+        $row->part_id = $partIds[0] ?? null;
         $row->date_str = $row->data_intrare
             ? Carbon::parse($row->data_intrare)->format('d.m.Y')
             : sprintf('%02d.%d', $row->luna, $row->an);
@@ -68,13 +94,12 @@ class WinmentorCumparariDetailPage extends Page
     {
         if (! $this->nr || ! $this->an || ! $this->luna) return [];
 
-        $lines = DB::table('winmentor_intrari_raw as i')
+        $query = DB::table('winmentor_intrari_raw as i')
             ->leftJoin('woo_products as wp', 'wp.sku', '=', 'i.sku')
-            ->where('i.firma', 'MAL2019')
-            ->where('i.nr_doc', $this->nr)
-            ->where('i.an', $this->an)
-            ->where('i.luna', $this->luna)
-            ->where('i.part_id', $this->part_id)
+            ->where('i.firma', 'MAL2019');
+        $this->applyDocFilters($query, 'i.');
+
+        $lines = $query
             ->selectRaw("
                 i.sku,
                 i.den_articol,
@@ -84,7 +109,7 @@ class WinmentorCumparariDetailPage extends Page
                 i.pret_vanzare,
                 i.moneda,
                 i.curs_bnr,
-                ROUND(i.cantitate * i.pret, 2) as total,
+                ROUND(i.cantitate * i.pret * COALESCE(i.curs_bnr, 1), 2) as total,
                 i.den_gestiune,
                 COALESCE(wp.winmentor_name, wp.name) as product_name
             ")

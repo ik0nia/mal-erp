@@ -40,7 +40,16 @@
   <div class="wm-antet">
     <div class="wm-antet-row">
       <span class="wm-antet-label">Furnizor</span>
-      <span class="wm-antet-value">{{ $doc->partner_name }}</span>
+      <span class="wm-antet-value">
+        @if($doc->supplier_url)
+          <a href="{{ $doc->supplier_url }}" style="color:#4f46e5;text-decoration:none;" class="hover:underline">{{ $doc->partner_name }}</a>
+        @else
+          {{ $doc->partner_name }}
+        @endif
+        @if($doc->are_eur)
+          <span style="font-size:.7rem;color:#b45309;font-weight:700;margin-left:.35rem;">factură EUR — totaluri convertite în RON la curs BNR</span>
+        @endif
+      </span>
     </div>
     @if($doc->nr_receptie)
     <div class="wm-antet-row">

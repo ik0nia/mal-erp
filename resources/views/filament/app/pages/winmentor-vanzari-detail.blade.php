@@ -79,7 +79,13 @@
     {{-- Partener --}}
     <div class="wm-detail-item">
       <div class="wm-detail-label">Partener</div>
-      <div class="wm-detail-value">{{ $doc->partner_name }}</div>
+      <div class="wm-detail-value">
+        @if($doc->partner_url ?? null)
+          <a href="{{ $doc->partner_url }}" style="color:#4f46e5;text-decoration:none;" class="hover:underline">{{ $doc->partner_name }}</a>
+        @else
+          {{ $doc->partner_name }}
+        @endif
+      </div>
       @if($doc->partner_cui)
         <div class="wm-detail-sub">CUI: {{ $doc->partner_cui }}</div>
       @endif

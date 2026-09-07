@@ -27,12 +27,28 @@
       <label class="wm-filter-label">Până la</label>
       <input type="date" class="wm-filter-input" wire:model.blur="dateTo">
     </div>
+    <div style="display:flex;gap:.35rem;align-items:center;padding-bottom:.1rem;">
+      <button wire:click="goPrevMonth" class="wm-filter-input" style="cursor:pointer;" title="Luna anterioară">&laquo;</button>
+      <button wire:click="goToday" class="wm-filter-input" style="cursor:pointer;">Azi</button>
+      <button wire:click="goYesterday" class="wm-filter-input" style="cursor:pointer;">Ieri</button>
+      <button wire:click="goThisMonth" class="wm-filter-input" style="cursor:pointer;">Luna curentă</button>
+      <button wire:click="goLastMonth" class="wm-filter-input" style="cursor:pointer;">Luna trecută</button>
+      <button wire:click="goNextMonth" class="wm-filter-input" style="cursor:pointer;" title="Luna următoare">&raquo;</button>
+    </div>
   </div>
 
   @php $rows = $this->getRows(); @endphp
   <div class="wm-card-header">
     <span class="wm-card-title">Recepții / Intrări marfă</span>
-    <span class="wm-card-count">{{ count($rows) }} documente{{ count($rows) >= 300 ? ' (limitat la 300)' : '' }}</span>
+    <span class="wm-card-count" style="display:flex;gap:.5rem;align-items:center;">
+      <span>pagina {{ $this->page }} · {{ count($rows) }} documente</span>
+      @if($this->page > 1)
+        <button wire:click="prevPage" class="wm-filter-input" style="cursor:pointer;padding:.15rem .6rem;">&lsaquo; mai noi</button>
+      @endif
+      @if($this->hasMore)
+        <button wire:click="nextPage" class="wm-filter-input" style="cursor:pointer;padding:.15rem .6rem;">mai vechi &rsaquo;</button>
+      @endif
+    </span>
   </div>
 
   @if(empty($rows))
@@ -53,12 +69,19 @@
       </thead>
       <tbody>
         @foreach($rows as $row)
-        <tr wire:click="openDocument('{{ $row->nr_doc }}', '{{ $row->part_id }}', {{ $row->an }}, {{ $row->luna }})">
-          <td style="font-weight:600;font-family:monospace;">{{ $row->nr_doc ?? '—' }}</td>
+        <tr wire:click="openDocument('{{ $row->nr_doc }}', '{{ $row->nr_receptie }}', {{ $row->an }}, {{ $row->luna }})">
+          <td style="font-weight:600;font-family:monospace;">{{ $row->nr_doc ?? '—' }}{!! $row->are_eur ? ' <span style="font-size:.65rem;color:#b45309;font-weight:700;">EUR</span>' : '' !!}</td>
           <td style="font-family:monospace;color:#6b7280;">{{ $row->nr_receptie ?? '—' }}</td>
           <td style="white-space:nowrap;">{{ $row->date_str }}</td>
           <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-            {{ $row->partner_name }}
+            @if($row->supplier_id)
+              <a href="{{ \App\Filament\App\Resources\SupplierResource::getUrl('view', ['record' => $row->supplier_id]) }}"
+                 onclick="event.stopPropagation();" style="color:#4f46e5;text-decoration:none;" class="hover:underline">
+                {{ $row->partner_name }}
+              </a>
+            @else
+              {{ $row->partner_name }}
+            @endif
           </td>
           <td>
             @if($row->po_url)

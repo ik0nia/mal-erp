@@ -103,15 +103,22 @@ class WinmentorVanzariDetailPage extends Page
         // Lookup partener
         $partnerName = null;
         $partnerData = null;
+        $partnerUrl  = null;
 
         if ($row->cod_fiscal_client) {
             $partnerData = \App\Models\Customer::where('winmentor_id', $row->cod_fiscal_client)->first();
             $partnerName = $partnerData?->name;
+            if ($partnerData) {
+                $partnerUrl = \App\Filament\App\Resources\CustomerResource::getUrl('view', ['record' => $partnerData->id]);
+            }
         }
         if (! $partnerName && $row->part_id) {
             $supplier = \App\Models\Supplier::where('winmentor_id', $row->part_id)->first();
             $partnerName = $supplier?->name;
             if (! $partnerData) $partnerData = $supplier;
+            if ($supplier) {
+                $partnerUrl = \App\Filament\App\Resources\SupplierResource::getUrl('view', ['record' => $supplier->id]);
+            }
         }
 
         // Lookup partener din WinMentor dacă nu e în ERP
@@ -128,6 +135,7 @@ class WinmentorVanzariDetailPage extends Page
         }
 
         $row->partner_name  = $partnerName;
+        $row->partner_url   = $partnerUrl;
         $row->partner_cui   = $wmPartener?->cod_fiscal ?? $row->cod_fiscal_client ?? null;
         $row->partner_addr  = $wmPartener?->adresa ?? $row->adresa_client ?? null;
         $row->partner_loc   = $wmPartener?->localitate ?? $row->localitate ?? null;
