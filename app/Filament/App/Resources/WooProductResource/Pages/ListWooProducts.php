@@ -27,7 +27,11 @@ class ListWooProducts extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [];
+        return [
+            \Filament\Actions\CreateAction::make()
+                ->label('Creează produs')
+                ->icon('heroicon-o-plus'),
+        ];
     }
 
     public function getBreadcrumbs(): array

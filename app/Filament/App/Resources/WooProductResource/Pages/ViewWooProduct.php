@@ -233,7 +233,7 @@ class ViewWooProduct extends ViewRecord
                 ->label('Resync WooCommerce')
                 ->icon('heroicon-o-arrow-path')
                 ->color('gray')
-                ->hidden()
+                ->extraAttributes(['class' => 'hidden'])
                 ->visible(function (): bool {
                     if (! $this->record->woo_id || ! $this->record->connection_id) {
                         return false;
@@ -400,7 +400,7 @@ class ViewWooProduct extends ViewRecord
 
             Actions\Action::make('gallery_set_primary')
                 ->label('Setează ca principală')
-                ->hidden()
+                ->extraAttributes(['class' => 'hidden'])
                 ->action(function (array $arguments): void {
                     $imageId = (int) ($arguments['image_id'] ?? 0);
                     if (! $imageId) {
@@ -429,7 +429,7 @@ class ViewWooProduct extends ViewRecord
             // ── Gallery: șterge o imagine ─────────────────────────────────
             Actions\Action::make('gallery_delete_image')
                 ->label('Șterge imaginea')
-                ->hidden()
+                ->extraAttributes(['class' => 'hidden'])
                 ->requiresConfirmation()
                 ->modalHeading('Șterge imaginea?')
                 ->modalDescription('Această acțiune nu poate fi anulată.')
@@ -472,7 +472,7 @@ class ViewWooProduct extends ViewRecord
             // ── Gallery: adaugă URL manual ────────────────────────────────
             Actions\Action::make('gallery_add_url')
                 ->label('Adaugă URL imagine')
-                ->hidden()
+                ->extraAttributes(['class' => 'hidden'])
                 ->modalHeading('Adaugă imagine')
                 ->modalSubmitActionLabel('Adaugă')
                 ->form([
@@ -522,7 +522,7 @@ class ViewWooProduct extends ViewRecord
             // ── Gallery: mută imaginea mai în față (swap sort_order cu precedenta) ──
             Actions\Action::make('gallery_move_before')
                 ->label('Mută mai în față')
-                ->hidden()
+                ->extraAttributes(['class' => 'hidden'])
                 ->action(function (array $arguments): void {
                     $imageId = (int) ($arguments['image_id'] ?? 0);
                     if (! $imageId) {
@@ -555,7 +555,7 @@ class ViewWooProduct extends ViewRecord
             // ── Gallery: mută imaginea mai în spate (swap sort_order cu următoarea) ──
             Actions\Action::make('gallery_move_after')
                 ->label('Mută mai în spate')
-                ->hidden()
+                ->extraAttributes(['class' => 'hidden'])
                 ->action(function (array $arguments): void {
                     $imageId = (int) ($arguments['image_id'] ?? 0);
                     if (! $imageId) {
@@ -588,7 +588,7 @@ class ViewWooProduct extends ViewRecord
             // ── Gallery: import poze din Toya ─────────────────────────────
             Actions\Action::make('gallery_import_toya')
                 ->label('Import poze Toya')
-                ->hidden()
+                ->extraAttributes(['class' => 'hidden'])
                 ->modalHeading('Import imagini din Toya')
                 ->modalDescription('Se vor importa toate imaginile suplimentare din feedul Toya. Imaginile deja existente nu vor fi duplicate.')
                 ->modalSubmitActionLabel('Importă')
