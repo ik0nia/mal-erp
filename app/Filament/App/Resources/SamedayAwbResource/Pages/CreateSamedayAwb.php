@@ -37,6 +37,7 @@ class CreateSamedayAwb extends CreateRecord
             'recipient_postal_code' => request()->string('recipient_postal_code')->toString(),
             'cod_amount'            => request()->string('cod_amount')->toString() ?: null,
             'reference'             => request()->string('reference')->toString(),
+            'locker_last_mile'      => request()->integer('locker_last_mile') ?: null,
         ]);
 
         if (! empty($prefill)) {
@@ -231,6 +232,11 @@ class CreateSamedayAwb extends CreateRecord
     {
         /** @var SamedayAwb $awb */
         $awb = $this->record;
+
+        // Oglindește AWB-ul în tabelul pluginului Sameday de pe site (vizibil în wp-admin)
+        if ($awb->status === SamedayAwb::STATUS_CREATED) {
+            app(\App\Services\Courier\SamedayAwbSiteMirror::class)->push($awb);
+        }
 
         if (! $this->wooOrderId || ! filled($awb->awb_number)) {
             return;

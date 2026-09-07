@@ -85,7 +85,7 @@ class SamedayAwbService
             filled($input['price_observation'] ?? null) ? trim((string) $input['price_observation']) : null,
             filled($input['client_observation'] ?? null) ? trim((string) $input['client_observation']) : null,
             null,
-            null,
+            $this->nullablePositiveInt($input['locker_last_mile'] ?? null), // livrare în căsuță Easybox
             null,
             null,
             'RON'
@@ -116,6 +116,7 @@ class SamedayAwbService
                 'contact_person_id' => $contactPersonId,
                 'service_id' => $serviceId,
                 'service_tax_ids' => $serviceTaxIds,
+                'locker_last_mile' => $this->nullablePositiveInt($input['locker_last_mile'] ?? null),
                 'delivery_interval_id' => $deliveryInterval?->getType(),
                 'recipient_name' => trim((string) ($input['recipient_name'] ?? '')),
                 'recipient_phone' => trim((string) ($input['recipient_phone'] ?? '')),

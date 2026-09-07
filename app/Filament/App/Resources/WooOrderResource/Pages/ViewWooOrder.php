@@ -780,6 +780,8 @@ class ViewWooOrder extends ViewRecord
             'recipient_postal_code' => (string) data_get($order->shipping, 'postcode', data_get($order->billing, 'postcode', '')),
             'cod_amount'            => $order->payment_method === 'cod' ? (string) $order->total : null,
             'reference'             => $order->number,
+            // Comandă Easybox → precompletăm căsuța (formularul AWB o preia automat)
+            'locker_last_mile'      => $this->currentLocker()['lockerId'] ?? null,
         ]);
 
         return route('filament.app.resources.sameday-awbs.create').'?'.http_build_query($params);

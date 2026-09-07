@@ -206,6 +206,52 @@ class WooDirectSqlService
         return $result->successful();
     }
 
+    /**
+     * Interogare READ-ONLY pe baza site-ului (wp db query), cu rândurile ca array-uri
+     * asociative. Punct unic pentru host/cheie/cale — folosit de sync-urile Sameday etc.
+     *
+     * @return array<int, array<string, string|null>>
+     */
+    public function querySite(string $sql, int $timeout = 60): array
+    {
+        $result = Process::timeout($timeout)->run([
+            'ssh', '-i', $this->sshKey, '-o', 'StrictHostKeyChecking=no', $this->sshHost,
+            'wp --path='.$this->wpPath.' db query '.escapeshellarg($sql).' --allow-root',
+        ]);
+
+        if (! $result->successful()) {
+            throw new \RuntimeException('Interogarea site-ului a eșuat: '.trim($result->errorOutput() ?: $result->output()));
+        }
+
+        $lines = array_values(array_filter(explode("\n", trim($result->output())), fn ($l) => $l !== ''));
+        if (empty($lines)) {
+            return [];
+        }
+
+        $headers = explode("\t", array_shift($lines));
+
+        return array_map(function (string $line) use ($headers) {
+            $values = explode("\t", $line);
+            $row    = [];
+            foreach ($headers as $i => $h) {
+                $v = $values[$i] ?? null;
+                $row[$h] = ($v === 'NULL') ? null : $v;
+            }
+            return $row;
+        }, $lines);
+    }
+
+    /**
+     * Execută statement-uri de SCRIERE pe baza site-ului. Public pentru integrarea
+     * Sameday (oglindirea AWB-urilor create din ERP în tabelul pluginului).
+     *
+     * @return array{updated:int, failed:int}
+     */
+    public function executeSiteSql(string $sql, string $type = 'generic'): array
+    {
+        return $this->executeSql($sql, 1, $type);
+    }
+
     private function executeSql(string $sql, int $productCount, string $type): array
     {
         if ($sql === '') {

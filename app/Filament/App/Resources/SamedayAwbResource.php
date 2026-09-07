@@ -166,6 +166,22 @@ class SamedayAwbResource extends Resource
                     ->columnSpanFull()
                     ->columns(6)
                     ->schema([
+                        Select::make('locker_last_mile')
+                            ->label('Căsuță Easybox (opțional — livrare în locker)')
+                            ->searchable()
+                            ->columnSpan(6)
+                            ->getSearchResultsUsing(fn (string $search): array => \Illuminate\Support\Facades\DB::table('sameday_lockers')
+                                ->where(fn ($q) => $q->where('name', 'like', "%{$search}%")
+                                    ->orWhere('city', 'like', "%{$search}%")
+                                    ->orWhere('address', 'like', "%{$search}%"))
+                                ->limit(30)->get()
+                                ->mapWithKeys(fn ($l) => [$l->locker_id => $l->name.' — '.$l->address.', '.$l->city.' ('.$l->county.')'])
+                                ->all())
+                            ->getOptionLabelUsing(function ($value): string {
+                                $l = \Illuminate\Support\Facades\DB::table('sameday_lockers')->where('locker_id', $value)->first();
+                                return $l ? $l->name.' — '.$l->address.', '.$l->city : (string) $value;
+                            })
+                            ->helperText('Pentru livrare Easybox alege căsuța (serviciul de locker corespunzător se alege mai sus). Se precompletează automat din comandă când aceasta e Easybox.'),
                         Select::make('recipient_type')
                             ->label('Tip destinatar')
                             ->options([
