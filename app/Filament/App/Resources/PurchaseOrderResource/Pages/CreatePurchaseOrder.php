@@ -699,6 +699,9 @@ class CreatePurchaseOrder extends CreateRecord
         // Acoperire adaptată furnizorului: lead time real + ciclu de comandă
         $coverDays = $this->resolveCoverDays($supplierId);
 
+        // Sezonalitate pentru luna în care se va vinde marfa comandată
+        $seasonal = $this->seasonalFactors($rows->pluck('sku')->filter()->all(), $coverDays);
+
         // Cantități din necesare (purchase request items PENDING pentru furnizorul ăsta)
         $pendingQtys = \Illuminate\Support\Facades\DB::table('purchase_request_items as pri')
             ->join('woo_products as wp', 'wp.id', '=', 'pri.woo_product_id')
@@ -730,7 +733,7 @@ class CreatePurchaseOrder extends CreateRecord
             } elseif ($base > 0) {
                 $trend  = ($avg30 > 0 && $avg7 > 0 && $avg7 < ($avg30 * 0.85))
                     ? max(0.5, $avg7 / $avg30) : 1.0;
-                $daily  = $base * $trend;
+                $daily  = $base * $trend * ($seasonal[$row->sku] ?? 1.0);
 
                 $maxStock = $row->max_stock_qty !== null ? (float) $row->max_stock_qty : null;
                 if ($maxStock !== null && $maxStock > 0) {
@@ -993,6 +996,9 @@ class CreatePurchaseOrder extends CreateRecord
         // Cantități deja pe comenzi deschise (PO-uri trimise/aprobate, nerecepționate)
         $onOrderQtys = $this->getOnOrderQtys($rows->pluck('woo_product_id')->all());
 
+        // Sezonalitate: ajustăm ritmul pentru luna în care se va vinde marfa comandată
+        $seasonal = $this->seasonalFactors($rows->pluck('sku')->filter()->all(), $coverDays);
+
         foreach ($rows as $row) {
             $avg7  = (float) $row->avg7;
             $avg30 = (float) $row->avg30;
@@ -1006,7 +1012,7 @@ class CreatePurchaseOrder extends CreateRecord
                 $trend = max(0.5, $avg7 / $avg30);
             }
 
-            $adjustedDaily = $base * $trend;
+            $adjustedDaily = $base * $trend * ($seasonal[$row->sku] ?? 1.0);
             $safetyStock   = $adjustedDaily * 3;
             $recommended   = (int) ceil($adjustedDaily * $coverDays + $safetyStock - $stock - $onOrder);
 
@@ -1029,6 +1035,43 @@ class CreatePurchaseOrder extends CreateRecord
         }
 
         return $items;
+    }
+
+    /**
+     * Factori de sezonalitate per SKU pentru orizontul de comandă: raportul dintre
+     * indicele lunii ÎN CARE se va vinde marfa comandată acum (azi + coverDays)
+     * și indicele lunii curente (pe care e calibrat ritmul recent). Clamp [0.5, 2].
+     */
+    private function seasonalFactors(array $skus, int $coverDays): array
+    {
+        if (empty($skus)) {
+            return [];
+        }
+
+        $lunaCurenta = (int) now()->month;
+        $lunaTinta   = (int) now()->addDays($coverDays)->month;
+
+        if ($lunaTinta === $lunaCurenta) {
+            return [];
+        }
+
+        $rows = \Illuminate\Support\Facades\DB::table('bi_seasonality')
+            ->whereIn('reference_product_id', $skus)
+            ->whereIn('luna', [$lunaCurenta, $lunaTinta])
+            ->get()
+            ->groupBy('reference_product_id');
+
+        $factors = [];
+        foreach ($rows as $sku => $r) {
+            $byLuna = $r->keyBy('luna');
+            $cur    = (float) ($byLuna[$lunaCurenta]->idx ?? 0);
+            $tinta  = (float) ($byLuna[$lunaTinta]->idx ?? 0);
+            if ($cur > 0 && $tinta > 0) {
+                $factors[$sku] = max(0.5, min(2.0, $tinta / $cur));
+            }
+        }
+
+        return $factors;
     }
 
     /**

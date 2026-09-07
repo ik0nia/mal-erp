@@ -171,6 +171,13 @@ Schedule::command('toya:sync-prices')
 //     ->timezone('Europe/Bucharest')
 //     ->withoutOverlapping(360);
 
+// Sezonalitate lunară per produs (istoric multi-anual) — luna 1 la 01:15.
+Schedule::command('bi:compute-seasonality')
+    ->monthlyOn(1, '01:15')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping(60)
+    ->runInBackground();
+
 // Clasificare ABC/XYZ produse — zilnic la 01:00 (Europe/Bucharest).
 // Calculează consum mediu zilnic, clasificare ABC/XYZ și reorder_qty.
 Schedule::command('erp:compute-abc-classification')
