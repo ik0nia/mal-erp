@@ -16,7 +16,10 @@ class FetchWinmentorIntrariCommand extends Command
     protected $signature = 'winmentor:fetch-intrari
                             {--firma=MAL2019 : Firma WinMentor din care să importe}
                             {--delay=30 : Secunde pauză între luni}
-                            {--force : Re-fetch luni deja importate}';
+                            {--force : Re-fetch luni deja importate}
+                            {--an= : Procesează doar anul specificat}
+                            {--luna= : Procesează doar luna specificată (necesită --an)}
+                            {--mark-processed : Marchează rândurile ca procesate (refetch istoric — evită re-procesarea prețurilor/alertelor)}';
 
     protected $description = 'Fetch intrări de marfă din WinMentor Bridge, lună cu lună, și salvează raw în DB';
 
@@ -41,6 +44,11 @@ class FetchWinmentorIntrariCommand extends Command
         }
 
         $luni = $luni->reverse()->values(); // cele mai recente primele
+
+        $anFiltru   = $this->option('an')   ? (int) $this->option('an')   : null;
+        $lunaFiltru = $this->option('luna') ? (int) $this->option('luna') : null;
+        if ($anFiltru)   $luni = $luni->filter(fn ($l) => (int) explode('_', $l)[0] === $anFiltru)->values();
+        if ($lunaFiltru) $luni = $luni->filter(fn ($l) => (int) explode('_', $l)[1] === $lunaFiltru)->values();
 
         $this->info("Firma: {$firma} — {$luni->count()} luni disponibile ({$luni->last()} → {$luni->first()})");
         $this->info("Delay între luni: {$delay}s");
@@ -83,6 +91,15 @@ class FetchWinmentorIntrariCommand extends Command
 
             $saved = $this->saveIntrari($firma, $an, $luna, $intrari);
             $totalSaved += $saved;
+
+            // Refetch istoric: rândurile au fost deja procesate cândva — marcăm ca procesate
+            // ca să nu re-declanșăm actualizări de preț / alerte de anomalii pe istorie
+            if ($saved > 0 && $this->option('mark-processed')) {
+                DB::table('winmentor_intrari_raw')
+                    ->where('firma', $firma)->where('an', $an)->where('luna', $luna)
+                    ->whereNull('processed_at')
+                    ->update(['processed_at' => now()]);
+            }
 
             $this->info("  [{$luna}/{$an}] ✓ {$saved} rânduri salvate");
 
@@ -144,13 +161,6 @@ class FetchWinmentorIntrariCommand extends Command
     private function saveIntrari(string $firma, int $an, int $luna, array $intrari): int
     {
         if (empty($intrari)) return 0;
-
-        // Șterge rândurile vechi pentru luna asta dacă există (re-fetch)
-        DB::table('winmentor_intrari_raw')
-            ->where('firma', $firma)
-            ->where('an', $an)
-            ->where('luna', $luna)
-            ->delete();
 
         // Index furnizori EUR (winmentor_id → true)
         $eurSuppliers = Supplier::where('default_currency', 'EUR')
@@ -219,8 +229,16 @@ class FetchWinmentorIntrariCommand extends Command
 
         if (empty($rows)) return 0;
 
-        // Insert în batch-uri de 500
-        collect($rows)->chunk(500)->each(fn ($chunk) => DB::table('winmentor_intrari_raw')->insert($chunk->all()));
+        // Delete + insert atomic per lună — crash la mijloc nu lasă luna goală
+        DB::transaction(function () use ($firma, $an, $luna, $rows) {
+            DB::table('winmentor_intrari_raw')
+                ->where('firma', $firma)
+                ->where('an', $an)
+                ->where('luna', $luna)
+                ->delete();
+
+            collect($rows)->chunk(500)->each(fn ($chunk) => DB::table('winmentor_intrari_raw')->insert($chunk->all()));
+        });
 
         return count($rows);
     }
