@@ -134,7 +134,9 @@ class WooWebhookController extends Controller
             'slug'              => filled($data['slug'] ?? '') ? $data['slug'] : $product->slug,
             'type'              => $data['type'] ?? $product->type,
             'status'            => $data['status'] ?? $product->status,
-            'sku'               => filled($data['sku'] ?? '') ? $data['sku'] : $product->sku,
+            // sku: NU suprascris din Woo — ERP-ul e sursa de adevăr (site-ul îl afișează ca EAN);
+            // acceptăm valoarea din Woo doar dacă ERP-ul nu are deloc sku
+            'sku'               => filled($product->sku) ? $product->sku : (($data['sku'] ?? '') ?: null),
             'description'       => $data['description'] ?? $product->description,
             'short_description' => $data['short_description'] ?? $product->short_description,
             'regular_price'     => isset($data['regular_price']) && $data['regular_price'] !== ''

@@ -3,12 +3,13 @@
 namespace App\Observers;
 
 use App\Jobs\PushProductPriceToWooJob;
+use App\Jobs\PushProductSkuToWooJob;
 use App\Models\WooProduct;
 
 class WooProductObserver
 {
     /**
-     * Când regular_price se schimbă în ERP, împingem prețul automat pe site.
+     * Când regular_price sau sku se schimbă în ERP, împingem valoarea automat pe site.
      * Nu acționăm dacă schimbarea vine din WooWebhookController (evităm loop).
      */
     public function updated(WooProduct $product): void
@@ -17,14 +18,16 @@ class WooProductObserver
             return;
         }
 
-        if (! $product->wasChanged('regular_price')) {
+        if (! $product->woo_id) {
             return;
         }
 
-        if (! $product->woo_id || ! $product->regular_price) {
-            return;
+        if ($product->wasChanged('regular_price') && $product->regular_price) {
+            PushProductPriceToWooJob::dispatch($product->id)->onQueue('default');
         }
 
-        PushProductPriceToWooJob::dispatch($product->id)->onQueue('default');
+        if ($product->wasChanged('sku') && filled($product->sku)) {
+            PushProductSkuToWooJob::dispatch($product->id)->onQueue('default');
+        }
     }
 }

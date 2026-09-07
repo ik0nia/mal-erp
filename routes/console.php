@@ -156,9 +156,9 @@ Schedule::command('bi:generate-period-report --type=annual')
     ->withoutOverlapping(360)
     ->runInBackground();
 
-// Toya — sync prețuri + stocuri + push WooCommerce (la fiecare 4 ore, 07:00–19:00).
+// Toya — sync prețuri + stocuri + push WooCommerce (din oră în oră, 07:00–19:00).
 Schedule::command('toya:sync-prices')
-    ->cron('0 7,11,15,19 * * *')
+    ->cron('0 7-19 * * *')
     ->timezone('Europe/Bucharest')
     ->withoutOverlapping(120)
     ->runInBackground();

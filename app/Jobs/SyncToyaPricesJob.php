@@ -238,10 +238,17 @@ class SyncToyaPricesJob implements ShouldQueue
         // 5. Push la WooCommerce via SQL direct (fără API — instant, fără timeout)
         $directSql = new \App\Services\WooCommerce\WooDirectSqlService;
 
+        // Chunk-uri de 2000 — un singur batch mare (>10k) depășește timeout-ul SSH de 120s
         if (! empty($wooPricePushRows)) {
-            $result = $directSql->updatePrices($wooPricePushRows);
-            $stats['price_pushed'] = $result['updated'];
-            Log::info('[SyncToyaPrices] Push prețuri direct SQL: ' . $result['updated'] . ' updated, ' . $result['failed'] . ' failed');
+            $updated = 0;
+            $failed = 0;
+            foreach (array_chunk($wooPricePushRows, 2000) as $chunk) {
+                $result = $directSql->updatePrices($chunk);
+                $updated += $result['updated'];
+                $failed += $result['failed'];
+            }
+            $stats['price_pushed'] = $updated;
+            Log::info('[SyncToyaPrices] Push prețuri direct SQL: ' . $updated . ' updated, ' . $failed . ' failed');
         }
 
         if (! empty($wooStockPushRows)) {
@@ -253,8 +260,14 @@ class SyncToyaPricesJob implements ShouldQueue
                 'backorders' => $row['backorders'] ?? 'no',
             ], $wooStockPushRows);
 
-            $result = $directSql->updateStock($stockBatch);
-            Log::info('[SyncToyaPrices] Push stoc direct SQL: ' . $result['updated'] . ' updated, ' . $result['failed'] . ' failed');
+            $updated = 0;
+            $failed = 0;
+            foreach (array_chunk($stockBatch, 2000) as $chunk) {
+                $result = $directSql->updateStock($chunk);
+                $updated += $result['updated'];
+                $failed += $result['failed'];
+            }
+            Log::info('[SyncToyaPrices] Push stoc direct SQL: ' . $updated . ' updated, ' . $failed . ' failed');
         }
 
         if (! empty($wooPricePushRows) || ! empty($wooStockPushRows)) {
@@ -262,7 +275,10 @@ class SyncToyaPricesJob implements ShouldQueue
         }
 
         // 6. Notificare produse noi Toya (SKU-uri EAN inexistente în ERP)
-        if (! empty($newSkus)) {
+        // Dedupe: la rulare orară, nu retrimitem același set de SKU-uri în aceeași zi
+        $newSkusHash = md5(implode(',', array_column($newSkus, 'sku')));
+        if (! empty($newSkus) && \Illuminate\Support\Facades\Cache::get('toya:new-skus-notified') !== $newSkusHash) {
+            \Illuminate\Support\Facades\Cache::put('toya:new-skus-notified', $newSkusHash, now()->addDay());
             \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($newSkus) {
                 $message->to('codrut@ikonia.ro')
                     ->subject('[ERP Malinco] ' . count($newSkus) . ' produse noi Toya detectate')
