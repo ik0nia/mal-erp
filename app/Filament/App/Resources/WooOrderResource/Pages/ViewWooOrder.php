@@ -123,6 +123,18 @@ class ViewWooOrder extends ViewRecord
                 ])
                 ->action(fn (array $data) => $this->saveOrderItems($data)),
 
+            Action::make('edit_address')
+                ->label('Editează livrare & client')
+                ->icon('heroicon-o-map-pin')
+                ->color('info')
+                ->visible(fn (): bool => $this->isOrderEditable())
+                ->modalHeading(fn (): string => 'Livrare & date client — comanda #'.$this->record->number)
+                ->modalDescription('Modificările se salvează în WooCommerce (site) și se resincronizează în ERP. Costul de transport modificat recalculează totalul comenzii.')
+                ->modalSubmitActionLabel('Salvează în WooCommerce')
+                ->modalWidth('3xl')
+                ->form(fn (): array => $this->buildAddressForm())
+                ->action(fn (array $data) => $this->saveOrderAddress($data)),
+
             Action::make('factura_winmentor')
                 ->label(function (): string {
                     $inv = $this->winmentorInvoice();
@@ -355,6 +367,133 @@ class ViewWooOrder extends ViewRecord
                 'price_gross' => round((float) $item->price * (1 + $rate / 100), 2),
             ];
         })->values()->all();
+    }
+
+    private function buildAddressForm(): array
+    {
+        $shipping = (array) ($this->record->shipping ?? []);
+        $billing  = (array) ($this->record->billing ?? []);
+        $shipLine = collect($this->record->data['shipping_lines'] ?? [])->first();
+
+        $grossShipping = round((float) $this->record->shipping_total * 1.21, 2);
+
+        return [
+            \Filament\Forms\Components\Section::make('Adresa de livrare')
+                ->columns(12)
+                ->schema([
+                    \Filament\Forms\Components\TextInput::make('s_first_name')->label('Prenume')->default($shipping['first_name'] ?? '')->columnSpan(3),
+                    \Filament\Forms\Components\TextInput::make('s_last_name')->label('Nume')->default($shipping['last_name'] ?? '')->columnSpan(3),
+                    \Filament\Forms\Components\TextInput::make('s_company')->label('Companie')->default($shipping['company'] ?? '')->columnSpan(6),
+                    \Filament\Forms\Components\TextInput::make('s_address_1')->label('Adresă')->default($shipping['address_1'] ?? '')->required()->columnSpan(8),
+                    \Filament\Forms\Components\TextInput::make('s_address_2')->label('Detalii (bl/sc/ap)')->default($shipping['address_2'] ?? '')->columnSpan(4),
+                    \Filament\Forms\Components\TextInput::make('s_city')->label('Localitate')->default($shipping['city'] ?? '')->required()->columnSpan(4),
+                    \Filament\Forms\Components\TextInput::make('s_state')->label('Județ (cod)')->default($shipping['state'] ?? '')->helperText('ex: BH, CJ, B')->columnSpan(3),
+                    \Filament\Forms\Components\TextInput::make('s_postcode')->label('Cod poștal')->default($shipping['postcode'] ?? '')->columnSpan(3),
+                    \Filament\Forms\Components\TextInput::make('s_phone')->label('Telefon livrare')->default($shipping['phone'] ?? '')->columnSpan(2),
+                ]),
+            \Filament\Forms\Components\Section::make('Contact client (facturare)')
+                ->columns(12)
+                ->schema([
+                    \Filament\Forms\Components\TextInput::make('b_phone')->label('Telefon')->default($billing['phone'] ?? '')->columnSpan(4),
+                    \Filament\Forms\Components\TextInput::make('b_email')->label('Email')->email()->default($billing['email'] ?? '')->columnSpan(8),
+                ]),
+            \Filament\Forms\Components\Section::make('Transport')
+                ->columns(12)
+                ->schema([
+                    \Filament\Forms\Components\TextInput::make('ship_method')->label('Metodă transport')
+                        ->default($shipLine['method_title'] ?? '')->columnSpan(7),
+                    \Filament\Forms\Components\TextInput::make('ship_cost_gross')->label('Cost transport (cu TVA)')
+                        ->numeric()->minValue(0)->step('0.01')->suffix('RON')
+                        ->default($grossShipping)
+                        ->helperText($shipLine ? 'Modificarea recalculează totalul comenzii în WooCommerce.' : 'Comanda nu are linie de transport — costul nu poate fi editat.')
+                        ->disabled(! $shipLine)
+                        ->columnSpan(5),
+                ]),
+            \Filament\Forms\Components\Section::make('Notă client')
+                ->schema([
+                    \Filament\Forms\Components\Textarea::make('customer_note')->label('')->rows(2)
+                        ->default((string) $this->record->customer_note),
+                ]),
+        ];
+    }
+
+    private function saveOrderAddress(array $data): void
+    {
+        /** @var WooOrder $order */
+        $order = $this->record;
+
+        if (! $this->isOrderEditable()) {
+            Notification::make()->danger()->title('Comanda nu mai poate fi editată')->send();
+            return;
+        }
+
+        $shipping = (array) ($order->shipping ?? []);
+        $billing  = (array) ($order->billing ?? []);
+
+        $newShipping = array_merge($shipping, [
+            'first_name' => trim($data['s_first_name'] ?? ''),
+            'last_name'  => trim($data['s_last_name'] ?? ''),
+            'company'    => trim($data['s_company'] ?? ''),
+            'address_1'  => trim($data['s_address_1'] ?? ''),
+            'address_2'  => trim($data['s_address_2'] ?? ''),
+            'city'       => trim($data['s_city'] ?? ''),
+            'state'      => strtoupper(trim($data['s_state'] ?? '')),
+            'postcode'   => trim($data['s_postcode'] ?? ''),
+            'phone'      => trim($data['s_phone'] ?? ''),
+        ]);
+
+        $newBilling = array_merge($billing, [
+            'phone' => trim($data['b_phone'] ?? ''),
+            'email' => trim($data['b_email'] ?? ''),
+        ]);
+
+        $payload = [];
+        if ($newShipping != $shipping)                                  $payload['shipping'] = $newShipping;
+        if ($newBilling != $billing)                                    $payload['billing'] = $newBilling;
+        if (trim($data['customer_note'] ?? '') !== (string) $order->customer_note) {
+            $payload['customer_note'] = trim($data['customer_note'] ?? '');
+        }
+
+        // Transport: linia de shipping se editează prin id + total (fără TVA — Woo recalculează taxa)
+        $shipLine = collect($order->data['shipping_lines'] ?? [])->first();
+        if ($shipLine) {
+            $newGross = round((float) ($data['ship_cost_gross'] ?? 0), 2);
+            $oldGross = round((float) $order->shipping_total * 1.21, 2);
+            $newTitle = trim($data['ship_method'] ?? '');
+
+            if (abs($newGross - $oldGross) >= 0.01 || ($newTitle !== '' && $newTitle !== ($shipLine['method_title'] ?? ''))) {
+                $line = ['id' => $shipLine['id'], 'total' => number_format(round($newGross / 1.21, 2), 2, '.', '')];
+                if ($newTitle !== '') $line['method_title'] = $newTitle;
+                $payload['shipping_lines'] = [$line];
+            }
+        }
+
+        if (empty($payload)) {
+            Notification::make()->info()->title('Nicio modificare')->send();
+            return;
+        }
+
+        try {
+            $client = new WooClient($order->connection);
+            $client->updateOrder((int) $order->woo_id, $payload);
+
+            $this->syncOrderFromWoo();
+
+            $body = 'Modificări salvate: '.implode(', ', array_keys($payload)).'.';
+            if ($order->winmentor_sync_status === 'synced') {
+                $body .= ' ATENȚIE: comanda a fost deja trimisă în WinMentor — verifică dacă adresa contează și acolo!';
+            }
+
+            \Log::info('WooOrder adresă/transport editate din ERP', [
+                'order' => $order->number, 'user' => auth()->user()?->email, 'campuri' => array_keys($payload),
+            ]);
+
+            Notification::make()->success()->title('Comandă actualizată în WooCommerce')->body($body)->persistent()->send();
+
+            $this->redirect(WooOrderResource::getUrl('view', ['record' => $order]));
+        } catch (Throwable $e) {
+            Notification::make()->danger()->title('Eroare la actualizare')->body($e->getMessage())->persistent()->send();
+        }
     }
 
     private function saveOrderItems(array $data): void
