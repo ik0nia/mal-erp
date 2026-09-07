@@ -25,7 +25,7 @@ class ProductPriceHistoryPage extends Page
 
     public string $search = '';
 
-    #[\Livewire\Attributes\Url(as: 'product')]
+    #[\Livewire\Attributes\Url(as: 'product', history: true)]
     public ?int $productId = null;
 
     public static function canAccess(): bool
@@ -106,6 +106,7 @@ class ProductPriceHistoryPage extends Page
     public function purchaseLogs(): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         return ProductPurchasePriceLog::where('woo_product_id', $this->productId)
+            ->with('supplier:id,name')
             ->orderByDesc('acquired_at')->paginate(25, ['*'], 'purchasePage');
     }
 

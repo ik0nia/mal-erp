@@ -167,7 +167,7 @@
                     @endforeach
                     </tbody>
                 </table>
-                <div style="margin-top:0.6rem;">{{ $sale->links() }}</div>
+                <x-price-history-pager :paginator="$sale" pageName="salePage" />
             @endif
         </div>
 
@@ -180,22 +180,24 @@
                 <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
                     <thead><tr style="text-align:left; color:#6b7280;">
                         <th style="padding:0.3rem 0.5rem;">Data</th><th style="padding:0.3rem 0.5rem;">Furnizor</th>
-                        <th style="padding:0.3rem 0.5rem;">Preț unitar</th><th style="padding:0.3rem 0.5rem;">Mon.</th>
+                        <th style="padding:0.3rem 0.5rem; text-align:right;">Cant.</th>
+                        <th style="padding:0.3rem 0.5rem; text-align:right;">Preț unitar</th><th style="padding:0.3rem 0.5rem;">Mon.</th>
                         <th style="padding:0.3rem 0.5rem;">Doc.</th>
                     </tr></thead>
                     <tbody>
                     @foreach($purchase as $l)
                         <tr style="border-top:1px solid #f3f4f6; {{ $l->has_anomaly ? 'background:#fef6f5;' : '' }}">
-                            <td style="padding:0.3rem 0.5rem;">{{ $l->acquired_at?->format('d.m.Y') }}</td>
-                            <td style="padding:0.3rem 0.5rem;">{{ \Illuminate\Support\Str::limit($l->supplier_name_raw ?? '—', 28) }}</td>
-                            <td style="padding:0.3rem 0.5rem; font-weight:600;">{{ number_format((float)$l->unit_price, 2, ',', '.') }} @if($l->has_anomaly)<span title="Anomalie preț">⚠</span>@endif</td>
+                            <td style="padding:0.3rem 0.5rem; white-space:nowrap;">{{ $l->acquired_at?->format('d.m.Y') }}</td>
+                            <td style="padding:0.3rem 0.5rem;">{{ \Illuminate\Support\Str::limit($l->supplier?->name ?? $l->supplier_name_raw ?? '—', 28) }}</td>
+                            <td style="padding:0.3rem 0.5rem; text-align:right; color:#6b7280;">{{ $l->quantity !== null ? rtrim(rtrim(number_format((float)$l->quantity, 3, ',', '.'), '0'), ',') : '—' }}</td>
+                            <td style="padding:0.3rem 0.5rem; text-align:right; font-weight:600; white-space:nowrap;">{{ number_format((float)$l->unit_price, 2, ',', '.') }}@if($l->exchange_rate) <span style="color:#9ca3af; font-weight:400;" title="Convertit din EUR la curs {{ number_format((float)$l->exchange_rate, 4, ',', '.') }}">€</span>@endif @if($l->has_anomaly)<span title="Anomalie preț">⚠</span>@endif</td>
                             <td style="padding:0.3rem 0.5rem;">{{ $l->currency }}</td>
                             <td style="padding:0.3rem 0.5rem;">{{ $l->nr_doc }}</td>
                         </tr>
                     @endforeach
                     </tbody>
                 </table>
-                <div style="margin-top:0.6rem;">{{ $purchase->links() }}</div>
+                <x-price-history-pager :paginator="$purchase" pageName="purchasePage" />
             @endif
         </div>
     @endif

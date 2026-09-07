@@ -120,6 +120,8 @@ class ProcessWinmentorIntrariCommand extends Command
         $moneda  = strtoupper($row->moneda ?? '');
         $cursRon = $row->curs_bnr ? (float) $row->curs_bnr : null;
 
+        $partId = $partId !== null ? ltrim($partId, '0') : null;
+
         // WinMentor nu exportă câmpul monedă — deducem din furnizor
         if ($moneda === '' && isset($this->eurPartIds[$partId])) {
             $moneda = 'EUR';
@@ -329,6 +331,34 @@ class ProcessWinmentorIntrariCommand extends Command
             return [$id, null];
         }
 
+        // Rezolvare locală prin winmentor_parteneri (wm_id sau cod_extern) — fără apel la bridge
+        $local = DB::table('winmentor_parteneri')
+            ->whereRaw("TRIM(LEADING '0' FROM wm_id) = ?", [$partId])
+            ->orWhereRaw("TRIM(LEADING '0' FROM COALESCE(cod_extern, '')) = ?", [$partId])
+            ->first(['wm_id', 'cod_extern', 'denumire', 'cod_fiscal']);
+        if ($local) {
+            $cui = preg_replace('/[^0-9]/', '', $local->cod_fiscal ?? '');
+            $existing = null;
+            if ($cui) {
+                $existing = Supplier::where('vat_number', 'like', "%{$cui}%")->first();
+            }
+            $existing ??= Supplier::whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower(trim($local->denumire))])->first();
+            if ($existing) {
+                if (! $existing->winmentor_id) {
+                    $existing->update(['winmentor_id' => $local->wm_id]);
+                }
+                $this->supplierIndex[$partId] = $existing->id;
+                $this->supplierCache[$partId] = ['id' => $existing->id, 'name' => null];
+
+                return [$existing->id, null];
+            }
+
+            // Partener cunoscut, dar fără furnizor în ERP — măcar numele real, nu ID-ul
+            $this->supplierCache[$partId] = ['id' => null, 'name' => $local->denumire];
+
+            return [null, $local->denumire];
+        }
+
         // Caută în WinMentor și creează furnizor inactiv dacă îl găsește
         try {
             $partener = $bridge->searchPartenerById($partId);
@@ -413,8 +443,25 @@ class ProcessWinmentorIntrariCommand extends Command
         $this->info('Construiesc indexuri...');
 
         $this->productIndex  = WooProduct::whereNotNull('sku')->pluck('id', 'sku')->all();
-        $this->supplierIndex = Supplier::whereNotNull('winmentor_id')->pluck('id', 'winmentor_id')->all();
-        $this->eurPartIds    = Supplier::where('default_currency', 'EUR')->whereNotNull('winmentor_id')->pluck('winmentor_id')->flip()->all();
+
+        // Furnizorii pot apărea în intrări cu wm_id SAU cod_extern (ID-ul legacy) —
+        // indexăm pe ambele, prin winmentor_parteneri (chei fără zerouri de umplutură).
+        $this->supplierIndex = [];
+        $this->eurPartIds    = [];
+        $eurIds = Supplier::where('default_currency', 'EUR')->pluck('id')->flip()->all();
+        foreach (Supplier::whereNotNull('winmentor_id')->get(['id', 'winmentor_id']) as $s) {
+            $keys = [ltrim($s->winmentor_id, '0')];
+            $p = DB::table('winmentor_parteneri')
+                ->where('wm_id', $s->winmentor_id)->orWhere('cod_extern', $s->winmentor_id)->first(['wm_id', 'cod_extern']);
+            if ($p) {
+                $keys[] = ltrim($p->wm_id, '0');
+                if ($p->cod_extern) $keys[] = ltrim($p->cod_extern, '0');
+            }
+            foreach (array_unique(array_filter($keys)) as $k) {
+                $this->supplierIndex[$k] = $s->id;
+                if (isset($eurIds[$s->id])) $this->eurPartIds[$k] = true;
+            }
+        }
 
         // Preîncarcă ultimele prețuri cunoscute per produs (din DB, sortat cronologic)
         ProductPurchasePriceLog::where('firma', $firma)

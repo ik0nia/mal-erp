@@ -93,8 +93,58 @@ class BnrExchangeRateService
             }
         }
 
-        Log::warning("[BNR] Nu s-a găsit cursul {$currency} pentru {$date->format('Y-m-d')} (nici în ultimele 7 zile)");
+        // Fallback ECB — site-ul BNR blochează uneori accesul din datacenter (302 → homepage).
+        // Cursul de referință ECB pentru RON diferă nesemnificativ de cel BNR.
+        $ecb = $this->fetchEcbRate($currency, $date);
+        if ($ecb !== null) {
+            Log::info("[BNR] Curs {$currency}/{$date->format('Y-m-d')} obținut din fallback ECB: {$ecb}");
+            return $ecb;
+        }
+
+        Log::warning("[BNR] Nu s-a găsit cursul {$currency} pentru {$date->format('Y-m-d')} (nici în ultimele 7 zile, nici la ECB)");
         return null;
+    }
+
+    /**
+     * Fallback: cursul de referință ECB (data-api.ecb.europa.eu).
+     * Pentru EUR returnează RON/EUR direct; pentru alte valute derivă prin EUR
+     * (ex. USD/RON = RON-per-EUR ÷ USD-per-EUR). Ia ultima zi bancară ≤ data cerută.
+     */
+    private function fetchEcbRate(string $currency, Carbon $date): ?float
+    {
+        $currency = strtoupper($currency);
+        $start = $date->copy()->subDays(7)->format('Y-m-d');
+        $end   = $date->format('Y-m-d');
+
+        $fetch = function (string $cur) use ($start, $end): ?float {
+            try {
+                $url = "https://data-api.ecb.europa.eu/service/data/EXR/D.{$cur}.EUR.SP00.A"
+                    ."?startPeriod={$start}&endPeriod={$end}&format=csvdata";
+                $response = Http::timeout(15)->get($url);
+                if (! $response->successful()) return null;
+
+                $last = null;
+                foreach (explode("\n", trim($response->body())) as $i => $line) {
+                    if ($i === 0) continue;
+                    $cols = str_getcsv($line);
+                    if (isset($cols[7]) && is_numeric($cols[7])) $last = (float) $cols[7];
+                }
+
+                return $last;
+            } catch (\Throwable $e) {
+                Log::warning("[BNR] Eroare fallback ECB {$cur}: {$e->getMessage()}");
+                return null;
+            }
+        };
+
+        $ronPerEur = $fetch('RON');
+        if ($ronPerEur === null || $ronPerEur <= 0) return null;
+        if ($currency === 'EUR') return round($ronPerEur, 4);
+
+        $curPerEur = $fetch($currency);
+        if ($curPerEur === null || $curPerEur <= 0) return null;
+
+        return round($ronPerEur / $curPerEur, 4);
     }
 
     /**
