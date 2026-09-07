@@ -177,8 +177,8 @@ class SyncWinmentorComenziCommand extends Command
     }
 
     /**
-     * part_id poate fi un ID de sediu, nu de partener. Construim mapă sediu→denumire
-     * din partenerii WinMentor pentru ID-urile lipsă (la fel ca la livrări).
+     * part_id poate fi un ID de sediu, nu de partener. Rezolvare prin cache-ul
+     * persistent (scanează nomenclatorul doar pentru ID-uri nemaiîntâlnite).
      */
     private function resolveSediuNames(\Illuminate\Support\Collection $lines, array $parteneriMap): array
     {
@@ -186,41 +186,10 @@ class SyncWinmentorComenziCommand extends Command
             ->reject(fn($id) => isset($parteneriMap[(string) $id]))
             ->values();
 
-        if ($missingPartIds->isEmpty()) {
-            return $parteneriMap;
-        }
-
-        try {
-            $bridge = app(\App\Services\Winmentor\WinmentorBridgeClient::class);
-            $bridge->selectFirma();
-            $ref = new \ReflectionClass($bridge);
-            $getMethod = $ref->getMethod('get');
-            $getMethod->setAccessible(true);
-
-            $sediuMap = [];
-            for ($page = 1; $page <= 50; $page++) {
-                $r = $getMethod->invoke($bridge, '/api/parteneri', ['page' => $page, 'pageSize' => 500]);
-                $items = $r['data']['items'] ?? [];
-
-                foreach ($items as $item) {
-                    foreach ($item['denumiriSedii'] ?? [] as $sediuId) {
-                        if ($missingPartIds->contains($sediuId)) {
-                            $sediuMap[$sediuId] = $item['denumire'] ?? '';
-                        }
-                    }
-                }
-
-                if (! ($r['data']['hasNextPage'] ?? false)) break;
-                if ($missingPartIds->every(fn($id) => isset($sediuMap[(string) $id]))) break;
+        foreach (app(\App\Services\Winmentor\SediuPartenerResolver::class)->resolveNames($missingPartIds) as $sediuId => $denumire) {
+            if ($denumire !== '') {
+                $parteneriMap[$sediuId] = $denumire;
             }
-
-            foreach ($sediuMap as $sediuId => $denumire) {
-                if ($denumire !== '') {
-                    $parteneriMap[$sediuId] = $denumire;
-                }
-            }
-        } catch (\Throwable $e) {
-            $this->warn('Rezolvare sedii eșuată: ' . $e->getMessage());
         }
 
         return $parteneriMap;

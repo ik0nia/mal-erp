@@ -41,41 +41,14 @@ class SyncWinmentorLivrariCommand extends Command
         $parteneriMap = DB::table('winmentor_parteneri')->pluck('denumire', 'wm_id')->toArray();
 
         // Fallback: part_id poate fi un ID de sediu, nu de partener.
-        // Construim o mapă sediu→denumire din partenerii WinMentor.
+        // Rezolvare prin cache-ul persistent (scanează nomenclatorul doar la ID-uri noi).
         $missingPartIds = $cmLines->pluck(0)->unique()->filter()
             ->reject(fn($id) => isset($parteneriMap[(string) $id]))
             ->values();
 
-        if ($missingPartIds->isNotEmpty()) {
-            $bridge = app(\App\Services\Winmentor\WinmentorBridgeClient::class);
-            $bridge->selectFirma();
-            $ref    = new \ReflectionClass($bridge);
-            $getMethod = $ref->getMethod('get');
-            $getMethod->setAccessible(true);
-
-            // Scanăm partenerii din Bridge și construim mapă sediu→denumire
-            $sediuMap = [];
-            for ($page = 1; $page <= 50; $page++) {
-                $r = $getMethod->invoke($bridge, '/api/parteneri', ['page' => $page, 'pageSize' => 500]);
-                $items = $r['data']['items'] ?? [];
-
-                foreach ($items as $item) {
-                    foreach ($item['denumiriSedii'] ?? [] as $sediuId) {
-                        if ($missingPartIds->contains($sediuId)) {
-                            $sediuMap[$sediuId] = $item['denumire'] ?? '';
-                        }
-                    }
-                }
-
-                if (! ($r['data']['hasNextPage'] ?? false)) break;
-                // Stop early dacă am rezolvat toate
-                if ($missingPartIds->every(fn($id) => isset($sediuMap[(string) $id]))) break;
-            }
-
-            foreach ($sediuMap as $sediuId => $denumire) {
-                if ($denumire !== '') {
-                    $parteneriMap[$sediuId] = $denumire;
-                }
+        foreach (app(\App\Services\Winmentor\SediuPartenerResolver::class)->resolveNames($missingPartIds) as $sediuId => $denumire) {
+            if ($denumire !== '') {
+                $parteneriMap[$sediuId] = $denumire;
             }
         }
 
