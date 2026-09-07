@@ -217,6 +217,13 @@ Schedule::command('winmentor:fetch-solduri')
     ->withoutOverlapping(60)
     ->runInBackground();
 
+// WinMentor — partenerii noi devin automat clienți ERP (după sync-ul de parteneri de la 00:05).
+Schedule::command('winmentor:import-parteneri-clienti')
+    ->dailyAt('00:20')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping(30)
+    ->runInBackground();
+
 // Sameday — căsuțe Easybox de pe site (zilnic) + AWB-uri create pe site (30 min).
 Schedule::command('sameday:sync-lockers')
     ->dailyAt('06:50')

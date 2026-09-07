@@ -34,6 +34,7 @@ class Customer extends Model
         'notes',
         'is_active',
         'winmentor_id',
+        'winmentor_partner_id',
     ];
 
     protected function casts(): array

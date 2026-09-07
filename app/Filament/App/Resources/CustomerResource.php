@@ -438,15 +438,21 @@ class CustomerResource extends Resource
     public static function wmLink(Customer $record): array
     {
         $cui = trim((string) ($record->winmentor_id ?: $record->cui ?: ''));
-        if ($cui === '') {
-            return ['asociat' => false, 'cui' => ''];
+
+        // Legătura STABILĂ: winmentor_partner_id (wm_id intern) — acoperă și PF fără CUI
+        $row = null;
+        if (filled($record->winmentor_partner_id)) {
+            $row = DB::table('winmentor_parteneri')->where('wm_id', $record->winmentor_partner_id)->first();
         }
 
-        $digits = preg_replace('/\D/', '', $cui);
-        $row = DB::table('winmentor_parteneri')
-            ->where('cod_fiscal', $cui)
-            ->when($digits !== '', fn ($q) => $q->orWhereRaw("REPLACE(REPLACE(UPPER(cod_fiscal), ' ', ''), 'RO', '') = ?", [$digits]))
-            ->first();
+        // Fallback: convenția veche pe CUI
+        if (! $row && $cui !== '') {
+            $digits = preg_replace('/\D/', '', $cui);
+            $row = DB::table('winmentor_parteneri')
+                ->where('cod_fiscal', $cui)
+                ->when($digits !== '', fn ($q) => $q->orWhereRaw("REPLACE(REPLACE(UPPER(cod_fiscal), ' ', ''), 'RO', '') = ?", [$digits]))
+                ->first();
+        }
 
         if (! $row) {
             return ['asociat' => false, 'cui' => $cui];
