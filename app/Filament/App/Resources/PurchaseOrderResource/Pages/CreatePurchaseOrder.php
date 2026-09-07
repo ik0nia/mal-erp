@@ -696,6 +696,9 @@ class CreatePurchaseOrder extends CreateRecord
         // Cantități deja pe comenzi deschise (PO-uri trimise/aprobate, nerecepționate)
         $onOrderQtys = $this->getOnOrderQtys($productIds);
 
+        // Acoperire adaptată furnizorului: lead time real + ciclu de comandă
+        $coverDays = $this->resolveCoverDays($supplierId);
+
         // Cantități din necesare (purchase request items PENDING pentru furnizorul ăsta)
         $pendingQtys = \Illuminate\Support\Facades\DB::table('purchase_request_items as pri')
             ->join('woo_products as wp', 'wp.id', '=', 'pri.woo_product_id')
@@ -734,7 +737,7 @@ class CreatePurchaseOrder extends CreateRecord
                     $salesRecommended = max(0, $maxStock - $stock - $onOrder);
                 } else {
                     $safety           = $daily * 3;
-                    $salesRecommended = max(0, $daily * 7 + $safety - $stock - $onOrder);
+                    $salesRecommended = max(0, $daily * $coverDays + $safety - $stock - $onOrder);
                 }
             } else {
                 $salesRecommended = 0; // fără rulaj — nu recomandăm cantitate din vânzări
@@ -954,8 +957,11 @@ class CreatePurchaseOrder extends CreateRecord
      * @param  int  $coverDays  zile de stoc de acoperit
      * @return array<int, array{hint: int, sku: string, name: string, supplier_sku: ?string, velocity_day: float, min_stock_qty: ?float, max_stock_qty: ?float}>
      */
-    private function getVelocityItems(int $supplierId, array $excludeProductIds, int $coverDays = 7): array
+    private function getVelocityItems(int $supplierId, array $excludeProductIds, ?int $coverDays = null): array
     {
+        // Acoperire adaptată furnizorului: lead time real + ciclu de comandă
+        $coverDays ??= $this->resolveCoverDays($supplierId);
+
         $rows = \Illuminate\Support\Facades\DB::table('product_suppliers as ps')
             ->join('woo_products as wp', 'wp.id', '=', 'ps.woo_product_id')
             ->leftJoin('bi_product_velocity_current as bpv', 'bpv.reference_product_id', '=', 'wp.sku')
@@ -1023,6 +1029,28 @@ class CreatePurchaseOrder extends CreateRecord
         }
 
         return $items;
+    }
+
+    /**
+     * Zile de acoperire pentru recomandări = lead time real al furnizorului
+     * (media ultimelor PO-uri recepționate) + 7 zile ciclu de comandă.
+     * Fallback 10 zile (7+3) pentru furnizori fără istoric.
+     */
+    private function resolveCoverDays(int $supplierId): int
+    {
+        $avgLead = \Illuminate\Support\Facades\DB::table('purchase_orders')
+            ->where('supplier_id', $supplierId)
+            ->where('status', PurchaseOrder::STATUS_RECEIVED)
+            ->whereNotNull('lead_time_days')
+            ->orderByDesc('received_at')
+            ->limit(10)
+            ->avg('lead_time_days');
+
+        if ($avgLead === null) {
+            return 10;
+        }
+
+        return max(7, (int) ceil((float) $avgLead) + 7);
     }
 
     /**
