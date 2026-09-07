@@ -15,7 +15,7 @@ class AvailabilityReportPage extends Page
 
     protected static ?string $navigationLabel = 'Disponibilitate & SLA';
 
-    protected static ?int $navigationSort = 20;
+    protected static ?int $navigationSort = 30;
 
     protected string $view = 'filament.pages.availability-report';
 

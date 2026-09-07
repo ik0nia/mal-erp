@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\App\Pages;
+namespace App\Filament\Pages;
 
 use App\Services\Winmentor\WinmentorBridgeClient;
 use Filament\Actions\Action;
@@ -10,11 +10,11 @@ use Filament\Pages\Page;
 class WinmentorMaintenancePage extends Page
 {
     protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-power';
-    protected static ?string $navigationLabel = 'Mentenanță COM';
+    protected static ?string $navigationLabel = 'Mentenanță COM WinMentor';
     protected static ?string $title           = 'Mentenanță WinMentor (conexiune COM)';
-    protected static string|\UnitEnum|null $navigationGroup = 'WinMentor';
+    protected static string|\UnitEnum|null $navigationGroup = 'Integrări';
     protected static ?int    $navigationSort  = 40;
-    protected string $view = 'filament.app.pages.winmentor-maintenance';
+    protected string $view = 'filament.pages.winmentor-maintenance';
 
     /** Utilizatori cu drept de conectare/deconectare COM (pe lângă super_admin). */
     private const ALLOWED_EMAILS = [

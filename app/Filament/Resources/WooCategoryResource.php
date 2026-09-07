@@ -19,7 +19,9 @@ class WooCategoryResource extends Resource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-tag';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Integrări';
+    protected static string|\UnitEnum|null $navigationGroup = 'Catalog & Stoc';
+
+    protected static ?int $navigationSort = 20;
 
     protected static ?string $navigationLabel = 'Woo Categorii';
 

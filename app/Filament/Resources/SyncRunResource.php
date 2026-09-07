@@ -21,6 +21,8 @@ class SyncRunResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Integrări';
 
+    protected static ?int $navigationSort = 20;
+
     protected static ?string $navigationLabel = 'Sync Runs';
 
     protected static ?string $modelLabel = 'Sync run';

@@ -20,9 +20,11 @@ class AppSettingsPage extends Page implements HasForms
     use InteractsWithForms;
 
     protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-cog-6-tooth';
+    protected static string|\UnitEnum|null $navigationGroup = 'Sistem & Setări';
+
     protected static ?string $navigationLabel = 'Setări aplicație';
     protected static ?string $title           = 'Setări aplicație';
-    protected static ?int    $navigationSort  = 100;
+    protected static ?int    $navigationSort  = 40;
     protected string  $view            = 'filament.pages.app-settings';
 
     public ?string $brand_name = null;

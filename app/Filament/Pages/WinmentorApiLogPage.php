@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\App\Pages;
+namespace App\Filament\Pages;
 
 use App\Models\WinmentorApiLog;
 use Filament\Pages\Page;
@@ -17,11 +17,11 @@ class WinmentorApiLogPage extends Page implements HasTable
     use InteractsWithTable;
 
     protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-signal';
-    protected static ?string $navigationLabel = 'Apeluri API Bridge';
+    protected static ?string $navigationLabel = 'Apeluri API MentorAPI';
     protected static ?string $title           = 'Log apeluri WinMentor Bridge';
-    protected static string|\UnitEnum|null $navigationGroup = 'WinMentor';
-    protected static ?int    $navigationSort  = 30;
-    protected string $view = 'filament.app.pages.winmentor-api-log';
+    protected static string|\UnitEnum|null $navigationGroup = 'Integrări';
+    protected static ?int    $navigationSort  = 60;
+    protected string $view = 'filament.pages.winmentor-api-log';
 
     public static function canAccess(): bool
     {

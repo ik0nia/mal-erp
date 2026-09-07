@@ -18,9 +18,11 @@ class RolePermissionsPage extends Page implements HasForms
     use InteractsWithForms;
 
     protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-lock-closed';
+    protected static string|\UnitEnum|null $navigationGroup = 'Sistem & Setări';
+
     protected static ?string $navigationLabel = 'Permisiuni roluri';
     protected static ?string $title           = 'Permisiuni per rol';
-    protected static ?int    $navigationSort  = 98;
+    protected static ?int    $navigationSort  = 60;
     protected string  $view            = 'filament.pages.role-permissions';
 
     public array   $data         = [];
@@ -47,7 +49,7 @@ class RolePermissionsPage extends Page implements HasForms
             'App\\Filament\\App\\Pages\\UnassignedItemsPage'               => ['label' => 'Iteme neasignate',      'group' => 'Achiziții'],
             'App\\Filament\\App\\Pages\\ProductsWithoutSupplier'           => ['label' => 'Fără furnizor',         'group' => 'Achiziții'],
             'App\\Filament\\App\\Pages\\WinmentorReceptionQueuePage'      => ['label' => 'Coadă WinMentor',       'group' => 'Achiziții'],
-            'App\\Filament\\App\\Pages\\WinmentorSyncLogPage'             => ['label' => 'Log WinMentor',         'group' => 'Achiziții'],
+            'App\\Filament\\Pages\\WinmentorSyncLogPage'             => ['label' => 'Log WinMentor',         'group' => 'Achiziții'],
             'App\\Filament\\App\\Pages\\SupplierPriceIntelligencePage'     => ['label' => 'Prețuri din Emailuri',  'group' => 'Comunicare'],
             // Comunicare
             'App\\Filament\\App\\Pages\\EmailInboxPage'                    => ['label' => 'Email inbox',           'group' => 'Comunicare'],

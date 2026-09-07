@@ -10,8 +10,8 @@ class AiUsageLogPage extends Page
 {
     protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-cpu-chip';
     protected static ?string $navigationLabel = 'Consum API Claude';
-    protected static string|\UnitEnum|null $navigationGroup = 'Sistem';
-    protected static ?int    $navigationSort  = 20;
+    protected static string|\UnitEnum|null $navigationGroup = 'Sistem & Setări';
+    protected static ?int    $navigationSort  = 80;
     protected string  $view            = 'filament.pages.ai-usage-log';
 
     public string $period = '7';

@@ -18,7 +18,7 @@ class GdprDataSubjectPage extends Page
 
     protected static ?string $navigationLabel = 'Date persoană vizată (GDPR)';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 10;
 
     protected string $view = 'filament.pages.gdpr-data-subject';
 

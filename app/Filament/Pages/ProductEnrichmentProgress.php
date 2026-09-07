@@ -8,9 +8,9 @@ use Illuminate\Support\Facades\DB;
 class ProductEnrichmentProgress extends Page
 {
     protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-chart-bar';
-    protected static string|\UnitEnum|null $navigationGroup = 'Integrări';
+    protected static string|\UnitEnum|null $navigationGroup = 'Catalog & Stoc';
     protected static ?string $navigationLabel = 'Progres îmbogățire produse';
-    protected static ?int    $navigationSort  = 99;
+    protected static ?int    $navigationSort  = 40;
 
     protected string $view = 'filament.app.pages.product-enrichment-progress';
 

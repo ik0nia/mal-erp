@@ -22,7 +22,9 @@ class CompanyApiSettingResource extends Resource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-building-office-2';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Setări';
+    protected static string|\UnitEnum|null $navigationGroup = 'Sistem & Setări';
+
+    protected static ?int $navigationSort = 30;
 
     protected static ?string $navigationLabel = 'API date firmă';
 

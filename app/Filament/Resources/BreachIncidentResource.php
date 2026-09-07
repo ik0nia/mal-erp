@@ -25,7 +25,7 @@ class BreachIncidentResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Registru breșe (GDPR)';
 
-    protected static ?int $navigationSort = 30;
+    protected static ?int $navigationSort = 40;
 
     protected static function currentUser(): ?User
     {

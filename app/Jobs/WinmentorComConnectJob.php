@@ -35,13 +35,13 @@ class WinmentorComConnectJob implements ShouldQueue
                 ]);
             }
         } finally {
-            cache()->forget(\App\Filament\App\Pages\WinmentorMaintenancePage::CONNECTING_CACHE_KEY);
+            cache()->forget(\App\Filament\Pages\WinmentorMaintenancePage::CONNECTING_CACHE_KEY);
         }
     }
 
     public function failed(\Throwable $e): void
     {
-        cache()->forget(\App\Filament\App\Pages\WinmentorMaintenancePage::CONNECTING_CACHE_KEY);
+        cache()->forget(\App\Filament\Pages\WinmentorMaintenancePage::CONNECTING_CACHE_KEY);
         \Log::error('WinMentor COM reconectare eșuată (exception)', [
             'user'  => $this->triggeredBy,
             'error' => $e->getMessage(),

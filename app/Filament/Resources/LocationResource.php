@@ -24,7 +24,9 @@ class LocationResource extends Resource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-map-pin';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Setări';
+    protected static string|\UnitEnum|null $navigationGroup = 'Sistem & Setări';
+
+    protected static ?int $navigationSort = 20;
 
     protected static ?string $navigationLabel = 'Locații';
 

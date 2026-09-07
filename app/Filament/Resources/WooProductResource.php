@@ -19,7 +19,9 @@ class WooProductResource extends Resource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-shopping-bag';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Integrări';
+    protected static string|\UnitEnum|null $navigationGroup = 'Catalog & Stoc';
+
+    protected static ?int $navigationSort = 10;
 
     protected static ?string $navigationLabel = 'Woo Produse';
 

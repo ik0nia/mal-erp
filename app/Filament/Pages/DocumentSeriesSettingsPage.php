@@ -16,9 +16,11 @@ class DocumentSeriesSettingsPage extends Page implements HasForms
     use InteractsWithForms;
 
     protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-document-text';
+    protected static string|\UnitEnum|null $navigationGroup = 'Sistem & Setări';
+
     protected static ?string $navigationLabel = 'Serii documente';
     protected static ?string $title           = 'Setări serii documente';
-    protected static ?int    $navigationSort  = 99;
+    protected static ?int    $navigationSort  = 50;
     protected string  $view            = 'filament.pages.document-series-settings';
 
     public array $data = [];

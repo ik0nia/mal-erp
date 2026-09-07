@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\App\Pages;
+namespace App\Filament\Pages;
 
 use App\Models\PurchaseOrder;
 use Filament\Pages\Page;
@@ -15,11 +15,11 @@ class WinmentorSyncLogPage extends Page implements HasTable
     use InteractsWithTable;
 
     protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-clipboard-document-list';
-    protected static ?string $navigationLabel = 'Log WinMentor';
+    protected static ?string $navigationLabel = 'Log sync WinMentor';
     protected static ?string $title           = 'Log sincronizare WinMentor';
-    protected static string|\UnitEnum|null $navigationGroup = 'WinMentor';
-    protected static ?int    $navigationSort  = 20;
-    protected string $view = 'filament.app.pages.winmentor-sync-log';
+    protected static string|\UnitEnum|null $navigationGroup = 'Integrări';
+    protected static ?int    $navigationSort  = 50;
+    protected string $view = 'filament.pages.winmentor-sync-log';
 
     public static function canAccess(): bool
     {

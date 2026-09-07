@@ -8,9 +8,9 @@ use Illuminate\Support\Facades\File;
 class WinmentorBridgeLogPage extends Page
 {
     protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-arrow-path-rounded-square';
-    protected static ?string $navigationLabel = 'Log WinMentor Bridge';
-    protected static string|\UnitEnum|null $navigationGroup = 'Sistem';
-    protected static ?int    $navigationSort  = 25;
+    protected static ?string $navigationLabel = 'Log MentorAPI';
+    protected static string|\UnitEnum|null $navigationGroup = 'Integrări';
+    protected static ?int    $navigationSort  = 30;
     protected string  $view = 'filament.pages.winmentor-bridge-log';
 
     public string $date = '';

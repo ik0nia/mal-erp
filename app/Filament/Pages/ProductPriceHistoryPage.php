@@ -15,11 +15,11 @@ class ProductPriceHistoryPage extends Page
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-chart-bar';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Integrări';
+    protected static string|\UnitEnum|null $navigationGroup = 'Comercial';
 
     protected static ?string $navigationLabel = 'Istoric preț produs';
 
-    protected static ?int $navigationSort = 25;
+    protected static ?int $navigationSort = 20;
 
     protected string $view = 'filament.pages.product-price-history';
 

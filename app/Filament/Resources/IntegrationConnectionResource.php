@@ -39,6 +39,8 @@ class IntegrationConnectionResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Integrări';
 
+    protected static ?int $navigationSort = 10;
+
     protected static ?string $navigationLabel = 'Conexiuni';
 
     protected static ?string $modelLabel = 'Conexiune';
