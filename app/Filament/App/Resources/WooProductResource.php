@@ -1622,6 +1622,7 @@ class WooProductResource extends Resource
             . ' style="flex:0 0 auto;width:min(420px,100%);position:relative;">'
 
             // ── Lightbox overlay ────────────────────────────────────────────
+            . '<template x-teleport="body">'
             . '<div x-show="lightbox" x-cloak'
             . ' x-on:click.self="lightbox = false"'
             . ' style="position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;">'
@@ -1641,7 +1642,7 @@ class WooProductResource extends Resource
 
             // Buton închide
             . '<button x-on:click="lightbox = false" type="button"'
-            . ' style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.15);color:white;border:none;border-radius:50%;width:40px;height:40px;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>'
+            . ' style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.15);color:white;border:none;border-radius:50%;width:40px;height:40px;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">🗑</button>'
 
             // Contor lightbox
             . '<div x-show="images.length > 1"'
@@ -1649,6 +1650,7 @@ class WooProductResource extends Resource
             . ' x-text="(current+1) + \' / \' + images.length"></div>'
 
             . '</div>'  // end lightbox
+            . '</template>'
 
             // Cadru imagine
             . '<div style="position:relative;aspect-ratio:1/1;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;background:#fafafa;">'
@@ -1702,13 +1704,17 @@ class WooProductResource extends Resource
             . ' x-on:click="$wire.mountAction(\'gallery_move_after\', {image_id: images[current].id})"'
             . ' style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;border-radius:6px;width:28px;height:28px;font-size:0.85rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;">→</button>'
 
-            . '<button type="button" title="Adaugă imagine"'
+            . '<button type="button" title="Urcă imagini de pe calculator"'
+            . ' x-on:click="$wire.mountAction(\'gallery_upload\')"'
+            . ' style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:6px;width:28px;height:28px;font-size:0.85rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;">📤</button>'
+
+            . '<button type="button" title="Adaugă imagine prin URL"'
             . ' x-on:click="$wire.mountAction(\'gallery_add_url\')"'
-            . ' style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:6px;width:28px;height:28px;font-size:1rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;">+</button>'
+            . ' style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:6px;width:28px;height:28px;font-size:0.85rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;">🔗</button>'
 
             . '<button x-show="images[current]?.id" type="button" title="Șterge imaginea"'
             . ' x-on:click="$wire.mountAction(\'gallery_delete_image\', {image_id: images[current].id})"'
-            . ' style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;width:28px;height:28px;font-size:0.8rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;">✕</button>'
+            . ' style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;width:28px;height:28px;font-size:0.8rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;">🗑</button>'
 
             . '<button x-show="isToya" type="button" title="Import poze Toya"'
             . ' x-on:click="$wire.mountAction(\'gallery_import_toya\')"'

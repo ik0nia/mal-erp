@@ -347,8 +347,13 @@ class ViewWooProduct extends ViewRecord
                 }),
 
             // ── Gallery: setează poza principală ─────────────────────────
-            // ── Gallery: UPLOAD imagini de pe calculator ───────────────────
-            Actions\Action::make('gallery_upload')
+        ];
+    }
+
+    /** Acțiune montabilă din butoanele galeriei (nu apare în header). */
+    public function gallery_uploadAction(): Actions\Action
+    {
+        return Actions\Action::make('gallery_upload')
                 ->label('Urcă imagini')
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('primary')
@@ -396,11 +401,14 @@ class ViewWooProduct extends ViewRecord
                     Notification::make()->success()->title($added.' imagine(i) urcate')
                         ->body('Sincronizarea cu site-ul rulează în fundal (câteva secunde).')->send();
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $product->getRouteKey()]));
-                }),
+                });
+    }
 
-            Actions\Action::make('gallery_set_primary')
+    /** Acțiune montabilă din butoanele galeriei (nu apare în header). */
+    public function gallery_set_primaryAction(): Actions\Action
+    {
+        return Actions\Action::make('gallery_set_primary')
                 ->label('Setează ca principală')
-                ->extraAttributes(['class' => 'hidden'])
                 ->action(function (array $arguments): void {
                     $imageId = (int) ($arguments['image_id'] ?? 0);
                     if (! $imageId) {
@@ -424,12 +432,14 @@ class ViewWooProduct extends ViewRecord
 
                     Notification::make()->success()->title('Imaginea principală a fost actualizată — se sincronizează pe site.')->send();
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record->getRouteKey()]));
-                }),
+                });
+    }
 
-            // ── Gallery: șterge o imagine ─────────────────────────────────
-            Actions\Action::make('gallery_delete_image')
+    /** Acțiune montabilă din butoanele galeriei (nu apare în header). */
+    public function gallery_delete_imageAction(): Actions\Action
+    {
+        return Actions\Action::make('gallery_delete_image')
                 ->label('Șterge imaginea')
-                ->extraAttributes(['class' => 'hidden'])
                 ->requiresConfirmation()
                 ->modalHeading('Șterge imaginea?')
                 ->modalDescription('Această acțiune nu poate fi anulată.')
@@ -467,12 +477,14 @@ class ViewWooProduct extends ViewRecord
                     $this->dispatchImageSync();
                     Notification::make()->success()->title('Imaginea a fost ștearsă — se sincronizează pe site.')->send();
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record->getRouteKey()]));
-                }),
+                });
+    }
 
-            // ── Gallery: adaugă URL manual ────────────────────────────────
-            Actions\Action::make('gallery_add_url')
+    /** Acțiune montabilă din butoanele galeriei (nu apare în header). */
+    public function gallery_add_urlAction(): Actions\Action
+    {
+        return Actions\Action::make('gallery_add_url')
                 ->label('Adaugă URL imagine')
-                ->extraAttributes(['class' => 'hidden'])
                 ->modalHeading('Adaugă imagine')
                 ->modalSubmitActionLabel('Adaugă')
                 ->form([
@@ -517,12 +529,14 @@ class ViewWooProduct extends ViewRecord
                     $this->dispatchImageSync();
                     Notification::make()->success()->title('Imaginea a fost adăugată — se sincronizează pe site.')->send();
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $product->getRouteKey()]));
-                }),
+                });
+    }
 
-            // ── Gallery: mută imaginea mai în față (swap sort_order cu precedenta) ──
-            Actions\Action::make('gallery_move_before')
+    /** Acțiune montabilă din butoanele galeriei (nu apare în header). */
+    public function gallery_move_beforeAction(): Actions\Action
+    {
+        return Actions\Action::make('gallery_move_before')
                 ->label('Mută mai în față')
-                ->extraAttributes(['class' => 'hidden'])
                 ->action(function (array $arguments): void {
                     $imageId = (int) ($arguments['image_id'] ?? 0);
                     if (! $imageId) {
@@ -550,12 +564,14 @@ class ViewWooProduct extends ViewRecord
                     }
 
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record->getRouteKey()]));
-                }),
+                });
+    }
 
-            // ── Gallery: mută imaginea mai în spate (swap sort_order cu următoarea) ──
-            Actions\Action::make('gallery_move_after')
+    /** Acțiune montabilă din butoanele galeriei (nu apare în header). */
+    public function gallery_move_afterAction(): Actions\Action
+    {
+        return Actions\Action::make('gallery_move_after')
                 ->label('Mută mai în spate')
-                ->extraAttributes(['class' => 'hidden'])
                 ->action(function (array $arguments): void {
                     $imageId = (int) ($arguments['image_id'] ?? 0);
                     if (! $imageId) {
@@ -583,12 +599,14 @@ class ViewWooProduct extends ViewRecord
                     }
 
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record->getRouteKey()]));
-                }),
+                });
+    }
 
-            // ── Gallery: import poze din Toya ─────────────────────────────
-            Actions\Action::make('gallery_import_toya')
+    /** Acțiune montabilă din butoanele galeriei (nu apare în header). */
+    public function gallery_import_toyaAction(): Actions\Action
+    {
+        return Actions\Action::make('gallery_import_toya')
                 ->label('Import poze Toya')
-                ->extraAttributes(['class' => 'hidden'])
                 ->modalHeading('Import imagini din Toya')
                 ->modalDescription('Se vor importa toate imaginile suplimentare din feedul Toya. Imaginile deja existente nu vor fi duplicate.')
                 ->modalSubmitActionLabel('Importă')
@@ -599,8 +617,6 @@ class ViewWooProduct extends ViewRecord
                         ->title('Job trimis')
                         ->body('Imaginile vor fi importate în câteva secunde. Reîncarcă pagina după.')
                         ->send();
-                }),
-
-        ];
+                });
     }
 }
