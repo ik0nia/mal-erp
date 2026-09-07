@@ -107,6 +107,11 @@ class WooOrder extends Model
         return $this->hasMany(WooOrderItem::class, 'order_id');
     }
 
+    public function edits(): HasMany
+    {
+        return $this->hasMany(WooOrderEdit::class)->latest();
+    }
+
     public function samedayAwbs(): HasMany
     {
         return $this->hasMany(SamedayAwb::class, 'woo_order_id');

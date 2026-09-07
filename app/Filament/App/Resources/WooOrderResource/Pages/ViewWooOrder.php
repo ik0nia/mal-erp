@@ -123,6 +123,55 @@ class ViewWooOrder extends ViewRecord
                 ])
                 ->action(fn (array $data) => $this->saveOrderItems($data)),
 
+            Action::make('add_product')
+                ->label('Adaugă produs')
+                ->icon('heroicon-o-plus-circle')
+                ->color('success')
+                ->visible(fn (): bool => $this->isOrderEditable())
+                ->modalHeading(fn (): string => 'Adaugă produs — comanda #'.$this->record->number)
+                ->modalDescription('Produsul se adaugă în comandă în WooCommerce, cu recalcularea totalurilor. Lasă prețul gol pentru prețul curent de pe site.')
+                ->modalSubmitActionLabel('Adaugă în comandă')
+                ->form([
+                    \Filament\Forms\Components\Select::make('product_id')
+                        ->label('Produs')
+                        ->required()
+                        ->searchable()
+                        ->getSearchResultsUsing(fn (string $search) => \App\Models\WooProduct::query()
+                            ->whereNotNull('woo_id')->where('is_placeholder', false)
+                            ->where('status', 'publish')
+                            ->where(fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('sku', 'like', "%{$search}%"))
+                            ->limit(30)
+                            ->get()
+                            ->mapWithKeys(fn ($p) => [$p->id => $p->decoded_name.' — '.$p->sku.' ('.number_format((float) $p->regular_price, 2).' lei)'])
+                            ->all())
+                        ->getOptionLabelUsing(fn ($value) => \App\Models\WooProduct::find($value)?->decoded_name),
+                    \Filament\Forms\Components\TextInput::make('quantity')
+                        ->label('Cantitate')->numeric()->minValue(1)->default(1)->required(),
+                    \Filament\Forms\Components\TextInput::make('price_gross')
+                        ->label('Preț cu TVA (opțional — implicit prețul de pe site)')
+                        ->numeric()->minValue(0)->step('0.01')->suffix('RON'),
+                ])
+                ->action(fn (array $data) => $this->addOrderProduct($data)),
+
+            Action::make('delete_product')
+                ->label('Șterge produs')
+                ->icon('heroicon-o-trash')
+                ->color('danger')
+                ->visible(fn (): bool => $this->isOrderEditable() && $this->record->items->count() > 1)
+                ->modalHeading(fn (): string => 'Șterge produs — comanda #'.$this->record->number)
+                ->modalDescription('Produsul se elimină din comandă în WooCommerce (totalurile se recalculează). Poți reveni oricând din Istoricul modificărilor.')
+                ->modalSubmitActionLabel('Șterge din comandă')
+                ->requiresConfirmation()
+                ->form(fn (): array => [
+                    \Filament\Forms\Components\Select::make('woo_item_id')
+                        ->label('Produsul de șters')
+                        ->required()
+                        ->options($this->record->items->mapWithKeys(fn ($i) => [
+                            $i->woo_item_id => $i->name.' — '.$i->quantity.' × '.number_format((float) $i->price, 2).' lei',
+                        ])->all()),
+                ])
+                ->action(fn (array $data) => $this->deleteOrderProduct((int) $data['woo_item_id'])),
+
             Action::make('edit_address')
                 ->label('Editează livrare & client')
                 ->icon('heroicon-o-map-pin')
@@ -369,6 +418,173 @@ class ViewWooOrder extends ViewRecord
         })->values()->all();
     }
 
+    /** Snapshot complet al unui item — suficient pentru re-adăugare la undo */
+    private function itemSnapshot(\App\Models\WooOrderItem $item): array
+    {
+        return [
+            'woo_item_id'    => (int) $item->woo_item_id,
+            'woo_product_id' => (int) ($item->data['product_id'] ?? $item->woo_product_id),
+            'name'           => $item->name,
+            'sku'            => $item->sku,
+            'quantity'       => (float) $item->quantity,
+            'price'          => (float) $item->price,     // net, per bucată
+            'subtotal'       => (float) $item->subtotal,
+            'total'          => (float) $item->total,
+        ];
+    }
+
+    private function logEdit(string $action, string $label, ?array $before, ?array $after): void
+    {
+        \App\Models\WooOrderEdit::create([
+            'woo_order_id' => $this->record->id,
+            'user_email'   => auth()->user()?->email,
+            'action'       => $action,
+            'label'        => $label,
+            'before'       => $before,
+            'after'        => $after,
+        ]);
+    }
+
+    private function deleteOrderProduct(int $wooItemId): void
+    {
+        /** @var WooOrder $order */
+        $order = $this->record;
+        $item  = $order->items->firstWhere('woo_item_id', $wooItemId);
+
+        if (! $this->isOrderEditable() || ! $item) {
+            Notification::make()->danger()->title('Produsul nu poate fi șters')->send();
+            return;
+        }
+
+        try {
+            $client = new WooClient($order->connection);
+            $client->updateOrder((int) $order->woo_id, ['line_items' => [['id' => $wooItemId, 'quantity' => 0]]]);
+
+            $this->logEdit('remove_item', 'Șters: '.$item->name.' × '.(float) $item->quantity, $this->itemSnapshot($item), null);
+            $this->syncOrderFromWoo();
+
+            Notification::make()->success()->title('Produs șters din comandă')
+                ->body('Poți reveni oricând din secțiunea „Istoric modificări".')->send();
+            $this->redirect(WooOrderResource::getUrl('view', ['record' => $order]));
+        } catch (Throwable $e) {
+            Notification::make()->danger()->title('Eroare la ștergere')->body($e->getMessage())->persistent()->send();
+        }
+    }
+
+    private function addOrderProduct(array $data): void
+    {
+        /** @var WooOrder $order */
+        $order   = $this->record;
+        $product = \App\Models\WooProduct::find($data['product_id'] ?? null);
+
+        if (! $this->isOrderEditable() || ! $product?->woo_id) {
+            Notification::make()->danger()->title('Produsul nu poate fi adăugat')->send();
+            return;
+        }
+
+        $qty  = max(1, (int) $data['quantity']);
+        $line = ['product_id' => (int) $product->woo_id, 'quantity' => $qty];
+
+        if (filled($data['price_gross'] ?? null)) {
+            $net  = round((float) $data['price_gross'] / 1.21, 4);
+            $tot  = number_format(round($net * $qty, 2), 2, '.', '');
+            $line['subtotal'] = $tot;
+            $line['total']    = $tot;
+        }
+
+        try {
+            $existingIds = $order->items->pluck('woo_item_id')->map(fn ($v) => (int) $v)->all();
+
+            $client = new WooClient($order->connection);
+            $resp   = $client->updateOrder((int) $order->woo_id, ['line_items' => [$line]]);
+
+            // Identificăm linia nou-creată din răspuns (pentru undo)
+            $newLine = collect($resp['line_items'] ?? [])
+                ->first(fn ($l) => ! in_array((int) $l['id'], $existingIds, true)
+                    && (int) $l['product_id'] === (int) $product->woo_id);
+
+            $this->logEdit('add_item', 'Adăugat: '.$product->decoded_name.' × '.$qty, null, [
+                'woo_item_id'    => (int) ($newLine['id'] ?? 0),
+                'woo_product_id' => (int) $product->woo_id,
+                'name'           => $product->decoded_name,
+                'quantity'       => $qty,
+            ]);
+
+            $this->syncOrderFromWoo();
+
+            Notification::make()->success()->title('Produs adăugat în comandă')->send();
+            $this->redirect(WooOrderResource::getUrl('view', ['record' => $order]));
+        } catch (Throwable $e) {
+            Notification::make()->danger()->title('Eroare la adăugare')->body($e->getMessage())->persistent()->send();
+        }
+    }
+
+    /**
+     * Undo pentru o modificare din istoric (apelat din blade-ul de istoric).
+     */
+    public function revertEdit(int $editId): void
+    {
+        /** @var WooOrder $order */
+        $order = $this->record;
+        $edit  = \App\Models\WooOrderEdit::where('woo_order_id', $order->id)->find($editId);
+
+        if (! $edit?->isRevertible() || ! $this->isOrderEditable()) {
+            Notification::make()->danger()->title('Modificarea nu mai poate fi anulată')->send();
+            return;
+        }
+
+        try {
+            $client  = new WooClient($order->connection);
+            $payload = null;
+
+            switch ($edit->action) {
+                case 'remove_item':
+                    $s = $edit->before;
+                    $line = ['product_id' => (int) $s['woo_product_id'], 'quantity' => (int) $s['quantity']];
+                    if (isset($s['subtotal'])) {
+                        $line['subtotal'] = number_format((float) $s['subtotal'], 2, '.', '');
+                        $line['total']    = number_format((float) $s['total'], 2, '.', '');
+                    }
+                    $payload = ['line_items' => [$line]];
+                    break;
+
+                case 'add_item':
+                    if (empty($edit->after['woo_item_id'])) {
+                        throw new \RuntimeException('Linia adăugată nu a putut fi identificată pentru anulare.');
+                    }
+                    $payload = ['line_items' => [['id' => (int) $edit->after['woo_item_id'], 'quantity' => 0]]];
+                    break;
+
+                case 'edit_items':
+                    $payload = ['line_items' => array_map(fn ($l) => [
+                        'id'       => (int) $l['woo_item_id'],
+                        'quantity' => (int) $l['quantity'],
+                        'subtotal' => number_format((float) $l['subtotal'], 2, '.', ''),
+                        'total'    => number_format((float) $l['total'], 2, '.', ''),
+                    ], $edit->before['lines'] ?? [])];
+                    break;
+
+                case 'edit_address':
+                    $payload = $edit->before;
+                    break;
+            }
+
+            if (empty($payload)) {
+                throw new \RuntimeException('Nimic de restaurat.');
+            }
+
+            $client->updateOrder((int) $order->woo_id, $payload);
+
+            $edit->update(['reverted_at' => now(), 'reverted_by' => auth()->user()?->email]);
+            $this->syncOrderFromWoo();
+
+            Notification::make()->success()->title('Modificare anulată')->body($edit->label.' — revenit la starea anterioară.')->send();
+            $this->redirect(WooOrderResource::getUrl('view', ['record' => $order]));
+        } catch (Throwable $e) {
+            Notification::make()->danger()->title('Eroare la anulare')->body($e->getMessage())->persistent()->send();
+        }
+    }
+
     private function buildAddressForm(): array
     {
         $shipping = (array) ($this->record->shipping ?? []);
@@ -477,6 +693,20 @@ class ViewWooOrder extends ViewRecord
             $client = new WooClient($order->connection);
             $client->updateOrder((int) $order->woo_id, $payload);
 
+            // Snapshot „before" pentru undo — doar câmpurile modificate
+            $before = [];
+            if (isset($payload['shipping']))       $before['shipping'] = $shipping;
+            if (isset($payload['billing']))        $before['billing'] = $billing;
+            if (isset($payload['customer_note']))  $before['customer_note'] = (string) $order->customer_note;
+            if (isset($payload['shipping_lines'])) {
+                $before['shipping_lines'] = [[
+                    'id'           => $shipLine['id'],
+                    'total'        => number_format((float) $order->shipping_total, 2, '.', ''),
+                    'method_title' => $shipLine['method_title'] ?? '',
+                ]];
+            }
+            $this->logEdit('edit_address', 'Editat: '.implode(', ', array_keys($payload)), $before, $payload);
+
             $this->syncOrderFromWoo();
 
             $body = 'Modificări salvate: '.implode(', ', array_keys($payload)).'.';
@@ -508,6 +738,9 @@ class ViewWooOrder extends ViewRecord
 
         $original = $order->items->keyBy('woo_item_id');
         $lines    = [];
+        $beforeLines = [];
+        $afterLines  = [];
+        $removedSnapshots = [];
 
         foreach ($data['items'] ?? [] as $row) {
             $itemId = (int) ($row['woo_item_id'] ?? 0);
@@ -527,6 +760,8 @@ class ViewWooOrder extends ViewRecord
 
             if ($changed) {
                 $lines[] = ['id' => $itemId, 'quantity' => $qty, 'subtotal' => $line, 'total' => $line];
+                $beforeLines[] = ['woo_item_id' => $itemId, 'name' => $orig->name, 'quantity' => (int) $orig->quantity, 'subtotal' => (float) $orig->subtotal, 'total' => (float) $orig->total];
+                $afterLines[]  = ['woo_item_id' => $itemId, 'name' => $orig->name, 'quantity' => $qty, 'subtotal' => (float) $line, 'total' => (float) $line];
             }
 
             $original->forget($itemId);
@@ -535,6 +770,7 @@ class ViewWooOrder extends ViewRecord
         // rândurile șterse din repeater = eliminate din comandă (Woo: quantity 0)
         foreach ($original as $removed) {
             $lines[] = ['id' => (int) $removed->woo_item_id, 'quantity' => 0];
+            $removedSnapshots[] = $this->itemSnapshot($removed);
         }
 
         if (empty($lines)) {
@@ -545,6 +781,13 @@ class ViewWooOrder extends ViewRecord
         try {
             $client = new WooClient($order->connection);
             $client->updateOrder((int) $order->woo_id, ['line_items' => $lines]);
+
+            if (! empty($beforeLines)) {
+                $this->logEdit('edit_items', 'Editat: '.count($beforeLines).' produs(e)', ['lines' => $beforeLines], ['lines' => $afterLines]);
+            }
+            foreach ($removedSnapshots as $snap) {
+                $this->logEdit('remove_item', 'Șters: '.$snap['name'].' × '.$snap['quantity'], $snap, null);
+            }
 
             $this->syncOrderFromWoo();
 

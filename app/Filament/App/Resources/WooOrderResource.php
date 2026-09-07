@@ -388,6 +388,16 @@ class WooOrderResource extends Resource
                             ->columns(6),
                     ]),
 
+                Section::make('Istoric modificări (din ERP)')
+                    ->columnSpanFull()
+                    ->collapsible()
+                    ->visible(fn ($record): bool => $record->edits()->exists())
+                    ->schema([
+                        \Filament\Infolists\Components\ViewEntry::make('edits_history')
+                            ->label('')
+                            ->view('filament.app.woo-order-edits-history'),
+                    ]),
+
                 Section::make('Totale')
                     ->columnSpanFull()
                     ->columns(5)
