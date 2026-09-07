@@ -677,7 +677,7 @@ class CreatePurchaseOrder extends CreateRecord
             ->where('ps.supplier_id', $supplierId)
             ->where('wp.is_discontinued', false)
             ->select([
-                'wp.id', 'wp.name', 'wp.sku', 'wp.min_stock_qty', 'wp.max_stock_qty',
+                'wp.id', 'wp.name', 'wp.sku', 'wp.min_stock_qty', 'wp.max_stock_qty', 'wp.procurement_type',
                 'ps.supplier_sku', 'ps.order_multiple',
                 \Illuminate\Support\Facades\DB::raw('COALESCE(stk.total_qty, 0) as stock'),
                 \Illuminate\Support\Facades\DB::raw('COALESCE(bpv.avg_out_qty_7d, 0)  as avg7'),
@@ -692,6 +692,9 @@ class CreatePurchaseOrder extends CreateRecord
 
         // Calculăm cantitatea recomandată per produs
         $productIds = $rows->pluck('id')->all();
+
+        // Cantități deja pe comenzi deschise (PO-uri trimise/aprobate, nerecepționate)
+        $onOrderQtys = $this->getOnOrderQtys($productIds);
 
         // Cantități din necesare (purchase request items PENDING pentru furnizorul ăsta)
         $pendingQtys = \Illuminate\Support\Facades\DB::table('purchase_request_items as pri')
@@ -715,20 +718,23 @@ class CreatePurchaseOrder extends CreateRecord
             $avg30 = (float) $row->avg30;
             $avg90 = (float) $row->avg90;
             $stock = (float) $row->stock;
+            $onOrder = (float) ($onOrderQtys[$row->id] ?? 0);
 
             $base = max($avg7, $avg30, $avg90);
 
-            if ($base > 0) {
+            if ($row->procurement_type === \App\Models\WooProduct::PROCUREMENT_ON_DEMAND) {
+                $salesRecommended = 0; // produs la comandă — doar cantitățile din necesare
+            } elseif ($base > 0) {
                 $trend  = ($avg30 > 0 && $avg7 > 0 && $avg7 < ($avg30 * 0.85))
                     ? max(0.5, $avg7 / $avg30) : 1.0;
                 $daily  = $base * $trend;
 
                 $maxStock = $row->max_stock_qty !== null ? (float) $row->max_stock_qty : null;
                 if ($maxStock !== null && $maxStock > 0) {
-                    $salesRecommended = max(0, $maxStock - $stock);
+                    $salesRecommended = max(0, $maxStock - $stock - $onOrder);
                 } else {
                     $safety           = $daily * 3;
-                    $salesRecommended = max(0, $daily * 7 + $safety - $stock);
+                    $salesRecommended = max(0, $daily * 7 + $safety - $stock - $onOrder);
                 }
             } else {
                 $salesRecommended = 0; // fără rulaj — nu recomandăm cantitate din vânzări
@@ -881,8 +887,8 @@ class CreatePurchaseOrder extends CreateRecord
 
             if ($maxStock !== null && $maxStock > 0) {
                 // Dacă avem target de stoc maxim: cât mai trebuie să cumpărăm
-                // post-livrare: currentStock + generalQty + additionalStore >= maxStock
-                $additionalStore = max(0, (int) ceil($maxStock - $currentStock - $generalQty));
+                // post-livrare: currentStock + onOrder + generalQty + additionalStore >= maxStock
+                $additionalStore = max(0, (int) ceil($maxStock - $currentStock - ($vi['on_order'] ?? 0) - $generalQty));
                 $calcMethod      = 'max_stock';
             } elseif ($vi && $vi['hint'] > 0) {
                 // Velocity hint (deja redus de stoc curent): din el scădem ce acoperă necesarele generale
@@ -978,11 +984,15 @@ class CreatePurchaseOrder extends CreateRecord
 
         $items = [];
 
+        // Cantități deja pe comenzi deschise (PO-uri trimise/aprobate, nerecepționate)
+        $onOrderQtys = $this->getOnOrderQtys($rows->pluck('woo_product_id')->all());
+
         foreach ($rows as $row) {
             $avg7  = (float) $row->avg7;
             $avg30 = (float) $row->avg30;
             $avg90 = (float) $row->avg90;
             $stock = (float) $row->stock;
+            $onOrder = (float) ($onOrderQtys[$row->woo_product_id] ?? 0);
 
             $base  = max($avg7, $avg30, $avg90);
             $trend = 1.0;
@@ -992,12 +1002,13 @@ class CreatePurchaseOrder extends CreateRecord
 
             $adjustedDaily = $base * $trend;
             $safetyStock   = $adjustedDaily * 3;
-            $recommended   = (int) ceil($adjustedDaily * $coverDays + $safetyStock - $stock);
+            $recommended   = (int) ceil($adjustedDaily * $coverDays + $safetyStock - $stock - $onOrder);
 
             $daysUntilStockout = $avg7 > 0 ? round($stock / $avg7, 1) : null;
 
             $items[$row->woo_product_id] = [
                 'hint'              => max(0, $recommended),
+                'on_order'          => $onOrder,
                 'name'              => $row->name,
                 'sku'               => $row->sku,
                 'supplier_sku'      => $row->supplier_sku,
@@ -1012,6 +1023,35 @@ class CreatePurchaseOrder extends CreateRecord
         }
 
         return $items;
+    }
+
+    /**
+     * Cantități aflate deja pe comenzi de achiziție deschise (nerecepționate),
+     * per produs — se scad din recomandări ca să nu comandăm de două ori.
+     *
+     * @param  int[]  $productIds
+     * @return array<int, float>
+     */
+    private function getOnOrderQtys(array $productIds): array
+    {
+        if (empty($productIds)) {
+            return [];
+        }
+
+        return \Illuminate\Support\Facades\DB::table('purchase_order_items as poi')
+            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->whereIn('po.status', [
+                PurchaseOrder::STATUS_PENDING_APPROVAL,
+                PurchaseOrder::STATUS_APPROVED,
+                PurchaseOrder::STATUS_SENT,
+                PurchaseOrder::STATUS_PARTIALLY_RECEIVED,
+            ])
+            ->whereIn('poi.woo_product_id', $productIds)
+            ->selectRaw('poi.woo_product_id, SUM(GREATEST(0, poi.quantity - COALESCE(poi.received_quantity, 0))) as qty')
+            ->groupBy('poi.woo_product_id')
+            ->pluck('qty', 'woo_product_id')
+            ->map(fn ($v) => (float) $v)
+            ->all();
     }
 
     /**
