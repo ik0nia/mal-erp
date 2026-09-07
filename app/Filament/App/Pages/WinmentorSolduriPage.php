@@ -48,21 +48,29 @@ class WinmentorSolduriPage extends Page
      *
      * @return array{rows: array, total_net: float, total_avans: float}
      */
+    /** Documentele mai vechi de atâtea luni = „istoric necompensat", nu creanță operațională. */
+    public int $luniOperational = 24;
+
     public function getSolduri(string $directie): array
     {
+        $cutoff = now()->subMonths($this->luniOperational)->toDateString();
+
         $parteneri = DB::table('winmentor_solduri_raw as s')
             ->leftJoin('winmentor_parteneri as p', 'p.wm_id', '=', 's.part_id')
             ->where('s.directie', $directie)
             ->groupBy('s.part_id', 'p.denumire', 'p.cod_fiscal')
-            ->selectRaw('
+            ->selectRaw("
                 s.part_id,
                 p.denumire as partener,
                 p.cod_fiscal,
                 ROUND(SUM(s.rest_de_plata), 2) as net,
+                ROUND(SUM(CASE WHEN s.data_factura >= ? THEN s.rest_de_plata ELSE 0 END), 2) as net_recent,
+                ROUND(SUM(CASE WHEN s.data_factura < ? OR s.data_factura IS NULL THEN s.rest_de_plata ELSE 0 END), 2) as net_vechi,
+                SUM(s.moneda = 'EUR') as docs_eur,
                 COUNT(*) as docs,
                 MIN(CASE WHEN s.rest_de_plata > 0 THEN s.data_factura END) as cel_mai_vechi,
                 MAX(CASE WHEN s.rest_de_plata > 0 THEN s.data_factura END) as cel_mai_nou
-            ')
+            ", [$cutoff, $cutoff])
             ->havingRaw('ABS(net) >= 1')
             ->orderByDesc('net')
             ->get();
@@ -84,6 +92,8 @@ class WinmentorSolduriPage extends Page
         $totalAvans = 0.0;
         $rows       = [];
 
+        $totalVechi = 0.0;
+
         foreach ($parteneri as $p) {
             $net = (float) $p->net;
 
@@ -92,7 +102,8 @@ class WinmentorSolduriPage extends Page
                 continue;
             }
 
-            $totalNet += $net;
+            $totalNet   += (float) $p->net_recent > 0 ? (float) $p->net_recent : 0.0;
+            $totalVechi += (float) $p->net_vechi > 0 ? (float) $p->net_vechi : 0.0;
 
             $url = null;
             if ($directie === 'furnizor' && ($sid = $suppliers->get($p->part_id))) {
@@ -109,6 +120,9 @@ class WinmentorSolduriPage extends Page
                 'partner_url'  => $url,
                 'cui'          => $p->cod_fiscal,
                 'net'          => $net,
+                'net_recent'   => (float) $p->net_recent,
+                'net_vechi'    => (float) $p->net_vechi,
+                'are_eur'      => (int) $p->docs_eur > 0,
                 'docs'         => (int) $p->docs,
                 'vechi'        => $p->cel_mai_vechi,
                 'nou'          => $p->cel_mai_nou,
@@ -116,7 +130,9 @@ class WinmentorSolduriPage extends Page
             ];
         }
 
-        return ['rows' => $rows, 'total_net' => $totalNet, 'total_avans' => $totalAvans];
+        usort($rows, fn ($a, $b) => $b->net_recent <=> $a->net_recent);
+
+        return ['rows' => $rows, 'total_net' => $totalNet, 'total_vechi' => $totalVechi, 'total_avans' => $totalAvans];
     }
 
     /** Documentele deschise ale unui partener (pentru expandare în UI). */

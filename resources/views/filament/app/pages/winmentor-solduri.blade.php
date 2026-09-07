@@ -32,7 +32,8 @@
   @endphp
 
   <div class="sc-tot">
-    <span>{{ $this->tab === 'clienti' ? 'Total de încasat (net)' : 'Total de plătit (net)' }}<b>{{ number_format($data['total_net'], 0, ',', '.') }} lei</b></span>
+    <span>{{ $this->tab === 'clienti' ? 'De încasat (documente < ' . $this->luniOperational . ' luni)' : 'De plătit (documente < ' . $this->luniOperational . ' luni)' }}<b>{{ number_format($data['total_net'], 0, ',', '.') }} lei</b></span>
+    <span>Sold istoric necompensat (mai vechi — de verificat în contabilitate)<b style="color:#9ca3af;">{{ number_format($data['total_vechi'], 0, ',', '.') }} lei</b></span>
     <span>{{ $this->tab === 'clienti' ? 'Avansuri / solduri în favoarea clienților' : 'Avansuri plătite furnizorilor (marfă nerecepționată)' }}<b style="color:#b45309;">{{ number_format($data['total_avans'], 0, ',', '.') }} lei</b></span>
     <span>Parteneri cu sold<b>{{ count($data['rows']) }}</b></span>
   </div>
@@ -43,7 +44,8 @@
       <th style="text-align:right;">Documente</th>
       <th>Cel mai vechi doc. neînchis</th>
       <th>Vechime</th>
-      <th style="text-align:right;">Sold net (lei)</th>
+      <th style="text-align:right;">Sold recent (lei)</th>
+      <th style="text-align:right;">Istoric vechi (lei)</th>
     </tr></thead>
     <tbody>
     @forelse($data['rows'] as $r)
@@ -61,10 +63,11 @@
           @elseif($r->zile_vechime > 30)<span class="sc-badge sc-mid">{{ $r->zile_vechime }} zile</span>
           @else <span class="sc-badge sc-ok">{{ $r->zile_vechime }} zile</span>@endif
         </td>
-        <td style="text-align:right;font-weight:700;">{{ number_format($r->net, 2, ',', '.') }}</td>
+        <td style="text-align:right;font-weight:700;">{{ number_format($r->net_recent, 2, ',', '.') }}{!! $r->are_eur ? ' <span style="font-size:.65rem;color:#b45309;font-weight:700;">+EUR</span>' : '' !!}</td>
+        <td style="text-align:right;color:#9ca3af;">{{ $r->net_vechi != 0 ? number_format($r->net_vechi, 2, ',', '.') : '—' }}</td>
       </tr>
     @empty
-      <tr><td colspan="6" style="text-align:center;color:#9ca3af;padding:2rem;">Niciun partener cu sold. Rulează winmentor:fetch-solduri.</td></tr>
+      <tr><td colspan="7" style="text-align:center;color:#9ca3af;padding:2rem;">Niciun partener cu sold. Rulează winmentor:fetch-solduri.</td></tr>
     @endforelse
     </tbody>
   </table>
