@@ -70,8 +70,16 @@ class SamedayAwbResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->schema([
+        return $schema->schema(static::formComponents());
+    }
+
+    /**
+     * Componentele formularului de AWB — refolosite și de popup-ul „Creare AWB"
+     * de pe comanda WooCommerce (aceeași sursă unică de adevăr).
+     */
+    public static function formComponents(): array
+    {
+        return [
                 Section::make('Expeditor')
                     ->columnSpanFull()
                     ->columns(4)
@@ -381,7 +389,7 @@ class SamedayAwbResource extends Resource
                             ->addActionLabel('Adaugă colet')
                             ->columnSpan(6),
                     ]),
-            ]);
+            ];
     }
 
     public static function table(Table $table): Table

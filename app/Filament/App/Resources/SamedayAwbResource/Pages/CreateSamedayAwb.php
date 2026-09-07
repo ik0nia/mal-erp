@@ -132,133 +132,17 @@ class CreateSamedayAwb extends CreateRecord
             ]);
         }
 
-        $locationId = (int) ($user->location_id ?? 0);
-        if ($locationId <= 0) {
-            throw ValidationException::withMessages([
-                'recipient_name' => 'Utilizatorul curent nu are o locație validă.',
-            ]);
-        }
+        $order = $this->wooOrderId ? WooOrder::find($this->wooOrderId) : null;
 
-        $connection = SamedayAwbResource::resolveSamedayConnectionForLocation($locationId);
-        if (! $connection instanceof IntegrationConnection) {
-            throw ValidationException::withMessages([
-                'recipient_name' => 'Locația ta nu are conexiune Sameday activă.',
-            ]);
-        }
-
-        $fallbackCounty = SamedayAwbResource::countyNameForCurrentUserLocation((int) ($data['recipient_county_id'] ?? 0))
-            ?? trim((string) ($data['recipient_county'] ?? ''));
-        $fallbackCity = SamedayAwbResource::cityNameForCurrentUserLocation(
-            (int) ($data['recipient_county_id'] ?? 0),
-            (int) ($data['recipient_city_id'] ?? 0)
-        ) ?? trim((string) ($data['recipient_city'] ?? ''));
-        $fallbackAddress = $this->composeAddressFromData($data);
-
-        try {
-            $result = app(SamedayAwbService::class)->createAwb($connection, $data);
-            $resolvedPackageCount = max(
-                1,
-                (int) data_get($result, 'request_payload.package_count', max(1, (int) ($data['package_count'] ?? 1)))
-            );
-            $resolvedPackageWeight = max(
-                0.01,
-                (float) data_get($result, 'request_payload.package_weight_kg', max(0.01, (float) ($data['package_weight_kg'] ?? 1)))
-            );
-
-            return SamedayAwb::query()->create([
-                'location_id' => $locationId,
-                'user_id' => (int) $user->id,
-                'integration_connection_id' => (int) $connection->id,
-                'woo_order_id' => $this->wooOrderId,
-                'provider' => IntegrationConnection::PROVIDER_SAMEDAY,
-                'status' => SamedayAwb::STATUS_CREATED,
-                'awb_number' => (string) ($result['awb_number'] ?? ''),
-                'service_id' => isset($result['service_id']) ? (int) $result['service_id'] : null,
-                'pickup_point_id' => isset($result['pickup_point_id']) ? (int) $result['pickup_point_id'] : null,
-                'recipient_name' => trim((string) ($data['recipient_name'] ?? '')),
-                'recipient_phone' => trim((string) ($data['recipient_phone'] ?? '')),
-                'recipient_email' => filled($data['recipient_email'] ?? null) ? trim((string) $data['recipient_email']) : null,
-                'recipient_county' => trim((string) data_get($result, 'request_payload.recipient_county', $fallbackCounty)),
-                'recipient_city' => trim((string) data_get($result, 'request_payload.recipient_city', $fallbackCity)),
-                'recipient_address' => trim((string) data_get($result, 'request_payload.recipient_address', $fallbackAddress)),
-                'recipient_postal_code' => filled($data['recipient_postal_code'] ?? null) ? trim((string) $data['recipient_postal_code']) : null,
-                'package_count' => $resolvedPackageCount,
-                'package_weight_kg' => $resolvedPackageWeight,
-                'cod_amount' => max(0, (float) ($data['cod_amount'] ?? 0)),
-                'insured_value' => max(0, (float) ($data['insured_value'] ?? 0)),
-                'shipping_cost' => isset($result['shipping_cost']) ? (float) $result['shipping_cost'] : null,
-                'reference' => filled($data['reference'] ?? null) ? trim((string) $data['reference']) : null,
-                'observation' => filled($data['observation'] ?? null) ? trim((string) $data['observation']) : null,
-                'request_payload' => $result['request_payload'] ?? null,
-                'response_payload' => $result['response_payload'] ?? null,
-                'error_message' => null,
-            ]);
-        } catch (Throwable $exception) {
-            SamedayAwb::query()->create([
-                'location_id' => $locationId,
-                'user_id' => (int) $user->id,
-                'integration_connection_id' => (int) $connection->id,
-                'provider' => IntegrationConnection::PROVIDER_SAMEDAY,
-                'status' => SamedayAwb::STATUS_FAILED,
-                'awb_number' => null,
-                'service_id' => isset($data['service_id']) ? (int) $data['service_id'] : null,
-                'pickup_point_id' => isset($data['pickup_point_id']) ? (int) $data['pickup_point_id'] : null,
-                'recipient_name' => trim((string) ($data['recipient_name'] ?? '')),
-                'recipient_phone' => trim((string) ($data['recipient_phone'] ?? '')),
-                'recipient_email' => filled($data['recipient_email'] ?? null) ? trim((string) $data['recipient_email']) : null,
-                'recipient_county' => $fallbackCounty,
-                'recipient_city' => $fallbackCity,
-                'recipient_address' => $fallbackAddress,
-                'recipient_postal_code' => filled($data['recipient_postal_code'] ?? null) ? trim((string) $data['recipient_postal_code']) : null,
-                'package_count' => max(1, (int) ($data['package_count'] ?? 1)),
-                'package_weight_kg' => max(0.01, (float) ($data['package_weight_kg'] ?? 1)),
-                'cod_amount' => max(0, (float) ($data['cod_amount'] ?? 0)),
-                'insured_value' => max(0, (float) ($data['insured_value'] ?? 0)),
-                'shipping_cost' => null,
-                'reference' => filled($data['reference'] ?? null) ? trim((string) $data['reference']) : null,
-                'observation' => filled($data['observation'] ?? null) ? trim((string) $data['observation']) : null,
-                'request_payload' => $data,
-                'response_payload' => null,
-                'error_message' => $exception->getMessage(),
-            ]);
-
-            throw ValidationException::withMessages([
-                'recipient_name' => 'Nu s-a putut crea AWB: '.$exception->getMessage(),
-            ]);
-        }
+        // Fluxul complet (creare Sameday + persistare + oglindire site + notă/meta Woo)
+        return app(\App\Services\Courier\SamedayAwbCreator::class)->create($data, $user, $order);
     }
 
     protected function afterCreate(): void
     {
-        /** @var SamedayAwb $awb */
-        $awb = $this->record;
-
-        // Oglindește AWB-ul în tabelul pluginului Sameday de pe site (vizibil în wp-admin)
-        if ($awb->status === SamedayAwb::STATUS_CREATED) {
-            app(\App\Services\Courier\SamedayAwbSiteMirror::class)->push($awb);
-        }
-
-        if (! $this->wooOrderId || ! filled($awb->awb_number)) {
-            return;
-        }
-
-        $order = WooOrder::find($this->wooOrderId);
-        if (! $order instanceof WooOrder || ! $order->connection) {
-            return;
-        }
-
-        try {
-            $client = new WooClient($order->connection);
-            $client->addOrderNote((int) $order->woo_id, 'AWB Sameday: '.$awb->awb_number);
-            $client->updateOrderMeta((int) $order->woo_id, '_sameday_awb_number', (string) $awb->awb_number);
-        } catch (Throwable) {
-            // Non-critical: don't block AWB creation if WooCommerce push fails
-        }
+        // Oglindirea pe site + nota/meta Woo sunt făcute de SamedayAwbCreator.
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
     private function composeAddressFromData(array $data): string
     {
         $explicit = trim((string) ($data['recipient_address'] ?? ''));

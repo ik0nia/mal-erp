@@ -276,8 +276,35 @@ class WooOrderResource extends Resource
                             ->icon('heroicon-o-truck')
                             ->color('success')
                             ->size('sm')
-                            ->url(fn ($livewire): string => $livewire->buildCreateAwbUrl())
-                            ->openUrlInNewTab(false),
+                            ->visible(fn (WooOrder $record): bool => (bool) $record->woo_id)
+                            ->modalHeading(fn (WooOrder $record): string => 'Creare AWB Sameday — comanda #'.$record->number)
+                            ->modalDescription('Datele destinatarului, ramburs-ul și căsuța Easybox sunt precompletate din comandă; expeditorul din setările conexiunii Sameday. AWB-ul apare automat și în WooCommerce (notă + plugin Sameday).')
+                            ->modalSubmitActionLabel('Creează AWB')
+                            ->modalWidth('5xl')
+                            ->form(\App\Filament\App\Resources\SamedayAwbResource::formComponents())
+                            ->fillForm(fn (WooOrder $record, $livewire): array => array_filter([
+                                'recipient_name'        => $record->customer_name,
+                                'recipient_phone'       => $record->customer_phone,
+                                'recipient_email'       => $record->customer_email,
+                                'recipient_address'     => (string) data_get($record->shipping, 'address_1', data_get($record->billing, 'address_1', '')),
+                                'recipient_postal_code' => (string) data_get($record->shipping, 'postcode', data_get($record->billing, 'postcode', '')),
+                                'cod_amount'            => $record->payment_method === 'cod' ? (string) $record->total : null,
+                                'reference'             => $record->number,
+                                'locker_last_mile'      => $livewire->currentLocker()['lockerId'] ?? null,
+                            ]))
+                            ->action(function (array $data, WooOrder $record, $livewire): void {
+                                $awb = app(\App\Services\Courier\SamedayAwbCreator::class)
+                                    ->create($data, auth()->user(), $record);
+
+                                \Filament\Notifications\Notification::make()
+                                    ->success()
+                                    ->title('AWB creat: '.$awb->awb_number)
+                                    ->body('AWB-ul e vizibil pe comandă în ERP și în WooCommerce (notă + plugin Sameday).')
+                                    ->persistent()
+                                    ->send();
+
+                                $livewire->redirect(static::getUrl('view', ['record' => $record]));
+                            }),
                     ])
                     ->schema([
                         RepeatableEntry::make('samedayAwbs')
