@@ -42,6 +42,7 @@ class FetchWinmentorIncasariPlatiCommand extends Command
 
         $lock = Cache::lock("winmentor_fetch_incasari_{$firma}", 240);
         if (! $lock->get()) {
+            $this->warn('Alt fetch de încasări rulează (lock activ) — ieșire.');
             return self::SUCCESS;
         }
 

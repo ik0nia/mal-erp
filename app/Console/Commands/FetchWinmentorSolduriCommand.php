@@ -39,6 +39,7 @@ class FetchWinmentorSolduriCommand extends Command
 
         $lock = Cache::lock("winmentor_fetch_solduri_{$firma}", 1800);
         if (! $lock->get()) {
+            $this->warn('Alt fetch de solduri rulează (lock activ) — ieșire.');
             return self::SUCCESS;
         }
 
