@@ -47,12 +47,45 @@ class WatchWinmentorVanzariCommand extends Command
         }
     }
 
+    /** Context pentru persistCashPaidDocs (setat înainte de merge, inclusiv din refetch istoric) */
+    protected string $ctxFirma = 'MAL2019';
+    protected int $ctxAn = 0;
+    protected int $ctxLuna = 0;
+
+    /**
+     * Persistă facturile/avizele încasate cash (semnal doar în /ext, altfel pierdut) —
+     * folosit de Scadențar ca să nu marcheze restante facturile achitate la casă.
+     */
+    protected function persistCashPaidDocs(array $nrDocs): void
+    {
+        if (empty($nrDocs) || ! $this->ctxAn) {
+            return;
+        }
+
+        $now  = now();
+        $rows = array_map(fn ($nr) => [
+            'firma'       => $this->ctxFirma,
+            'an'          => $this->ctxAn,
+            'luna'        => $this->ctxLuna,
+            'nr_factura'  => $nr,
+            'detected_at' => $now,
+        ], $nrDocs);
+
+        foreach (array_chunk($rows, 500) as $chunk) {
+            DB::table('winmentor_facturi_cash')->insertOrIgnore($chunk);
+        }
+    }
+
     private function runWatch(WinmentorBridgeClient $bridge, string $firma): int
     {
 
         $conn = \App\Models\IntegrationConnection::find(5);
         $an   = $conn->bridgeAn();
         $luna = $conn->bridgeLuna();
+
+        $this->ctxFirma = $firma;
+        $this->ctxAn    = $an;
+        $this->ctxLuna  = $luna;
 
         try {
             $bridge->selectFirmaForMonth($an, $luna, $firma);
@@ -183,6 +216,8 @@ class WatchWinmentorVanzariCommand extends Command
                 }
             }
         }
+
+        $this->persistCashPaidDocs(array_keys($cashPaidDocs));
 
         // 1. Facturi + avize din /luna (date bogate, tipDocument precis: AE/F)
         $lunaKeys = [];

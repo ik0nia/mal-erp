@@ -208,6 +208,15 @@ Schedule::command('winmentor:sync-stock-bridge')
     ->withoutOverlapping(30)
     ->runInBackground();
 
+// WinMentor — scadențar oficial (rest de plată per factură). Apel COM GREU (minute)
+// → rulat seara, după fereastra de lucru și înainte de fetch-ul de emulare (20:45).
+Schedule::command('winmentor:fetch-solduri')
+    ->dailyAt('19:35')
+    ->timezone('Europe/Bucharest')
+    ->days([1, 2, 3, 4, 5, 6])
+    ->withoutOverlapping(60)
+    ->runInBackground();
+
 // WinMentor — încasări clienți + plăți furnizori (orar, luna de lucru curentă).
 Schedule::command('winmentor:fetch-incasari-plati')
     ->hourlyAt(40)

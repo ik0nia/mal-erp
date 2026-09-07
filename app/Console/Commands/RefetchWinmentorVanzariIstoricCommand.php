@@ -90,6 +90,10 @@ class RefetchWinmentorVanzariIstoricCommand extends WatchWinmentorVanzariCommand
 
                 $this->line("  [{$luna}/{$an}] selectFirma + fetch ({$oldCount} rânduri vechi)...");
 
+                $this->ctxFirma = $firma;
+                $this->ctxAn    = $an;
+                $this->ctxLuna  = $luna;
+
                 try {
                     $bridge->selectFirmaForMonth($an, $luna, $firma);
                     sleep(3);

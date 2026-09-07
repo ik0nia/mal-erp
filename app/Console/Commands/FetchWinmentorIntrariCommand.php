@@ -217,6 +217,8 @@ class FetchWinmentorIntrariCommand extends Command
                 'uom'           => trim($row[11] ?? '') ?: null,
                 'pret'          => $pretStr !== '' ? (float) str_replace(',', '.', $pretStr) : null,
                 'pret_vanzare'  => $pretVanzStr !== '' ? (float) str_replace(',', '.', $pretVanzStr) : null,
+                'cota_tva'      => is_numeric(trim($row[16] ?? '')) ? (float) trim($row[16]) : null,
+                'serie_factura' => trim($row[20] ?? '') ?: null,
                 'moneda'        => $moneda,
                 'curs_bnr'      => $cursRon,
                 'den_gestiune'  => trim($row[1] ?? '') ?: null,
