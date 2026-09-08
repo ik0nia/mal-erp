@@ -155,6 +155,20 @@ class ViewWooOrder extends ViewRecord
                     }
                 }),
 
+            Action::make('create_awb')
+                ->label(function (): string {
+                    $awb = \App\Models\SamedayAwb::where('woo_order_id', $this->record->id)->latest('id')->first();
+                    return $awb ? 'AWB: '.$awb->awb_number : 'Creează AWB';
+                })
+                ->icon('heroicon-o-truck')
+                ->color(fn (): string => \App\Models\SamedayAwb::where('woo_order_id', $this->record->id)->exists() ? 'gray' : 'primary')
+                ->url(function (): string {
+                    $awb = \App\Models\SamedayAwb::where('woo_order_id', $this->record->id)->latest('id')->first();
+                    return $awb
+                        ? \App\Filament\App\Resources\SamedayAwbResource::getUrl('index', ['tableSearch' => $awb->awb_number])
+                        : $this->buildCreateAwbUrl();
+                }),
+
             Action::make('add_note')
                 ->label('Adaugă notă')
                 ->icon('heroicon-o-chat-bubble-left-ellipsis')
