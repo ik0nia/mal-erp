@@ -47,3 +47,13 @@ node-renderer/node_modules/
 /public/downloads/
 /public/reports/
 /storage/fonts/
+
+# Documente comerciale Ikonia (nu se urcă pe GitHub)
+/public/deviz-*
+/public/oferta-*
+/public/draft-contract.*
+/public/documentatie-*
+/public/fairplay-*
+/public/docs/deviz.html
+/public/docs/audit-deviz.html
+/public/docs/documentatie-tehnica.html
