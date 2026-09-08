@@ -33,7 +33,7 @@ Route::prefix('wh')->name('warehouse.')->group(function () {
 
     // Auth
     Route::get('login', [WarehouseController::class, 'loginForm'])->name('login');
-    Route::post('login', [WarehouseController::class, 'login'])->name('login.post');
+    Route::post('login', [WarehouseController::class, 'login'])->name('login.post')->middleware('throttle:5,1');
     Route::post('logout', [WarehouseController::class, 'logout'])->name('logout')->middleware('auth');
 
     // Autentificat — ecran PIN (fără verificare PIN)

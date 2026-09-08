@@ -57,3 +57,5 @@ node-renderer/node_modules/
 /public/docs/deviz.html
 /public/docs/audit-deviz.html
 /public/docs/documentatie-tehnica.html
+/public/contract-*
+.env.bak*

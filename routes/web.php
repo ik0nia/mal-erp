@@ -95,7 +95,7 @@ Route::middleware(['web', 'auth'])->group(function () {
     });
 
     Route::post('/api/category-review/{id}/approve', function (int $id, Request $request) {
-        if ($request->header('X-Review-Token') !== config('services.category_review_token')) {
+        if (! hash_equals((string) config('services.category_review_token'), (string) $request->header('X-Review-Token'))) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
         $proposal = \App\Models\CategoryReviewProposal::findOrFail($id);
@@ -138,7 +138,7 @@ Route::middleware(['web', 'auth'])->group(function () {
     });
 
     Route::post('/api/category-review/{id}/reject', function (int $id, Request $request) {
-        if ($request->header('X-Review-Token') !== config('services.category_review_token')) {
+        if (! hash_equals((string) config('services.category_review_token'), (string) $request->header('X-Review-Token'))) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
         $proposal = \App\Models\CategoryReviewProposal::findOrFail($id);
@@ -154,8 +154,10 @@ Route::middleware(['web', 'auth'])->group(function () {
     });
 });
 
-// WinMentor Bridge — plan integrare ERP (public, fără autentificare)
-Route::middleware('web')->get('/docs/winmentor-integrare', function () {
+// WinMentor Bridge — plan integrare ERP (doar super_admin — audit securitate 2026-09-08)
+Route::middleware(['web', 'auth'])->get('/docs/winmentor-integrare', function () {
+    abort_unless(auth()->user()?->isSuperAdmin(), 404);
+
     $md   = file_get_contents(base_path('private/winmentor/INTEGRARE-ERP.md'));
     $html = \Illuminate\Support\Str::markdown($md, [
         'html_input'         => 'strip',
@@ -184,6 +186,7 @@ Route::middleware(['web', 'auth'])->get('/print/winmentor-factura', function (Re
         'company' => \App\Models\Location::find(1),
     ]);
 })->name('print.winmentor-factura');
+
 
 // Redirect permanent de la vechea cale woo-products → produse
 Route::permanentRedirect('/woo-products', '/produse');
@@ -646,4 +649,43 @@ Route::middleware(['web', 'auth'])->get('/sameday-lockers.json', function () {
     });
 
     return response()->json($lockers);
+});
+
+// Rapoarte private — doar codrut@ikonia.ro, servite din storage (NU din public/)
+Route::middleware(['web', 'auth'])->get('/rapoarte/{raport}', function (string $raport) {
+    abort_unless(auth()->user()?->email === 'codrut@ikonia.ro', 404);
+
+    $rapoarte = [
+        'securitate'      => storage_path('app/rapoarte/raport-securitate-erp-2026-09-08.html'),
+        'audit-achizitii' => storage_path('app/audit-achizitii.html'),
+    ];
+    $path = $rapoarte[$raport] ?? null;
+    abort_unless($path && is_file($path), 404);
+
+    return response()->file($path, ['Content-Type' => 'text/html; charset=UTF-8']);
+})->where('raport', '[a-z0-9-]+')->name('rapoarte.privat');
+
+// Documente comerciale private (mutate din public/ la auditul de securitate 2026-09-08)
+// — doar codrut@ikonia.ro; index + servire cu protecție anti-traversal
+Route::middleware(['web', 'auth'])->group(function () {
+    $docsGate = function () {
+        abort_unless(auth()->user()?->email === 'codrut@ikonia.ro', 404);
+        return storage_path('app/documente');
+    };
+
+    Route::get('/documente', function () use ($docsGate) {
+        $base = $docsGate();
+        $files = collect(\Illuminate\Support\Facades\File::allFiles($base))
+            ->map(fn ($f) => $f->getRelativePathname())
+            ->sort()->values();
+        $items = $files->map(fn ($f) => '<li><a href="/documente/' . implode('/', array_map('rawurlencode', explode('/', $f))) . '">' . e($f) . '</a></li>')->implode("\n");
+        return response('<!DOCTYPE html><html lang="ro"><head><meta charset="utf-8"><title>Documente private</title><style>body{font-family:sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem}li{margin:.3rem 0}</style></head><body><h1>Documente private (' . $files->count() . ')</h1><ul>' . $items . '</ul></body></html>');
+    })->name('documente.index');
+
+    Route::get('/documente/{path}', function (string $path) use ($docsGate) {
+        $base = $docsGate();
+        $real = realpath($base . '/' . $path);
+        abort_unless($real && str_starts_with($real, $base . DIRECTORY_SEPARATOR) && is_file($real), 404);
+        return response()->file($real);
+    })->where('path', '[A-Za-z0-9._\-\/]+')->name('documente.serve');
 });

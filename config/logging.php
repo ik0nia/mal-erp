@@ -70,7 +70,7 @@ return [
             'path'       => storage_path('logs/laravel.log'),
             'level'      => env('LOG_LEVEL', 'debug'),
             'days'       => env('LOG_DAILY_DAYS', 14),
-            'permission' => 0666,
+            'permission' => 0664,
             'replace_placeholders' => true,
         ],
 
@@ -134,7 +134,7 @@ return [
             'path'       => storage_path('logs/winmentor/bridge/bridge.log'),
             'level'      => 'debug',
             'days'       => 35,
-            'permission' => 0666,
+            'permission' => 0664,
             'replace_placeholders' => true,
         ],
 
@@ -144,7 +144,7 @@ return [
             'path'       => storage_path('logs/winmentor/sync/sync.log'),
             'level'      => 'info',
             'days'       => 35,
-            'permission' => 0666,
+            'permission' => 0664,
             'replace_placeholders' => true,
         ],
 
