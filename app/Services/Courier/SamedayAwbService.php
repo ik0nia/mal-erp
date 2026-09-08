@@ -482,6 +482,95 @@ class SamedayAwbService
     }
 
     /**
+     * Toate căsuțele Easybox direct din API-ul Sameday (sursa proaspătă —
+     * tabela wp_sameday_locker de pe site e înghețată când harta live e activă).
+     *
+     * @return array<int, array{locker_id: int, name: string, county: ?string, city: ?string, address: ?string, postal_code: ?string}>
+     */
+    public function getAllLockersFromApi(IntegrationConnection $connection): array
+    {
+        $sameday = $this->newSamedayInstance($connection);
+        $requestClass = '\\Sameday\\Requests\\SamedayGetLockersRequest';
+
+        $lockers = [];
+        $page = 1;
+        $pages = 1;
+
+        do {
+            $request = new $requestClass();
+            $request->setCountPerPage(500);
+            $request->setPage($page);
+
+            $response = $sameday->getLockers($request);
+            $pages = max(1, (int) $response->getPages());
+
+            foreach ($response->getLockers() as $locker) {
+                $id = (int) $locker->getId();
+                if ($id <= 0) {
+                    continue;
+                }
+                $lockers[$id] = [
+                    'locker_id'   => $id,
+                    'name'        => (string) $locker->getName(),
+                    'county'      => (string) $locker->getCounty() ?: null,
+                    'city'        => (string) $locker->getCity() ?: null,
+                    'address'     => (string) $locker->getAddress() ?: null,
+                    'postal_code' => (string) $locker->getPostalCode() ?: null,
+                    'lat'         => is_numeric($locker->getLat()) ? (float) $locker->getLat() : null,
+                    'lng'         => is_numeric($locker->getLong()) ? (float) $locker->getLong() : null,
+                ];
+            }
+
+            $page++;
+        } while ($page <= $pages);
+
+        return array_values($lockers);
+    }
+
+    /** Pickup point-ul marcat default în contul Sameday (null dacă nu există). */
+    public function getDefaultPickupPointId(IntegrationConnection $connection): ?int
+    {
+        foreach ($this->getPickupPointDataset($connection) as $pickupPoint) {
+            if ((bool) ($pickupPoint['is_default'] ?? false)) {
+                return (int) ($pickupPoint['id'] ?? 0) ?: null;
+            }
+        }
+
+        return null;
+    }
+
+    /** Persoana de contact default a pickup point-ului dat (sau a celui default). */
+    public function getDefaultContactPersonId(IntegrationConnection $connection, ?int $pickupPointId = null): ?int
+    {
+        $pickupPoints = $this->getPickupPointDataset($connection);
+        if ($pickupPoints === []) {
+            return null;
+        }
+
+        $target = null;
+        $pickupPointId = max(0, (int) $pickupPointId);
+        foreach ($pickupPoints as $pickupPoint) {
+            if ($pickupPointId > 0 && (int) ($pickupPoint['id'] ?? 0) === $pickupPointId) {
+                $target = $pickupPoint;
+                break;
+            }
+            if ($pickupPointId <= 0 && (bool) ($pickupPoint['is_default'] ?? false)) {
+                $target = $pickupPoint;
+                break;
+            }
+        }
+        $target ??= $pickupPoints[0];
+
+        foreach (($target['contact_persons'] ?? []) as $contactPerson) {
+            if ((bool) ($contactPerson['is_default'] ?? false)) {
+                return (int) ($contactPerson['id'] ?? 0) ?: null;
+            }
+        }
+
+        return (int) ($target['contact_persons'][0]['id'] ?? 0) ?: null;
+    }
+
+    /**
      * @return array<int, string>
      */
     public function getServiceTaxOptions(IntegrationConnection $connection, ?int $serviceId = null): array

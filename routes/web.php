@@ -636,3 +636,14 @@ Route::middleware(['web', 'auth'])->group(function () {
     });
 
 });
+
+// Căsuțe Easybox pentru harta custom din formularul AWB (cache 1h, ~7100 puncte)
+Route::middleware(['web', 'auth'])->get('/sameday-lockers.json', function () {
+    $lockers = \Illuminate\Support\Facades\Cache::remember('sameday_lockers_map_json', 3600, function () {
+        return \Illuminate\Support\Facades\DB::table('sameday_lockers')
+            ->whereNotNull('lat')
+            ->get(['locker_id', 'name', 'county', 'city', 'address', 'lat', 'lng']);
+    });
+
+    return response()->json($lockers);
+});

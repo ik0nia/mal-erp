@@ -510,6 +510,45 @@ class ViewWooOrder extends ViewRecord
                     \Filament\Forms\Components\TextInput::make('s_postcode')->label('Cod poștal')->default($shipping['postcode'] ?? '')->columnSpan(3),
                     \Filament\Forms\Components\TextInput::make('s_phone')->label('Telefon livrare')->default($shipping['phone'] ?? '')->columnSpan(2),
                 ]),
+            \Filament\Schemas\Components\Section::make('Transport & Easybox')
+                ->columns(12)
+                ->schema([
+                    \Filament\Forms\Components\TextInput::make('ship_method')
+                        ->label('Metodă transport')
+                        ->default($shipLine['method_title'] ?? '')
+                        ->columnSpan(6),
+                    \Filament\Forms\Components\TextInput::make('ship_cost_gross')
+                        ->label('Cost transport (cu TVA)')
+                        ->numeric()->minValue(0)->step('0.01')->suffix('RON')
+                        ->default($grossShipping)
+                        ->helperText($shipLine ? 'Recalculează totalul comenzii.' : 'Comanda nu are linie de transport.')
+                        ->disabled(! $shipLine)
+                        ->columnSpan(6),
+                    Select::make('locker_id')
+                        ->label(fn (): string => ($l = $this->currentLocker()) ? 'Căsuță Easybox (curentă: '.($l['name'] ?? $l['lockerId'] ?? '?').')' : 'Căsuță Easybox (opțional — livrare în locker)')
+                        ->searchable()
+                        ->default(fn () => $this->currentLocker()['lockerId'] ?? null)
+                        ->getSearchResultsUsing(fn (string $search) => \Illuminate\Support\Facades\DB::table('sameday_lockers')
+                            ->where(fn ($q) => $q->where('name', 'like', "%{$search}%")
+                                ->orWhere('city', 'like', "%{$search}%")
+                                ->orWhere('address', 'like', "%{$search}%"))
+                            ->limit(30)->get()
+                            ->mapWithKeys(fn ($l) => [$l->locker_id => $l->name.' — '.$l->address.', '.$l->city.' ('.$l->county.')'])
+                            ->all())
+                        ->getOptionLabelUsing(function ($value) {
+                            $l = \Illuminate\Support\Facades\DB::table('sameday_lockers')->where('locker_id', $value)->first();
+                            return $l
+                                ? $l->name.' — '.$l->address.', '.$l->city
+                                : 'Easybox #'.$value.' (ales de client — valid, dar lipsește din nomenclatorul local)';
+                        })
+                        ->helperText('Alege căsuța de pe hartă sau caut-o. Golește câmpul pentru livrare la adresă (fără Easybox).')
+                        ->columnSpan(12),
+                    \Filament\Forms\Components\ViewField::make('locker_map_shipping')
+                        ->label('')
+                        ->view('filament.app.sameday-locker-map', ['lockerField' => 'locker_id'])
+                        ->dehydrated(false)
+                        ->columnSpan(12),
+                ]),
             \Filament\Schemas\Components\Section::make('Notă client')
                 ->schema([
                     \Filament\Forms\Components\Textarea::make('customer_note')->label('')->rows(2)
@@ -586,12 +625,81 @@ class ViewWooOrder extends ViewRecord
             $before['customer_note']  = (string) $order->customer_note;
         }
 
+        // Transport (metodă/cost) + căsuță Easybox — aceleași câmpuri ca în modalul Transport
+        if ($this->applyTransportChanges($data, $payload, $before) === false) {
+            return; // căsuță invalidă — mesajul a fost deja afișat
+        }
+
         if (empty($payload)) {
             Notification::make()->info()->title('Nicio modificare')->send();
             return;
         }
 
         $this->pushOrderPayload($payload, $before, 'Editat: livrare/transport');
+    }
+
+    /**
+     * Populează $payload/$before cu modificările de transport (metodă, cost) și căsuță
+     * Easybox din $data. Returnează false dacă o căsuță selectată e invalidă (blochează salvarea).
+     * Sursă unică folosită de saveShipping() și saveTransport().
+     */
+    private function applyTransportChanges(array $data, array &$payload, array &$before): bool
+    {
+        /** @var WooOrder $order */
+        $order = $this->record;
+
+        $shipLine = collect($order->data['shipping_lines'] ?? [])->first();
+        if ($shipLine && array_key_exists('ship_cost_gross', $data)) {
+            $newGross = round((float) ($data['ship_cost_gross'] ?? 0), 2);
+            $oldGross = round((float) $order->shipping_total * 1.21, 2);
+            $newTitle = trim($data['ship_method'] ?? '');
+
+            if (abs($newGross - $oldGross) >= 0.01 || ($newTitle !== '' && $newTitle !== ($shipLine['method_title'] ?? ''))) {
+                $line = ['id' => $shipLine['id'], 'total' => number_format(round($newGross / 1.21, 2), 2, '.', '')];
+                if ($newTitle !== '') {
+                    $line['method_title'] = $newTitle;
+                }
+                $payload['shipping_lines'] = [$line];
+                $before['shipping_lines']  = [[
+                    'id'           => $shipLine['id'],
+                    'total'        => number_format((float) $order->shipping_total, 2, '.', ''),
+                    'method_title' => $shipLine['method_title'] ?? '',
+                ]];
+            }
+        }
+
+        if (! array_key_exists('locker_id', $data)) {
+            return true;
+        }
+
+        $locker    = $this->currentLocker();
+        $currentId = (string) ($locker['lockerId'] ?? '');
+        $newId     = (string) ($data['locker_id'] ?? '');
+
+        if ($newId !== $currentId) {
+            if ($newId === '') {
+                $newMeta = '';
+            } else {
+                $l = \Illuminate\Support\Facades\DB::table('sameday_lockers')->where('locker_id', $newId)->first();
+                if (! $l) {
+                    Notification::make()->danger()->title('Căsuța selectată nu există')->send();
+                    return false;
+                }
+                $newMeta = json_encode([
+                    'lockerId' => (string) $l->locker_id,
+                    'oohType'  => $locker['oohType'] ?? '0',
+                    'name'     => $l->name,
+                    'address'  => $l->address,
+                    'city'     => $l->city,
+                    'county'   => $l->county,
+                ] + array_diff_key($locker ?? [], array_flip(['lockerId', 'name', 'address', 'city', 'county'])), JSON_UNESCAPED_UNICODE);
+            }
+
+            $payload['meta_data'] = [['key' => '_sameday_shipping_locker_id', 'value' => $newMeta]];
+            $before['meta_data']  = [['key' => '_sameday_shipping_locker_id', 'value' => $locker ? json_encode($locker, JSON_UNESCAPED_UNICODE) : '']];
+        }
+
+        return true;
     }
 
     /** Trimite payload-ul în WooCommerce, loghează cu snapshot pentru undo și resincronizează. */
@@ -1082,9 +1190,15 @@ class ViewWooOrder extends ViewRecord
                             ->all())
                         ->getOptionLabelUsing(function ($value) {
                             $l = \Illuminate\Support\Facades\DB::table('sameday_lockers')->where('locker_id', $value)->first();
-                            return $l ? $l->name.' — '.$l->address.', '.$l->city : (string) $value;
+                            return $l
+                                ? $l->name.' — '.$l->address.', '.$l->city
+                                : 'Easybox #'.$value.' (ales de client — valid, dar lipsește din nomenclatorul local)';
                         })
-                        ->helperText('Caută după nume, oraș sau adresă. Golește câmpul pentru livrare la adresă (fără Easybox).'),
+                        ->helperText('Alege căsuța de pe hartă sau caut-o după nume/oraș/adresă. Golește câmpul pentru livrare la adresă (fără Easybox).'),
+                    \Filament\Forms\Components\ViewField::make('locker_map_transport')
+                        ->label('')
+                        ->view('filament.app.sameday-locker-map', ['lockerField' => 'locker_id'])
+                        ->dehydrated(false),
                 ]);
             })
             ->action(fn (array $data) => $this->saveTransport($data));
@@ -1103,51 +1217,8 @@ class ViewWooOrder extends ViewRecord
         $payload = [];
         $before  = [];
 
-        $shipLine = collect($order->data['shipping_lines'] ?? [])->first();
-        if ($shipLine) {
-            $newGross = round((float) ($data['ship_cost_gross'] ?? 0), 2);
-            $oldGross = round((float) $order->shipping_total * 1.21, 2);
-            $newTitle = trim($data['ship_method'] ?? '');
-
-            if (abs($newGross - $oldGross) >= 0.01 || ($newTitle !== '' && $newTitle !== ($shipLine['method_title'] ?? ''))) {
-                $line = ['id' => $shipLine['id'], 'total' => number_format(round($newGross / 1.21, 2), 2, '.', '')];
-                if ($newTitle !== '') $line['method_title'] = $newTitle;
-                $payload['shipping_lines'] = [$line];
-                $before['shipping_lines']  = [[
-                    'id'           => $shipLine['id'],
-                    'total'        => number_format((float) $order->shipping_total, 2, '.', ''),
-                    'method_title' => $shipLine['method_title'] ?? '',
-                ]];
-            }
-        }
-
-        // Easybox: schimbarea/eliminarea căsuței prin meta pluginului Sameday
-        $locker    = $this->currentLocker();
-        $currentId = (string) ($locker['lockerId'] ?? '');
-        $newId     = (string) ($data['locker_id'] ?? '');
-
-        if ($newId !== $currentId) {
-            if ($newId === '') {
-                $newMeta = '';
-            } else {
-                $l = \Illuminate\Support\Facades\DB::table('sameday_lockers')->where('locker_id', $newId)->first();
-                if (! $l) {
-                    Notification::make()->danger()->title('Căsuța selectată nu există')->send();
-                    return;
-                }
-                // Format compatibil cu pluginul Sameday (păstrăm câmpurile pe care le avem)
-                $newMeta = json_encode([
-                    'lockerId' => (string) $l->locker_id,
-                    'oohType'  => $locker['oohType'] ?? '0',
-                    'name'     => $l->name,
-                    'address'  => $l->address,
-                    'city'     => $l->city,
-                    'county'   => $l->county,
-                ] + array_diff_key($locker ?? [], array_flip(['lockerId', 'name', 'address', 'city', 'county'])), JSON_UNESCAPED_UNICODE);
-            }
-
-            $payload['meta_data'] = [['key' => '_sameday_shipping_locker_id', 'value' => $newMeta]];
-            $before['meta_data']  = [['key' => '_sameday_shipping_locker_id', 'value' => $locker ? json_encode($locker, JSON_UNESCAPED_UNICODE) : '']];
+        if ($this->applyTransportChanges($data, $payload, $before) === false) {
+            return; // căsuță invalidă — mesajul a fost deja afișat
         }
 
         if (empty($payload)) {

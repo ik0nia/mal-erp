@@ -50,6 +50,7 @@ class SamedayAwbCreator
 
         try {
             $result = app(SamedayAwbService::class)->createAwb($connection, $data);
+
             $resolvedPackageCount = max(
                 1,
                 (int) data_get($result, 'request_payload.package_count', max(1, (int) ($data['package_count'] ?? 1)))
@@ -94,6 +95,8 @@ class SamedayAwbCreator
         } catch (ValidationException $exception) {
             throw $exception;
         } catch (Throwable $exception) {
+            $badRequest = $exception instanceof \Sameday\Exceptions\SamedayBadRequestException ? $exception : null;
+            $errorMessage = $badRequest ? $this->translateSamedayErrors($badRequest, $data) : $exception->getMessage();
             SamedayAwb::query()->create([
                 'location_id' => $locationId,
                 'user_id' => (int) $user->id,
@@ -119,14 +122,74 @@ class SamedayAwbCreator
                 'reference' => filled($data['reference'] ?? null) ? trim((string) $data['reference']) : null,
                 'observation' => filled($data['observation'] ?? null) ? trim((string) $data['observation']) : null,
                 'request_payload' => $data,
-                'response_payload' => null,
-                'error_message' => $exception->getMessage(),
+                'response_payload' => $badRequest ? ['errors' => $badRequest->getErrors()] : null,
+                'error_message' => $errorMessage,
             ]);
 
             throw ValidationException::withMessages([
-                'recipient_name' => 'Nu s-a putut crea AWB: '.$exception->getMessage(),
+                'recipient_name' => $badRequest ? $errorMessage : 'Nu s-a putut crea AWB: '.$errorMessage,
             ]);
         }
+    }
+
+    /**
+     * Traduce erorile de validare Sameday (per câmp) în mesaje utile în română.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function translateSamedayErrors(\Sameday\Exceptions\SamedayBadRequestException $exception, array $data): string
+    {
+        $fields = [];
+        foreach ($exception->getErrors() as $error) {
+            foreach ((array) ($error['key'] ?? []) as $key) {
+                $fields[] = (string) $key;
+            }
+        }
+        $fields = array_unique($fields);
+
+        // Cel mai frecvent: căsuța Easybox aleasă de client nu e în catalogul contului
+        // (harta publică Sameday din checkout arată TOATE lockerele din țară, dar contul
+        // poate genera AWB doar către cele din nomenclatorul propriu).
+        if (in_array('lockerLastMile', $fields, true) || in_array('oohLastMile', $fields, true)) {
+            $lockerId = (int) ($data['locker_last_mile'] ?? 0);
+            $city = trim((string) ($data['recipient_city'] ?? ''));
+
+            $suggestions = '';
+            $cityId = (int) ($data['recipient_city_id'] ?? 0);
+            $cityName = $cityId > 0
+                ? SamedayAwbResource::cityNameForCurrentUserLocation((int) ($data['recipient_county_id'] ?? 0), $cityId)
+                : $city;
+            if ($cityName) {
+                $nearby = \Illuminate\Support\Facades\DB::table('sameday_lockers')
+                    ->where('city', 'like', '%'.$cityName.'%')
+                    ->limit(3)->pluck('name')->all();
+                if ($nearby) {
+                    $suggestions = ' În '.$cityName.' ai disponibile: '.implode('; ', $nearby).'.';
+                }
+            }
+
+            return "Căsuța Easybox #{$lockerId} nu este în catalogul contului Sameday, deși apare pe harta publică din checkout. "
+                .'Alege altă căsuță validă de pe hartă'.$suggestions
+                .' Sau golește câmpul „Căsuță Easybox" pentru livrare la adresă.';
+        }
+
+        $labels = [
+            'awbRecipient.name'        => 'nume destinatar',
+            'awbRecipient.phoneNumber' => 'telefon destinatar',
+            'awbRecipient.address'     => 'adresă destinatar',
+            'awbRecipient.cityString'  => 'oraș destinatar',
+            'awbRecipient.county'      => 'județ destinatar',
+            'awbRecipient.postalCode'  => 'cod poștal',
+            'parcels'                  => 'colet (greutate/dimensiuni)',
+            'service'                  => 'serviciu Sameday',
+            'pickupPoint'              => 'punct de ridicare',
+        ];
+
+        $human = array_map(fn ($f) => $labels[$f] ?? $f, $fields);
+
+        return $human
+            ? 'Sameday a respins AWB-ul — verifică: '.implode(', ', $human).'.'
+            : 'Sameday a respins AWB-ul (date invalide). Verifică datele destinatarului și coletul.';
     }
 
     /** Oglindire pe site + notă și meta pe comanda WooCommerce. */

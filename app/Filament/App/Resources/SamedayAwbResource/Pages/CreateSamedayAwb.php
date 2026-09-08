@@ -23,6 +23,9 @@ class CreateSamedayAwb extends CreateRecord
     /** @var int|null Woo order ID passed via query string */
     protected ?int $wooOrderId = null;
 
+    /** Rezumatul comenzii sursă, afișat sub titlul paginii. */
+    public ?string $orderSummary = null;
+
     public function mount(): void
     {
         parent::mount();
@@ -51,11 +54,29 @@ class CreateSamedayAwb extends CreateRecord
             }
         }
 
+        // Livrare în Easybox → serviciul de locker, nu cel default
+        if (! empty($prefill['locker_last_mile'])) {
+            $prefill['service_id'] = 15; // Locker NextDay
+        }
+
+        if ($this->wooOrderId && ($order = WooOrder::with('items')->find($this->wooOrderId))) {
+            $data = SamedayAwbResource::orderPrefillData($order);
+            $prefill = array_merge($prefill, $data['prefill']);
+            $this->orderSummary = $data['summary'];
+            SamedayAwbResource::notifyMissingWeights($data['missing_weight']);
+        }
+
         if (! empty($prefill)) {
             // Merge peste defaults (fill() cu array parțial ar goli restul câmpurilor)
             $this->form->fill(array_merge($this->form->getRawState(), $prefill));
         }
     }
+
+    public function getSubheading(): ?string
+    {
+        return $this->orderSummary;
+    }
+
 
     /**
      * @return array<int, Action>

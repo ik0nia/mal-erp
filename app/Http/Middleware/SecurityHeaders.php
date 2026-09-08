@@ -39,6 +39,8 @@ class SecurityHeaders
         //   fonts.googleapis.com   — Google Fonts stylesheet
         //   fonts.bunny.net        — font alternativ (welcome page)
         //   fonts.gstatic.com      — fișiere font Google
+        //   cdn.sameday.ro         — Locker Plugin SDK (hartă Easybox la creare AWB)
+        //   lockerplugin.sameday.ro — iframe-ul hărții de lockere (frame-src)
         //
         // img-src https:  — imaginile produselor pot veni de pe domenii externe (WooCommerce, furnizori)
         //
@@ -47,12 +49,12 @@ class SecurityHeaders
 
         $csp = implode('; ', [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net cdnjs.cloudflare.com",
-            "style-src 'self' 'unsafe-inline' fonts.googleapis.com fonts.bunny.net",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net cdnjs.cloudflare.com cdn.sameday.ro",
+            "style-src 'self' 'unsafe-inline' fonts.googleapis.com fonts.bunny.net cdn.jsdelivr.net",
             "font-src 'self' fonts.gstatic.com fonts.bunny.net data:",
             "img-src 'self' data: blob: https:",
             "connect-src 'self'",
-            "frame-src 'self'",
+            "frame-src 'self' https://lockerplugin.sameday.ro",
             "frame-ancestors 'self'",
             "form-action 'self'",
             "base-uri 'self'",

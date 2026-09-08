@@ -282,16 +282,16 @@ class WooOrderResource extends Resource
                             ->modalSubmitActionLabel('Creează AWB')
                             ->modalWidth('5xl')
                             ->form(\App\Filament\App\Resources\SamedayAwbResource::formComponents())
-                            ->fillForm(fn (WooOrder $record, $livewire): array => array_filter([
-                                'recipient_name'        => $record->customer_name,
-                                'recipient_phone'       => $record->customer_phone,
-                                'recipient_email'       => $record->customer_email,
-                                'recipient_address'     => (string) data_get($record->shipping, 'address_1', data_get($record->billing, 'address_1', '')),
-                                'recipient_postal_code' => (string) data_get($record->shipping, 'postcode', data_get($record->billing, 'postcode', '')),
-                                'cod_amount'            => $record->payment_method === 'cod' ? (string) $record->total : null,
-                                'reference'             => $record->number,
-                                'locker_last_mile'      => $livewire->currentLocker()['lockerId'] ?? null,
-                            ]))
+                            ->fillForm(function (WooOrder $record): array {
+                                // fillForm ÎNLOCUIEȘTE starea → pornim de la default-urile complete
+                                $data = \App\Filament\App\Resources\SamedayAwbResource::orderPrefillData($record);
+                                \App\Filament\App\Resources\SamedayAwbResource::notifyMissingWeights($data['missing_weight']);
+
+                                return array_merge(
+                                    \App\Filament\App\Resources\SamedayAwbResource::defaultFormState(),
+                                    $data['prefill']
+                                );
+                            })
                             ->action(function (array $data, WooOrder $record, $livewire): void {
                                 $awb = app(\App\Services\Courier\SamedayAwbCreator::class)
                                     ->create($data, auth()->user(), $record);

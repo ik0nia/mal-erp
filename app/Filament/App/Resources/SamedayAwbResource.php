@@ -187,9 +187,19 @@ class SamedayAwbResource extends Resource
                                 ->all())
                             ->getOptionLabelUsing(function ($value): string {
                                 $l = \Illuminate\Support\Facades\DB::table('sameday_lockers')->where('locker_id', $value)->first();
-                                return $l ? $l->name.' — '.$l->address.', '.$l->city : (string) $value;
+                                return $l
+                                    ? $l->name.' — '.$l->address.', '.$l->city
+                                    : 'Easybox #'.$value.' (ales de client — valid, dar lipsește din nomenclatorul local)';
                             })
-                            ->helperText('Pentru livrare Easybox alege căsuța (serviciul de locker corespunzător se alege mai sus). Se precompletează automat din comandă când aceasta e Easybox.'),
+                            ->helperText('Pentru livrare Easybox alege căsuța de pe hartă sau caut-o în listă (serviciul trece automat pe Locker NextDay). Se precompletează automat din comandă când aceasta e Easybox.'),
+                        \Filament\Forms\Components\ViewField::make('locker_map')
+                            ->label('')
+                            ->view('filament.app.sameday-locker-map', [
+                                'lockerField'  => 'locker_last_mile',
+                                'serviceField' => 'service_id',
+                            ])
+                            ->dehydrated(false)
+                            ->columnSpan(6),
                         Select::make('recipient_type')
                             ->label('Tip destinatar')
                             ->options([
@@ -386,6 +396,7 @@ class SamedayAwbResource extends Resource
                                     ->minValue(1),
                             ])
                             ->columns(4)
+                            ->defaultItems(0)
                             ->addActionLabel('Adaugă colet')
                             ->columnSpan(6),
                     ]),
@@ -558,6 +569,170 @@ class SamedayAwbResource extends Resource
         );
     }
 
+    /**
+     * Starea completă de default a formularului — necesară în modalele Action,
+     * unde fillForm() ÎNLOCUIEȘTE starea și NU aplică default-urile componentelor.
+     *
+     * @return array<string, mixed>
+     */
+    public static function defaultFormState(): array
+    {
+        $pickup = static::defaultPickupPointForCurrentUserLocation();
+
+        return [
+            'location_id'          => static::currentUser()?->location_id,
+            'pickup_point_id'      => $pickup,
+            'contact_person_id'    => static::defaultContactPersonForCurrentUserLocation($pickup),
+            'service_id'           => static::defaultServiceForCurrentUserLocation(),
+            'service_tax_ids'      => [],
+            'delivery_interval_id' => null,
+            'third_party_pickup'   => false,
+            'recipient_type'       => 'individual',
+            'package_type'         => 0,
+            'awb_payment_type'     => 1,
+            'package_count'        => 1,
+            'package_weight_kg'    => static::defaultPackageWeightForCurrentUserLocation(),
+            'cod_amount'           => 0,
+            'insured_value'        => 0,
+            'parcels'              => [],
+        ];
+    }
+
+    /**
+     * Prefill complet din comanda Woo: destinatar (cu mapare județ/oraș pe nomenclatorul
+     * Sameday), firmă (CUI/ONRC din meta av_facturare), colet (greutate totală din produse
+     * + dimensiunile produsului cel mai voluminos), Easybox → serviciul de locker.
+     *
+     * @return array{prefill: array<string, mixed>, summary: string, missing_weight: array<int, string>}
+     */
+    public static function orderPrefillData(\App\Models\WooOrder $order): array
+    {
+        $locationId = (int) ($order->location_id ?: static::currentUserLocationId());
+
+        $prefill = array_filter([
+            'recipient_name'        => (string) $order->customer_name,
+            'recipient_phone'       => (string) $order->customer_phone,
+            'recipient_email'       => (string) $order->customer_email,
+            'recipient_street'      => (string) data_get($order->shipping, 'address_1', data_get($order->billing, 'address_1', '')),
+            'recipient_postal_code' => (string) data_get($order->shipping, 'postcode', data_get($order->billing, 'postcode', '')),
+            'reference'             => (string) $order->number,
+        ]);
+
+        if ($order->payment_method === 'cod') {
+            $prefill['cod_amount'] = (float) $order->total;
+        }
+
+        // Județ (cod ISO Woo, ex. "BH") + oraș → nomenclatorul Sameday
+        $countyId = static::resolveCountyIdFromText($locationId, (string) data_get($order->shipping, 'state', data_get($order->billing, 'state', '')));
+        if ($countyId) {
+            $prefill['recipient_county_id'] = $countyId;
+            $cityId = static::resolveCityIdFromText($locationId, $countyId, (string) data_get($order->shipping, 'city', data_get($order->billing, 'city', '')));
+            if ($cityId) {
+                $prefill['recipient_city_id'] = $cityId;
+            }
+        }
+
+        // Easybox → căsuța + serviciul de locker (meta value = JSON string sau array)
+        $lockerMeta = collect(data_get($order->data, 'meta_data', []))
+            ->firstWhere('key', '_sameday_shipping_locker_id');
+        $lockerValue = data_get($lockerMeta, 'value');
+        if (is_string($lockerValue) && $lockerValue !== '') {
+            $lockerValue = json_decode($lockerValue, true);
+        }
+        $lockerId = (int) data_get($lockerValue, 'lockerId', 0);
+        if ($lockerId > 0) {
+            $prefill['locker_last_mile'] = $lockerId;
+            $prefill['service_id'] = 15; // Locker NextDay
+        }
+
+        // Greutate totală + dimensiunile produsului dominant
+        $totalWeight = 0.0;
+        $missingWeight = [];
+        $itemCount = 0;
+        $bestDims = null;
+        $bestVolume = 0.0;
+
+        foreach ($order->items as $item) {
+            $itemCount += (int) $item->quantity;
+
+            $product = \App\Models\WooProduct::where('woo_id', $item->woo_product_id)->first(['data']);
+            $weight = (float) data_get($product?->data, 'weight', 0);
+            if ($weight > 0) {
+                $totalWeight += $weight * (float) $item->quantity;
+            } else {
+                $missingWeight[] = (string) $item->name;
+            }
+
+            $length = (float) data_get($product?->data, 'dimensions.length', 0);
+            $width  = (float) data_get($product?->data, 'dimensions.width', 0);
+            $height = (float) data_get($product?->data, 'dimensions.height', 0);
+            $volume = $length * $width * $height;
+            if ($volume > $bestVolume) {
+                $bestVolume = $volume;
+                $bestDims = ['length' => $length, 'width' => $width, 'height' => $height];
+            }
+        }
+
+        if ($totalWeight > 0) {
+            $roundedWeight = round(max(0.1, $totalWeight), 2);
+            $prefill['package_weight_kg'] = $roundedWeight;
+            $prefill['parcels'] = [array_filter([
+                'weight_kg' => $roundedWeight,
+                'length_cm' => $bestDims ? (int) ceil($bestDims['length']) : null,
+                'width_cm'  => $bestDims ? (int) ceil($bestDims['width']) : null,
+                'height_cm' => $bestDims ? (int) ceil($bestDims['height']) : null,
+            ])];
+        }
+
+        // Persoană juridică: companie din billing + CUI/ONRC din meta av_facturare
+        $company = trim((string) data_get($order->billing, 'company', ''));
+        if ($company !== '') {
+            $prefill['recipient_type'] = 'company';
+            $prefill['recipient_company_name'] = $company;
+
+            $facturare = collect(data_get($order->data, 'meta_data', []))->firstWhere('key', 'av_facturare');
+            $prefill['recipient_company_cui'] = (string) data_get($facturare, 'value.cui', '');
+            $prefill['recipient_company_onrc'] = (string) data_get($facturare, 'value.nr_reg_com', '');
+        }
+
+        $parts = [
+            'Comanda #'.$order->number,
+            $itemCount.' '.($itemCount === 1 ? 'produs' : 'produse'),
+        ];
+        $parts[] = $totalWeight > 0
+            ? number_format($totalWeight, 2, ',', '.').' kg din greutățile produselor'
+            : 'fără greutăți pe produse — verifică greutatea!';
+        if ($order->payment_method === 'cod') {
+            $parts[] = 'ramburs '.number_format((float) $order->total, 2, ',', '.').' RON';
+        }
+
+        return [
+            'prefill'        => $prefill,
+            'summary'        => implode(' · ', $parts),
+            'missing_weight' => $missingWeight,
+        ];
+    }
+
+    /** Notificare standard pentru produsele fără greutate din prefill. */
+    public static function notifyMissingWeights(array $missingWeight): void
+    {
+        if (empty($missingWeight)) {
+            return;
+        }
+
+        Notification::make()
+            ->warning()
+            ->title('Produse fără greutate setată')
+            ->body(
+                'Greutatea precompletată NU include: '
+                .e(implode(', ', array_slice($missingWeight, 0, 5)))
+                .(count($missingWeight) > 5 ? ' +'.(count($missingWeight) - 5).' altele' : '')
+                .'. Ajustează greutatea coletului dacă e cazul.'
+            )
+            ->persistent()
+            ->send();
+    }
+
     public static function resolveSamedayConnectionForLocation(int $locationId): ?IntegrationConnection
     {
         if ($locationId <= 0) {
@@ -597,7 +772,16 @@ class SamedayAwbResource extends Resource
 
     public static function defaultServiceForCurrentUserLocation(): ?int
     {
-        return static::firstPositiveIntKey(static::serviceOptionsForCurrentUserLocation());
+        $options = static::serviceOptionsForCurrentUserLocation();
+
+        // Serviciul configurat pe conexiune (ex. 7 = 24H) are prioritate
+        $connection = static::resolveSamedayConnectionForLocation(static::currentUserLocationId());
+        $configured = (int) data_get($connection?->settings, 'default_service_id', 0);
+        if ($configured > 0 && array_key_exists($configured, $options)) {
+            return $configured;
+        }
+
+        return static::firstPositiveIntKey($options);
     }
 
     /**
@@ -627,6 +811,18 @@ class SamedayAwbResource extends Resource
 
     public static function defaultPickupPointForCurrentUserLocation(): ?int
     {
+        $connection = static::resolveSamedayConnectionForLocation(static::currentUserLocationId());
+        if ($connection) {
+            try {
+                $default = app(SamedayAwbService::class)->getDefaultPickupPointId($connection);
+                if ($default) {
+                    return $default;
+                }
+            } catch (Throwable) {
+                // fallback mai jos
+            }
+        }
+
         return static::firstPositiveIntKey(static::pickupPointOptionsForCurrentUserLocation());
     }
 
@@ -657,6 +853,18 @@ class SamedayAwbResource extends Resource
 
     public static function defaultContactPersonForCurrentUserLocation(?int $pickupPointId = null): ?int
     {
+        $connection = static::resolveSamedayConnectionForLocation(static::currentUserLocationId());
+        if ($connection) {
+            try {
+                $default = app(SamedayAwbService::class)->getDefaultContactPersonId($connection, $pickupPointId);
+                if ($default) {
+                    return $default;
+                }
+            } catch (Throwable) {
+                // fallback mai jos
+            }
+        }
+
         return static::firstPositiveIntKey(static::contactPersonOptionsForCurrentUserLocation($pickupPointId));
     }
 
