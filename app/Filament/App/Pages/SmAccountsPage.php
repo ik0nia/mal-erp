@@ -28,6 +28,16 @@ class SmAccountsPage extends Page implements HasTable
 
     protected string $view = 'filament.app.pages.sm-accounts';
 
+    public static function canAccess(): bool
+    {
+        return \App\Models\RolePermission::check(static::class, 'can_access');
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canAccess();
+    }
+
     public function table(Table $table): Table
     {
         return $table

@@ -12,6 +12,8 @@ use Filament\Tables\Table;
 
 class SmPostResource extends Resource
 {
+    use \App\Filament\App\Concerns\ChecksRolePermissions;
+
     protected static ?string $model = SmPost::class;
 
     protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-megaphone';
