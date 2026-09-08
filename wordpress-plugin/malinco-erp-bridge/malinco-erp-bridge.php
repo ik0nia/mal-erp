@@ -4,7 +4,8 @@
  * Plugin URI:  https://erp.malinco.ro
  * Description: Comunicare bidirecțională ERP ↔ WooCommerce: meta produse, furnizori, parametri custom, preț/stoc/disponibilitate automată.
  * Version:     2.0.0
- * Author:      Malinco ERP
+ * Author:      Ikonia Agency SRL
+ * Author URI:  https://ikonia.ro
  * Requires WC: 5.0
  * Requires PHP: 8.1
  */
