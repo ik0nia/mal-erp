@@ -179,11 +179,14 @@ class NecesarMarfa extends Page
             $avg90 = (float) $p->avg_daily_90d;
             $stock = (float) $p->stock;
 
-            // Baseline: MAX dintre cele trei medii.
-            // avg_30d și avg_90d sunt diluate când avem <30/<90 zile de date reale
-            // (ex: 10 vândute în 7 zile → avg_7d=1.43, avg_30d=0.33, avg_90d=0.11)
-            // MAX asigură că nu subestimăm din cauza perioadei incomplete.
-            $base = max($avg7, $avg30, $avg90);
+            // Fără vânzări în ultimele 30 de zile → fără sugestie de cantitate
+            // (rulaj doar pe avg90 = coadă sezonieră/declin, nu semnal de comandă).
+            $hasRecentSales = $avg7 > 0 || $avg30 > 0;
+
+            // Baseline: ritmul susținut (avg30/avg90); avg7 plafonat la 2× ritmul
+            // susținut ca un spike one-off (o singură comandă mare) să nu umfle recomandarea.
+            $sustained = max($avg30, $avg90);
+            $base = $sustained > 0 ? max($sustained, min($avg7, 2 * $sustained)) : $avg7;
 
             // Trend: comparăm 7d cu 30d doar pentru atenuare (cerere în scădere clară).
             // Nu amplificăm avg_7d — ar dubla un semnal deja corect.
@@ -208,7 +211,7 @@ class NecesarMarfa extends Page
             $p->trend_direction     = $trendDirection;
             $p->adjusted_daily      = $adjustedDaily;
             $p->days_until_stockout = $avg7 > 0 ? $stock / $avg7 : null;
-            $p->recommended_qty     = $adjustedDaily > 0
+            $p->recommended_qty     = ($hasRecentSales && $adjustedDaily > 0)
                 ? max(0, (int) ceil($adjustedDaily * $coverDays + $safetyStock - $stock))
                 : null;
 

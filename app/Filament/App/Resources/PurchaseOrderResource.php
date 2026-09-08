@@ -1059,7 +1059,11 @@ class PurchaseOrderResource extends Resource
                         $minStk = $row->min_stock_qty !== null ? (float) $row->min_stock_qty : null;
                         $maxStk = $row->max_stock_qty !== null ? (float) $row->max_stock_qty : null;
 
-                        $base  = max($avg7, $avg30, $avg90);
+                        // Aceleași reguli ca în CreatePurchaseOrder::getVelocityItems():
+                        // spike avg7 plafonat la 2× ritmul susținut; fără vânzări în 30 zile → fără hint
+                        $hasRecentSales = $avg7 > 0 || $avg30 > 0;
+                        $sustained = max($avg30, $avg90);
+                        $base  = $sustained > 0 ? max($sustained, min($avg7, 2 * $sustained)) : $avg7;
                         $trend = ($avg30 > 0 && $avg7 > 0 && $avg7 < $avg30 * 0.85)
                             ? max(0.5, $avg7 / $avg30)
                             : 1.0;
@@ -1067,7 +1071,7 @@ class PurchaseOrderResource extends Resource
                         $sales7d     = round($avg7 * 7, 1);
                         $sales30d    = round($avg30 * 30, 1);
                         $safetyStock = $velDay * 3;
-                        $hint        = max(0, (int) ceil($velDay * 7 + $safetyStock - $stock));
+                        $hint        = $hasRecentSales ? max(0, (int) ceil($velDay * 7 + $safetyStock - $stock)) : 0;
 
                         // additional_store
                         if ($maxStk !== null && $maxStk > 0) {

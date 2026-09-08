@@ -155,13 +155,17 @@ class CreatePurchaseOrder extends CreateRecord
                             $minStk   = $info && $info->min_stock_qty !== null ? (float) $info->min_stock_qty : null;
                             $maxStk   = $info && $info->max_stock_qty !== null ? (float) $info->max_stock_qty : null;
 
-                            $base    = max($avg7, $avg30, $avg90);
+                            // Aceleași reguli ca în getVelocityItems(): spike avg7 plafonat
+                            // la 2× ritmul susținut; fără vânzări în 30 zile → fără hint
+                            $hasRecentSales = $avg7 > 0 || $avg30 > 0;
+                            $sustained = max($avg30, $avg90);
+                            $base    = $sustained > 0 ? max($sustained, min($avg7, 2 * $sustained)) : $avg7;
                             $trend   = ($avg30 > 0 && $avg7 > 0 && $avg7 < $avg30 * 0.85) ? max(0.5, $avg7 / $avg30) : 1.0;
                             $velDay  = $base * $trend;
                             $sales7d = round($avg7 * 7, 1);
                             $sales30d = round($avg30 * 30, 1);
                             $safetyStock = $velDay * 3;
-                            $hint    = max(0, (int) ceil($velDay * 7 + $safetyStock - $stock));
+                            $hint    = $hasRecentSales ? max(0, (int) ceil($velDay * 7 + $safetyStock - $stock)) : 0;
                             $daysToStockout = $avg7 > 0 ? round($stock / $avg7, 1) : null;
 
                             if ($maxStk !== null && $maxStk > 0) {
@@ -1014,7 +1018,14 @@ class CreatePurchaseOrder extends CreateRecord
             $stock = (float) $row->stock;
             $onOrder = (float) ($onOrderQtys[$row->woo_product_id] ?? 0);
 
-            $base  = max($avg7, $avg30, $avg90);
+            // Fără vânzări în ultimele 30 de zile → fără sugestie de cantitate
+            // (produsul rămâne în listă; rulaj doar pe avg90 = coadă sezonieră/declin).
+            $hasRecentSales = $avg7 > 0 || $avg30 > 0;
+
+            // Spike-urile one-off pe 7 zile (o singură comandă mare) nu dictează singure
+            // recomandarea: avg7 e plafonat la 2× ritmul susținut (avg30/avg90).
+            $sustained = max($avg30, $avg90);
+            $base  = $sustained > 0 ? max($sustained, min($avg7, 2 * $sustained)) : $avg7;
             $trend = 1.0;
             if ($avg30 > 0 && $avg7 > 0 && $avg7 < ($avg30 * 0.85)) {
                 $trend = max(0.5, $avg7 / $avg30);
@@ -1029,12 +1040,12 @@ class CreatePurchaseOrder extends CreateRecord
             // Produse LENTE cu stoc mic: formula liniară dă 0 („o bucată ajunge"),
             // dar dacă stocul moare în interiorul a 2 cicluri de comandă, sugerăm
             // completarea până la 2 cicluri — tot faci comanda la furnizor acum.
-            if ($recommended <= 0 && $daysUntilStockout !== null && $daysUntilStockout <= 2 * $coverDays) {
+            if ($hasRecentSales && $recommended <= 0 && $daysUntilStockout !== null && $daysUntilStockout <= 2 * $coverDays) {
                 $recommended = (int) ceil($adjustedDaily * 2 * $coverDays - $stock - $onOrder);
             }
 
             $items[$row->woo_product_id] = [
-                'hint'              => max(0, $recommended),
+                'hint'              => $hasRecentSales ? max(0, $recommended) : 0,
                 'on_order'          => $onOrder,
                 'name'              => $row->name,
                 'sku'               => $row->sku,
