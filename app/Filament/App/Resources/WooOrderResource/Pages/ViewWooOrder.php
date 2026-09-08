@@ -169,6 +169,14 @@ class ViewWooOrder extends ViewRecord
                         : $this->buildCreateAwbUrl();
                 }),
 
+            Action::make('simulate_shipping')
+                ->label('Simulează transport')
+                ->icon('heroicon-o-calculator')
+                ->color('info')
+                ->action(function (): void {
+                    $this->simulateShippingCost();
+                }),
+
             Action::make('add_note')
                 ->label('Adaugă notă')
                 ->icon('heroicon-o-chat-bubble-left-ellipsis')
@@ -776,6 +784,100 @@ class ViewWooOrder extends ViewRecord
         }
 
         return $result;
+    }
+
+    /** Cere estimarea de cost Sameday pe datele comenzii și o compară cu transportul încasat. */
+    public function simulateShippingCost(): void
+    {
+        /** @var WooOrder $order */
+        $order      = $this->record;
+        $locationId = (int) ($order->location_id ?: auth()->user()?->location_id ?? 0);
+
+        $connection = \App\Filament\App\Resources\SamedayAwbResource::resolveSamedayConnectionForLocation($locationId);
+        if (! $connection) {
+            Notification::make()->warning()->title('Simulare nereușită')
+                ->body('Locația comenzii nu are conexiune Sameday activă.')->send();
+
+            return;
+        }
+
+        $countyText = (string) data_get($order->shipping, 'state', data_get($order->billing, 'state', ''));
+        $cityText   = (string) data_get($order->shipping, 'city', data_get($order->billing, 'city', ''));
+
+        $countyId = \App\Filament\App\Resources\SamedayAwbResource::resolveCountyIdFromText($locationId, $countyText);
+        $cityId   = $countyId
+            ? \App\Filament\App\Resources\SamedayAwbResource::resolveCityIdFromText($locationId, $countyId, $cityText)
+            : null;
+
+        if (! $countyId || ! $cityId) {
+            Notification::make()->warning()->title('Simulare nereușită')
+                ->body("Nu am putut mapa adresa pe nomenclatorul Sameday (județ: {$countyText}, oraș: {$cityText}).")->send();
+
+            return;
+        }
+
+        // Greutatea comenzii din greutățile produselor (Woo data->weight, kg)
+        $weight = 0.0;
+        $missingWeight = [];
+        foreach ($order->items as $item) {
+            $productWeight = (float) WooProduct::where('woo_id', $item->woo_product_id)->value('data->weight');
+            if ($productWeight <= 0) {
+                $missingWeight[] = $item->name;
+            }
+            $weight += $productWeight * (float) $item->quantity;
+        }
+        if ($weight <= 0) {
+            $weight = \App\Filament\App\Resources\SamedayAwbResource::defaultPackageWeightForLocation($locationId);
+        }
+
+        $isLocker  = $this->currentLocker() !== null;
+        $serviceId = $isLocker ? 15 : 7; // Locker NextDay / 24H
+
+        try {
+            $estimate = app(\App\Services\Courier\SamedayAwbService::class)->estimateAwbCost($connection, [
+                'service_id'            => $serviceId,
+                'recipient_name'        => (string) $order->customer_name,
+                'recipient_phone'       => (string) ($order->customer_phone ?: '0700000000'),
+                'recipient_county_id'   => $countyId,
+                'recipient_city_id'     => $cityId,
+                'recipient_address'     => (string) data_get($order->shipping, 'address_1', data_get($order->billing, 'address_1', '-')),
+                'recipient_postal_code' => (string) data_get($order->shipping, 'postcode', data_get($order->billing, 'postcode', '')),
+                'cod_amount'            => $order->payment_method === 'cod' ? (float) $order->total : 0,
+                'parcels'               => [['weight_kg' => round(max(0.1, $weight), 2)]],
+            ]);
+        } catch (Throwable $e) {
+            Notification::make()->danger()->title('Simulare nereușită')->body($e->getMessage())->send();
+
+            return;
+        }
+
+        $cost    = (float) ($estimate['cost'] ?? 0);
+        $charged = (float) $order->shipping_total;
+        $diff    = $charged - $cost;
+
+        $lines = [
+            sprintf('Cost real Sameday: <strong>%s RON</strong> (%s, %s kg%s)',
+                number_format($cost, 2, ',', '.'),
+                $isLocker ? 'Easybox' : 'livrare la domiciliu',
+                number_format($weight, 2, ',', '.'),
+                $order->payment_method === 'cod' ? ', cu ramburs' : ''),
+            sprintf('Transport încasat la checkout: <strong>%s RON</strong>', number_format($charged, 2, ',', '.')),
+            sprintf('Diferență: <strong>%s%s RON</strong> %s',
+                $diff >= 0 ? '+' : '−',
+                number_format(abs($diff), 2, ',', '.'),
+                $diff >= 0 ? '(acoperit)' : '(transport sub cost!)'),
+        ];
+        if (! empty($missingWeight)) {
+            $lines[] = 'Fără greutate setată: '.implode(', ', array_slice($missingWeight, 0, 3))
+                .(count($missingWeight) > 3 ? ' +'.(count($missingWeight) - 3) : '');
+        }
+
+        Notification::make()
+            ->{$diff >= 0 ? 'success' : 'warning'}()
+            ->title('Simulare cost transport')
+            ->body(implode("<br>", $lines))
+            ->persistent()
+            ->send();
     }
 
     public function buildCreateAwbUrl(): string

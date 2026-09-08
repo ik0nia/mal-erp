@@ -803,6 +803,83 @@ class SamedayAwbResource extends Resource
         return static::cityOptionsForCurrentUserLocation($countyId)[$cityId] ?? null;
     }
 
+    /** Cod ISO Woo (ex. "CJ") sau nume de județ → ID județ din nomenclatorul Sameday. */
+    public static function resolveCountyIdFromText(int $locationId, string $county): ?int
+    {
+        $county = trim($county);
+        if ($county === '') {
+            return null;
+        }
+
+        $isoToName = [
+            'AB' => 'Alba', 'AR' => 'Arad', 'AG' => 'Arges', 'BC' => 'Bacau', 'BH' => 'Bihor',
+            'BN' => 'Bistrita-Nasaud', 'BT' => 'Botosani', 'BV' => 'Brasov', 'BR' => 'Braila',
+            'B' => 'Bucuresti', 'BZ' => 'Buzau', 'CS' => 'Caras-Severin', 'CL' => 'Calarasi',
+            'CJ' => 'Cluj', 'CT' => 'Constanta', 'CV' => 'Covasna', 'DB' => 'Dambovita',
+            'DJ' => 'Dolj', 'GL' => 'Galati', 'GR' => 'Giurgiu', 'GJ' => 'Gorj', 'HR' => 'Harghita',
+            'HD' => 'Hunedoara', 'IL' => 'Ialomita', 'IS' => 'Iasi', 'IF' => 'Ilfov',
+            'MM' => 'Maramures', 'MH' => 'Mehedinti', 'MS' => 'Mures', 'NT' => 'Neamt',
+            'OT' => 'Olt', 'PH' => 'Prahova', 'SM' => 'Satu Mare', 'SJ' => 'Salaj', 'SB' => 'Sibiu',
+            'SV' => 'Suceava', 'TR' => 'Teleorman', 'TM' => 'Timis', 'TL' => 'Tulcea',
+            'VS' => 'Vaslui', 'VL' => 'Valcea', 'VN' => 'Vrancea',
+        ];
+
+        $name = $isoToName[strtoupper($county)] ?? $county;
+        $needle = static::normalizeGeoName($name);
+
+        foreach (static::countyOptionsForLocation($locationId) as $id => $label) {
+            if (static::normalizeGeoName($label) === $needle) {
+                return (int) $id;
+            }
+        }
+
+        return null;
+    }
+
+    /** Nume oraș din comandă → ID oraș Sameday (match exact normalizat, sectoare București, apoi prefix). */
+    public static function resolveCityIdFromText(int $locationId, int $countyId, string $city): ?int
+    {
+        $needle = static::normalizeGeoName($city);
+        if ($needle === '' || $countyId <= 0) {
+            return null;
+        }
+
+        $options = static::cityOptionsForLocation($locationId, $countyId);
+
+        // București: "Sector 3" / "Bucuresti Sectorul 3" → "Sectorul 3"
+        if (preg_match('/sector(?:ul)?\s*(\d)/', $needle, $m)) {
+            foreach ($options as $id => $label) {
+                if (str_contains(static::normalizeGeoName($label), 'sectorul '.$m[1])) {
+                    return (int) $id;
+                }
+            }
+        }
+
+        foreach ($options as $id => $label) {
+            if (static::normalizeGeoName($label) === $needle) {
+                return (int) $id;
+            }
+        }
+
+        foreach ($options as $id => $label) {
+            $norm = static::normalizeGeoName($label);
+            if (str_starts_with($norm, $needle) || str_starts_with($needle, $norm)) {
+                return (int) $id;
+            }
+        }
+
+        return null;
+    }
+
+    /** Lowercase + fără diacritice, pentru comparat nume geografice. */
+    private static function normalizeGeoName(string $value): string
+    {
+        $value = mb_strtolower(trim($value));
+        $value = strtr($value, ['ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ş' => 's', 'ț' => 't', 'ţ' => 't']);
+
+        return preg_replace('/[^a-z0-9 -]/', '', $value) ?? '';
+    }
+
     /**
      * @param  array<int|string, string>  $options
      */
