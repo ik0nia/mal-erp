@@ -14,6 +14,6 @@
     "@fontsource/open-sans": "^5.2.7",
     "canvas": "^3.2.1",
     "fabric": "^7.2.0",
-    "puppeteer-core": "^24.42.0"
+    "puppeteer-core": "^25.10.0"
   }
 }
