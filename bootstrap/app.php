@@ -35,6 +35,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\SecurityHeaders::class,
         ]);
+
+        // Gate pe matricea RolePermission (rute non-Filament: PWA, exporturi)
+        $middleware->alias([
+            'perm' => \App\Http\Middleware\EnsureRolePermission::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Livewire stale snapshot: componenta nu mai are proprietatea din snapshot-ul vechi al browserului

@@ -9,15 +9,19 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('app')->name('mobile.')->middleware('auth')->group(function () {
     Route::get('/', [HubController::class, 'home'])->name('home');
 
-    // Dispecerizare vânzări azi (magazin / depozit / livrare)
-    Route::get('dispecer',           [\App\Http\Controllers\Mobile\DispecerController::class, 'index'])->name('dispecer');
-    Route::post('dispecer/set',      [\App\Http\Controllers\Mobile\DispecerController::class, 'set'])->name('dispecer.set');
-    Route::post('dispecer/confirma', [\App\Http\Controllers\Mobile\DispecerController::class, 'confirma'])->name('dispecer.confirma');
+    // Dispecerizare vânzări azi (magazin / depozit / livrare) — rol din matricea de permisiuni
+    Route::middleware('perm:mobile_dispecer')->group(function () {
+        Route::get('dispecer',           [\App\Http\Controllers\Mobile\DispecerController::class, 'index'])->name('dispecer');
+        Route::post('dispecer/set',      [\App\Http\Controllers\Mobile\DispecerController::class, 'set'])->name('dispecer.set');
+        Route::post('dispecer/confirma', [\App\Http\Controllers\Mobile\DispecerController::class, 'confirma'])->name('dispecer.confirma');
+    });
 
-    // De predat — pentru manipulanți / gestionar depozit
-    Route::get('de-predat',        [\App\Http\Controllers\Mobile\DispecerController::class, 'dePredat'])->name('depredat');
-    Route::post('de-predat/gata',  [\App\Http\Controllers\Mobile\DispecerController::class, 'predat'])->name('depredat.gata');
-    Route::post('de-predat/linie', [\App\Http\Controllers\Mobile\DispecerController::class, 'predatLinie'])->name('depredat.linie');
+    // De predat — pentru manipulanți / gestionar depozit — rol din matricea de permisiuni
+    Route::middleware('perm:mobile_depredat')->group(function () {
+        Route::get('de-predat',        [\App\Http\Controllers\Mobile\DispecerController::class, 'dePredat'])->name('depredat');
+        Route::post('de-predat/gata',  [\App\Http\Controllers\Mobile\DispecerController::class, 'predat'])->name('depredat.gata');
+        Route::post('de-predat/linie', [\App\Http\Controllers\Mobile\DispecerController::class, 'predatLinie'])->name('depredat.linie');
+    });
 });
 
 // ─── PWA Inventar / Lookup produse ──────────────────────────────────────────

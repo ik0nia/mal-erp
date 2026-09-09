@@ -73,8 +73,15 @@ class ViewWooOrder extends ViewRecord
 
     public function isOrderEditable(): bool
     {
-        return in_array((string) $this->record->status, self::EDITABLE_STATUSES, true)
+        return $this->canEditOrder()
+            && in_array((string) $this->record->status, self::EDITABLE_STATUSES, true)
             && $this->record->woo_id;
+    }
+
+    /** Matricea de permisiuni: rolul curent are voie să modifice comenzi (can_edit). */
+    public function canEditOrder(): bool
+    {
+        return \App\Models\RolePermission::check(WooOrderResource::class, 'can_edit');
     }
 
     protected function getHeaderActions(): array
@@ -113,6 +120,7 @@ class ViewWooOrder extends ViewRecord
                         : null;
                 }),
             Action::make('import_winmentor')
+                ->visible(fn (): bool => $this->canEditOrder())
                 ->label(fn (): string => $this->record->winmentor_sync_status === 'synced'
                     ? 'Trimisă în WinMentor'
                     : 'Import în WinMentor')
@@ -156,6 +164,7 @@ class ViewWooOrder extends ViewRecord
                 }),
 
             Action::make('create_awb')
+                ->visible(fn (): bool => $this->canEditOrder())
                 ->label(function (): string {
                     $awb = \App\Models\SamedayAwb::where('woo_order_id', $this->record->id)->latest('id')->first();
                     return $awb ? 'AWB: '.$awb->awb_number : 'Creează AWB';
@@ -178,6 +187,7 @@ class ViewWooOrder extends ViewRecord
                 }),
 
             Action::make('add_note')
+                ->visible(fn (): bool => $this->canEditOrder())
                 ->label('Adaugă notă')
                 ->icon('heroicon-o-chat-bubble-left-ellipsis')
                 ->color('gray')
@@ -218,6 +228,7 @@ class ViewWooOrder extends ViewRecord
                 }),
 
             Action::make('create_purchase_request')
+                ->visible(fn (): bool => $this->canEditOrder())
                 ->label('Creare Necesar')
                 ->icon('heroicon-o-clipboard-document-list')
                 ->color('warning')
@@ -1016,6 +1027,7 @@ class ViewWooOrder extends ViewRecord
     public function changeStatusAction(): Action
     {
         return Action::make('changeStatus')
+            ->visible(fn (): bool => $this->canEditOrder())
             ->label('Schimbă status')
             ->modalHeading(fn (): string => 'Schimbă status — comanda #'.$this->record->number)
             ->form([
@@ -1047,6 +1059,7 @@ class ViewWooOrder extends ViewRecord
     public function editBillingAction(): Action
     {
         return Action::make('editBilling')
+            ->visible(fn (): bool => $this->canEditOrder())
             ->label('Editează facturarea')
             ->modalHeading(fn (): string => 'Date facturare — comanda #'.$this->record->number)
             ->modalDescription('Modificările se salvează direct în WooCommerce și se resincronizează în ERP.')
@@ -1059,6 +1072,7 @@ class ViewWooOrder extends ViewRecord
     public function editShippingAction(): Action
     {
         return Action::make('editShipping')
+            ->visible(fn (): bool => $this->canEditOrder())
             ->label('Editează livrarea')
             ->modalHeading(fn (): string => 'Livrare & transport — comanda #'.$this->record->number)
             ->modalDescription('Modificările se salvează direct în WooCommerce; costul de transport modificat recalculează totalul comenzii.')

@@ -778,6 +778,12 @@ class WooProductResource extends Resource
             'stocks',
         ])->where('is_placeholder', false);
 
+        return static::applyUserVisibilityFilter($query);
+    }
+
+    /** Scope-ul de locație al userului curent — folosit și de ViewWooProduct::resolveRecord(). */
+    public static function applyUserVisibilityFilter(Builder $query): Builder
+    {
         $user = static::currentUser();
 
         if (! $user) {

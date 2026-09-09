@@ -51,17 +51,19 @@ class CustomerResource extends Resource
 
     public static function canCreate(): bool
     {
-        return auth()->check();
+        return \App\Models\RolePermission::check(static::permissionKey(), 'can_create');
     }
 
     public static function canEdit(Model $record): bool
     {
-        return static::canAccessRecord($record);
+        return \App\Models\RolePermission::check(static::permissionKey(), 'can_edit')
+            && static::canAccessRecord($record);
     }
 
     public static function canDelete(Model $record): bool
     {
-        return static::canAccessRecord($record);
+        return \App\Models\RolePermission::check(static::permissionKey(), 'can_delete')
+            && static::canAccessRecord($record);
     }
 
     public static function form(Schema $schema): Schema

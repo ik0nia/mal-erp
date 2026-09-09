@@ -79,6 +79,10 @@ class RolePermissionsPage extends Page implements HasForms
             'App\\Filament\\App\\Pages\\ProductReviewRequestsPage'         => ['label' => 'Reverificări produse',        'group' => 'Produse'],
             'App\\Filament\\App\\Pages\\ToyaImportPage'                    => ['label' => 'Import Toya',                 'group' => 'Produse'],
             'App\\Filament\\App\\Pages\\ProductSubstitutionMatchingPage'   => ['label' => 'Matching înlocuitori Toya',   'group' => 'Produse'],
+            // PWA mobil (/app) + exporturi PDF
+            'mobile_dispecer'          => ['label' => 'PWA: Dispecer vânzări (/app/dispecer)', 'group' => 'PWA mobil'],
+            'mobile_depredat'          => ['label' => 'PWA: De predat (/app/de-predat)',      'group' => 'PWA mobil'],
+            'rapoarte_pdf_management'  => ['label' => 'Rapoarte PDF management (discrepanțe, furnizori, Toya)', 'group' => 'Rapoarte'],
             // Secțiuni pagina produs (View)
             'woo_product_section_descriere'          => ['label' => 'Card: Descriere',             'group' => 'Pagina produs'],
             'woo_product_section_atribute_tehnice'   => ['label' => 'Card: Atribute tehnice',      'group' => 'Pagina produs'],

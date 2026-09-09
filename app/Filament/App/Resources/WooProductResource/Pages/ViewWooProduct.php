@@ -54,10 +54,13 @@ class ViewWooProduct extends ViewRecord
     }
 
     // getEloquentQuery() filtrează is_placeholder=false, deci placeholder-urile
-    // (ex. produse WinMentor/Temad nepublicate) ar genera 404. Interogăm direct.
+    // (ex. produse WinMentor/Temad nepublicate) ar genera 404. Interogăm fără acel
+    // filtru, dar cu scope-ul de locație al userului (audit Etapa 6).
     protected function resolveRecord(int|string $key): Model
     {
-        return WooProduct::findOrFail($key);
+        return \App\Filament\App\Resources\WooProductResource::applyUserVisibilityFilter(
+            WooProduct::query()
+        )->findOrFail($key);
     }
 
     public function mount(int|string $record): void

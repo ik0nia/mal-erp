@@ -206,6 +206,7 @@ Route::middleware(['web', 'auth'])->group(function () {
 
     // Raport PDF — discrepanțe preț de vânzare vs WinMentor
     Route::get('/rapoarte/discrepante-pret-vanzare', function () {
+        abort_unless(\App\Models\RolePermission::check('rapoarte_pdf_management'), 403);
         $file = storage_path('app/LISTA PRODUSE PRET ACHIZITIE.xlsx');
 
         $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file);
@@ -280,6 +281,7 @@ Route::middleware(['web', 'auth'])->group(function () {
 
     // Raport PDF — furnizori fără persoane de contact
     Route::get('/rapoarte/furnizori-fara-contact', function () {
+        abort_unless(\App\Models\RolePermission::check('rapoarte_pdf_management'), 403);
         $suppliers = \App\Models\Supplier::withCount([
                 'contacts',
                 'products' => fn ($q) => $q->where('is_discontinued', false),
@@ -300,6 +302,7 @@ Route::middleware(['web', 'auth'])->group(function () {
 
     // Raport PDF — produse discontinued fără furnizor activ
     Route::get('/rapoarte/produse-discontinued-fara-furnizor', function () {
+        abort_unless(\App\Models\RolePermission::check('rapoarte_pdf_management'), 403);
         $products = \Illuminate\Support\Facades\DB::table('woo_products as wp')
             ->leftJoin(
                 \Illuminate\Support\Facades\DB::raw('(SELECT woo_product_id, SUM(quantity) as total FROM product_stocks GROUP BY woo_product_id) stk'),
@@ -331,6 +334,7 @@ Route::middleware(['web', 'auth'])->group(function () {
 
     // ── Propunere aprovizionare Toya (PDF) ───────────────────────────────────
     Route::get('/rapoarte/propunere-toya', function () {
+        abort_unless(\App\Models\RolePermission::check('rapoarte_pdf_management'), 403);
         $basePath = storage_path('app/toya-proposal');
 
         $s1 = json_decode(file_get_contents("{$basePath}/shelf1_final.json"), true);
