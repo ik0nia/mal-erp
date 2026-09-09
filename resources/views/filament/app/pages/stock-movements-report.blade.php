@@ -20,8 +20,8 @@
 .smr-stat-sub { margin-top:0.25rem; font-size:0.75rem; color:#9ca3af; }
 .smr-charts { display:grid; grid-template-columns:1fr; gap:1rem; }
 @@media(min-width:768px){ .smr-charts { grid-template-columns:1fr 1fr; } }
-.smr-card { border-radius:0.75rem; border:1px solid #e5e7eb; background:#fff; overflow:hidden; }
-.smr-card-header { padding:0.75rem 1rem; border-bottom:1px solid #f3f4f6; }
+.smr-card { border-radius:0.875rem; border:1px solid #e2e8f0; background:#fff; overflow:hidden; box-shadow:0 1px 2px rgba(15,23,42,0.05); }
+.smr-card-header { padding:0.75rem 1rem; border-bottom:1px solid #f1f5f9; background:linear-gradient(180deg,#fafbfc,#f8fafc); }
 .smr-card-header h3 { font-size:0.875rem; font-weight:600; color:#374151; margin:0; }
 .smr-table { width:100%; font-size:0.875rem; border-collapse:collapse; }
 .smr-table th { padding:0.5rem 1rem; text-align:left; font-size:0.75rem; font-weight:500; text-transform:uppercase; color:#6b7280; background:#f9fafb; border-bottom:1px solid #f3f4f6; }
@@ -76,26 +76,38 @@
     </div>
 
     {{-- Stat cards --}}
-    <div class="smr-stats">
-        <div class="smr-stat">
-            <div class="smr-stat-label">Intrări stoc</div>
-            <div class="smr-stat-value" style="color:#16a34a;">{{ number_format($this->statTotalInQty, 0, '.', '') }}</div>
-            <div class="smr-stat-sub">{{ number_format($this->statTotalInValue, 2, ',', '.') }} lei</div>
+    <div class="erp-stat-grid">
+        <div class="erp-stat erp-stat--success">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-arrow-down-tray" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Intrări stoc</p>
+                <p class="erp-stat-value">{{ number_format($this->statTotalInQty, 0, '.', '') }}</p>
+                <p class="erp-stat-sub">{{ number_format($this->statTotalInValue, 2, ',', '.') }} lei</p>
+            </div>
         </div>
-        <div class="smr-stat">
-            <div class="smr-stat-label">Ieșiri stoc</div>
-            <div class="smr-stat-value" style="color:#dc2626;">{{ number_format($this->statTotalOutQty, 0, '.', '') }}</div>
-            <div class="smr-stat-sub">{{ number_format($this->statTotalOutValue, 2, ',', '.') }} lei</div>
+        <div class="erp-stat erp-stat--danger">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-arrow-up-tray" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Ieșiri stoc</p>
+                <p class="erp-stat-value">{{ number_format($this->statTotalOutQty, 0, '.', '') }}</p>
+                <p class="erp-stat-sub">{{ number_format($this->statTotalOutValue, 2, ',', '.') }} lei</p>
+            </div>
         </div>
-        <div class="smr-stat">
-            <div class="smr-stat-label">Produse cu mișcări</div>
-            <div class="smr-stat-value" style="color:#dc2626;">{{ number_format($this->statProductsWithMovement, 0, '.', '') }}</div>
-            <div class="smr-stat-sub">în ultimele {{ $this->days }} zile</div>
+        <div class="erp-stat erp-stat--info">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-cube" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Produse cu mișcări</p>
+                <p class="erp-stat-value">{{ number_format($this->statProductsWithMovement, 0, '.', '') }}</p>
+                <p class="erp-stat-sub">în ultimele {{ $this->days }} zile</p>
+            </div>
         </div>
-        <div class="smr-stat">
-            <div class="smr-stat-label">Prețuri modificate</div>
-            <div class="smr-stat-value" style="color:#d97706;">{{ number_format($this->statProductsWithPriceChange, 0, '.', '') }}</div>
-            <div class="smr-stat-sub">în ultimele {{ $this->days }} zile</div>
+        <div class="erp-stat erp-stat--warning">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-receipt-percent" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Prețuri modificate</p>
+                <p class="erp-stat-value">{{ number_format($this->statProductsWithPriceChange, 0, '.', '') }}</p>
+                <p class="erp-stat-sub">în ultimele {{ $this->days }} zile</p>
+            </div>
         </div>
     </div>
 

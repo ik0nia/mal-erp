@@ -1,0 +1,158 @@
+/* ═══════════════════════════════════════════════════════════════════
+   ERP Malinco — Design System (2026-09)
+   Clase partajate pentru paginile custom (dashboard, rapoarte, BI).
+   Tokens: brand #dc2626, gri slate, radius 0.875rem.
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+    --erp-brand: #dc2626;
+    --erp-brand-soft: #fee2e2;
+    --erp-ink: #0f172a;
+    --erp-muted: #64748b;
+    --erp-faint: #94a3b8;
+    --erp-line: #e2e8f0;
+    --erp-card-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    --erp-card-shadow-hover: 0 6px 16px -4px rgba(15, 23, 42, 0.12);
+    --erp-radius: 0.875rem;
+}
+
+/* ── Stat cards ─────────────────────────────────────────────────── */
+.erp-stat {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    border-radius: var(--erp-radius);
+    border: 1px solid var(--erp-line);
+    background: linear-gradient(135deg, #ffffff 55%, var(--erp-accent-wash, #fafafa) 100%);
+    padding: 1rem 1.125rem 1rem 1.25rem;
+    box-shadow: var(--erp-card-shadow);
+    overflow: hidden;
+    transition: box-shadow 0.18s ease, transform 0.18s ease;
+    --erp-accent: #64748b;
+    --erp-accent-soft: #f1f5f9;
+    --erp-accent-wash: #fcfcfd;
+}
+.erp-stat:hover {
+    box-shadow: var(--erp-card-shadow-hover);
+    transform: translateY(-1px);
+}
+.erp-stat::before {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0; left: 0;
+    width: 4px;
+    background: var(--erp-accent);
+    opacity: 0.9;
+}
+.erp-stat-icon {
+    flex: none;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--erp-accent-soft);
+    color: var(--erp-accent);
+}
+.erp-stat-icon svg { width: 1.4rem; height: 1.4rem; }
+.erp-stat-body { min-width: 0; }
+.erp-stat-label {
+    margin: 0;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--erp-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.erp-stat-value {
+    margin: 0.15rem 0 0;
+    font-size: 1.75rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--erp-ink);
+    font-variant-numeric: tabular-nums;
+}
+.erp-stat-sub {
+    margin: 0.15rem 0 0;
+    font-size: 0.72rem;
+    color: var(--erp-faint);
+}
+.erp-stat--danger  { --erp-accent: #dc2626; --erp-accent-soft: #fee2e2; --erp-accent-wash: #fff5f5; }
+.erp-stat--warning { --erp-accent: #d97706; --erp-accent-soft: #fef3c7; --erp-accent-wash: #fffdf5; }
+.erp-stat--success { --erp-accent: #059669; --erp-accent-soft: #d1fae5; --erp-accent-wash: #f4fdf9; }
+.erp-stat--info    { --erp-accent: #2563eb; --erp-accent-soft: #dbeafe; --erp-accent-wash: #f5f9ff; }
+.erp-stat--danger  .erp-stat-value { color: #b91c1c; }
+.erp-stat--warning .erp-stat-value { color: #b45309; }
+.erp-stat--success .erp-stat-value { color: #047857; }
+.erp-stat--info    .erp-stat-value { color: #1d4ed8; }
+
+/* grile standard pentru stat cards */
+.erp-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+@media (min-width: 640px)  { .erp-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .erp-stat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.erp-stat-grid--5 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+@media (min-width: 1024px) { .erp-stat-grid--5 { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+
+/* ── Carduri de secțiune ────────────────────────────────────────── */
+.erp-card {
+    border-radius: var(--erp-radius);
+    border: 1px solid var(--erp-line);
+    background: #fff;
+    overflow: hidden;
+    box-shadow: var(--erp-card-shadow);
+    transition: box-shadow 0.18s ease;
+}
+.erp-card:hover { box-shadow: var(--erp-card-shadow-hover); }
+.erp-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.875rem 1.25rem;
+    border-bottom: 1px solid #f1f5f9;
+    background: linear-gradient(180deg, #fafbfc, #f8fafc);
+}
+.erp-card-header h3 {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+/* ── Titluri de secțiune în pagini ──────────────────────────────── */
+.erp-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--erp-ink);
+    margin: 0;
+}
+.erp-section-title svg { width: 1.4rem; height: 1.4rem; color: var(--erp-brand); }
+.erp-count-pill {
+    background: var(--erp-brand-soft);
+    color: var(--erp-brand);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.125rem 0.55rem;
+    border-radius: 9999px;
+}
+
+/* ── Polish global subtil (Filament) ────────────────────────────── */
+/* rânduri tabel: hover mai clar */
+.fi-ta-row:hover > td { background-color: #f8fafc !important; }
+/* secțiunile Filament: umbră blândă */
+.fi-section {
+    box-shadow: var(--erp-card-shadow) !important;
+}
+/* heading pagină: greutate mai echilibrată */
+.fi-header-heading { letter-spacing: -0.02em; }

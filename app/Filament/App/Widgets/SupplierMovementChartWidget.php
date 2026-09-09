@@ -117,6 +117,8 @@ class SupplierMovementChartWidget extends ChartWidget
                     'data'            => $data,
                     'backgroundColor' => array_slice($colors, 0, count($data)),
                     'borderWidth'     => 0,
+                    'borderRadius'    => 4,
+                    'maxBarThickness' => 40,
                 ],
             ],
             'labels' => $labels,
@@ -126,6 +128,23 @@ class SupplierMovementChartWidget extends ChartWidget
     protected function getType(): string
     {
         return 'bar';
+    }
+
+    protected function getOptions(): array
+    {
+        return [
+            'plugins' => ['legend' => ['display' => false]],
+            'scales'  => [
+                'y' => [
+                    'grid'  => ['color' => 'rgba(15,23,42,0.05)'],
+                    'ticks' => ['color' => '#94a3b8', 'font' => ['size' => 11]],
+                ],
+                'x' => [
+                    'grid'  => ['display' => false],
+                    'ticks' => ['color' => '#94a3b8', 'font' => ['size' => 11]],
+                ],
+            ],
+        ];
     }
 
     public static function canView(): bool

@@ -283,7 +283,8 @@ class AppPanelProvider extends PanelProvider
             ->renderHook(
                 \Filament\View\PanelsRenderHook::HEAD_END,
                 fn () => new \Illuminate\Support\HtmlString(
-                    '<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.18.6/umd/index.min.js" defer></script>'
+                    '<link rel="stylesheet" href="/css/erp-design.css?v=1">'
+                    . '<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.18.6/umd/index.min.js" defer></script>'
                     . '<script src="/js/sameday-locker-map.js?v=4" defer></script>'
                     . '<style>@media(max-width:767px){.fi-header-heading,.fi-breadcrumbs{display:none!important;}}</style>'
                     . '<script>if(window.innerWidth<1024){document.querySelectorAll("[x-data]").forEach(function(el){if(el.__x&&el.__x.$data&&"sidebarOpen" in el.__x.$data){el.__x.$data.sidebarOpen=false;}});try{localStorage.setItem("sidebarOpen","false");}catch(e){}}</script>'

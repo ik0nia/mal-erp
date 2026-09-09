@@ -5,20 +5,15 @@
 .ppi-filter select, .ppi-filter input { width:100%; border-radius:0.5rem; border:1px solid #d1d5db; padding:0.4rem 0.5rem; font-size:0.875rem; background:#fff; }
 .ppi-checks { display:flex; flex-wrap:wrap; align-items:center; gap:1rem; }
 .ppi-checks label { display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.875rem; font-weight:500; color:#374151; }
-.ppi-stat-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:1rem; }
-@@media(min-width:640px){ .ppi-stat-grid { grid-template-columns:repeat(4, minmax(0, 1fr)); } }
-.ppi-stat { border-radius:0.75rem; border:1px solid #e5e7eb; background:#fff; padding:1rem; }
-.ppi-stat-label { font-size:0.75rem; font-weight:500; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; }
-.ppi-stat-value { margin-top:0.25rem; font-size:1.875rem; font-weight:700; color:#111827; }
-.ppi-stat--danger { border-color:#fecaca; }
-.ppi-stat--danger .ppi-stat-label, .ppi-stat--danger .ppi-stat-value { color:#dc2626; }
-.ppi-stat--warning { border-color:#fde68a; }
-.ppi-stat--warning .ppi-stat-label, .ppi-stat--warning .ppi-stat-value { color:#d97706; }
-.ppi-supplier { border-radius:0.75rem; border:1px solid #e5e7eb; background:#fff; overflow:hidden; margin-bottom:1.5rem; }
+.ppi-supplier { border-radius:0.875rem; border:1px solid #e2e8f0; background:#fff; overflow:hidden; margin-bottom:1.5rem; box-shadow:0 1px 2px rgba(15,23,42,0.05); transition:box-shadow 0.18s ease; }
+.ppi-supplier:hover { box-shadow:0 6px 16px -4px rgba(15,23,42,0.12); }
 .ppi-supplier--urgent { border-left:4px solid #ef4444; }
-.ppi-supplier-header { display:flex; align-items:center; justify-content:space-between; padding:1rem 1.5rem; border-bottom:1px solid #f3f4f6; background:#f9fafb; }
+.ppi-supplier-header { display:flex; align-items:center; justify-content:space-between; padding:1rem 1.5rem; border-bottom:1px solid #f1f5f9; background:linear-gradient(180deg,#fafbfc,#f8fafc); }
 .ppi-supplier-info { display:flex; align-items:center; gap:0.75rem; }
-.ppi-supplier-icon { width:2.5rem; height:2.5rem; border-radius:0.375rem; background:#f3f4f6; display:flex; align-items:center; justify-content:center; }
+.ppi-supplier-icon { width:2.5rem; height:2.5rem; border-radius:0.625rem; background:#fee2e2; display:flex; align-items:center; justify-content:center; }
+.ppi-supplier-icon svg { color:#dc2626 !important; }
+.ppi-btn-po { box-shadow:0 1px 2px rgba(220,38,38,0.35); transition:background 0.15s ease, box-shadow 0.15s ease; }
+.ppi-btn-po:hover { box-shadow:0 3px 8px rgba(220,38,38,0.4); }
 .ppi-supplier-name { font-weight:600; color:#111827; }
 .ppi-supplier-meta { font-size:0.875rem; color:#6b7280; }
 .ppi-btn-po { display:inline-flex; align-items:center; gap:0.5rem; padding:0.5rem 1rem; background:#dc2626; color:#fff; font-size:0.875rem; font-weight:500; border-radius:0.5rem; border:none; cursor:pointer; }
@@ -57,31 +52,43 @@
 <div style="display:flex; flex-direction:column; gap:1.5rem;">
 
     {{-- Titlu --}}
-    <div style="display:flex; align-items:center; gap:0.5rem;">
-        <x-filament::icon icon="heroicon-o-clipboard-document-list" style="width:1.5rem; height:1.5rem; color:#dc2626;" />
-        <h2 style="font-size:1.25rem; font-weight:700; color:#111827; margin:0;">Necesare de comandat</h2>
+    <h2 class="erp-section-title">
+        <x-filament::icon icon="heroicon-o-clipboard-document-list" />
+        Necesare de comandat
         @if($totalPending > 0)
-            <span style="background:#fee2e2; color:#dc2626; font-size:0.75rem; font-weight:700; padding:0.125rem 0.5rem; border-radius:9999px;">{{ $totalPending }}</span>
+            <span class="erp-count-pill">{{ $totalPending }}</span>
         @endif
-    </div>
+    </h2>
 
     {{-- Stat cards --}}
-    <div class="ppi-stat-grid">
-        <div class="ppi-stat">
-            <p class="ppi-stat-label">Total în așteptare</p>
-            <p class="ppi-stat-value">{{ $totalPending }}</p>
+    <div class="erp-stat-grid">
+        <div class="erp-stat">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-inbox-stack" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Total în așteptare</p>
+                <p class="erp-stat-value">{{ $totalPending }}</p>
+            </div>
         </div>
-        <div class="ppi-stat ppi-stat--danger">
-            <p class="ppi-stat-label">Urgente</p>
-            <p class="ppi-stat-value">{{ $totalUrgent }}</p>
+        <div class="erp-stat erp-stat--danger">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-fire" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Urgente</p>
+                <p class="erp-stat-value">{{ $totalUrgent }}</p>
+            </div>
         </div>
-        <div class="ppi-stat ppi-stat--warning">
-            <p class="ppi-stat-label">Rezervate</p>
-            <p class="ppi-stat-value">{{ $totalReserved }}</p>
+        <div class="erp-stat erp-stat--warning">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-bookmark" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Rezervate</p>
+                <p class="erp-stat-value">{{ $totalReserved }}</p>
+            </div>
         </div>
-        <div class="ppi-stat">
-            <p class="ppi-stat-label">Furnizori afectați</p>
-            <p class="ppi-stat-value">{{ $totalSuppliers }}</p>
+        <div class="erp-stat erp-stat--info">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-truck" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Furnizori afectați</p>
+                <p class="erp-stat-value">{{ $totalSuppliers }}</p>
+            </div>
         </div>
     </div>
 

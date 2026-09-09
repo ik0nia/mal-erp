@@ -95,16 +95,20 @@ class StockMovementChartWidget extends ChartWidget
                 [
                     'label'           => $labelIn,
                     'data'            => $in,
-                    'backgroundColor' => 'rgba(34, 197, 94, 0.7)',
-                    'borderColor'     => 'rgb(34, 197, 94)',
-                    'borderWidth'     => 1,
+                    'backgroundColor' => 'rgba(5, 150, 105, 0.75)',
+                    'borderColor'     => 'rgb(5, 150, 105)',
+                    'borderWidth'     => 0,
+                    'borderRadius'    => 4,
+                    'maxBarThickness' => 26,
                 ],
                 [
                     'label'           => $labelOut,
                     'data'            => $out,
-                    'backgroundColor' => 'rgba(239, 68, 68, 0.7)',
-                    'borderColor'     => 'rgb(239, 68, 68)',
-                    'borderWidth'     => 1,
+                    'backgroundColor' => 'rgba(220, 38, 38, 0.7)',
+                    'borderColor'     => 'rgb(220, 38, 38)',
+                    'borderWidth'     => 0,
+                    'borderRadius'    => 4,
+                    'maxBarThickness' => 26,
                 ],
             ],
             'labels' => $labels,
@@ -114,6 +118,28 @@ class StockMovementChartWidget extends ChartWidget
     protected function getType(): string
     {
         return 'bar';
+    }
+
+    protected function getOptions(): array
+    {
+        return [
+            'plugins' => [
+                'legend' => [
+                    'position' => 'bottom',
+                    'labels'   => ['boxWidth' => 12, 'font' => ['size' => 11], 'usePointStyle' => true, 'pointStyle' => 'rectRounded'],
+                ],
+            ],
+            'scales' => [
+                'y' => [
+                    'grid'  => ['color' => 'rgba(15,23,42,0.05)'],
+                    'ticks' => ['color' => '#94a3b8', 'font' => ['size' => 11]],
+                ],
+                'x' => [
+                    'grid'  => ['display' => false],
+                    'ticks' => ['color' => '#94a3b8', 'font' => ['size' => 11]],
+                ],
+            ],
+        ];
     }
 
     public static function canView(): bool

@@ -11,6 +11,8 @@ class NewWinmentorProductsWidget extends Widget
 
     protected int|string|array $columnSpan = 'full';
 
+    protected static bool $isLazy = false;
+
     protected string $view = 'filament.widgets.new-winmentor-products-widget';
 
     public function getData(): array

@@ -79,22 +79,34 @@
     </div>
 
     {{-- Stat cards --}}
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
-        <div style="border-radius: 0.75rem; border: 1px solid #e5e7eb; background: #fff; padding: 1rem;">
-            <p style="font-size: 0.875rem; color: #6b7280;">Total în așteptare</p>
-            <p style="font-size: 1.875rem; font-weight: 700; color: #111827; margin-top: 0.25rem;">{{ $totalPending }}</p>
+    <div class="erp-stat-grid" style="margin-bottom: 1.5rem;">
+        <div class="erp-stat">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-inbox-stack" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Total în așteptare</p>
+                <p class="erp-stat-value">{{ $totalPending }}</p>
+            </div>
         </div>
-        <div style="border-radius: 0.75rem; border: 1px solid #fecaca; background: #fff; padding: 1rem;">
-            <p style="font-size: 0.875rem; color: #dc2626;">Urgente</p>
-            <p style="font-size: 1.875rem; font-weight: 700; color: #dc2626; margin-top: 0.25rem;">{{ $totalUrgent }}</p>
+        <div class="erp-stat erp-stat--danger">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-fire" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Urgente</p>
+                <p class="erp-stat-value">{{ $totalUrgent }}</p>
+            </div>
         </div>
-        <div style="border-radius: 0.75rem; border: 1px solid #fde68a; background: #fff; padding: 1rem;">
-            <p style="font-size: 0.875rem; color: #d97706;">Rezervate</p>
-            <p style="font-size: 1.875rem; font-weight: 700; color: #d97706; margin-top: 0.25rem;">{{ $totalReserved }}</p>
+        <div class="erp-stat erp-stat--warning">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-bookmark" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Rezervate</p>
+                <p class="erp-stat-value">{{ $totalReserved }}</p>
+            </div>
         </div>
-        <div style="border-radius: 0.75rem; border: 1px solid #e5e7eb; background: #fff; padding: 1rem;">
-            <p style="font-size: 0.875rem; color: #6b7280;">Furnizori afectați</p>
-            <p style="font-size: 1.875rem; font-weight: 700; color: #111827; margin-top: 0.25rem;">{{ $totalSuppliers }}</p>
+        <div class="erp-stat erp-stat--info">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-truck" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Furnizori afectați</p>
+                <p class="erp-stat-value">{{ $totalSuppliers }}</p>
+            </div>
         </div>
     </div>
 
@@ -110,10 +122,10 @@
                 <div style="border-radius: 0.75rem; border: 1px solid #e5e7eb; background: #fff; overflow: hidden; {{ $group['urgent_count'] > 0 ? 'border-left: 4px solid #ef4444;' : '' }}">
 
                     {{-- Header furnizor --}}
-                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-bottom: 1px solid #f3f4f6; background: #f9fafb;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-bottom: 1px solid #f1f5f9; background: linear-gradient(180deg,#fafbfc,#f8fafc);">
                         <div style="display: flex; align-items: center; gap: 0.75rem;">
-                            <div style="width: 2.5rem; height: 2.5rem; border-radius: 0.375rem; background: #f3f4f6; display: flex; align-items: center; justify-content: center;">
-                                <x-filament::icon icon="heroicon-o-truck" style="width: 1.25rem; height: 1.25rem; color: #9ca3af;"/>
+                            <div style="width: 2.5rem; height: 2.5rem; border-radius: 0.625rem; background: #fee2e2; display: flex; align-items: center; justify-content: center;">
+                                <x-filament::icon icon="heroicon-o-truck" style="width: 1.25rem; height: 1.25rem; color: #dc2626;"/>
                             </div>
                             <div>
                                 <h3 style="font-weight: 600; color: #111827;">{{ $group['supplier_name'] }}</h3>
