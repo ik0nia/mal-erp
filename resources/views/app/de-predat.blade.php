@@ -58,7 +58,7 @@
                 <div class="p-line" data-poz="{{ $line['pozitie'] }}" data-rest="{{ $line['rest'] }}">
                     <div class="p-line-info">
                         <div class="p-line-name">{{ $line['produs'] }}</div>
-                        <div class="p-line-meta js-rest">rămas {{ $fmt($line['rest']) }} buc@if($line['cant_predata'] > 0) (din {{ $fmt($line['cant_alocata']) }})@endif</div>
+                        <div class="p-line-meta js-rest">rămas {{ $fmt($line['rest']) }} buc @if($line['cant_predata'] > 0) (din {{ $fmt($line['cant_alocata']) }})@endif</div>
                     </div>
                     <input type="number" min="0" step="0.01" class="p-qty js-qty" value="{{ $fmt($line['rest']) }}">
                     <button class="p-preda js-predapart" title="Predă cantitatea introdusă">Predă</button>
