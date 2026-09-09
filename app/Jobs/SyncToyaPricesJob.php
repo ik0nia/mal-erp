@@ -157,6 +157,9 @@ class SyncToyaPricesJob implements ShouldQueue
                         'manage_stock'   => true,
                         'stock_quantity' => 0,
                         'backorders'     => $stockStatus === 'outofstock' ? 'no' : 'yes',
+                        // doar pentru logging (array_map-ul de batch nu le trimite în SQL)
+                        '_sku'           => $row->sku,
+                        '_schimbare'     => $row->stock_status . '→' . $stockStatus,
                     ];
                 }
             }
@@ -268,6 +271,9 @@ class SyncToyaPricesJob implements ShouldQueue
                 $failed += $result['failed'];
             }
             Log::info('[SyncToyaPrices] Push stoc direct SQL: ' . $updated . ' updated, ' . $failed . ' failed');
+            $detalii = array_map(fn ($r) => ($r['_sku'] ?? $r['id']) . ' ' . ($r['_schimbare'] ?? ''), array_slice($wooStockPushRows, 0, 50));
+            Log::info('[SyncToyaPrices] Disponibilitate schimbată: ' . implode(', ', $detalii)
+                . (count($wooStockPushRows) > 50 ? ' … (+' . (count($wooStockPushRows) - 50) . ')' : ''));
         }
 
         if (! empty($wooPricePushRows) || ! empty($wooStockPushRows)) {
