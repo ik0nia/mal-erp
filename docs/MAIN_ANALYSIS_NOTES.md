@@ -16,7 +16,7 @@ Quick technical analysis of current main functionality, focused on integration r
 1. WinMentor queue execution visibility depends on `sync_runs` + logs
 - Worker output (`RUNNING/FAIL/DONE`) is not enough for root-cause analysis.
 - Real diagnosis path:
-  - `storage/logs/laravel.log`
+  - `storage/logs/laravel-YYYY-MM-DD.log`
   - `sync_runs.errors`
   - `sync_runs.stats.phase`
 

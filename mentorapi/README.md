@@ -18,7 +18,7 @@ GOOS=windows GOARCH=386 go build -ldflags="-s -w" -o mentorapi.exe .
 
 # Run on Windows (where WinMentor is installed)
 mentorapi.exe
-# MentorAPI v1.3.0 — WinMentor DocImpServer REST Bridge
+# MentorAPI v1.4.0 — WinMentor DocImpServer REST Bridge
 # Listening on http://0.0.0.0:9500
 ```
 

@@ -1,45 +1,52 @@
 # Project Context (main snapshot, fast agent onboarding)
 
 ## 1) What this project is
-Laravel 12 + Filament ERP-style app with:
+Laravel 13 + Filament 5 ERP app (Temelia ERP) with:
 - admin panel (`/admin`) for configuration/integrations
-- operational panel (`/`) for day-to-day work (products, offers, customers)
-- integration pipelines:
-  - WooCommerce catalog import (categories/products)
-  - WinMentor CSV stock/price sync, including deferred Woo price pushes
+- operational panel (`/`) for day-to-day work (products, orders, offers, customers, purchasing)
+- integration pipelines: WooCommerce (catalog, orders, prices), WinMentor via
+  MentorAPI Go bridge (`mentorapi/`), Sameday courier, supplier feeds (Toya), IMAP email + AI
+- mobile PWAs: `/app` (hub + dispecer), `/wh` (reception), `/inv` (inventory)
 
 This file is optimized to reduce context-loading tokens for future agents.
 For issue-focused reliability notes, also read `docs/MAIN_ANALYSIS_NOTES.md`.
+NOTE: sections 4-6 below describe only the original core (catalog/offers); many
+modules were added later — see README.md for the full module list.
 
 ---
 
 ## 2) Stack and runtime
-- PHP 8.2
-- Laravel 12
-- Filament 3
-- Queue-driven background processing
-- Vite/Tailwind frontend assets
-- Main extra package: `awcodes/filament-table-repeater`
+- PHP 8.3
+- Laravel 13
+- Filament 5 (Livewire 4)
+- Redis queues via Laravel Horizon (supervisor: `laravel-horizon`); Redis requires password (see `.env`)
+- Vite 8 / Tailwind 4 frontend assets; shared design system in `public/css/erp-design.css`
+- Logs are daily: `storage/logs/laravel-YYYY-MM-DD.log`
 
 Important composer scripts:
 - `composer setup`
 - `composer dev` (server + queue listener + logs + vite)
 - `composer test`
 
+Production runs directly from this working tree. CLI user has no sudo; code is
+read-only for `www-data`. After any artisan command that compiles views, delete
+`storage/framework/views/*.php` (owner mismatch otherwise breaks web with 500).
+
 ---
 
 ## 3) Panels and access model
 - `AdminPanelProvider` (`/admin`):
   - for admin users
-  - includes integrations, settings, sync run monitoring
-  - has `IntegrationImportStatusWidget`
+  - includes integrations, settings, sync run monitoring, role permission matrix
 - `AppPanelProvider` (`/`):
   - for operational users (and super admin)
-  - includes sales/workflow resources (offers, customers, Woo product browsing)
+  - most resources/pages live here (sales, purchasing, WinMentor, reports, BI)
 
 User access is driven by:
-- `User::isAdmin()`
-- `User::isSuperAdmin()`
+- `RolePermission::check($key, $permission)` — DB matrix per role (`role_permissions`),
+  default-deny, super_admin bypasses; managed in Settings → Permisiuni roluri
+- traits: `ChecksRolePermissions` (resources/pages), `EnforcesLocationScope` (location filtering)
+- non-Filament routes use middleware `perm:<key>` (`EnsureRolePermission`)
 - location scope via `User::operationalLocationIds()`
 
 ---
@@ -196,9 +203,11 @@ Scheduler behavior:
 
 ## 8) Queue troubleshooting quick guide
 
+Queues run on Redis via Horizon (`php artisan horizon:status`, dashboard at `/horizon`).
+
 If worker shows pattern like many fast `FAIL` and then some `DONE`:
 1. Check real exception message in logs:
-   - `storage/logs/laravel.log`
+   - `storage/logs/laravel-YYYY-MM-DD.log` (daily rotation)
    - search for:
      - `Winmentor import queue job failed`
      - `Winmentor import failed`

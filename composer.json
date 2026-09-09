@@ -1,8 +1,8 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "temelia/erp",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Temelia ERP — gestiune produse, stocuri, comenzi și integrări pentru distribuție de materiale de construcții.",
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
