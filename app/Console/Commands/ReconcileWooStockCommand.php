@@ -30,6 +30,9 @@ class ReconcileWooStockCommand extends Command
 
     protected $description = 'Aliniază stocul WooCommerce la stocul real ERP (fix produse fantomă + backorders precomandă)';
 
+    /** Peste atâtea corecții într-o rulare orară = drift anormal → alertă admini. */
+    private const DRIFT_ALERT_THRESHOLD = 300;
+
     public function handle(): int
     {
         $dryRun = $this->option('dry-run');
@@ -108,8 +111,14 @@ class ReconcileWooStockCommand extends Command
             ];
         }
 
+        // Scriem DOAR diferențele față de site — rulează orar; o suprascriere
+        // oarbă a 3.500+ produse ar însemna flush de cache la fiecare oră și
+        // ar face inutilizabilă alerta de drift.
+        $service = new WooDirectSqlService;
+        $batch = $this->filterChangedOnly($service, $batch);
+
         $this->table(
-            ['instock', 'outofstock', 'onbackorder', 'fără stoc ERP (ignorate)', 'de scris'],
+            ['instock', 'outofstock', 'onbackorder', 'fără stoc ERP (ignorate)', 'diferite → de scris'],
             [[$stats['instock'], $stats['outofstock'], $stats['onbackorder'], $stats['no_stock_record'], count($batch)]]
         );
 
@@ -123,7 +132,6 @@ class ReconcileWooStockCommand extends Command
             return self::SUCCESS;
         }
 
-        $service = new WooDirectSqlService;
         $totalUpdated = 0;
         $totalFailed = 0;
 
@@ -136,6 +144,20 @@ class ReconcileWooStockCommand extends Command
 
         $this->info("Scris: {$totalUpdated} | eșuat: {$totalFailed}");
 
+        // În regim normal reconcilierea orară corectează câteva produse (comenzile
+        // online dintre facturările WinMentor). Sute de scrieri pe oră = push-ul
+        // delta nu mai ajunge pe site (vezi incidentul din 2026-09-09: drift
+        // acumulat până la -65 pe site vs 35 real) — anunțăm adminii.
+        if (! $dryRun && $totalUpdated >= self::DRIFT_ALERT_THRESHOLD) {
+            $admins = \App\Models\User::where('is_super_admin', true)->get();
+            \Filament\Notifications\Notification::make()
+                ->title('⚠ Drift mare de stoc site ↔ ERP')
+                ->body("Reconcilierea orară a corectat {$totalUpdated} produse pe site (prag: " . self::DRIFT_ALERT_THRESHOLD . '). Verifică sync-ul de stoc (winmentor:sync-stock-bridge) și push-ul spre WooCommerce.')
+                ->warning()
+                ->sendToDatabase($admins);
+            \Illuminate\Support\Facades\Log::warning("[ReconcileWooStock] drift mare: {$totalUpdated} produse corectate într-o rulare");
+        }
+
         // Golim cache-ul DOAR dacă am scris ceva — rulează orar, iar un flush
         // total pe fiecare rulare ar goli permanent cache-ul nginx degeaba
         // (primele vizite după flush primesc HTML pre-optimizare LiteSpeed).
@@ -147,5 +169,50 @@ class ReconcileWooStockCommand extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Păstrează doar produsele a căror stare pe site diferă de ținta ERP
+     * (_stock, _stock_status, _backorders — citite bulk de pe site).
+     * La eroare de citire întoarce batch-ul întreg (mai bine scriem în plus
+     * decât să ratăm corecții).
+     *
+     * @param  array<int, array{id: int, stock_quantity: int, stock_status: string, manage_stock: bool, backorders: string}>  $batch
+     */
+    private function filterChangedOnly(WooDirectSqlService $service, array $batch): array
+    {
+        if (empty($batch)) {
+            return $batch;
+        }
+
+        try {
+            $site = [];
+            foreach (array_chunk(array_column($batch, 'id'), 5000) as $ids) {
+                $rows = $service->querySite(
+                    'SELECT post_id, meta_key, meta_value FROM wp_postmeta'
+                    . ' WHERE meta_key IN ("_stock", "_stock_status", "_backorders")'
+                    . ' AND post_id IN (' . implode(',', array_map('intval', $ids)) . ')',
+                    120
+                );
+                foreach ($rows as $r) {
+                    $site[(int) $r['post_id']][$r['meta_key']] = $r['meta_value'];
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->warn('Citirea stării site a eșuat (' . $e->getMessage() . ') — scriu tot batch-ul.');
+
+            return $batch;
+        }
+
+        return array_values(array_filter($batch, function (array $item) use ($site) {
+            $s = $site[$item['id']] ?? null;
+            if ($s === null) {
+                return true; // necunoscut pe site → scriem
+            }
+
+            return (int) ($s['_stock'] ?? PHP_INT_MIN) !== $item['stock_quantity']
+                || ($s['_stock_status'] ?? '') !== $item['stock_status']
+                || ($s['_backorders'] ?? '') !== $item['backorders'];
+        }));
     }
 }
