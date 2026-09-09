@@ -1,12 +1,6 @@
 <x-filament-panels::page>
 
   <style>
-  .repl-kpi { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:1rem; }
-  @@media(min-width:640px){ .repl-kpi { grid-template-columns:repeat(4, minmax(0, 1fr)); } }
-  .repl-kpi-card { border-radius:0.75rem; border:1px solid #e5e7eb; background:#fff; padding:1rem 1.25rem; }
-  .repl-kpi-label { font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#9ca3af; }
-  .repl-kpi-value { margin-top:0.25rem; font-size:1.5rem; font-weight:700; color:#111827; }
-  .repl-kpi-sub { margin-top:0.25rem; font-size:0.75rem; color:#9ca3af; }
   .repl-card { border-radius:0.75rem; border:1px solid #e5e7eb; background:#fff; overflow:hidden; }
   .repl-card-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem; padding:0.75rem 1.25rem; border-bottom:1px solid #f3f4f6; background:#f9fafb; }
   .repl-card-title { font-size:0.875rem; font-weight:600; color:#1f2937; }
@@ -39,34 +33,46 @@
   @endphp
 
   {{-- KPI Cards --}}
-  <div class="repl-kpi">
-    <div class="repl-kpi-card">
-      <div class="repl-kpi-label">Total de comandat</div>
-      @if($dataMissing)
-        <div class="repl-kpi-value" style="color:#d1d5db;">—</div>
-      @else
-        <div class="repl-kpi-value">{{ number_format($this->totalQty, 0, ',', '.') }} <span style="font-size:0.875rem; font-weight:400; color:#9ca3af;">buc</span></div>
-        <div class="repl-kpi-sub">{{ $totalCount }} produse</div>
-      @endif
+  <div class="erp-stat-grid">
+    <div class="erp-stat">
+      <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-shopping-cart" /></div>
+      <div class="erp-stat-body">
+        <p class="erp-stat-label">Total de comandat</p>
+        @if($dataMissing)
+          <p class="erp-stat-value" style="color:#d1d5db;">—</p>
+        @else
+          <p class="erp-stat-value">{{ number_format($this->totalQty, 0, ',', '.') }} <span style="font-size:0.875rem; font-weight:400; color:#9ca3af;">buc</span></p>
+          <p class="erp-stat-sub">{{ $totalCount }} produse</p>
+        @endif
+      </div>
     </div>
-    <div class="repl-kpi-card">
-      <div class="repl-kpi-label">Cost estimat total</div>
-      @if($dataMissing)
-        <div class="repl-kpi-value" style="color:#d1d5db;">—</div>
-      @else
-        <div class="repl-kpi-value">{{ number_format($this->totalCost, 0, ',', '.') }} <span style="font-size:0.875rem; font-weight:400; color:#9ca3af;">RON</span></div>
-        <div class="repl-kpi-sub">Data: {{ $this->calcDay }}</div>
-      @endif
+    <div class="erp-stat">
+      <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-banknotes" /></div>
+      <div class="erp-stat-body">
+        <p class="erp-stat-label">Cost estimat total</p>
+        @if($dataMissing)
+          <p class="erp-stat-value" style="color:#d1d5db;">—</p>
+        @else
+          <p class="erp-stat-value">{{ number_format($this->totalCost, 0, ',', '.') }} <span style="font-size:0.875rem; font-weight:400; color:#9ca3af;">RON</span></p>
+          <p class="erp-stat-sub">Data: {{ $this->calcDay }}</p>
+        @endif
+      </div>
     </div>
-    <div class="repl-kpi-card" style="border-color:#fecaca; background:#fef2f2;">
-      <div class="repl-kpi-label" style="color:#ef4444;">Produse urgente</div>
-      <div class="repl-kpi-value" style="color:#b91c1c;">{{ number_format($this->countUrgent, 0, '.', '') }}</div>
-      <div class="repl-kpi-sub" style="color:#ef4444;">&lt; 7 zile stoc</div>
+    <div class="erp-stat erp-stat--danger">
+      <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-exclamation-triangle" /></div>
+      <div class="erp-stat-body">
+        <p class="erp-stat-label">Produse urgente</p>
+        <p class="erp-stat-value">{{ number_format($this->countUrgent, 0, '.', '') }}</p>
+        <p class="erp-stat-sub">&lt; 7 zile stoc</p>
+      </div>
     </div>
-    <div class="repl-kpi-card" style="border-color:#fed7aa; background:#fff7ed;">
-      <div class="repl-kpi-label" style="color:#f97316;">Produse curând</div>
-      <div class="repl-kpi-value" style="color:#c2410c;">{{ number_format($this->countSoon, 0, '.', '') }}</div>
-      <div class="repl-kpi-sub" style="color:#f97316;">7–14 zile stoc</div>
+    <div class="erp-stat erp-stat--warning">
+      <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-clock" /></div>
+      <div class="erp-stat-body">
+        <p class="erp-stat-label">Produse curând</p>
+        <p class="erp-stat-value">{{ number_format($this->countSoon, 0, '.', '') }}</p>
+        <p class="erp-stat-sub">7–14 zile stoc</p>
+      </div>
     </div>
   </div>
 

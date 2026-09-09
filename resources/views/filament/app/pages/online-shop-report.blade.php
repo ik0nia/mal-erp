@@ -8,13 +8,6 @@
 .osr-pill:focus { outline:none; }
 .osr-pill--active { background:#dc2626; color:#fff; border-color:#dc2626; box-shadow:0 1px 2px rgba(0,0,0,0.1); }
 .osr-sep { color:#d1d5db; }
-.osr-stats { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:1rem; }
-@@media(min-width:640px){ .osr-stats { grid-template-columns:repeat(3, minmax(0, 1fr)); } }
-@@media(min-width:1024px){ .osr-stats { grid-template-columns:repeat(5, minmax(0, 1fr)); } }
-.osr-stat { border-radius:0.75rem; border:1px solid #e5e7eb; background:#fff; padding:1rem; }
-.osr-stat-label { font-size:0.75rem; font-weight:500; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; }
-.osr-stat-value { margin-top:0.25rem; font-size:1.5rem; font-weight:700; color:#111827; }
-.osr-stat-sub { margin-top:0.25rem; font-size:0.75rem; color:#9ca3af; }
 .osr-charts { display:grid; grid-template-columns:1fr; gap:1rem; }
 @@media(min-width:768px){ .osr-charts { grid-template-columns:2fr 1fr; } }
 .osr-card { border-radius:0.75rem; border:1px solid #e5e7eb; background:#fff; overflow:hidden; }
@@ -69,31 +62,46 @@
     </div>
 
     {{-- Stat cards --}}
-    <div class="osr-stats">
-        <div class="osr-stat">
-            <div class="osr-stat-label">Total vânzări</div>
-            <div class="osr-stat-value" style="color:#dc2626;">{{ number_format($this->statRevenue, 2, ',', '.') }}</div>
-            <div class="osr-stat-sub">lei (fără anulate)</div>
+    <div class="erp-stat-grid--5">
+        <div class="erp-stat erp-stat--success">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-banknotes" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Total vânzări</p>
+                <p class="erp-stat-value">{{ number_format($this->statRevenue, 2, ',', '.') }}</p>
+                <p class="erp-stat-sub">lei (fără anulate)</p>
+            </div>
         </div>
-        <div class="osr-stat">
-            <div class="osr-stat-label">Comenzi active</div>
-            <div class="osr-stat-value">{{ number_format($this->statOrders, 0, '.', '') }}</div>
-            <div class="osr-stat-sub">fără anulate/eșuate</div>
+        <div class="erp-stat erp-stat--info">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-shopping-cart" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Comenzi active</p>
+                <p class="erp-stat-value">{{ number_format($this->statOrders, 0, '.', '') }}</p>
+                <p class="erp-stat-sub">fără anulate/eșuate</p>
+            </div>
         </div>
-        <div class="osr-stat">
-            <div class="osr-stat-label">Medie/comandă</div>
-            <div class="osr-stat-value">{{ number_format($this->statAvgOrder, 2, ',', '.') }}</div>
-            <div class="osr-stat-sub">lei</div>
+        <div class="erp-stat">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-calculator" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Medie/comandă</p>
+                <p class="erp-stat-value">{{ number_format($this->statAvgOrder, 2, ',', '.') }}</p>
+                <p class="erp-stat-sub">lei</p>
+            </div>
         </div>
-        <div class="osr-stat">
-            <div class="osr-stat-label">Finalizate</div>
-            <div class="osr-stat-value" style="color:#16a34a;">{{ number_format($this->statCompleted, 0, '.', '') }}</div>
-            <div class="osr-stat-sub">{{ $this->statOrders > 0 ? round($this->statCompleted / $this->statOrders * 100) . '% din total' : '—' }}</div>
+        <div class="erp-stat erp-stat--success">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-check-circle" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Finalizate</p>
+                <p class="erp-stat-value">{{ number_format($this->statCompleted, 0, '.', '') }}</p>
+                <p class="erp-stat-sub">{{ $this->statOrders > 0 ? round($this->statCompleted / $this->statOrders * 100) . '% din total' : '—' }}</p>
+            </div>
         </div>
-        <div class="osr-stat">
-            <div class="osr-stat-label">În procesare</div>
-            <div class="osr-stat-value" style="color:#d97706;">{{ number_format($this->statProcessing, 0, '.', '') }}</div>
-            <div class="osr-stat-sub">{{ $this->statOrders > 0 ? round($this->statProcessing / $this->statOrders * 100) . '% din total' : '—' }}</div>
+        <div class="erp-stat erp-stat--warning">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-clock" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">În procesare</p>
+                <p class="erp-stat-value">{{ number_format($this->statProcessing, 0, '.', '') }}</p>
+                <p class="erp-stat-sub">{{ $this->statOrders > 0 ? round($this->statProcessing / $this->statOrders * 100) . '% din total' : '—' }}</p>
+            </div>
         </div>
     </div>
 

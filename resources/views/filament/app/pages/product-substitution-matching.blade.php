@@ -5,39 +5,60 @@
     {{-- Stat cards --}}
     <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.75rem; margin-bottom: 1.5rem;">
 
-        <div style="background: #fff; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; padding: 0.75rem; text-align: center;">
-            <div style="font-size: 1.5rem; font-weight: 700; color: #111827;">{{ number_format($stats['totalSource'], 0, '.', '') }}</div>
-            <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">Produse totale</div>
+        <div class="erp-stat">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-cube" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Produse totale</p>
+                <p class="erp-stat-value">{{ number_format($stats['totalSource'], 0, '.', '') }}</p>
+            </div>
         </div>
 
-        <div style="background: #fff; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; padding: 0.75rem; text-align: center;">
-            <div style="font-size: 1.5rem; font-weight: 700; color: #9ca3af;">{{ number_format($stats['unprocessed'], 0, '.', '') }}</div>
-            <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">Neprocesate</div>
+        <div class="erp-stat">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-inbox" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Neprocesate</p>
+                <p class="erp-stat-value">{{ number_format($stats['unprocessed'], 0, '.', '') }}</p>
+            </div>
         </div>
 
-        <div style="background: #fff; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; padding: 0.75rem; text-align: center;">
-            <div style="font-size: 1.5rem; font-weight: 700; color: #eab308;">{{ number_format($stats['pending'], 0, '.', '') }}</div>
-            <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">În așteptare</div>
+        <div class="erp-stat erp-stat--warning">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-clock" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">În așteptare</p>
+                <p class="erp-stat-value">{{ number_format($stats['pending'], 0, '.', '') }}</p>
+            </div>
         </div>
 
-        <div style="background: #fff; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; padding: 0.75rem; text-align: center;">
-            <div style="font-size: 1.5rem; font-weight: 700; color: #16a34a;">{{ number_format($stats['approved'], 0, '.', '') }}</div>
-            <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">Aprobate</div>
+        <div class="erp-stat erp-stat--success">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-check-circle" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Aprobate</p>
+                <p class="erp-stat-value">{{ number_format($stats['approved'], 0, '.', '') }}</p>
+            </div>
         </div>
 
-        <div style="background: #fff; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; padding: 0.75rem; text-align: center;">
-            <div style="font-size: 1.5rem; font-weight: 700; color: #ef4444;">{{ number_format($stats['rejected'], 0, '.', '') }}</div>
-            <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">Respinse</div>
+        <div class="erp-stat erp-stat--danger">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-x-circle" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Respinse</p>
+                <p class="erp-stat-value">{{ number_format($stats['rejected'], 0, '.', '') }}</p>
+            </div>
         </div>
 
-        <div style="background: #fff; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; padding: 0.75rem; text-align: center;">
-            <div style="font-size: 1.5rem; font-weight: 700; color: #9ca3af;">{{ number_format($stats['noMatch'], 0, '.', '') }}</div>
-            <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">Fără match</div>
+        <div class="erp-stat">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-question-mark-circle" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Fără match</p>
+                <p class="erp-stat-value">{{ number_format($stats['noMatch'], 0, '.', '') }}</p>
+            </div>
         </div>
 
-        <div style="background: #fff; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; padding: 0.75rem; text-align: center;">
-            <div style="font-size: 1.5rem; font-weight: 700; color: #2563eb;">{{ number_format($stats['total'], 0, '.', '') }}</div>
-            <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">Procesate total</div>
+        <div class="erp-stat erp-stat--info">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-cpu-chip" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Procesate total</p>
+                <p class="erp-stat-value">{{ number_format($stats['total'], 0, '.', '') }}</p>
+            </div>
         </div>
 
     </div>

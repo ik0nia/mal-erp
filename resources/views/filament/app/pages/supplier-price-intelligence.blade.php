@@ -4,21 +4,30 @@
     {{-- Stat cards --}}
     @php $stats = $this->getStats(); @endphp
     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
-        <div style="background: #fff; border-radius: 0.75rem; border: 1px solid #e5e7eb; padding: 1rem;">
-            <p style="font-size: 0.75rem; color: #6b7280;">Prețuri extrase total</p>
-            <p style="font-size: 1.5rem; font-weight: 700; color: #111827;">{{ number_format($stats['total'], 0, '.', '') }}</p>
+        <div class="erp-stat">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-banknotes" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Prețuri extrase total</p>
+                <p class="erp-stat-value">{{ number_format($stats['total'], 0, '.', '') }}</p>
+            </div>
         </div>
-        <div style="background: #fff; border-radius: 0.75rem; border: 1px solid #e5e7eb; padding: 1rem;">
-            <p style="font-size: 0.75rem; color: #6b7280;">Potrivite cu catalog</p>
-            <p style="font-size: 1.5rem; font-weight: 700; color: #2563eb;">{{ number_format($stats['matched'], 0, '.', '') }}</p>
-            @if($stats['total'] > 0)
-            <p style="font-size: 0.75rem; color: #9ca3af;">{{ round($stats['matched']/$stats['total']*100) }}% din total</p>
-            @endif
+        <div class="erp-stat erp-stat--info">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-link" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Potrivite cu catalog</p>
+                <p class="erp-stat-value">{{ number_format($stats['matched'], 0, '.', '') }}</p>
+                @if($stats['total'] > 0)
+                <p class="erp-stat-sub">{{ round($stats['matched']/$stats['total']*100) }}% din total</p>
+                @endif
+            </div>
         </div>
-        <div style="background: #fff; border-radius: 0.75rem; border: 1px solid #e5e7eb; padding: 1rem;">
-            <p style="font-size: 0.75rem; color: #6b7280;">Mai ieftin cu >5% față de catalog</p>
-            <p style="font-size: 1.5rem; font-weight: 700; color: #16a34a;">{{ number_format($stats['cheaper'], 0, '.', '') }}</p>
-            <p style="font-size: 0.75rem; color: #9ca3af;">Potențial de negociere</p>
+        <div class="erp-stat erp-stat--success">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-arrow-trending-down" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Mai ieftin cu >5% față de catalog</p>
+                <p class="erp-stat-value">{{ number_format($stats['cheaper'], 0, '.', '') }}</p>
+                <p class="erp-stat-sub">Potențial de negociere</p>
+            </div>
         </div>
     </div>
 

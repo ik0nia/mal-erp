@@ -28,10 +28,6 @@
 .wo-cmd-header:hover{background:#f3f4f6;}
 .wo-obs{padding:.375rem 1.25rem;background:#fffbeb;font-size:.75rem;color:#92400e;border-bottom:1px solid #fef3c7;}
 .wo-empty{display:flex;align-items:center;justify-content:center;padding:3rem;color:#9ca3af;font-size:.875rem;flex-direction:column;gap:.5rem;}
-.wo-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;}
-.wo-stat{border-radius:.75rem;border:1px solid #e5e7eb;background:#fff;padding:1rem;}
-.wo-stat-val{font-size:1.5rem;font-weight:700;color:#1f2937;}
-.wo-stat-label{font-size:.75rem;color:#9ca3af;margin-top:.25rem;}
 .wo-filters{display:flex;gap:.75rem;margin-bottom:1rem;align-items:center;}
 .wo-input{border:1px solid #d1d5db;border-radius:.5rem;padding:.375rem .75rem;font-size:.875rem;color:#111827;background:#fff;outline:none;}
 .wo-input:focus{border-color:#6366f1;box-shadow:0 0 0 2px rgba(99,102,241,.15);}
@@ -149,16 +145,19 @@
 
 {{-- ═══ TAB: OFERTE (PREȚURI NEGOCIATE) ═══ --}}
 @elseif($tab === 'oferte')
-    <div class="wo-stats">
+    <div class="erp-stat-grid" style="margin-bottom:1.5rem;">
         @foreach([
-            ['label' => 'Total prețuri', 'value' => $oferteStats['total'] ?? 0],
-            ['label' => 'Active', 'value' => $oferteStats['active'] ?? 0],
-            ['label' => 'Parteneri', 'value' => $oferteStats['parteneri'] ?? 0],
-            ['label' => 'Produse', 'value' => $oferteStats['produse'] ?? 0],
+            ['label' => 'Total prețuri', 'value' => $oferteStats['total'] ?? 0, 'variant' => '', 'icon' => 'heroicon-o-tag'],
+            ['label' => 'Active', 'value' => $oferteStats['active'] ?? 0, 'variant' => 'erp-stat--success', 'icon' => 'heroicon-o-check-circle'],
+            ['label' => 'Parteneri', 'value' => $oferteStats['parteneri'] ?? 0, 'variant' => 'erp-stat--info', 'icon' => 'heroicon-o-user-group'],
+            ['label' => 'Produse', 'value' => $oferteStats['produse'] ?? 0, 'variant' => 'erp-stat--info', 'icon' => 'heroicon-o-cube'],
         ] as $stat)
-            <div class="wo-stat">
-                <div class="wo-stat-val">{{ number_format($stat['value']) }}</div>
-                <div class="wo-stat-label">{{ $stat['label'] }}</div>
+            <div class="erp-stat {{ $stat['variant'] }}">
+                <div class="erp-stat-icon"><x-filament::icon :icon="$stat['icon']" /></div>
+                <div class="erp-stat-body">
+                    <p class="erp-stat-label">{{ $stat['label'] }}</p>
+                    <p class="erp-stat-value">{{ number_format($stat['value']) }}</p>
+                </div>
             </div>
         @endforeach
     </div>

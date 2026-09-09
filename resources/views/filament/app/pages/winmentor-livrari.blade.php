@@ -1,14 +1,6 @@
 <x-filament-panels::page>
 <style>
 .wl-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;}
-.wl-stat{border-radius:.75rem;border:1px solid #e5e7eb;background:#fff;padding:1rem 1.25rem;display:flex;align-items:center;gap:.75rem;}
-.wl-stat-icon{width:2.5rem;height:2.5rem;border-radius:.625rem;display:flex;align-items:center;justify-content:center;font-size:1.25rem;}
-.wl-stat-icon--blue{background:#dbeafe;}
-.wl-stat-icon--amber{background:#fef3c7;}
-.wl-stat-icon--green{background:#d1fae5;}
-.wl-stat-icon--purple{background:#ede9fe;}
-.wl-stat-val{font-size:1.5rem;font-weight:700;color:#1f2937;}
-.wl-stat-label{font-size:.75rem;color:#9ca3af;}
 .wl-search{display:flex;gap:.75rem;margin-bottom:1rem;align-items:center;}
 .wl-input{border:1px solid #d1d5db;border-radius:.5rem;padding:.5rem .75rem;font-size:.875rem;color:#111827;background:#fff;outline:none;width:320px;}
 .wl-input:focus{border-color:#6366f1;box-shadow:0 0 0 2px rgba(99,102,241,.15);}
@@ -72,50 +64,50 @@
 
 {{-- Stats --}}
 <div class="wl-stats">
-    <div class="wl-stat">
-        <div class="wl-stat-icon wl-stat-icon--blue">🚚</div>
-        <div>
-            <div class="wl-stat-val">{{ $totalComenzi }}</div>
-            <div class="wl-stat-label">{{ $tab === 'istoric' ? 'Comenzi în istoric' : 'Comenzi în livrare' }}</div>
+    <div class="erp-stat erp-stat--info">
+        <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-truck" /></div>
+        <div class="erp-stat-body">
+            <p class="erp-stat-label">{{ $tab === 'istoric' ? 'Comenzi în istoric' : 'Comenzi în livrare' }}</p>
+            <p class="erp-stat-value">{{ $totalComenzi }}</p>
         </div>
     </div>
-    <div class="wl-stat">
-        <div class="wl-stat-icon wl-stat-icon--amber">📦</div>
-        <div>
-            <div class="wl-stat-val">{{ $totalLinii }}</div>
-            <div class="wl-stat-label">{{ $tab === 'istoric' ? 'Linii în istoric' : 'Produse de livrat' }}</div>
+    <div class="erp-stat erp-stat--warning">
+        <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-cube" /></div>
+        <div class="erp-stat-body">
+            <p class="erp-stat-label">{{ $tab === 'istoric' ? 'Linii în istoric' : 'Produse de livrat' }}</p>
+            <p class="erp-stat-value">{{ $totalLinii }}</p>
         </div>
     </div>
-    <div class="wl-stat">
-        <div class="wl-stat-icon wl-stat-icon--green">💰</div>
-        <div>
-            <div class="wl-stat-val">{{ $totalValoare }} <span style="font-size:.8rem;font-weight:400;color:#6b7280;">lei</span></div>
-            <div class="wl-stat-label">Valoare totală</div>
+    <div class="erp-stat erp-stat--success">
+        <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-banknotes" /></div>
+        <div class="erp-stat-body">
+            <p class="erp-stat-label">Valoare totală</p>
+            <p class="erp-stat-value">{{ $totalValoare }} <span style="font-size:.8rem;font-weight:400;color:#6b7280;">lei</span></p>
         </div>
     </div>
 </div>
 
 @if($tab === 'istoric')
 <div class="wl-stats">
-    <div class="wl-stat">
-        <div class="wl-stat-icon wl-stat-icon--purple">⏱</div>
-        <div>
-            <div class="wl-stat-val">{{ $avgDurataFmt ?? '—' }}</div>
-            <div class="wl-stat-label">Timp mediu livrare</div>
+    <div class="erp-stat erp-stat--info">
+        <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-clock" /></div>
+        <div class="erp-stat-body">
+            <p class="erp-stat-label">Timp mediu livrare</p>
+            <p class="erp-stat-value">{{ $avgDurataFmt ?? '—' }}</p>
         </div>
     </div>
-    <div class="wl-stat">
-        <div class="wl-stat-icon" style="background:#dcfce7;">💵</div>
-        <div>
-            <div class="wl-stat-val">{{ $totalCash ?? 0 }} <span style="font-size:.8rem;font-weight:400;color:#6b7280;">/ {{ $valoareCash ?? '0' }} lei</span></div>
-            <div class="wl-stat-label">Comenzi cash</div>
+    <div class="erp-stat erp-stat--success">
+        <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-banknotes" /></div>
+        <div class="erp-stat-body">
+            <p class="erp-stat-label">Comenzi cash</p>
+            <p class="erp-stat-value">{{ $totalCash ?? 0 }} <span style="font-size:.8rem;font-weight:400;color:#6b7280;">/ {{ $valoareCash ?? '0' }} lei</span></p>
         </div>
     </div>
-    <div class="wl-stat">
-        <div class="wl-stat-icon" style="background:#dbeafe;">💳</div>
-        <div>
-            <div class="wl-stat-val">{{ $totalCard ?? 0 }} <span style="font-size:.8rem;font-weight:400;color:#6b7280;">/ {{ $valoareCard ?? '0' }} lei</span></div>
-            <div class="wl-stat-label">Comenzi card</div>
+    <div class="erp-stat erp-stat--info">
+        <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-credit-card" /></div>
+        <div class="erp-stat-body">
+            <p class="erp-stat-label">Comenzi card</p>
+            <p class="erp-stat-value">{{ $totalCard ?? 0 }} <span style="font-size:.8rem;font-weight:400;color:#6b7280;">/ {{ $valoareCard ?? '0' }} lei</span></p>
         </div>
     </div>
 </div>

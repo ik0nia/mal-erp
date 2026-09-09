@@ -1,14 +1,6 @@
 <x-filament-panels::page>
 <style>
 .wc-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;}
-.wc-stat{border-radius:.75rem;border:1px solid #e5e7eb;background:#fff;padding:1rem 1.25rem;display:flex;align-items:center;gap:.75rem;}
-.wc-stat-icon{width:2.5rem;height:2.5rem;border-radius:.625rem;display:flex;align-items:center;justify-content:center;font-size:1.25rem;}
-.wc-stat-icon--blue{background:#dbeafe;}
-.wc-stat-icon--amber{background:#fef3c7;}
-.wc-stat-icon--green{background:#d1fae5;}
-.wc-stat-icon--red{background:#fee2e2;}
-.wc-stat-val{font-size:1.5rem;font-weight:700;color:#1f2937;}
-.wc-stat-label{font-size:.75rem;color:#9ca3af;}
 .wc-search{display:flex;gap:.75rem;margin-bottom:1rem;align-items:center;flex-wrap:wrap;}
 .wc-input{border:1px solid #d1d5db;border-radius:.5rem;padding:.5rem .75rem;font-size:.875rem;color:#111827;background:#fff;outline:none;width:320px;}
 .wc-input:focus{border-color:#6366f1;box-shadow:0 0 0 2px rgba(99,102,241,.15);}
@@ -70,41 +62,41 @@
 
 {{-- Stats --}}
 <div class="wc-stats">
-    <div class="wc-stat">
-        <div class="wc-stat-icon wc-stat-icon--blue">📋</div>
-        <div>
-            <div class="wc-stat-val">{{ $totalComenzi }}</div>
-            <div class="wc-stat-label">{{ $tab === 'istoric' ? 'Comenzi în istoric' : 'Comenzi deschise' }}</div>
+    <div class="erp-stat erp-stat--info">
+        <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-clipboard-document-list" /></div>
+        <div class="erp-stat-body">
+            <p class="erp-stat-label">{{ $tab === 'istoric' ? 'Comenzi în istoric' : 'Comenzi deschise' }}</p>
+            <p class="erp-stat-value">{{ $totalComenzi }}</p>
         </div>
     </div>
-    <div class="wc-stat">
-        <div class="wc-stat-icon wc-stat-icon--amber">📦</div>
-        <div>
-            <div class="wc-stat-val">{{ $totalLinii }}</div>
-            <div class="wc-stat-label">Linii produse</div>
+    <div class="erp-stat">
+        <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-cube" /></div>
+        <div class="erp-stat-body">
+            <p class="erp-stat-label">Linii produse</p>
+            <p class="erp-stat-value">{{ $totalLinii }}</p>
         </div>
     </div>
     @if($tab === 'istoric')
-    <div class="wc-stat">
-        <div class="wc-stat-icon wc-stat-icon--green">🟢</div>
-        <div>
-            <div class="wc-stat-val">{{ $totalDeschise ?? 0 }}</div>
-            <div class="wc-stat-label">Încă deschise</div>
+    <div class="erp-stat erp-stat--warning">
+        <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-clock" /></div>
+        <div class="erp-stat-body">
+            <p class="erp-stat-label">Încă deschise</p>
+            <p class="erp-stat-value">{{ $totalDeschise ?? 0 }}</p>
         </div>
     </div>
-    <div class="wc-stat">
-        <div class="wc-stat-icon wc-stat-icon--red">🧾</div>
-        <div>
-            <div class="wc-stat-val">{{ $totalFacturate ?? 0 }}</div>
-            <div class="wc-stat-label">Facturate / livrate</div>
+    <div class="erp-stat erp-stat--success">
+        <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-document-check" /></div>
+        <div class="erp-stat-body">
+            <p class="erp-stat-label">Facturate / livrate</p>
+            <p class="erp-stat-value">{{ $totalFacturate ?? 0 }}</p>
         </div>
     </div>
     @else
-    <div class="wc-stat">
-        <div class="wc-stat-icon wc-stat-icon--green">💰</div>
-        <div>
-            <div class="wc-stat-val">{{ $totalValoare }} <span style="font-size:.8rem;font-weight:400;color:#6b7280;">lei</span></div>
-            <div class="wc-stat-label">Valoare totală</div>
+    <div class="erp-stat erp-stat--success">
+        <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-banknotes" /></div>
+        <div class="erp-stat-body">
+            <p class="erp-stat-label">Valoare totală</p>
+            <p class="erp-stat-value">{{ $totalValoare }} <span style="font-size:.8rem;font-weight:400;color:#6b7280;">lei</span></p>
         </div>
     </div>
     @endif

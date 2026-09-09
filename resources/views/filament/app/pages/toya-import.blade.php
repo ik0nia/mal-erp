@@ -3,43 +3,58 @@
     @php $stats = $this->getStats(); @endphp
 
     {{-- Stat cards --}}
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+    <div class="erp-stat-grid--5" style="margin-bottom: 1.5rem;">
 
-        <div style="background: #fff; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; padding: 1rem; text-align: center;">
-            <div style="font-size: 1.875rem; font-weight: 700; color: #111827;">{{ number_format($stats['total'], 0, '.', '') }}</div>
-            <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">Total importate</div>
+        <div class="erp-stat">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-archive-box" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Total importate</p>
+                <p class="erp-stat-value">{{ number_format($stats['total'], 0, '.', '') }}</p>
+            </div>
         </div>
 
-        <div style="background: #fff; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; padding: 1rem; text-align: center;">
-            <div style="font-size: 1.875rem; font-weight: 700; color: #2563eb;">{{ number_format($stats['withImage'], 0, '.', '') }}</div>
-            <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">Cu poză</div>
-            @if($stats['total'] > 0)
-                <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.125rem;">{{ round($stats['withImage'] / $stats['total'] * 100) }}%</div>
-            @endif
+        <div class="erp-stat erp-stat--info">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-photo" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Cu poză</p>
+                <p class="erp-stat-value">{{ number_format($stats['withImage'], 0, '.', '') }}</p>
+                @if($stats['total'] > 0)
+                    <p class="erp-stat-sub">{{ round($stats['withImage'] / $stats['total'] * 100) }}%</p>
+                @endif
+            </div>
         </div>
 
-        <div style="background: #fff; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; padding: 1rem; text-align: center;">
-            <div style="font-size: 1.875rem; font-weight: 700; color: #9333ea;">{{ number_format($stats['withDesc'], 0, '.', '') }}</div>
-            <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">Cu descriere</div>
-            @if($stats['total'] > 0)
-                <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.125rem;">{{ round($stats['withDesc'] / $stats['total'] * 100) }}%</div>
-            @endif
+        <div class="erp-stat erp-stat--info">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-document-text" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Cu descriere</p>
+                <p class="erp-stat-value">{{ number_format($stats['withDesc'], 0, '.', '') }}</p>
+                @if($stats['total'] > 0)
+                    <p class="erp-stat-sub">{{ round($stats['withDesc'] / $stats['total'] * 100) }}%</p>
+                @endif
+            </div>
         </div>
 
-        <div style="background: #fff; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; padding: 1rem; text-align: center;">
-            <div style="font-size: 1.875rem; font-weight: 700; color: #f97316;">{{ number_format($stats['withCat'], 0, '.', '') }}</div>
-            <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">Cu categorie</div>
-            @if($stats['total'] > 0)
-                <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.125rem;">{{ round($stats['withCat'] / $stats['total'] * 100) }}%</div>
-            @endif
+        <div class="erp-stat erp-stat--info">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-tag" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Cu categorie</p>
+                <p class="erp-stat-value">{{ number_format($stats['withCat'], 0, '.', '') }}</p>
+                @if($stats['total'] > 0)
+                    <p class="erp-stat-sub">{{ round($stats['withCat'] / $stats['total'] * 100) }}%</p>
+                @endif
+            </div>
         </div>
 
-        <div style="background: #fff; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; padding: 1rem; text-align: center;">
-            <div style="font-size: 1.875rem; font-weight: 700; color: #16a34a;">{{ number_format($stats['readyToPub'], 0, '.', '') }}</div>
-            <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">Gata de publicat</div>
-            @if($stats['total'] > 0)
-                <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.125rem;">{{ round($stats['readyToPub'] / $stats['total'] * 100) }}%</div>
-            @endif
+        <div class="erp-stat erp-stat--success">
+            <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-check-badge" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">Gata de publicat</p>
+                <p class="erp-stat-value">{{ number_format($stats['readyToPub'], 0, '.', '') }}</p>
+                @if($stats['total'] > 0)
+                    <p class="erp-stat-sub">{{ round($stats['readyToPub'] / $stats['total'] * 100) }}%</p>
+                @endif
+            </div>
         </div>
 
     </div>

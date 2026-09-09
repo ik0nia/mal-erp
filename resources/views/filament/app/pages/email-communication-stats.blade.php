@@ -6,18 +6,21 @@
     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
         @php
             $cards = [
-                ['label' => 'Total emailuri', 'value' => number_format($this->getTotalEmails(), 0, '.', ''), 'color' => '#8B1A1A', 'icon' => 'heroicon-o-envelope'],
-                ['label' => 'Procesate AI', 'value' => number_format($this->getProcessedEmails(), 0, '.', ''), 'color' => '#16a34a', 'icon' => 'heroicon-o-cpu-chip'],
-                ['label' => 'Neprocessate', 'value' => number_format($this->getUnprocessedEmails(), 0, '.', ''), 'color' => '#d97706', 'icon' => 'heroicon-o-clock'],
-                ['label' => 'Contacte totale', 'value' => number_format($this->getTotalContacts(), 0, '.', ''), 'color' => '#2563eb', 'icon' => 'heroicon-o-users'],
-                ['label' => 'Descoperite auto', 'value' => number_format($this->getDiscoveredContacts(), 0, '.', ''), 'color' => '#2563eb', 'icon' => 'heroicon-o-magnifying-glass'],
-                ['label' => 'Expeditori necunoscuți', 'value' => number_format($this->getUnknownSenders(), 0, '.', ''), 'color' => '#dc2626', 'icon' => 'heroicon-o-question-mark-circle'],
+                ['label' => 'Total emailuri', 'value' => number_format($this->getTotalEmails(), 0, '.', ''), 'variant' => null, 'icon' => 'heroicon-o-envelope'],
+                ['label' => 'Procesate AI', 'value' => number_format($this->getProcessedEmails(), 0, '.', ''), 'variant' => 'success', 'icon' => 'heroicon-o-cpu-chip'],
+                ['label' => 'Neprocessate', 'value' => number_format($this->getUnprocessedEmails(), 0, '.', ''), 'variant' => 'warning', 'icon' => 'heroicon-o-clock'],
+                ['label' => 'Contacte totale', 'value' => number_format($this->getTotalContacts(), 0, '.', ''), 'variant' => 'info', 'icon' => 'heroicon-o-user-group'],
+                ['label' => 'Descoperite auto', 'value' => number_format($this->getDiscoveredContacts(), 0, '.', ''), 'variant' => 'info', 'icon' => 'heroicon-o-magnifying-glass'],
+                ['label' => 'Expeditori necunoscuți', 'value' => number_format($this->getUnknownSenders(), 0, '.', ''), 'variant' => 'danger', 'icon' => 'heroicon-o-question-mark-circle'],
             ];
         @endphp
         @foreach($cards as $card)
-        <div style="background: #fff; border-radius: 0.75rem; border: 1px solid #e5e7eb; padding: 1rem; display: flex; flex-direction: column; gap: 0.25rem;">
-            <p style="font-size: 0.75rem; color: #6b7280;">{{ $card['label'] }}</p>
-            <p style="font-size: 1.5rem; font-weight: 700; color: #111827;">{{ $card['value'] }}</p>
+        <div class="erp-stat {{ $card['variant'] ? 'erp-stat--' . $card['variant'] : '' }}">
+            <div class="erp-stat-icon"><x-filament::icon :icon="$card['icon']" /></div>
+            <div class="erp-stat-body">
+                <p class="erp-stat-label">{{ $card['label'] }}</p>
+                <p class="erp-stat-value">{{ $card['value'] }}</p>
+            </div>
         </div>
         @endforeach
     </div>

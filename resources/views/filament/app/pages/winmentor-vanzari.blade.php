@@ -1,14 +1,5 @@
 <x-filament-panels::page>
 <style>
-.wv-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem;}
-.wv-stat{border-radius:.75rem;border:1px solid #e5e7eb;background:#fff;padding:1rem 1.25rem;display:flex;flex-direction:column;gap:.25rem;}
-.wv-stat-label{font-size:.75rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;}
-.wv-stat-value{font-size:1.5rem;font-weight:700;color:#111827;font-variant-numeric:tabular-nums;}
-.wv-stat-sub{font-size:.75rem;color:#9ca3af;}
-.wv-stat--blue{border-left:4px solid #3b82f6;}
-.wv-stat--amber{border-left:4px solid #f59e0b;}
-.wv-stat--green{border-left:4px solid #10b981;}
-.wv-stat--purple{border-left:4px solid #8b5cf6;}
 .wm-filters{display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;padding:1rem 1.25rem;background:#f9fafb;border-bottom:1px solid #e5e7eb;}
 .wm-filter-group{display:flex;flex-direction:column;gap:.25rem;}
 .wm-filter-label{font-size:.75rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;}
@@ -58,26 +49,38 @@
 
 {{-- Stat Cards (super_admin only) --}}
 @if($isSuperAdmin && !empty($stats))
-<div class="wv-stats">
-  <div class="wv-stat wv-stat--blue">
-    <span class="wv-stat-label">Facturi</span>
-    <span class="wv-stat-value">{{ number_format($stats['val_facturi'] ?? 0, 0, ',', '.') }} <small style="font-size:.6em;color:#6b7280">RON</small></span>
-    <span class="wv-stat-sub">{{ $stats['nr_facturi'] ?? 0 }} documente</span>
+<div class="erp-stat-grid" style="margin-bottom:1.5rem;">
+  <div class="erp-stat erp-stat--info">
+    <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-document-text" /></div>
+    <div class="erp-stat-body">
+      <p class="erp-stat-label">Facturi</p>
+      <p class="erp-stat-value">{{ number_format($stats['val_facturi'] ?? 0, 0, ',', '.') }} <small style="font-size:.6em;color:#6b7280">RON</small></p>
+      <p class="erp-stat-sub">{{ $stats['nr_facturi'] ?? 0 }} documente</p>
+    </div>
   </div>
-  <div class="wv-stat wv-stat--amber">
-    <span class="wv-stat-label">Avize</span>
-    <span class="wv-stat-value">{{ number_format($stats['val_avize'] ?? 0, 0, ',', '.') }} <small style="font-size:.6em;color:#6b7280">RON</small></span>
-    <span class="wv-stat-sub">{{ $stats['nr_avize'] ?? 0 }} documente</span>
+  <div class="erp-stat erp-stat--warning">
+    <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-truck" /></div>
+    <div class="erp-stat-body">
+      <p class="erp-stat-label">Avize</p>
+      <p class="erp-stat-value">{{ number_format($stats['val_avize'] ?? 0, 0, ',', '.') }} <small style="font-size:.6em;color:#6b7280">RON</small></p>
+      <p class="erp-stat-sub">{{ $stats['nr_avize'] ?? 0 }} documente</p>
+    </div>
   </div>
-  <div class="wv-stat wv-stat--green">
-    <span class="wv-stat-label">Bonuri de casa</span>
-    <span class="wv-stat-value">{{ number_format($stats['val_bonuri'] ?? 0, 0, ',', '.') }} <small style="font-size:.6em;color:#6b7280">RON</small></span>
-    <span class="wv-stat-sub">{{ $stats['nr_bonuri'] ?? 0 }} documente</span>
+  <div class="erp-stat erp-stat--success">
+    <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-banknotes" /></div>
+    <div class="erp-stat-body">
+      <p class="erp-stat-label">Bonuri de casa</p>
+      <p class="erp-stat-value">{{ number_format($stats['val_bonuri'] ?? 0, 0, ',', '.') }} <small style="font-size:.6em;color:#6b7280">RON</small></p>
+      <p class="erp-stat-sub">{{ $stats['nr_bonuri'] ?? 0 }} documente</p>
+    </div>
   </div>
-  <div class="wv-stat wv-stat--purple">
-    <span class="wv-stat-label">Total luna</span>
-    <span class="wv-stat-value">{{ number_format($stats['val_total'] ?? 0, 0, ',', '.') }} <small style="font-size:.6em;color:#6b7280">RON</small></span>
-    <span class="wv-stat-sub">{{ ($stats['nr_facturi'] ?? 0) + ($stats['nr_avize'] ?? 0) + ($stats['nr_bonuri'] ?? 0) }} documente total</span>
+  <div class="erp-stat">
+    <div class="erp-stat-icon"><x-filament::icon icon="heroicon-o-calendar-days" /></div>
+    <div class="erp-stat-body">
+      <p class="erp-stat-label">Total luna</p>
+      <p class="erp-stat-value">{{ number_format($stats['val_total'] ?? 0, 0, ',', '.') }} <small style="font-size:.6em;color:#6b7280">RON</small></p>
+      <p class="erp-stat-sub">{{ ($stats['nr_facturi'] ?? 0) + ($stats['nr_avize'] ?? 0) + ($stats['nr_bonuri'] ?? 0) }} documente total</p>
+    </div>
   </div>
 </div>
 
