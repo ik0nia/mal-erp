@@ -19,6 +19,7 @@
         "sameday-courier/php-sdk": "^2.4",
         "smalot/pdfparser": "^2.12",
         "spatie/laravel-activitylog": "^4.12",
+        "symfony/html-sanitizer": "^7.4",
         "webklex/laravel-imap": "^6.2"
     },
     "require-dev": {

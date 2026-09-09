@@ -95,8 +95,10 @@ class EmailMessage extends Model
     }
 
     /**
-     * Sanitizează HTML din email pentru a preveni XSS.
-     * Elimină taguri periculoase, atribute event handler și protocoale javascript:.
+     * Sanitizează HTML din email pentru a preveni XSS — symfony/html-sanitizer
+     * (allowlist reală; vechiul regex-blacklist era bypassabil și ținea doar
+     * CSP-ul + sandbox-ul iframe-ului). Emailurile au nevoie de tabele, stiluri
+     * inline și imagini (inclusiv data:image pentru cele embedate).
      */
     public static function sanitizeEmailHtml(string $html): string
     {
@@ -104,25 +106,29 @@ class EmailMessage extends Model
             return '';
         }
 
-        // Elimină complet taguri periculoase împreună cu conținutul lor
-        $html = preg_replace('/<(script|iframe|object|embed|form)\b[^>]*>.*?<\/\1>/is', '', $html);
+        static $sanitizer = null;
 
-        // Elimină taguri self-closing periculoase
-        $html = preg_replace('/<(script|iframe|object|embed|form)\b[^>]*\/?>/i', '', $html);
+        if ($sanitizer === null) {
+            $config = (new \Symfony\Component\HtmlSanitizer\HtmlSanitizerConfig)
+                ->allowSafeElements()
+                // layout de email: tabele + imagini cu atributele lor istorice
+                ->allowElement('table', ['border', 'cellpadding', 'cellspacing', 'width', 'align', 'bgcolor', 'style'])
+                ->allowElement('img', ['src', 'alt', 'title', 'width', 'height', 'border', 'style'])
+                ->allowElement('center')
+                ->allowAttribute('style', '*')
+                ->allowAttribute('width', '*')
+                ->allowAttribute('height', '*')
+                ->allowAttribute('align', '*')
+                ->allowAttribute('valign', '*')
+                ->allowAttribute('bgcolor', '*')
+                ->allowLinkSchemes(['https', 'http', 'mailto', 'tel'])
+                ->allowMediaSchemes(['https', 'http', 'data', 'cid'])
+                // emailurile comerciale sunt lungi — default-ul de 20k ar trunchia
+                ->withMaxInputLength(2_000_000);
 
-        // Elimină atribute event handler (onclick, onerror, onload, etc.)
-        $html = preg_replace('/\s+on\w+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $html);
+            $sanitizer = new \Symfony\Component\HtmlSanitizer\HtmlSanitizer($config);
+        }
 
-        // Înlocuiește javascript: cu # în atributele href/src/action
-        $html = preg_replace('/\b(href|src|action)\s*=\s*["\']?\s*javascript\s*:/i', '$1="#" data-blocked="', $html);
-        $html = preg_replace('/javascript\s*:/i', '#', $html);
-
-        // Elimină atributul srcdoc (poate conține HTML arbitrar)
-        $html = preg_replace('/\s+srcdoc\s*=\s*(?:"[^"]*"|\'[^\']*\')/i', '', $html);
-
-        // Elimină data: URLs în href/src (pot conține HTML/JS)
-        $html = preg_replace('/\b(href|src)\s*=\s*["\']data:(?!image\/)[^"\']*["\']/i', '$1="#"', $html);
-
-        return $html;
+        return $sanitizer->sanitize($html);
     }
 }
