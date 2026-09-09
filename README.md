@@ -41,11 +41,6 @@ npm run build       # build assets producție
 php artisan horizon # cozi (în producție rulează prin supervisor)
 ```
 
-⚠️ Producția rulează direct din acest working tree (deploy = push de pe server).
-Codul e read-only pentru `www-data`; userul CLI nu are sudo. După comenzi
-artisan care compilează view-uri, șterge `storage/framework/views/*.php`
-(altfel web-ul primește EPERM la `touch()` → 500).
-
 ## Documentație
 
 - `docs/PROJECT_CONTEXT.md` — arhitectură, module, fluxuri (onboarding rapid)
