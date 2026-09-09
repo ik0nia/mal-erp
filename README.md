@@ -10,7 +10,7 @@ comenzi, achiziții, ofertare și integrări cu WooCommerce, WinMentor și curie
 - **MySQL** · **Redis** (cache + cozi) · **Laravel Horizon** (supervisor)
 - **Vite 8** + **Tailwind 4** pentru assets; design system custom în `public/css/erp-design.css`
 - **node-renderer/**: Puppeteer + Chrome headless — randare imagini social media (JPEG 1080×1080)
-- **mentorapi/**: bridge Go (Windows, COM) pentru WinMentor — 162 endpoint-uri REST
+- **mentorapi/**: bridge Go (Windows, COM) pentru WinMentor — 169 endpoint-uri REST
 - **wordpress-plugin/**: plugin bridge cu endpoint-uri REST custom pe site-ul WooCommerce
 
 ## Module principale
