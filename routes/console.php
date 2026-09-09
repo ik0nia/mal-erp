@@ -222,6 +222,18 @@ Schedule::command('winmentor:sync-stock-bridge')
     ->withoutOverlapping(30)
     ->runInBackground();
 
+// Reconciliere ABSOLUTĂ stoc site ← ERP. Sync-ul de mai sus împinge doar DELTE
+// (la variații WinMentor); comenzile online decrementează _stock pe site și,
+// fără corecția asta, driftul se acumulează (2026-09-09: 3.551 produse ajunse
+// greșite, ex. -65 pe site vs 35 real → vânzări pierdute).
+Schedule::command('winmentor:reconcile-woo-stock')
+    ->hourlyAt(18)
+    ->timezone('Europe/Bucharest')
+    ->days([1, 2, 3, 4, 5, 6])
+    ->between('07:00', '20:00')
+    ->withoutOverlapping(50)
+    ->runInBackground();
+
 // WinMentor — scadențar oficial (rest de plată per factură). Apel COM GREU (minute)
 // → rulat seara, după fereastra de lucru și înainte de fetch-ul de emulare (20:45).
 Schedule::command('winmentor:fetch-solduri')
