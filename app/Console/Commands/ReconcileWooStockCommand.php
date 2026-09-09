@@ -136,9 +136,15 @@ class ReconcileWooStockCommand extends Command
 
         $this->info("Scris: {$totalUpdated} | eșuat: {$totalFailed}");
 
-        // Golim cache-ul o singură dată la final (disponibilitatea s-a putut schimba).
-        $this->info('Golesc cache site...');
-        $service->flushCache();
+        // Golim cache-ul DOAR dacă am scris ceva — rulează orar, iar un flush
+        // total pe fiecare rulare ar goli permanent cache-ul nginx degeaba
+        // (primele vizite după flush primesc HTML pre-optimizare LiteSpeed).
+        if ($totalUpdated > 0) {
+            $this->info('Golesc cache site...');
+            $service->flushCache();
+        } else {
+            $this->info('Nimic scris — cache-ul rămâne cald.');
+        }
 
         return self::SUCCESS;
     }

@@ -2,6 +2,7 @@
 
 namespace App\Services\WooCommerce;
 
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 
@@ -175,7 +176,28 @@ class WooDirectSqlService
             return false;
         }
 
+        $this->warmCache();
+
         return true;
+    }
+
+    /**
+     * Încălzește cache-ul nginx după flush cu paginile-cheie, de DOUĂ ori:
+     * la prima cerere LiteSpeed își construiește bundle-urile CSS/JS și pagina
+     * iese ne-optimizată; a doua cerere produce varianta optimizată — pe aceea
+     * o reține nginx. Fără warmup, primul vizitator „fixează" varianta proastă.
+     */
+    private function warmCache(): void
+    {
+        foreach ([1, 2] as $pass) {
+            foreach (['/', '/shop/', '/contact/'] as $path) {
+                try {
+                    Http::timeout(20)->withoutVerifying()->get('https://malinco.ro' . $path);
+                } catch (\Throwable) {
+                    // warmup best-effort — un timeout nu trebuie să strice sync-ul
+                }
+            }
+        }
     }
 
     /**
