@@ -15,7 +15,10 @@ use Illuminate\Support\Facades\Log;
  */
 class RefreshAwbCourierStatusCommand extends Command
 {
-    protected $signature = 'awb:refresh-courier-status {--days=0 : Limitează la AWB-uri din ultimele N zile (0 = toate)}';
+    protected $signature = 'awb:refresh-courier-status
+        {--days=0 : Limitează la AWB-uri din ultimele N zile (0 = toate)}
+        {--delay=1.5 : Secunde de pauză între apeluri}
+        {--limit=60 : Max AWB-uri per rulare (0 = toate)}';
 
     protected $description = 'Actualizează statusul curier (tracking Sameday) pentru AWB-urile active';
 
@@ -39,8 +42,9 @@ class RefreshAwbCourierStatusCommand extends Command
                             });
                     });
             })
-            ->orderBy('courier_status_at') // cele neverificate demult primele
-            ->limit(60) // max per rulare — Sameday face rate-limiting agresiv
+            // cele mai NOI fără status primele, apoi restul activelor
+            ->orderByRaw('(courier_status IS NULL) DESC, created_at DESC')
+            ->when((int) $this->option('limit') > 0, fn ($q) => $q->limit((int) $this->option('limit')))
             ->get();
 
         $this->info('AWB-uri active de verificat: ' . $awbs->count());
@@ -82,6 +86,7 @@ class RefreshAwbCourierStatusCommand extends Command
                     'courier_status_at' => $last['date'] ?? $awb->courier_status_at,
                     'picked_up_at'      => $pickedUp ?? $awb->picked_up_at,
                     'delivered_at'      => $deliveredAt ?? $awb->delivered_at,
+                    'tracking_history'  => $tracking, // istoricul complet, salvat local
                 ]);
                 $updated++;
                 if ($deliveredAt) $delivered++;
@@ -93,7 +98,7 @@ class RefreshAwbCourierStatusCommand extends Command
                 }
             }
 
-            usleep(1500000); // politețe față de API-ul Sameday (rate-limit strict)
+            usleep((int) ((float) $this->option('delay') * 1_000_000)); // politețe față de API-ul Sameday
         }
 
         $this->info("Actualizate: {$updated} (din care livrate: {$delivered}).");

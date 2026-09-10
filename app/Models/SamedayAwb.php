@@ -46,7 +46,22 @@ class SamedayAwb extends Model
         'courier_status_at',
         'picked_up_at',
         'delivered_at',
+        'tracking_history',
     ];
+
+    /**
+     * Tracking încheiat definitiv — nu mai are sens niciun apel către Sameday:
+     * retur/ramburs transferat/anulat/refuz/indisponibil, iar «livrat» doar fără ramburs.
+     */
+    public function isTrackingTerminal(): bool
+    {
+        $cs = (string) $this->courier_status;
+        if ($cs === '') return false;
+        if ($cs === 'indisponibil') return true;
+        if (preg_match('/retur|rambur|anulat|refuz/i', $cs)) return true;
+
+        return (bool) preg_match('/livrat/i', $cs) && (float) $this->cod_amount <= 0;
+    }
 
     protected function casts(): array
     {
@@ -61,6 +76,7 @@ class SamedayAwb extends Model
             'courier_status_at' => 'datetime',
             'picked_up_at' => 'datetime',
             'delivered_at' => 'datetime',
+            'tracking_history' => 'array',
             'cod_amount' => 'decimal:2',
             'insured_value' => 'decimal:2',
             'shipping_cost' => 'decimal:2',

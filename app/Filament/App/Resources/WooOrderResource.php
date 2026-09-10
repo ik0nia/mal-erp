@@ -343,6 +343,10 @@ class WooOrderResource extends Resource
                                             ->modalCancelActionLabel('Închide')
                                             ->modalWidth('lg')
                                             ->modalContent(function ($record) {
+                                                // tracking încheiat + istoric salvat → servim local, fără apel Sameday
+                                                if ($record->isTrackingTerminal() && filled($record->tracking_history)) {
+                                                    return view('filament.app.awb-tracking-timeline', ['tracking' => $record->tracking_history, 'awb' => $record]);
+                                                }
                                                 try {
                                                     $connection = $record->connection
                                                         ?? IntegrationConnection::find($record->integration_connection_id)
@@ -362,10 +366,16 @@ class WooOrderResource extends Resource
                                                         'courier_status_at' => $last['date'] ?? $record->courier_status_at,
                                                         'picked_up_at'      => $pickedUp ?? $record->picked_up_at,
                                                         'delivered_at'      => $deliveredAt ?? $record->delivered_at,
+                                                        'tracking_history'  => $tracking,
                                                     ]);
 
                                                     return view('filament.app.awb-tracking-timeline', ['tracking' => $tracking, 'awb' => $record->fresh()]);
                                                 } catch (\Throwable $e) {
+                                                    // fallback: istoric salvat local în loc de eroare
+                                                    if (filled($record->tracking_history)) {
+                                                        return view('filament.app.awb-tracking-timeline', ['tracking' => $record->tracking_history, 'awb' => $record]);
+                                                    }
+
                                                     return view('filament.app.awb-tracking-timeline', ['error' => 'Tracking indisponibil: ' . $e->getMessage(), 'awb' => $record]);
                                                 }
                                             })
