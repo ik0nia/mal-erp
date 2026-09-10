@@ -113,6 +113,28 @@ class WooOrderResource extends Resource
                     ->dateTime('d.m.Y H:i')
                     ->sortable(),
 
+                Tables\Columns\TextColumn::make('awb_info')
+                    ->label('AWB')
+                    ->placeholder('—')
+                    ->getStateUsing(function (WooOrder $record): ?string {
+                        $awb = $record->samedayAwbs
+                            ->filter(fn ($a) => filled($a->awb_number) && $a->status !== 'cancelled')
+                            ->sortByDesc('id')->first();
+
+                        return $awb?->awb_number;
+                    })
+                    ->description(function (WooOrder $record): ?string {
+                        $awb = $record->samedayAwbs
+                            ->filter(fn ($a) => filled($a->awb_number) && $a->status !== 'cancelled')
+                            ->sortByDesc('id')->first();
+
+                        return $awb?->courier_status
+                            ? $awb->courier_status . ($awb->courier_status_at ? ' · ' . $awb->courier_status_at->format('d.m H:i') : '')
+                            : null;
+                    })
+                    ->copyable()
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('winmentor_sync_status')
                     ->label('WinMentor')
                     ->badge()
