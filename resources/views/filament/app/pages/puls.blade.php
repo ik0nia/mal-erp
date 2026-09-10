@@ -279,24 +279,89 @@
             <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#d1d5db;vertical-align:-1px"></span> {{ $anTrecut }} la aceeași zi: <b>{{ $lei($ytdTrecut) }} lei</b></span>
         </div>
     </div>
-    <div style="display:flex;align-items:flex-end;gap:10px;height:130px;margin-top:12px">
-        @for ($l = 1; $l <= 12; $l++)
-            @php
-                $vC = $luniAn[$l][$anCurent] ?? 0;
-                $vT = $luniAn[$l][$anTrecut] ?? 0;
-                $hC = $vC > 0 ? max(3, (int) round($vC / $maxLuna * 100)) : 0;
-                $hT = $vT > 0 ? max(3, (int) round($vT / $maxLuna * 100)) : 0;
-                $lunaViitoare = $l > now()->month;
-            @endphp
-            <div style="flex:1;display:flex;flex-direction:column;height:100%;justify-content:flex-end">
-                <div style="display:flex;align-items:flex-end;gap:2px;flex:1">
-                    <div title="{{ $numeLuni[$l-1] }} {{ $anTrecut }} — {{ $lei($vT) }} lei" style="flex:1;height:{{ $hT }}%;background:#d1d5db;border-radius:3px 3px 0 0"></div>
-                    <div title="{{ $numeLuni[$l-1] }} {{ $anCurent }} — {{ $lei($vC) }} lei" style="flex:1;height:{{ $hC }}%;background:{{ $l === (int) now()->month ? '#c8102e' : '#e0637a' }};border-radius:3px 3px 0 0;{{ $lunaViitoare ? 'opacity:.25' : '' }}"></div>
+    @php
+        // liniile de tendință: câte un punct per lună (centru coloană), pt fiecare an
+        $ptsT = []; $ptsC = [];
+        for ($l = 1; $l <= 12; $l++) {
+            $x = round(($l - 0.5) / 12 * 1000, 1);
+            $vT = $luniAn[$l][$anTrecut] ?? 0;
+            if ($vT > 0) $ptsT[] = $x . ',' . round(100 - min(100, $vT / $maxLuna * 100), 1);
+            $vC = $luniAn[$l][$anCurent] ?? 0;
+            if ($vC > 0 && $l <= (int) now()->month) $ptsC[] = $x . ',' . round(100 - min(100, $vC / $maxLuna * 100), 1);
+        }
+    @endphp
+    <div style="position:relative;margin-top:12px">
+        <div style="display:flex;align-items:flex-end;gap:10px;height:130px">
+            @for ($l = 1; $l <= 12; $l++)
+                @php
+                    $vC = $luniAn[$l][$anCurent] ?? 0;
+                    $vT = $luniAn[$l][$anTrecut] ?? 0;
+                    $hC = $vC > 0 ? max(3, (int) round($vC / $maxLuna * 100)) : 0;
+                    $hT = $vT > 0 ? max(3, (int) round($vT / $maxLuna * 100)) : 0;
+                    $lunaViitoare = $l > now()->month;
+                    $activa = $lunaSelectata === $l;
+                @endphp
+                @php $pc = (! $lunaViitoare && $vC > 0) ? $delta($vC, $vT) : null; @endphp
+                <div wire:click="selecteazaLuna({{ $l }})" class="puls-bar" style="flex:1;display:flex;flex-direction:column;height:100%;justify-content:flex-end;{{ $activa ? 'background:#fef7f7;border-radius:6px' : '' }}">
+                    <div style="height:13px;text-align:center;font-size:9.5px;font-weight:700;{{ $pc === null ? '' : ($pc >= 0 ? 'color:#047857' : 'color:#b91c1c') }}">
+                        {{ $pc === null ? '' : (($pc >= 0 ? '+' : '−') . abs($pc) . '%') }}
+                    </div>
+                    <div style="display:flex;align-items:flex-end;gap:2px;flex:1">
+                        <div title="{{ $numeLuni[$l-1] }} {{ $anTrecut }} — {{ $lei($vT) }} lei" style="flex:1;height:{{ $hT }}%;background:#d1d5db;border-radius:3px 3px 0 0"></div>
+                        <div title="{{ $numeLuni[$l-1] }} {{ $anCurent }} — {{ $lei($vC) }} lei" style="flex:1;height:{{ $hC }}%;background:{{ $l === (int) now()->month ? '#c8102e' : '#e0637a' }};border-radius:3px 3px 0 0;{{ $lunaViitoare ? 'opacity:.25' : '' }}"></div>
+                    </div>
+                    <div style="text-align:center;font-size:10px;color:{{ $activa ? '#c8102e' : ($l === (int) now()->month ? '#c8102e' : '#9ca3af') }};font-weight:{{ $activa || $l === (int) now()->month ? '700' : '400' }};margin-top:3px">{{ $numeLuni[$l-1] }}</div>
                 </div>
-                <div style="text-align:center;font-size:10px;color:{{ $l === (int) now()->month ? '#c8102e' : '#9ca3af' }};font-weight:{{ $l === (int) now()->month ? '700' : '400' }};margin-top:3px">{{ $numeLuni[$l-1] }}</div>
-            </div>
-        @endfor
+            @endfor
+        </div>
+        {{-- tendințe: gri = anul trecut, roșu = anul curent --}}
+        <svg viewBox="0 0 1000 100" preserveAspectRatio="none" style="position:absolute;left:0;top:13px;width:100%;bottom:17px;height:auto;pointer-events:none">
+            <polyline points="{{ implode(' ', $ptsT) }}" fill="none" stroke="#6b7280" stroke-width="2" stroke-dasharray="5,4" opacity=".6" vector-effect="non-scaling-stroke"/>
+            <polyline points="{{ implode(' ', $ptsC) }}" fill="none" stroke="#c8102e" stroke-width="2.5" opacity=".75" vector-effect="non-scaling-stroke"/>
+        </svg>
     </div>
+
+    @if ($lunaSelectata && $detaliuLuna)
+        @php
+            $lc = (float) ($detaliuLuna['curent']->lei ?? 0);
+            $lt = (float) ($detaliuLuna['trecut']->lei ?? 0);
+        @endphp
+        <div style="margin-top:12px;border-top:1px dashed #e5e7eb;padding-top:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <div style="font-size:13.5px;font-weight:700;color:#111827;text-transform:capitalize">{{ $numeLuni[$lunaSelectata-1] }} — comparație pe ani</div>
+                <button wire:click="selecteazaLuna(null)" style="font-size:11.5px;color:#6b7280;background:none;border:none;cursor:pointer">✕ închide</button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:8px">
+                <div style="background:#fef7f7;border:1px solid #f3cfd4;border-radius:10px;padding:10px 14px">
+                    <div style="font-size:11px;color:#c8102e;font-weight:700">{{ $numeLuni[$lunaSelectata-1] }} {{ $anCurent }}</div>
+                    <div style="font-size:20px;font-weight:800;color:#111827">{{ $lei($lc) }} lei{!! $chip($delta($lc, $lt)) !!}</div>
+                    <div style="font-size:11.5px;color:#9ca3af">{{ $detaliuLuna['curent']->documente ?? 0 }} documente</div>
+                </div>
+                <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:10px 14px">
+                    <div style="font-size:11px;color:#6b7280;font-weight:700">{{ $numeLuni[$lunaSelectata-1] }} {{ $anTrecut }}</div>
+                    <div style="font-size:20px;font-weight:800;color:#374151">{{ $lei($lt) }} lei</div>
+                    <div style="font-size:11.5px;color:#9ca3af">{{ $detaliuLuna['trecut']->documente ?? 0 }} documente</div>
+                </div>
+                <div style="border:1px solid #e5e7eb;border-radius:10px;padding:10px 14px">
+                    <div style="font-size:11px;color:#6b7280;font-weight:700">DIFERENȚA</div>
+                    <div style="font-size:20px;font-weight:800;color:{{ $lc >= $lt ? '#047857' : '#b91c1c' }}">{{ $lc >= $lt ? '+' : '−' }}{{ $lei(abs($lc - $lt)) }} lei</div>
+                    <div style="font-size:11.5px;color:#9ca3af">{{ $anCurent }} față de {{ $anTrecut }}</div>
+                </div>
+            </div>
+            @if (count($detaliuLuna['topProduse']))
+                <div style="font-size:11px;color:#6b7280;margin:10px 0 2px;font-weight:600">Top produse {{ $numeLuni[$lunaSelectata-1] }} {{ $anCurent }}:</div>
+                <table style="width:100%;border-collapse:collapse">
+                    @foreach ($detaliuLuna['topProduse'] as $p)
+                        <tr>
+                            <td style="padding:4px 6px 4px 0;border-bottom:1px solid #f3f4f6;font-size:12.5px;color:#1f2937">{{ \Illuminate\Support\Str::limit($p->den_articol, 60) }}</td>
+                            <td style="padding:4px 0;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280;text-align:right;white-space:nowrap">{{ $lei($p->buc) }} buc</td>
+                            <td style="padding:4px 0 4px 10px;border-bottom:1px solid #f3f4f6;font-size:12.5px;font-weight:700;text-align:right;white-space:nowrap">{{ $lei($p->lei) }} lei</td>
+                        </tr>
+                    @endforeach
+                </table>
+            @endif
+        </div>
+    @endif
 </div>
 
 {{-- bara de sistem --}}

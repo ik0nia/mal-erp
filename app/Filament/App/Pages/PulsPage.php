@@ -37,6 +37,9 @@ class PulsPage extends Page
     /** Clientul selectat pentru detaliu (denumire) — sau null. */
     public ?string $clientSelectat = null;
 
+    /** Luna selectată din graficul anual (1-12) — sau null. */
+    public ?int $lunaSelectata = null;
+
     public static function canAccess(): bool
     {
         return in_array(auth()->user()?->email, self::PILOT_EMAILS, true);
@@ -66,6 +69,11 @@ class PulsPage extends Page
     public function selecteazaClient(?string $denumire): void
     {
         $this->clientSelectat = ($denumire && $denumire === $this->clientSelectat) ? null : $denumire;
+    }
+
+    public function selecteazaLuna(?int $luna): void
+    {
+        $this->lunaSelectata = ($luna && $luna === $this->lunaSelectata) ? null : $luna;
     }
 
     /** WHERE sargabil pe indexul (an, luna, zi) — prefiltru pe an + expresie exactă. */
@@ -148,6 +156,27 @@ class PulsPage extends Page
         // anul la zi vs anul trecut la aceeași zi
         $ytd = $salesRange(now()->startOfYear()->toDateString(), $today);
         $ytdTrecut = $salesRange(now()->subYear()->startOfYear()->toDateString(), now()->subYear()->toDateString());
+
+        // detaliu pe luna selectată din graficul anual: ambii ani + top produse
+        $detaliuLuna = null;
+        if ($this->lunaSelectata >= 1 && $this->lunaSelectata <= 12) {
+            $l = $this->lunaSelectata;
+            $statLuna = fn (int $an) => DB::table('winmentor_vanzari_raw')
+                ->where('an', $an)->where('luna', $l)
+                ->whereNotNull('den_articol')->where('den_articol', '!=', '')
+                ->selectRaw('ROUND(COALESCE(SUM(cantitate*pret),0)) lei, COUNT(DISTINCT nr_factura) documente')->first();
+            $detaliuLuna = [
+                'curent' => $statLuna(now()->year),
+                'trecut' => $statLuna(now()->year - 1),
+                'topProduse' => DB::table('winmentor_vanzari_raw')
+                    ->where('an', now()->year)->where('luna', $l)
+                    ->where('cantitate', '>', 0)->whereNotNull('den_articol')->where('den_articol', '!=', '')
+                    ->whereRaw("den_articol NOT REGEXP 'SERVICII|TRANSPORT|AVANS|TAXA|ACHITAT|TRANSFER|REFACTURAT|Utilitati|Deseu|PALET'")
+                    ->groupBy('den_articol')
+                    ->selectRaw('den_articol, ROUND(SUM(cantitate)) buc, ROUND(SUM(cantitate*pret)) lei')
+                    ->orderByDesc(DB::raw('SUM(cantitate*pret)'))->limit(5)->get(),
+            ];
+        }
 
         // încasări (bani efectiv intrați)
         $incasariAzi = (float) DB::table('winmentor_incasari_raw')->whereDate('data', $today)->sum('suma');
@@ -243,6 +272,7 @@ class PulsPage extends Page
             'aziTipuri' => $aziTipuri,
             'luniAn' => $luniAn,
             'ytd' => $ytd, 'ytdTrecut' => $ytdTrecut,
+            'detaliuLuna' => $detaliuLuna,
             'incasariAzi' => $incasariAzi, 'incasariLuna' => $incasariLuna,
             'detaliuZi' => $detaliuZi,
             'procesare' => $procesare,
