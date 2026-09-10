@@ -43,8 +43,16 @@ class RefetchWinmentorVanzariIstoricCommand extends WatchWinmentorVanzariCommand
         // 2025 permis explicit (cu --an): mergeVanzariSources re-aduce emularea per lună
         // (fallback pe /ext), deci nu se pierde nimic; datele 2025 populate sub vechiul
         // format au bonurile S sub-reprezentate ~10× (constatat 2026-09-08).
-        if ($anFiltru !== null && ($anFiltru < 2019 || $anFiltru > 2025)) {
-            $this->error('Doar anii 2019-2025 sunt permiși (2025 doar cu --an explicit; 2026 e luna live).');
+        // Anul curent: permis DOAR pe luni deja încheiate (documente introduse
+        // târziu/retroactiv după ultima citire a lunii de către watch); luna
+        // curentă rămâne exclusiv a watch-ului.
+        $azi = now('Europe/Bucharest');
+        if ($anFiltru !== null && ($anFiltru < 2019 || $anFiltru > $azi->year)) {
+            $this->error('Doar anii 2019-' . $azi->year . ' sunt permiși.');
+            return self::FAILURE;
+        }
+        if ($anFiltru === (int) $azi->year && (! $lunaFiltru || $lunaFiltru >= $azi->month)) {
+            $this->error('Pentru anul curent e obligatorie --luna, strict înaintea lunii curente (luna curentă e a watch-ului).');
             return self::FAILURE;
         }
 
@@ -144,86 +152,6 @@ class RefetchWinmentorVanzariIstoricCommand extends WatchWinmentorVanzariCommand
 
         $this->info('Refetch istoric finalizat.');
         return self::SUCCESS;
-    }
-
-    /**
-     * Rezolvă tipurile „ditto" din /ext: exportul DLL scrie tipul documentului doar la
-     * primul document dintr-o serie consecutivă de același tip; „=" înseamnă „același
-     * tip ca documentul precedent". Forward-fill pe ordinea de export (verificat empiric
-     * pe 1/2019: seriile F/AE/S nu se suprapun, doar 3/711 documente „=" împart numărul
-     * cu un document tipizat).
-     */
-    private function resolveDittoTypes(array $extData): array
-    {
-        $lastType = '';
-
-        foreach ($extData as &$row) {
-            $tip = trim($row['tipDocument'] ?? '');
-            if ($tip === '=' || $tip === '') {
-                if ($lastType !== '') {
-                    $row['tipDocument'] = $lastType;
-                    $row['_ditto']      = true;
-                }
-            } else {
-                $lastType = $tip;
-            }
-        }
-        unset($row);
-
-        return $extData;
-    }
-
-    /**
-     * Corectează atribuirile ditto greșite de la granițele dintre serii: fiecare tip
-     * de document are plaja lui de numere (F: 23xxx, AE: 53xxx, S: 158xxx în 2019);
-     * un document ditto al cărui număr cade în plaja explicită a ALTUI tip primește
-     * tipul plajei. Plajele se calculează per lună doar din documentele tipizate explicit.
-     */
-    private function fixDittoBySeries(array $vanzari): array
-    {
-        $ranges = [];
-
-        foreach ($vanzari as $row) {
-            if (! empty($row['_ditto'])) continue;
-            $tip = $row['tipDocument'] ?? '';
-            $nr  = $row['prefixDoc'] ?? '';
-            if (! in_array($tip, ['AE', 'F', 'S'], true) || ! ctype_digit((string) $nr)) continue;
-            $n = (int) $nr;
-            $ranges[$tip] = [
-                min($ranges[$tip][0] ?? $n, $n),
-                max($ranges[$tip][1] ?? $n, $n),
-            ];
-        }
-
-        foreach ($vanzari as &$row) {
-            if (empty($row['_ditto'])) continue;
-            $nr = $row['prefixDoc'] ?? '';
-            if (! ctype_digit((string) $nr)) continue;
-            $n       = (int) $nr;
-            $current = $row['tipDocument'] ?? '';
-
-            $inOwn = isset($ranges[$current]) && $n >= $ranges[$current][0] && $n <= $ranges[$current][1];
-            if ($inOwn) continue;
-
-            $matches = [];
-            foreach ($ranges as $tip => [$lo, $hi]) {
-                if ($tip !== $current && $n >= $lo && $n <= $hi) {
-                    $matches[] = $tip;
-                }
-            }
-            if (count($matches) === 1) {
-                $row['tipDocument'] = $matches[0];
-            }
-        }
-        unset($row);
-
-        // Curățăm markerul intern înainte de salvare (să nu ajungă în raw_row)
-        foreach ($vanzari as &$row) {
-            unset($row['_ditto']);
-        }
-        unset($row);
-
-        return $vanzari;
     }
 
     /**

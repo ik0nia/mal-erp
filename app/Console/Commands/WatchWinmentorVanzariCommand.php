@@ -94,11 +94,13 @@ class WatchWinmentorVanzariCommand extends Command
             // /vanzari/luna: facturi + avize cu date bogate (denArticol, discount, etc.)
             $lunaData = $bridge->getVanzariLuna();
 
-            // /vanzari/ext: include bonurile de casă (tipDocument S), date de bază
-            $extData = $bridge->getVanzari();
+            // /vanzari/ext: include bonurile de casă (tipDocument S), date de bază;
+            // tipurile „ditto" (=) se rezolvă ca să putem folosi AE/F-urile din /ext
+            $extData = $this->resolveDittoTypes($bridge->getVanzari());
 
             // Merge: lunaData cu tipDocument precis (AE/F) + emulare bonuri (S)
-            $vanzari = $this->mergeVanzariSources($lunaData, $extData, $bridge);
+            // + documentele AE/F prezente DOAR în /ext (GetVanzariLuna omite unele)
+            $vanzari = $this->fixDittoBySeries($this->mergeVanzariSources($lunaData, $extData, $bridge));
         } catch (\Throwable $e) {
             Log::channel('winmentor_sync')->warning("[WinMentor WatchVanzari] Eroare fetch: {$e->getMessage()}");
             return self::SUCCESS;
@@ -334,6 +336,96 @@ class WatchWinmentorVanzariCommand extends Command
             $result[] = $row;
         }
 
+        // 4. Avize/facturi prezente DOAR în /ext — GetVanzariLuna omite unele
+        //    documente (constatat 2026-09-11: ~3,7M lei în 2026 prinse doar
+        //    accidental de fallback). Cheia de dedup e aceeași ca la fallback.
+        foreach ($extData as $row) {
+            if (! in_array($row['tipDocument'] ?? '', ['AE', 'F'], true)) continue;
+            $key = ($row['prefixDoc'] ?? '') . '|' . ($row['nrDoc'] ?? '') . '|' . ($row['zi'] ?? '');
+            if (isset($lunaKeys[$key])) continue;
+            $result[] = $row;
+        }
+
         return $result;
+    }
+
+    /**
+     * Rezolvă tipurile „ditto" din /ext: exportul DLL scrie tipul documentului doar la
+     * primul document dintr-o serie consecutivă de același tip; „=" înseamnă „același
+     * tip ca documentul precedent". Forward-fill pe ordinea de export (verificat empiric
+     * pe 1/2019: seriile F/AE/S nu se suprapun, doar 3/711 documente „=" împart numărul
+     * cu un document tipizat).
+     */
+    protected function resolveDittoTypes(array $extData): array
+    {
+        $lastType = '';
+
+        foreach ($extData as &$row) {
+            $tip = trim($row['tipDocument'] ?? '');
+            if ($tip === '=' || $tip === '') {
+                if ($lastType !== '') {
+                    $row['tipDocument'] = $lastType;
+                    $row['_ditto']      = true;
+                }
+            } else {
+                $lastType = $tip;
+            }
+        }
+        unset($row);
+
+        return $extData;
+    }
+
+    /**
+     * Corectează atribuirile ditto greșite de la granițele dintre serii: fiecare tip
+     * de document are plaja lui de numere (F: 23xxx, AE: 53xxx, S: 158xxx în 2019);
+     * un document ditto al cărui număr cade în plaja explicită a ALTUI tip primește
+     * tipul plajei. Plajele se calculează per lună doar din documentele tipizate explicit.
+     */
+    protected function fixDittoBySeries(array $vanzari): array
+    {
+        $ranges = [];
+
+        foreach ($vanzari as $row) {
+            if (! empty($row['_ditto'])) continue;
+            $tip = $row['tipDocument'] ?? '';
+            $nr  = $row['prefixDoc'] ?? '';
+            if (! in_array($tip, ['AE', 'F', 'S'], true) || ! ctype_digit((string) $nr)) continue;
+            $n = (int) $nr;
+            $ranges[$tip] = [
+                min($ranges[$tip][0] ?? $n, $n),
+                max($ranges[$tip][1] ?? $n, $n),
+            ];
+        }
+
+        foreach ($vanzari as &$row) {
+            if (empty($row['_ditto'])) continue;
+            $nr = $row['prefixDoc'] ?? '';
+            if (! ctype_digit((string) $nr)) continue;
+            $n       = (int) $nr;
+            $current = $row['tipDocument'] ?? '';
+
+            $inOwn = isset($ranges[$current]) && $n >= $ranges[$current][0] && $n <= $ranges[$current][1];
+            if ($inOwn) continue;
+
+            $matches = [];
+            foreach ($ranges as $tip => [$lo, $hi]) {
+                if ($tip !== $current && $n >= $lo && $n <= $hi) {
+                    $matches[] = $tip;
+                }
+            }
+            if (count($matches) === 1) {
+                $row['tipDocument'] = $matches[0];
+            }
+        }
+        unset($row);
+
+        // Curățăm markerul intern înainte de salvare (să nu ajungă în raw_row)
+        foreach ($vanzari as &$row) {
+            unset($row['_ditto']);
+        }
+        unset($row);
+
+        return $vanzari;
     }
 }

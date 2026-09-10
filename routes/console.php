@@ -329,6 +329,19 @@ Schedule::command('winmentor:watch-vanzari --firma=MAL2019')
     ->withoutOverlapping(30)
     ->runInBackground();
 
+// WinMentor — re-fetch luna PRECEDENTĂ: prinde documentele introduse târziu sau
+// retroactiv după ultima citire a lunii de către watch (constatat 2026-09-11:
+// facturi din solduri absente din export). Noaptea, în afara ferestrei COM.
+Schedule::call(function () {
+    $t = now('Europe/Bucharest')->subMonthNoOverflow();
+    \Illuminate\Support\Facades\Artisan::call('winmentor:refetch-vanzari-istoric', [
+        '--an' => $t->year, '--luna' => $t->month,
+    ]);
+})->name('winmentor-refetch-luna-precedenta')
+    ->twiceMonthly(3, 10, '04:20')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping(120);
+
 // WinMentor — recalcul lei_net/motiv_exclus pe toți anii (plasă de siguranță;
 // watch-ul recalculează deja anul curent după fiecare import). Doar SQL local.
 Schedule::command('winmentor:recompute-vanzari-net')
