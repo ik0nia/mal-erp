@@ -27,14 +27,20 @@ class RefreshAwbCourierStatusCommand extends Command
             ->whereNotIn('status', [SamedayAwb::STATUS_CANCELLED, SamedayAwb::STATUS_FAILED])
             ->when($days > 0, fn ($q) => $q->where('created_at', '>=', now()->subDays($days)))
             ->where(function ($q) {
-                // se opresc din verificare doar statusurile TERMINALE + marcajul «indisponibil»
+                // Terminale: retur/ramburs transferat/anulat/refuz + marcajul «indisponibil».
+                // «Livrat» e terminal DOAR fără ramburs — la COD așteptăm și transferul banilor.
                 $q->whereNull('courier_status')
                     ->orWhere(function ($w) {
-                        $w->whereRaw("courier_status NOT REGEXP 'livrat|retur|rambur|anulat|refuz'")
-                            ->where('courier_status', '!=', 'indisponibil');
+                        $w->whereRaw("courier_status NOT REGEXP 'retur|rambur|anulat|refuz'")
+                            ->where('courier_status', '!=', 'indisponibil')
+                            ->where(function ($v) {
+                                $v->whereRaw("courier_status NOT REGEXP 'livrat'")
+                                    ->orWhere('cod_amount', '>', 0);
+                            });
                     });
             })
-            ->orderBy('id')
+            ->orderBy('courier_status_at') // cele neverificate demult primele
+            ->limit(60) // max per rulare — Sameday face rate-limiting agresiv
             ->get();
 
         $this->info('AWB-uri active de verificat: ' . $awbs->count());
@@ -51,12 +57,23 @@ class RefreshAwbCourierStatusCommand extends Command
                     ?? $fallback;
                 if (! $connection) continue;
 
-                $tracking = $service->getAwbStatusHistory($connection, $awb->awb_number);
+                try {
+                    $tracking = $service->getAwbStatusHistory($connection, $awb->awb_number);
+                } catch (\Throwable $first) {
+                    sleep(4); // rate-limit Sameday: o singură reîncercare, cu pauză
+                    $tracking = $service->getAwbStatusHistory($connection, $awb->awb_number);
+                }
                 $last = $tracking['history'][0] ?? null;
                 $deliveredAt = $tracking['summary']['delivered_at'] ?? null;
 
+                $label = $last['label'] ?? $awb->courier_status;
+                // după livrare, evenimentele de ramburs/retur au prioritate (închid ciclul COD)
+                if ($deliveredAt && ! preg_match('/rambur|retur/i', (string) $label)) {
+                    $label = 'Livrat — ' . $deliveredAt
+                        . ((float) $awb->cod_amount > 0 ? ' (ramburs în așteptare)' : '');
+                }
                 $awb->update([
-                    'courier_status'    => $deliveredAt ? ('Livrat — ' . $deliveredAt) : ($last['label'] ?? $awb->courier_status),
+                    'courier_status'    => $label,
                     'courier_status_at' => $last['date'] ?? $awb->courier_status_at,
                 ]);
                 $updated++;
@@ -69,7 +86,7 @@ class RefreshAwbCourierStatusCommand extends Command
                 }
             }
 
-            usleep(400000); // politețe față de API-ul Sameday
+            usleep(1500000); // politețe față de API-ul Sameday (rate-limit strict)
         }
 
         $this->info("Actualizate: {$updated} (din care livrate: {$delivered}).");
