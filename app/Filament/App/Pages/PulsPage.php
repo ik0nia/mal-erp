@@ -40,6 +40,27 @@ class PulsPage extends Page
     /** Luna selectată din graficul anual (1-12) — sau null. */
     public ?int $lunaSelectata = null;
 
+    /** Anii afișați ca linii în graficul de tendință. */
+    public array $aniActivi = [];
+
+    public function mount(): void
+    {
+        if ($this->aniActivi === []) {
+            $this->aniActivi = range(now()->year - 3, now()->year);
+        }
+    }
+
+    public function toggleAn(int $an): void
+    {
+        if (in_array($an, $this->aniActivi, true)) {
+            if (count($this->aniActivi) > 1) {
+                $this->aniActivi = array_values(array_diff($this->aniActivi, [$an]));
+            }
+        } else {
+            $this->aniActivi[] = $an;
+        }
+    }
+
     public static function canAccess(): bool
     {
         return in_array(auth()->user()?->email, self::PILOT_EMAILS, true);
@@ -144,9 +165,9 @@ class PulsPage extends Page
             ->selectRaw('tip_document, ROUND(SUM(cantitate*pret)) lei')
             ->pluck('lei', 'tip_document');
 
-        // grafic lunar: bare an curent vs an trecut + tendință pe ultimii 4 ani
+        // grafic lunar: bare an curent vs an trecut + tendință pe anii selectați
         $luniAn = DB::table('winmentor_vanzari_raw')
-            ->whereIn('an', range(now()->year - 3, now()->year))
+            ->where('an', '>=', 2019)
             ->whereNotNull('den_articol')->where('den_articol', '!=', '')
             ->groupBy('an', 'luna')
             ->selectRaw('an, luna, ROUND(SUM(cantitate*pret)) lei')

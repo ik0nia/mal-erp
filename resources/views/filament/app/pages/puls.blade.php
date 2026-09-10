@@ -350,19 +350,26 @@
 
 {{-- tendința lunară pe ultimii 4 ani --}}
 @php
-    $aniTrend = range($anCurent - 3, $anCurent);
-    $culoriTrend = [$anCurent => ['#c8102e', 3, ''], $anCurent - 1 => ['#374151', 2, ''], $anCurent - 2 => ['#9ca3af', 2, '6,4'], $anCurent - 3 => ['#d4d4d8', 2, '6,4']];
+    // paletă fixă per an (indiferent câți sunt activi) — anul curent mereu roșu
+    $paleta = ['#c8102e', '#2563eb', '#f59e0b', '#10b981', '#8b5cf6', '#06b6d4', '#ec4899', '#64748b'];
+    $aniDisponibili = [];
+    foreach ($luniAn as $g) foreach ($g as $a => $v) $aniDisponibili[$a] = true;
+    $aniDisponibili = array_keys($aniDisponibili); rsort($aniDisponibili);
+    $culoriTrend = [];
+    foreach ($aniDisponibili as $i => $a) $culoriTrend[$a] = [$paleta[$i % count($paleta)], $a === $anCurent ? 3.5 : 2.25];
+
+    $aniTrend = collect($aniActivi)->map(fn ($a) => (int) $a)->sort()->values()->all();
     $maxTrend = 1;
     foreach ($luniAn as $g) foreach ($aniTrend as $a) $maxTrend = max($maxTrend, $g[$a] ?? 0);
     $liniiTrend = [];
     $totaluriTrend = [];
-    foreach ($aniTrend as $a) {
+    foreach ($aniDisponibili as $a) {
         $pts = [];
         $totaluriTrend[$a] = 0;
         for ($l = 1; $l <= 12; $l++) {
             $v = $luniAn[$l][$a] ?? 0;
             $totaluriTrend[$a] += $v;
-            if ($v > 0 && ! ($a === $anCurent && $l > (int) now()->month)) {
+            if (in_array($a, $aniTrend, true) && $v > 0 && ! ($a === $anCurent && $l > (int) now()->month)) {
                 $pts[] = round(($l - 0.5) / 12 * 1000, 1) . ',' . round(100 - min(100, $v / $maxTrend * 100), 1);
             }
         }
@@ -371,11 +378,18 @@
 @endphp
 <div style="{{ $card }};margin-top:14px">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-        <div style="{{ $label }};margin:0">📉 Tendința lunară — ultimii 4 ani</div>
-        <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:#6b7280">
-            @foreach (array_reverse($aniTrend) as $a)
-                <span><span style="display:inline-block;width:14px;height:3px;border-radius:2px;background:{{ $culoriTrend[$a][0] }};vertical-align:3px"></span>
-                    <b style="color:{{ $a === $anCurent ? '#c8102e' : '#374151' }}">{{ $a }}</b> · {{ number_format($totaluriTrend[$a] / 1000000, 1, ',', '') }} mil.{{ $a === $anCurent ? ' (la zi)' : '' }}</span>
+        <div style="{{ $label }};margin:0">📉 Tendința lunară <span style="text-transform:none;color:#9ca3af">(apasă pe ani să-i afișezi/ascunzi)</span></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+            @foreach ($aniDisponibili as $a)
+                @php $activ = in_array($a, $aniTrend, true); $cul = $culoriTrend[$a][0]; @endphp
+                <button wire:click="toggleAn({{ $a }})"
+                    style="display:inline-flex;align-items:center;gap:6px;padding:4px 11px;font-size:11.5px;font-weight:700;border-radius:999px;cursor:pointer;transition:all .15s;
+                    {{ $activ
+                        ? "border:1.5px solid {$cul};background:{$cul}14;color:{$cul}"
+                        : 'border:1.5px solid #e5e7eb;background:#fff;color:#9ca3af;opacity:.65' }}">
+                    <span style="width:9px;height:9px;border-radius:50%;background:{{ $activ ? $cul : '#d1d5db' }}"></span>
+                    {{ $a }} <span style="font-weight:500;{{ $activ ? '' : 'color:#c4c8cf' }}">{{ number_format($totaluriTrend[$a] / 1000000, 1, ',', '') }}M</span>
+                </button>
             @endforeach
         </div>
     </div>
@@ -392,19 +406,128 @@
                     opacity="{{ $a === $anCurent ? '.9' : '.65' }}" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
             @endforeach
         </svg>
+        {{-- zone de click pe fiecare lună --}}
+        <div style="position:absolute;inset:0;display:flex;z-index:1">
+            @for ($l = 1; $l <= 12; $l++)
+                <div wire:click="selecteazaLuna({{ $l }})" style="flex:1;cursor:pointer;{{ $lunaSelectata === $l ? 'background:#c8102e0d;border-radius:8px' : '' }}"></div>
+            @endfor
+        </div>
         {{-- puncte cu tooltip pe anul curent --}}
-        @for ($l = 1; $l <= (int) now()->month; $l++)
-            @php $v = $luniAn[$l][$anCurent] ?? 0; @endphp
-            @if ($v > 0)
-                <div title="{{ $numeLuni[$l-1] }} {{ $anCurent }} — {{ $lei($v) }} lei"
-                    style="position:absolute;left:calc({{ round(($l - 0.5) / 12 * 100, 2) }}% - 4px);top:calc({{ round(100 - min(100, $v / $maxTrend * 100), 1) }}% - 4px);width:8px;height:8px;border-radius:50%;background:#c8102e;border:2px solid #fff;box-shadow:0 0 0 1px #c8102e"></div>
-            @endif
-        @endfor
+        @if (in_array($anCurent, $aniTrend, true))
+            @for ($l = 1; $l <= (int) now()->month; $l++)
+                @php $v = $luniAn[$l][$anCurent] ?? 0; @endphp
+                @if ($v > 0)
+                    <div title="{{ $numeLuni[$l-1] }} {{ $anCurent }} — {{ $lei($v) }} lei"
+                        style="position:absolute;z-index:2;left:calc({{ round(($l - 0.5) / 12 * 100, 2) }}% - 4px);top:calc({{ round(100 - min(100, $v / $maxTrend * 100), 1) }}% - 4px);width:8px;height:8px;border-radius:50%;background:#c8102e;border:2px solid #fff;box-shadow:0 0 0 1px #c8102e"></div>
+                @endif
+            @endfor
+        @endif
     </div>
     <div style="display:flex;margin-top:6px">
         @for ($l = 1; $l <= 12; $l++)
-            <span style="flex:1;text-align:center;font-size:10px;color:{{ $l === (int) now()->month ? '#c8102e' : '#9ca3af' }};font-weight:{{ $l === (int) now()->month ? '700' : '400' }}">{{ $numeLuni[$l-1] }}</span>
+            <span wire:click="selecteazaLuna({{ $l }})" style="flex:1;text-align:center;font-size:10px;cursor:pointer;color:{{ $lunaSelectata === $l ? '#c8102e' : ($l === (int) now()->month ? '#c8102e' : '#9ca3af') }};font-weight:{{ $lunaSelectata === $l || $l === (int) now()->month ? '700' : '400' }}">{{ $numeLuni[$l-1] }}</span>
         @endfor
+    </div>
+
+    {{-- luna selectată: fiecare an în milioane + % față de anul precedent --}}
+    @if ($lunaSelectata)
+        <div style="margin-top:10px;border-top:1px dashed #e5e7eb;padding-top:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                <span style="font-size:12px;font-weight:700;color:#111827;text-transform:capitalize">{{ $numeLuni[$lunaSelectata-1] }}, an cu an:</span>
+                <button wire:click="selecteazaLuna(null)" style="font-size:11px;color:#6b7280;background:none;border:none;cursor:pointer">✕</button>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+                @foreach (array_reverse($aniDisponibili) as $a)
+                    @php
+                        $v = $luniAn[$lunaSelectata][$a] ?? 0;
+                        if ($v <= 0) continue;
+                        $vPrec = $luniAn[$lunaSelectata][$a - 1] ?? 0;
+                        $dp = $vPrec > 0 ? (int) round(($v - $vPrec) / $vPrec * 100) : null;
+                        $cul = $culoriTrend[$a][0] ?? '#6b7280';
+                        $inGrafic = in_array($a, $aniTrend, true);
+                    @endphp
+                    <div style="border:1.5px solid {{ $inGrafic ? $cul : '#e5e7eb' }};border-radius:10px;padding:6px 12px;{{ $inGrafic ? "background:{$cul}0a" : '' }}">
+                        <div style="font-size:11px;font-weight:700;color:{{ $cul }}">{{ $a }}</div>
+                        <div style="font-size:15px;font-weight:800;color:#111827">{{ number_format($v / 1000000, 2, ',', '') }}M</div>
+                        @if ($dp !== null)
+                            <div style="font-size:11px;font-weight:700;color:{{ $dp >= 0 ? '#047857' : '#b91c1c' }}">{{ $dp >= 0 ? '▲ +' : '▼ −' }}{{ abs($dp) }}% vs {{ $a - 1 }}</div>
+                        @else
+                            <div style="font-size:11px;color:#9ca3af">primul an cu date</div>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
+    {{-- povestea cifrelor — generată automat din date --}}
+    @php
+        $lunaCrt = (int) now()->month;
+        $poveste = [];
+
+        // ritmul anului față de anul trecut
+        $dYtd = $delta($ytd, $ytdTrecut);
+        if ($dYtd !== null) {
+            $poveste[] = $dYtd >= 0
+                ? "<b style=\"color:#047857\">{$anCurent} merge peste {$anTrecut}</b>: " . $lei($ytd) . ' lei la zi, cu ' . abs($dYtd) . '% peste aceeași perioadă de anul trecut.'
+                : "<b style=\"color:#b91c1c\">{$anCurent} e sub ritmul lui {$anTrecut}</b>: " . $lei($ytd) . ' lei la zi, cu ' . abs($dYtd) . '% mai puțin decât aceeași perioadă de anul trecut (' . $lei($ytdTrecut) . ' lei).';
+        }
+
+        // cea mai bună / slabă lună a anului curent (relative la anul trecut)
+        $bestL = null; $bestD = null; $worstL = null; $worstD = null;
+        for ($l = 1; $l < $lunaCrt; $l++) {
+            $c = $luniAn[$l][$anCurent] ?? 0; $t = $luniAn[$l][$anTrecut] ?? 0;
+            if ($c <= 0 || $t <= 0) continue;
+            $d = ($c - $t) / $t * 100;
+            if ($bestD === null || $d > $bestD) { $bestD = $d; $bestL = $l; }
+            if ($worstD === null || $d < $worstD) { $worstD = $d; $worstL = $l; }
+        }
+        if ($bestL !== null && $bestD > 0) {
+            $poveste[] = 'Cea mai bună lună față de anul trecut: <b style="color:#047857">' . $numeLuni[$bestL-1] . ' (+' . round($bestD) . '%)</b>'
+                . ($worstD < 0 ? ', cea mai slabă: <b style="color:#b91c1c">' . $numeLuni[$worstL-1] . ' (−' . abs(round($worstD)) . '%)</b>.' : '.');
+        } elseif ($worstL !== null && $worstD < 0) {
+            $poveste[] = 'Luna cu cea mai mare scădere față de anul trecut: <b style="color:#b91c1c">' . $numeLuni[$worstL-1] . ' (−' . abs(round($worstD)) . '%)</b>.';
+        }
+
+        // sezonalitate: vârful mediu istoric (anii precedenți compleți)
+        $mediiLuni = [];
+        for ($l = 1; $l <= 12; $l++) {
+            $vals = [];
+            foreach ($aniTrend as $a) { if ($a !== $anCurent && ($luniAn[$l][$a] ?? 0) > 0) $vals[] = $luniAn[$l][$a]; }
+            if ($vals) $mediiLuni[$l] = array_sum($vals) / count($vals);
+        }
+        if ($mediiLuni) {
+            arsort($mediiLuni);
+            $varf = array_slice(array_keys($mediiLuni), 0, 2);
+            sort($varf);
+            $poveste[] = 'Sezonul puternic e istoric în <b>' . $numeLuni[$varf[0]-1] . '–' . $numeLuni[$varf[1]-1] . '</b> — ' .
+                ($lunaCrt < $varf[0] ? 'urmează abia de acum.' : ($lunaCrt <= $varf[1] + 1 ? 'suntem chiar în el.' : 'a trecut; urmează partea calmă a anului.'));
+        }
+
+        // recordul ultimilor 4 ani
+        $recV = 0; $recL = 1; $recA = $anCurent;
+        foreach ($luniAn as $l => $g) foreach ($g as $a => $v) { if ($v > $recV) { $recV = $v; $recL = $l; $recA = $a; } }
+        if ($recV > 0) {
+            $poveste[] = 'Recordul lunar (anii afișați): <b>' . $numeLuni[$recL-1] . ' ' . $recA . '</b> — ' . $lei($recV) . ' lei' . ($recA === $anCurent ? ' 🏆 (chiar anul acesta!)' : '.');
+        }
+
+        // direcția ultimelor 3 luni încheiate
+        if ($lunaCrt >= 4) {
+            $s3c = 0; $s3t = 0;
+            for ($l = $lunaCrt - 3; $l < $lunaCrt; $l++) { $s3c += $luniAn[$l][$anCurent] ?? 0; $s3t += $luniAn[$l][$anTrecut] ?? 0; }
+            $d3 = $delta($s3c, $s3t);
+            if ($d3 !== null) {
+                $poveste[] = 'Ultimele 3 luni încheiate: ' . ($d3 >= 0
+                    ? '<b style="color:#047857">trend în creștere (+' . abs($d3) . '% față de anul trecut)</b> — direcția e bună.'
+                    : '<b style="color:#b91c1c">−' . abs($d3) . '% față de anul trecut</b> — de urmărit cauza (stocuri? sezon? online?).');
+            }
+        }
+    @endphp
+    <div style="margin-top:12px;background:#fafaf9;border:1px solid #f0efed;border-radius:10px;padding:12px 16px">
+        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;font-weight:700;margin-bottom:6px">📖 Povestea cifrelor</div>
+        @foreach ($poveste as $fraza)
+            <div style="font-size:13px;color:#374151;padding:3px 0;line-height:1.5">· {!! $fraza !!}</div>
+        @endforeach
     </div>
 </div>
 
