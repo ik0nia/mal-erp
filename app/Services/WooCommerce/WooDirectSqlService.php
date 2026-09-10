@@ -118,7 +118,7 @@ class WooDirectSqlService
                 continue;
             }
             foreach (['_weight' => 'weight', '_length' => 'length', '_width' => 'width', '_height' => 'height'] as $meta => $key) {
-                $val = $this->sanitizeString((string) ($item[$key] ?? ''));
+                $val = $this->sanitizeDecimal((string) ($item[$key] ?? ''));
                 if ($val === '') {
                     continue;
                 }
@@ -352,5 +352,14 @@ class WooDirectSqlService
     private function sanitizeString(string $value): string
     {
         return preg_replace('/[^a-zA-Z0-9_-]/', '', $value);
+    }
+
+    /**
+     * Sanitizare pentru valori numerice: PĂSTREAZĂ punctul zecimal.
+     * (sanitizeString îl ștergea — „34.5" ajungea „345" pe site.)
+     */
+    private function sanitizeDecimal(string $value): string
+    {
+        return preg_replace('/[^0-9.]/', '', $value);
     }
 }
