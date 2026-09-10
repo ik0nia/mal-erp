@@ -183,6 +183,7 @@ class WooOrderResource extends Resource
                     ->openUrlInNewTab(),
             ])
             ->defaultSort('order_date', 'desc')
+            ->defaultPaginationPageOption(25)
             ->filters([
                 SelectFilter::make('status')
                     ->label('Status')
