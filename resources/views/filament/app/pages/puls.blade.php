@@ -402,8 +402,7 @@
         <svg viewBox="0 0 1000 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none">
             @foreach ($aniTrend as $a)
                 <polyline points="{{ $liniiTrend[$a] }}" fill="none" stroke="{{ $culoriTrend[$a][0] }}" stroke-width="{{ $culoriTrend[$a][1] }}"
-                    @if($culoriTrend[$a][2]) stroke-dasharray="{{ $culoriTrend[$a][2] }}" @endif
-                    opacity="{{ $a === $anCurent ? '.9' : '.65' }}" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+                    opacity="{{ $a === $anCurent ? '.9' : '.7' }}" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
             @endforeach
         </svg>
         {{-- zone de click pe fiecare lună --}}
