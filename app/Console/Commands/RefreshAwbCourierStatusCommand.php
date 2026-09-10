@@ -96,11 +96,14 @@ class RefreshAwbCourierStatusCommand extends Command
                 $updated++;
                 if ($deliveredAt) $delivered++;
             } catch (\Throwable $e) {
-                Log::warning('[AwbStatusRefresh] ' . $awb->awb_number . ': ' . substr($e->getMessage(), 0, 120));
-                // răbdare cu cele vechi: renunțăm («indisponibil») abia după 8 eșecuri
-                // în rulări diferite — eșecurile pot fi doar rate-limit temporar
+                $msg = $e->getMessage() !== '' ? $e->getMessage() : class_basename($e);
+                Log::warning('[AwbStatusRefresh] ' . $awb->awb_number . ': ' . substr($msg, 0, 120));
                 $attempts = $awb->tracking_attempts + 1;
-                if ($awb->courier_status === null && $attempts >= 8) {
+                // NotFound = Sameday nu mai are AWB-ul (istoric purjat / cont diferit) —
+                // nu are rost să insistăm; restul erorilor pot fi rate-limit temporar,
+                // deci răbdare: renunțăm («indisponibil») abia după 8 eșecuri
+                $prag = $e instanceof \Sameday\Exceptions\SamedayNotFoundException ? 2 : 8;
+                if ($awb->courier_status === null && $attempts >= $prag) {
                     $awb->update(['courier_status' => 'indisponibil', 'courier_status_at' => now(), 'tracking_attempts' => $attempts]);
                 } else {
                     $awb->update(['tracking_attempts' => $attempts]);
