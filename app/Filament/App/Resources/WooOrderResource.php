@@ -72,7 +72,7 @@ class WooOrderResource extends Resource
                 Tables\Columns\TextColumn::make('number')
                     ->label('Comandă')
                     ->formatStateUsing(fn (WooOrder $record): string => '#'.$record->number)
-                    ->description(fn (WooOrder $record): ?string => $record->order_date?->format('d.m.Y H:i'))
+                    ->description(fn (WooOrder $record): ?HtmlString => $record->order_date ? new HtmlString('<span style="font-size:11px;opacity:.75">'.$record->order_date->format('d.m.Y H:i').'</span>') : null)
                     ->searchable()
                     ->sortable(),
 
