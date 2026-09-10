@@ -26,19 +26,19 @@ class RefreshAwbCourierStatusCommand extends Command
     {
         $days = (int) $this->option('days');
         $awbs = SamedayAwb::query()
-            ->whereNotNull('awb_number')->where('awb_number', '!=', '')
-            ->whereNotIn('status', [SamedayAwb::STATUS_CANCELLED, SamedayAwb::STATUS_FAILED])
-            ->when($days > 0, fn ($q) => $q->where('created_at', '>=', now()->subDays($days)))
+            ->whereNotNull('sameday_awbs.awb_number')->where('sameday_awbs.awb_number', '!=', '')
+            ->whereNotIn('sameday_awbs.status', [SamedayAwb::STATUS_CANCELLED, SamedayAwb::STATUS_FAILED])
+            ->when($days > 0, fn ($q) => $q->where('sameday_awbs.created_at', '>=', now()->subDays($days)))
             ->where(function ($q) {
                 // Terminale: retur/ramburs transferat/anulat/refuz + marcajul «indisponibil».
                 // «Livrat» e terminal DOAR fără ramburs — la COD așteptăm și transferul banilor.
-                $q->whereNull('courier_status')
+                $q->whereNull('sameday_awbs.courier_status')
                     ->orWhere(function ($w) {
-                        $w->whereRaw("courier_status NOT REGEXP 'retur|rambur|anulat|refuz'")
-                            ->where('courier_status', '!=', 'indisponibil')
+                        $w->whereRaw("sameday_awbs.courier_status NOT REGEXP 'retur|rambur|anulat|refuz'")
+                            ->where('sameday_awbs.courier_status', '!=', 'indisponibil')
                             ->where(function ($v) {
-                                $v->whereRaw("courier_status NOT REGEXP 'livrat'")
-                                    ->orWhere('cod_amount', '>', 0);
+                                $v->whereRaw("sameday_awbs.courier_status NOT REGEXP 'livrat'")
+                                    ->orWhere('sameday_awbs.cod_amount', '>', 0);
                             });
                     });
             })
