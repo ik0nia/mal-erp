@@ -71,6 +71,8 @@ class SyncProductImagesToWooJob implements ShouldQueue
                 'data'           => $data,
             ]);
 
+            (new \App\Services\WooCommerce\WooPluginClient())->flushCache();
+
             Log::info('[ImageSync] Galerie sincronizată pe site', [
                 'product' => $product->id, 'woo_id' => $product->woo_id, 'imagini' => count($payload),
             ]);

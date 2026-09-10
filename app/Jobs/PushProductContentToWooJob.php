@@ -53,6 +53,8 @@ class PushProductContentToWooJob implements ShouldQueue
             $client = new WooClient($connection);
             $client->updateProduct((int) $product->woo_id, $payload);
 
+            (new \App\Services\WooCommerce\WooPluginClient())->flushCache();
+
             Log::info('[ContentSync] Conținut împins pe site', [
                 'product_id' => $product->id,
                 'woo_id'     => $product->woo_id,

@@ -3,7 +3,7 @@
  * Plugin Name: Malinco ERP Bridge
  * Plugin URI:  https://erp.malinco.ro
  * Description: Comunicare bidirecțională ERP ↔ WooCommerce: meta produse, furnizori, parametri custom, preț/stoc/disponibilitate automată.
- * Version:     2.0.0
+ * Version:     2.2.0
  * Author:      Ikonia Agency SRL
  * Author URI:  https://ikonia.ro
  * Requires WC: 5.0
@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-define('MERP_VERSION',    '2.1.0');
+define('MERP_VERSION',    '2.2.0');
 define('MERP_OPTION_KEY', 'malinco_erp_api_key');
 define('MERP_NS',         'malinco-erp/v1');
 
@@ -289,7 +289,26 @@ function merp_flush_cache(WP_REST_Request $request): WP_REST_Response
         $flushed[] = 'wp_super_cache';
     }
 
+    // Cache-ul de pagini nginx (fastcgi_cache) — directorul e deținut de www-data
+    $nginxCacheDir = '/var/cache/nginx/malinco';
+    if (is_dir($nginxCacheDir) && is_writable($nginxCacheDir)) {
+        merp_delete_dir_contents($nginxCacheDir);
+        $flushed[] = 'nginx_fastcgi_cache';
+    }
+
     return new WP_REST_Response(['success' => true, 'flushed' => $flushed]);
+}
+
+function merp_delete_dir_contents(string $dir): void
+{
+    $items = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::CHILD_FIRST
+    );
+
+    foreach ($items as $item) {
+        $item->isDir() ? @rmdir($item->getPathname()) : @unlink($item->getPathname());
+    }
 }
 
 function merp_get_option(WP_REST_Request $request): WP_REST_Response

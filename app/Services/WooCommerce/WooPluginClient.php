@@ -133,6 +133,25 @@ class WooPluginClient
     }
 
     /**
+     * Golește cache-urile de pe site (WC transients, object cache, nginx fastcgi).
+     * Apelată după push-uri de conținut/imagini ca modificarea să fie vizibilă imediat.
+     */
+    public function flushCache(): bool
+    {
+        if ($this->apiKey === '') {
+            return false;
+        }
+
+        try {
+            $response = $this->http()->post($this->url('cache/flush'));
+
+            return $response->successful() && ($response->json('success') === true);
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    /**
      * Trimite un ZIP cu noua versiune a plugin-ului și declanșează self-update.
      */
     public function deployPlugin(string $zipPath): bool
