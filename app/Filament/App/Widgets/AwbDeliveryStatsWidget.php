@@ -50,11 +50,11 @@ class AwbDeliveryStatsWidget extends Widget
         // «rambur» singur nu înseamnă încasat — eticheta «(ramburs în așteptare)» îl conține;
         // încasat = doar transferul efectiv («Rambursul a fost transferat»)
         $codPending = (clone $t)->where('cod_amount', '>', 0)->whereNotNull('delivered_at')
-            ->where(fn ($q) => $q->whereNull('courier_status')->orWhereRaw("courier_status NOT REGEXP 'rambur.*transferat'"))
+            ->where(fn ($q) => $q->whereNull('courier_status')->orWhereRaw("courier_status NOT REGEXP 'rambur.*(transferat|compensat)'"))
             ->whereRaw("COALESCE(courier_status,'') NOT REGEXP 'retur|refuz|anulat'")
             ->selectRaw('COUNT(*) c, COALESCE(SUM(cod_amount),0) s')->first();
 
-        $codCollected30 = (clone $t)->whereRaw("courier_status REGEXP 'rambur.*transferat'")
+        $codCollected30 = (clone $t)->whereRaw("courier_status REGEXP 'rambur.*(transferat|compensat)'")
             ->where('courier_status_at', '>=', now()->subDays(30))
             ->sum('cod_amount');
 
@@ -64,7 +64,7 @@ class AwbDeliveryStatsWidget extends Widget
             ->where(function ($q) {
                 $q->whereNull('courier_status')
                     ->orWhere(function ($w) {
-                        $w->whereRaw("courier_status NOT REGEXP 'retur|anulat|refuz|rambur.*transferat'")
+                        $w->whereRaw("courier_status NOT REGEXP 'retur|anulat|refuz|rambur.*(transferat|compensat)'")
                             ->where('courier_status', '!=', 'indisponibil')
                             ->where(fn ($v) => $v->whereRaw("courier_status NOT REGEXP 'livrat'")->orWhere('cod_amount', '>', 0));
                     });
