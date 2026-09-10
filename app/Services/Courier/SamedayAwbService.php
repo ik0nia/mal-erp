@@ -322,6 +322,47 @@ class SamedayAwbService
         return ['summary' => $summary, 'history' => $history];
     }
 
+    /**
+     * Schimbările de status din TOT contul, într-un interval de timp (max 7200s
+     * per apel — limită Sameday). Un singur apel acoperă toate AWB-urile, spre
+     * deosebire de getAwbStatusHistory (un apel per AWB).
+     *
+     * @return array<int, array{awb: string, parcel_awb: string, label: string, state: string, date: ?string}>
+     */
+    public function getStatusSyncEvents(IntegrationConnection $connection, int $startTimestamp, int $endTimestamp): array
+    {
+        if (! $connection->isSameday() || ! $connection->is_active) {
+            throw new RuntimeException('Conexiunea selectată nu este Sameday activă.');
+        }
+
+        $sameday = $this->newSamedayInstance($connection);
+        $events = [];
+
+        // ferestre de max 7000s (sub limita de 7200) până acoperim tot intervalul
+        for ($from = $startTimestamp; $from < $endTimestamp; $from += 7000) {
+            $to = min($from + 7000, $endTimestamp);
+            $response = $sameday->getStatusSync(
+                new \Sameday\Requests\SamedayGetStatusSyncRequest($from, $to)
+            );
+
+            foreach ($response->getStatuses() as $status) {
+                $parcelAwb = (string) $status->getParcelAwbNumber();
+                $events[] = [
+                    // numărul de colet = AWB-ul principal + sufix de 3 cifre (001, 002…)
+                    'awb'        => strlen($parcelAwb) > 3 ? substr($parcelAwb, 0, -3) : $parcelAwb,
+                    'parcel_awb' => $parcelAwb,
+                    'label'      => (string) ($status->getLabel() ?: $status->getName()),
+                    'state'      => (string) $status->getState(),
+                    'date'       => $status->getDate() ? $status->getDate()->format('Y-m-d H:i') : null,
+                ];
+            }
+        }
+
+        usort($events, fn ($a, $b) => strcmp($a['date'] ?? '', $b['date'] ?? ''));
+
+        return $events;
+    }
+
     public function cancelAwb(IntegrationConnection $connection, string $awbNumber): array
     {
         if (! $connection->isSameday() || ! $connection->is_active) {

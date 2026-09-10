@@ -163,11 +163,19 @@ Schedule::command('toya:sync-prices')
     ->withoutOverlapping(120)
     ->runInBackground();
 
-// Tracking AWB Sameday — statusul curier pentru AWB-urile active (la 30 min, 8-20)
-Schedule::command('awb:refresh-courier-status')
-    ->cron('*/30 8-20 * * *')
+// Tracking AWB Sameday — bulk prin status-sync (1-2 apeluri/rulare, la 15 min, 8-21)
+Schedule::command('awb:sync-courier-status')
+    ->cron('*/15 8-21 * * *')
     ->timezone('Europe/Bucharest')
-    ->withoutOverlapping(25)
+    ->withoutOverlapping(10)
+    ->runInBackground();
+
+// Plasă de siguranță: verificare per AWB pentru cele ratate de status-sync
+// (ex. evenimente mai vechi de 24h) — de 2 ori pe zi e suficient
+Schedule::command('awb:refresh-courier-status')
+    ->cron('5 12,20 * * *')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping(55)
     ->runInBackground();
 
 // Alerte prețuri achiziție — zilnic la 08:30 (Europe/Bucharest).
