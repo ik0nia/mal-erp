@@ -299,7 +299,16 @@ Schedule::command('winmentor:fetch-incasari-plati')
 
 // WinMentor — istoric COMPLET încasări bancare per client (GetIncasariClienti).
 // GetIncasariLuna omite majoritatea încasărilor (Mivinia: 3/25, constatat 2026-09-11).
-// Zilnic clienții cu vânzări recente; duminică noaptea toți (~1-2h).
+// Intra-day (2h, set mic: activi în ultimele 2 zile — vânzări SAU încasări);
+// zilnic set mai larg; duminică noaptea toți (~1-2h). Lock comun în comandă.
+Schedule::command('winmentor:fetch-incasari-clienti --zile=2')
+    ->everyTwoHours()
+    ->timezone('Europe/Bucharest')
+    ->days([1, 2, 3, 4, 5, 6])
+    ->between('08:30', '18:30')
+    ->withoutOverlapping(90)
+    ->runInBackground();
+
 Schedule::command('winmentor:fetch-incasari-clienti --zile=10')
     ->dailyAt('21:50')
     ->timezone('Europe/Bucharest')

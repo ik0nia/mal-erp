@@ -616,7 +616,9 @@ class CustomerResource extends Resource
                 'facturi'  => $facturi,
                 'incasari' => $incasari,
                 'sedii'    => $sedii,
-                'interval' => 'sincronizat local — istoric complet',
+                'interval' => ($ts = DB::table('winmentor_incasari_clienti')->whereIn('part_id', $partIds)->max('fetched_at'))
+                    ? 'istoric complet · actualizat ' . \Carbon\Carbon::parse($ts)->format('d.m H:i')
+                    : 'sincronizat local — istoric parțial (clientul intră în sync-ul nocturn)',
                 'eroare'   => null,
             ];
         });

@@ -36,6 +36,22 @@ class FetchWinmentorIncasariClientiCommand extends Command
             return self::FAILURE;
         }
 
+        // O singură instanță (intra-day + nocturn + duminical folosesc același COM)
+        $lock = \Illuminate\Support\Facades\Cache::lock('winmentor_incasari_clienti', 3 * 3600);
+        if (! $lock->get()) {
+            $this->warn('O altă rulare incasari-clienti e în curs — ieșire.');
+            return self::SUCCESS;
+        }
+
+        try {
+            return $this->doFetch($bridge, $firma);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    private function doFetch(WinmentorBridgeClient $bridge, string $firma): int
+    {
         if ($this->option('part')) {
             $partIds = [(string) $this->option('part')];
         } elseif ($this->option('toti')) {
@@ -45,10 +61,18 @@ class FetchWinmentorIncasariClientiCommand extends Command
         } else {
             $zile = max(1, (int) $this->option('zile'));
             $de = now()->subDays($zile);
-            $partIds = DB::table('winmentor_vanzari_raw')
+
+            // Clienți cu VÂNZĂRI recente + clienți cu ÎNCASĂRI recent detectate
+            // (exportul lunar e incomplet, dar e un semnal bun de „a plătit ceva")
+            $cuVanzari = DB::table('winmentor_vanzari_raw')
                 ->where('firma', $firma)
                 ->whereRaw('(an*10000 + luna*100 + zi) >= ?', [(int) $de->format('Ymd')])
                 ->whereNotNull('part_id')->distinct()->pluck('part_id')->all();
+            $cuIncasari = DB::table('winmentor_incasari_raw')
+                ->where('data', '>=', $de->toDateString())
+                ->whereNotNull('part_id')->distinct()->pluck('part_id')->all();
+
+            $partIds = array_values(array_unique(array_merge($cuVanzari, $cuIncasari)));
         }
 
         $this->info(count($partIds) . ' parteneri de procesat');
