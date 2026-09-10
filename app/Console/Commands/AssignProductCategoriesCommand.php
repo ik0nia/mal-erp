@@ -20,7 +20,8 @@ class AssignProductCategoriesCommand extends Command
     protected $signature = 'categories:assign-placeholder-products
                             {--limit= : Max number of products to process (default: all)}
                             {--batch-size=20 : Products per Claude API call}
-                            {--reassign : Also re-assign products that already have a category}';
+                            {--reassign : Also re-assign products that already have a category}
+                            {--only-stock : Doar produsele cu stoc fizic (lista de lucru)}';
 
     protected $description = 'Use Claude to assign the most specific category to uncategorized WinMentor products';
 
@@ -55,8 +56,16 @@ class AssignProductCategoriesCommand extends Command
         // Query uncategorized placeholder products
         $query = DB::table('woo_products')
             ->where('is_placeholder', true)
-            ->where('source', 'winmentor_csv')
+            ->whereIn('source', ['winmentor_csv', 'winmentor_bridge'])
             ->select('id', 'name');
+
+        if ($this->option('only-stock')) {
+            $query->whereExists(function ($q) {
+                $q->select(DB::raw(1))->from('product_stocks')
+                    ->whereColumn('product_stocks.woo_product_id', 'woo_products.id')
+                    ->where('quantity', '>', 0);
+            });
+        }
 
         if (! $reassign) {
             $query->whereNotExists(function ($q) {

@@ -46,7 +46,7 @@ class VerifyProductImagesCommand extends Command
         // Produse cu imagine aprobată care nu au fost verificate recent
         $products = DB::table('woo_products')
             ->where('is_placeholder', true)
-            ->where('source', 'winmentor_csv')
+            ->whereIn('source', ['winmentor_csv', 'winmentor_bridge'])
             ->whereNotNull('main_image_url')
             ->where('main_image_url', '!=', '')
             ->select('id', 'name', 'main_image_url')

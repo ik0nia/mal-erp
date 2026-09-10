@@ -73,7 +73,7 @@ class SearchProductImagesGoogleCommand extends Command
 
         $query = DB::table('woo_products')
             ->where('is_placeholder', true)
-            ->where('source', 'winmentor_csv')
+            ->whereIn('source', ['winmentor_csv', 'winmentor_bridge'])
             ->select('id', 'name');
 
         if ($onlyEmpty) {

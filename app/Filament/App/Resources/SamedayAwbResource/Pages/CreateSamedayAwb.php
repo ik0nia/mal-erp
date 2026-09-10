@@ -20,8 +20,14 @@ class CreateSamedayAwb extends CreateRecord
 {
     protected static string $resource = SamedayAwbResource::class;
 
-    /** @var int|null Woo order ID passed via query string */
-    protected ?int $wooOrderId = null;
+    /**
+     * @var int|null Woo order ID passed via query string.
+     * PUBLIC + Locked: proprietățile protected NU supraviețuiesc între
+     * request-urile Livewire — la submit revenea null și AWB-ul se salva
+     * fără legătura la comandă (regresie după upgrade-ul Livewire 4, 2026-09-09).
+     */
+    #[\Livewire\Attributes\Locked]
+    public ?int $wooOrderId = null;
 
     /** Rezumatul comenzii sursă, afișat sub titlul paginii. */
     public ?string $orderSummary = null;

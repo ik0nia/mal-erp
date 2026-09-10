@@ -42,9 +42,11 @@ class NewWinmentorProducts extends Page implements HasTable
 
     public static function getNavigationBadge(): ?string
     {
+        // doar cele cu stoc fizic — restul nomenclatorului WinMentor (articole moarte/interne) e zgomot
         $count = WooProduct::query()
             ->where('is_placeholder', true)
             ->whereIn('source', [WooProduct::SOURCE_WINMENTOR_CSV, WooProduct::SOURCE_WINMENTOR_BRIDGE])
+            ->whereHas('stocks', fn ($q) => $q->where('quantity', '>', 0))
             ->count();
 
         return $count > 0 ? (string) $count : null;
@@ -186,6 +188,14 @@ class NewWinmentorProducts extends Page implements HasTable
                     ->sortable(),
             ])
             ->filters([
+                TernaryFilter::make('has_stock')
+                    ->label('Cu stoc fizic')
+                    ->default(true)
+                    ->queries(
+                        true: fn ($q) => $q->whereHas('stocks', fn ($s) => $s->where('quantity', '>', 0)),
+                        false: fn ($q) => $q->whereDoesntHave('stocks', fn ($s) => $s->where('quantity', '>', 0)),
+                        blank: fn ($q) => $q,
+                    ),
                 TernaryFilter::make('has_image')
                     ->label('Poză')
                     ->placeholder('Toate')
