@@ -209,6 +209,60 @@ class WooOrderResource extends Resource
             ->searchPlaceholder('Caută număr, client...')
             ->recordActions([
                 Actions\ViewAction::make(),
+                Actions\Action::make('awb_history')
+                    ->label('Istoric AWB')
+                    ->icon('heroicon-o-clock')
+                    ->color('gray')
+                    ->visible(fn (WooOrder $record): bool => $record->samedayAwbs
+                        ->contains(fn ($a) => filled($a->awb_number) && $a->status !== 'cancelled'))
+                    ->modalHeading(function (WooOrder $record): string {
+                        $awb = $record->samedayAwbs->filter(fn ($a) => filled($a->awb_number) && $a->status !== 'cancelled')->sortByDesc('id')->first();
+
+                        return 'Tracking AWB ' . ($awb?->awb_number ?? '');
+                    })
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Închide')
+                    ->modalWidth('lg')
+                    ->modalContent(function (WooOrder $record) {
+                        $awb = $record->samedayAwbs->filter(fn ($a) => filled($a->awb_number) && $a->status !== 'cancelled')->sortByDesc('id')->first();
+                        if (! $awb) {
+                            return view('filament.app.awb-tracking-timeline', ['error' => 'Comanda nu are AWB valid.', 'awb' => null]);
+                        }
+                        // încheiat + istoric salvat → local, fără apel Sameday
+                        if ($awb->isTrackingTerminal() && filled($awb->tracking_history)) {
+                            return view('filament.app.awb-tracking-timeline', ['tracking' => $awb->tracking_history, 'awb' => $awb]);
+                        }
+                        try {
+                            $connection = $awb->connection
+                                ?? IntegrationConnection::find($awb->integration_connection_id)
+                                ?? IntegrationConnection::where('provider', IntegrationConnection::PROVIDER_SAMEDAY)->where('is_active', true)->first();
+                            $tracking = app(SamedayAwbService::class)->getAwbStatusHistory($connection, $awb->awb_number);
+                            $last = $tracking['history'][0] ?? null;
+                            $deliveredAt = $tracking['summary']['delivered_at'] ?? null;
+                            $pickedUp = collect($tracking['history'])
+                                ->filter(fn ($h) => preg_match('/ridicat/i', (string) ($h['label'] ?? '')))
+                                ->pluck('date')->filter()->sort()->first();
+                            $label = $last['label'] ?? $awb->courier_status;
+                            if ($deliveredAt && ! preg_match('/rambur|retur/i', (string) $label)) {
+                                $label = 'Livrat — ' . $deliveredAt . ((float) $awb->cod_amount > 0 ? ' (ramburs în așteptare)' : '');
+                            }
+                            $awb->update([
+                                'courier_status'    => $label,
+                                'courier_status_at' => $last['date'] ?? $awb->courier_status_at,
+                                'picked_up_at'      => $pickedUp ?? $awb->picked_up_at,
+                                'delivered_at'      => $deliveredAt ?? $awb->delivered_at,
+                                'tracking_history'  => $tracking,
+                            ]);
+
+                            return view('filament.app.awb-tracking-timeline', ['tracking' => $tracking, 'awb' => $awb->fresh()]);
+                        } catch (\Throwable $e) {
+                            if (filled($awb->tracking_history)) {
+                                return view('filament.app.awb-tracking-timeline', ['tracking' => $awb->tracking_history, 'awb' => $awb]);
+                            }
+
+                            return view('filament.app.awb-tracking-timeline', ['error' => 'Tracking indisponibil: ' . $e->getMessage(), 'awb' => $awb]);
+                        }
+                    }),
             ])
             ->bulkActions([
                 Actions\BulkAction::make('resync_selected')

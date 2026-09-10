@@ -42,8 +42,11 @@ class RefreshAwbCourierStatusCommand extends Command
                             });
                     });
             })
-            // cele mai NOI fără status primele, apoi restul activelor
-            ->orderByRaw('(courier_status IS NULL) DESC, created_at DESC')
+            // cele mai NOI fără status primele — după data COMENZII reale
+            // (created_at din ERP minte la cele importate în bloc de pe site)
+            ->leftJoin('woo_orders', 'woo_orders.id', '=', 'sameday_awbs.woo_order_id')
+            ->select('sameday_awbs.*')
+            ->orderByRaw('(sameday_awbs.courier_status IS NULL) DESC, COALESCE(woo_orders.order_date, sameday_awbs.created_at) DESC')
             ->when((int) $this->option('limit') > 0, fn ($q) => $q->limit((int) $this->option('limit')))
             ->get();
 
