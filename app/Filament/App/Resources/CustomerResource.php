@@ -645,22 +645,45 @@ class CustomerResource extends Resource
         if (empty($facturi)) {
             return '<p class="text-sm text-gray-500">Nu sunt facturi de încasat.</p>';
         }
+        // Sortare cronologică; stornourile (rest negativ) evidențiate — ele anulează
+        // facturi din listă dar rămân „deschise" până la compensare în WinMentor
+        usort($facturi, fn ($a, $b) => strcmp(
+            preg_replace('/(\d{2})\.(\d{2})\.(\d{4})/', '$3$2$1', $a['dataDocument'] ?? ''),
+            preg_replace('/(\d{2})\.(\d{2})\.(\d{4})/', '$3$2$1', $b['dataDocument'] ?? '')
+        ));
+
         $rows = '';
+        $total = 0.0;
+        $areStorno = false;
         foreach ($facturi as $f) {
+            $rest = (float) str_replace(['.', ','], ['', '.'], (string) ($f['rest'] ?? '0'));
+            $total += $rest;
+            $negativ = $rest < 0;
+            $areStorno = $areStorno || $negativ;
+            $style = $negativ ? ';color:#dc2626' : '';
             $rows .= '<tr>'
-                . '<td style="padding:4px 8px">' . e($f['tip'] ?? '') . '</td>'
+                . '<td style="padding:4px 8px">' . e($f['tip'] ?? '') . ($negativ ? ' <span style="color:#dc2626;font-size:11px">(storno)</span>' : '') . '</td>'
                 . '<td style="padding:4px 8px">' . e($f['nrDocument'] ?? '') . '</td>'
                 . '<td style="padding:4px 8px">' . e($f['dataDocument'] ?? '') . '</td>'
-                . '<td style="padding:4px 8px;text-align:right">' . e($f['rest'] ?? '') . '</td>'
+                . '<td style="padding:4px 8px;text-align:right' . $style . '">' . e($f['rest'] ?? '') . '</td>'
                 . '<td style="padding:4px 8px">' . e($f['dataScadenta'] ?? '') . '</td>'
                 . '</tr>';
         }
+
+        $footer = '<tr style="border-top:1px solid #ddd;font-weight:600">'
+            . '<td style="padding:4px 8px" colspan="3">Total rest de plată</td>'
+            . '<td style="padding:4px 8px;text-align:right">' . number_format($total, 2, ',', '.') . '</td><td></td></tr>';
+
+        $hint = $areStorno
+            ? '<p style="font-size:12px;color:#92400e;margin-top:6px">⚠ Stornouri necompensate în WinMentor: documentele cu rest negativ anulează (parțial sau total) facturi din listă — după compensare în Mentor dispar amândouă din sold.</p>'
+            : '';
+
         return '<table style="width:100%;border-collapse:collapse;font-size:13px">'
             . '<thead><tr style="text-align:left;border-bottom:1px solid #ddd">'
             . '<th style="padding:4px 8px">Tip</th><th style="padding:4px 8px">Nr. doc</th>'
             . '<th style="padding:4px 8px">Dată</th><th style="padding:4px 8px;text-align:right">Rest de plată</th>'
             . '<th style="padding:4px 8px">Scadență</th>'
-            . '</tr></thead><tbody>' . $rows . '</tbody></table>';
+            . '</tr></thead><tbody>' . $rows . $footer . '</tbody></table>' . $hint;
     }
 
     protected static function sediiHtml(array $sedii): string
