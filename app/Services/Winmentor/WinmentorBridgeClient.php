@@ -413,6 +413,24 @@ class WinmentorBridgeClient
     }
 
     /**
+     * Documentele de IEȘIRE ale unei zile din luna selectată (READ-ONLY).
+     * GetInfoIesiri(Zi) — listă la nivel de DOCUMENT (nu mișcare de stoc):
+     * candidat pentru facturile de decontare a avizelor, absente din /vanzari/luna.
+     */
+    public function getInfoIesiri(int $zi): array
+    {
+        $result = $this->get('/api/iesiri/info?zi=' . $zi, timeout: 60);
+        return $result['data'] ?? [];
+    }
+
+    /** Liniile unui document de ieșire (GetInfoIesiriExt(NrDoc, Zi)). READ-ONLY. */
+    public function getInfoIesiriExt(int $nrDoc, int $zi): array
+    {
+        $result = $this->get('/api/iesiri/info-ext?nrDoc=' . $nrDoc . '&zi=' . $zi, timeout: 60);
+        return $result['data'] ?? [];
+    }
+
+    /**
      * Returnează bonurile de casă din emularea casei de marcat (/api/vanzari/emulare).
      * Date bogate: idBon, pozitie, denArticol, numeClient, nrComanda (nr. casă),
      * valoare, pret, cantitate, gestiune.
