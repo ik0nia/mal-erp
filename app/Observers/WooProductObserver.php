@@ -32,7 +32,7 @@ class WooProductObserver
             PushProductSkuToWooJob::dispatch($product->id)->onQueue('default');
         }
 
-        if ($product->wasChanged(['name', 'short_description', 'description'])) {
+        if ($product->wasChanged(['name', 'short_description', 'description', 'unit'])) {
             PushProductContentToWooJob::dispatch($product->id)->onQueue('default');
         }
     }

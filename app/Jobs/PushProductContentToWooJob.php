@@ -17,6 +17,13 @@ class PushProductContentToWooJob implements ShouldQueue
 {
     use Queueable;
 
+    /** Coduri de unitate din importuri (Toya=poloneză, WinMentor=prescurtări) → afișare pe site */
+    private const UNIT_DISPLAY = [
+        'pac' => 'pachet',
+        'opa' => 'pachet',
+        'paa' => 'pereche',
+    ];
+
     public int $tries = 3;
 
     public int $backoff = 60;
@@ -47,6 +54,14 @@ class PushProductContentToWooJob implements ShouldQueue
         }
         if (filled($product->description)) {
             $payload['description'] = (string) $product->description;
+        }
+
+        // Unitatea de măsură — tema citește meta woodmart_price_unit_of_measure
+        if (filled($product->unit)) {
+            $payload['meta_data'][] = [
+                'key'   => 'woodmart_price_unit_of_measure',
+                'value' => self::UNIT_DISPLAY[$product->unit] ?? $product->unit,
+            ];
         }
 
         try {
