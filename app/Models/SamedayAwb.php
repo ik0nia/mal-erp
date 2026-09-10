@@ -44,6 +44,7 @@ class SamedayAwb extends Model
         'error_message',
         'courier_status',
         'courier_status_at',
+        'tracking_attempts',
         'picked_up_at',
         'delivered_at',
         'tracking_history',
