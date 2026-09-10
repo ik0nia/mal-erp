@@ -363,6 +363,22 @@ class SamedayAwbService
         return $events;
     }
 
+    /**
+     * Modifică suma de ramburs pe un AWB deja emis (înainte de livrare) —
+     * evită anularea + re-emiterea când clientul schimbă comanda.
+     */
+    public function updateCodAmount(IntegrationConnection $connection, string $awbNumber, float $amount): void
+    {
+        if (! $connection->isSameday() || ! $connection->is_active) {
+            throw new RuntimeException('Conexiunea selectată nu este Sameday activă.');
+        }
+
+        $sameday = $this->newSamedayInstance($connection);
+        $sameday->putAwbCODAmount(
+            new \Sameday\Requests\SamedayPutAwbCODAmountRequest(trim($awbNumber), $amount)
+        );
+    }
+
     public function cancelAwb(IntegrationConnection $connection, string $awbNumber): array
     {
         if (! $connection->isSameday() || ! $connection->is_active) {

@@ -438,7 +438,43 @@ class WooOrderResource extends Resource
                                     ->label('Colete / Ramburs')
                                     ->columnSpan(2)
                                     ->getStateUsing(fn ($record): string => (int) $record->package_count . ' colet(e), ' . rtrim(rtrim(number_format((float) $record->package_weight_kg, 2), '0'), '.') . ' kg'
-                                        . ((float) $record->cod_amount > 0 ? ' · ramburs ' . number_format((float) $record->cod_amount, 2) . ' RON' : '')),
+                                        . ((float) $record->cod_amount > 0 ? ' · ramburs ' . number_format((float) $record->cod_amount, 2) . ' RON' : ''))
+                                    ->hintAction(
+                                        Actions\Action::make('update_cod')
+                                            ->label('Modifică ramburs')
+                                            ->icon('heroicon-o-banknotes')
+                                            ->color('warning')
+                                            // are sens doar pe AWB activ, nelivrat încă
+                                            ->visible(fn ($record): bool => filled($record->awb_number)
+                                                && $record->status === 'created'
+                                                && ! $record->delivered_at
+                                                && ! $record->isTrackingTerminal())
+                                            ->schema([
+                                                \Filament\Forms\Components\TextInput::make('cod_amount')
+                                                    ->label('Sumă ramburs (RON)')
+                                                    ->numeric()->minValue(0)->required()
+                                                    ->default(fn ($record) => (float) $record->cod_amount)
+                                                    ->helperText('0 = fără ramburs. Se trimite direct la Sameday.'),
+                                            ])
+                                            ->action(function (array $data, $record): void {
+                                                try {
+                                                    $connection = $record->connection
+                                                        ?? IntegrationConnection::find($record->integration_connection_id)
+                                                        ?? IntegrationConnection::where('provider', IntegrationConnection::PROVIDER_SAMEDAY)->where('is_active', true)->first();
+                                                    app(SamedayAwbService::class)->updateCodAmount($connection, $record->awb_number, (float) $data['cod_amount']);
+                                                    $record->update(['cod_amount' => (float) $data['cod_amount']]);
+                                                    \Filament\Notifications\Notification::make()
+                                                        ->title('Ramburs actualizat la Sameday')
+                                                        ->body(number_format((float) $data['cod_amount'], 2) . ' RON pe AWB ' . $record->awb_number)
+                                                        ->success()->send();
+                                                } catch (\Throwable $e) {
+                                                    \Filament\Notifications\Notification::make()
+                                                        ->title('Nu am putut modifica rambursul')
+                                                        ->body($e->getMessage())
+                                                        ->danger()->send();
+                                                }
+                                            })
+                                    ),
                                 TextEntry::make('created_at')->label('Creat la')->dateTime('d.m.Y H:i')->columnSpan(2),
                                 TextEntry::make('delivery_time')
                                     ->label('Durată livrare')
