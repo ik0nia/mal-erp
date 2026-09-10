@@ -21,6 +21,9 @@ use Illuminate\Support\Facades\DB;
  *    sunt vânzări operaționale (în bilanț sunt la alte venituri, nu în CA).
  *  - «fara_articol»: linii centralizatoare fără articol (bonuri «INTERNE»
  *    care dublează bonurile individuale de emulare).
+ *  - «achitare_factura»: bonurile «ACHITAT FACT.EMISE» (casa 4, din nov 2025)
+ *    sunt PLĂȚI pentru facturi deja emise, nu vânzări — marfa a fost numărată
+ *    pe aviz/factură; fără excludere 2026 părea +13% vs 2025 (2,2M dublați).
  *
  * Sumele sunt CU TVA (decizia utilizatorului): avizele/facturile au prețul
  * FĂRĂ TVA (verificat: c*p*(1+cota) = valoare_factura per document) → se
@@ -48,11 +51,12 @@ class VanzariNetService
                     WHEN den_articol IS NULL OR den_articol = '' THEN 'fara_articol'
                     WHEN den_articol REGEXP 'AVANS' THEN 'avans'
                     WHEN den_articol REGEXP 'PARCEL' THEN 'teren'
+                    WHEN den_articol REGEXP 'ACHITAT' THEN 'achitare_factura'
                     ELSE NULL
                 END,
                 lei_cu_tva = CASE
                     WHEN den_articol IS NULL OR den_articol = '' THEN 0
-                    WHEN den_articol REGEXP 'AVANS|PARCEL' THEN 0
+                    WHEN den_articol REGEXP 'AVANS|PARCEL|ACHITAT' THEN 0
                     WHEN tip_document = 'S' THEN ROUND(cantitate * pret, 2)
                     ELSE ROUND(cantitate * pret * (1 +
                         CASE WHEN cota_tva REGEXP '^[0-9]+(\\\\.[0-9]+)?$'
