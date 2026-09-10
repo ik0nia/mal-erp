@@ -115,18 +115,18 @@ class PulsPage extends Page
     {
         $today = now()->toDateString();
 
-        // banii: FĂRĂ filtrul cantitate>0 (stornările/retururile se compensează —
-        // altfel dublăm avizele refacturate) și FĂRĂ liniile centralizatoare fără
-        // articol (bonuri «INTERNE» care dublează bonurile individuale)
+        // banii: SUM(lei_net) — valoare precalculată de VanzariNetService care
+        // exclude refacturările de avize, facturile de avans, terenurile și
+        // centralizatoarele, și scade TVA-ul din bonurile de casă (prețul S e brut).
+        // Fără lei_net cifrele ies cu 20-45% peste realitate (verificat vs bilanț).
         $salesDay = fn (string $date) => $this->whereZile(DB::table('winmentor_vanzari_raw'), $date, $date)
-            ->whereNotNull('den_articol')->where('den_articol', '!=', '')
-            ->selectRaw('ROUND(SUM(cantitate * pret)) lei, COUNT(DISTINCT nr_factura) documente')->first();
+            ->selectRaw('ROUND(COALESCE(SUM(lei_net),0)) lei,
+                COUNT(DISTINCT CASE WHEN COALESCE(lei_net,0) != 0 THEN nr_factura END) documente')->first();
         $azi = $salesDay($today);
         $ieri = $salesDay(now()->subDay()->toDateString());
 
         $salesRange = fn ($from, $to) => (float) $this->whereZile(DB::table('winmentor_vanzari_raw'), $from, $to)
-            ->whereNotNull('den_articol')->where('den_articol', '!=', '')
-            ->selectRaw('COALESCE(SUM(cantitate * pret),0) lei')->value('lei');
+            ->selectRaw('COALESCE(SUM(lei_net),0) lei')->value('lei');
         $sapt = $salesRange(now()->startOfWeek()->toDateString(), $today);
         $saptTrecuta = $salesRange(now()->subWeek()->startOfWeek()->toDateString(), now()->subWeek()->endOfWeek()->toDateString());
         $luna = $salesRange(now()->startOfMonth()->toDateString(), $today);
@@ -134,9 +134,8 @@ class PulsPage extends Page
 
         // grafic: vânzări pe zi, ultimele 30 zile
         $grafic = $this->whereZile(DB::table('winmentor_vanzari_raw'), now()->subDays(29)->toDateString())
-            ->whereNotNull('den_articol')->where('den_articol', '!=', '')
             ->groupBy('an', 'luna', 'zi')
-            ->selectRaw("CONCAT(an,'-',LPAD(luna,2,'0'),'-',LPAD(zi,2,'0')) ziua, ROUND(SUM(cantitate*pret)) lei")
+            ->selectRaw("CONCAT(an,'-',LPAD(luna,2,'0'),'-',LPAD(zi,2,'0')) ziua, ROUND(COALESCE(SUM(lei_net),0)) lei")
             ->pluck('lei', 'ziua')->all();
         $zileGrafic = [];
         for ($i = 29; $i >= 0; $i--) {
@@ -150,27 +149,25 @@ class PulsPage extends Page
             $detaliuZi = [
                 'total' => $salesDay($this->ziSelectata),
                 'topProduse' => $this->whereZile(DB::table('winmentor_vanzari_raw'), $this->ziSelectata, $this->ziSelectata)
-                    ->where('cantitate', '>', 0)->whereNotNull('den_articol')->where('den_articol', '!=', '')
-                    ->whereRaw("den_articol NOT REGEXP 'SERVICII|TRANSPORT|AVANS|TAXA|ACHITAT|TRANSFER|REFACTURAT|Utilitati|Deseu|PALET'")
+                    ->where('cantitate', '>', 0)->whereNull('motiv_exclus')
+                    ->whereRaw("den_articol NOT REGEXP 'SERVICII|TRANSPORT|TAXA|ACHITAT|TRANSFER|REFACTURAT|Utilitati|Deseu|PALET'")
                     ->groupBy('den_articol')
-                    ->selectRaw('den_articol, ROUND(SUM(cantitate)) buc, ROUND(SUM(cantitate*pret)) lei')
-                    ->orderByDesc(DB::raw('SUM(cantitate*pret)'))->limit(8)->get(),
+                    ->selectRaw('den_articol, ROUND(SUM(cantitate)) buc, ROUND(SUM(lei_net)) lei')
+                    ->orderByDesc(DB::raw('SUM(lei_net)'))->limit(8)->get(),
             ];
         }
 
         // defalcare azi pe tip document (S=bonuri, AE=avize, F=facturi)
         $aziTipuri = $this->whereZile(DB::table('winmentor_vanzari_raw'), $today, $today)
-            ->whereNotNull('den_articol')->where('den_articol', '!=', '')
             ->groupBy('tip_document')
-            ->selectRaw('tip_document, ROUND(SUM(cantitate*pret)) lei')
+            ->selectRaw('tip_document, ROUND(COALESCE(SUM(lei_net),0)) lei')
             ->pluck('lei', 'tip_document');
 
         // grafic lunar: bare an curent vs an trecut + tendință pe anii selectați
         $luniAn = DB::table('winmentor_vanzari_raw')
             ->where('an', '>=', 2019)
-            ->whereNotNull('den_articol')->where('den_articol', '!=', '')
             ->groupBy('an', 'luna')
-            ->selectRaw('an, luna, ROUND(SUM(cantitate*pret)) lei')
+            ->selectRaw('an, luna, ROUND(COALESCE(SUM(lei_net),0)) lei')
             ->get()->groupBy('luna')
             ->map(fn ($g) => $g->keyBy('an')->map(fn ($r) => (float) $r->lei));
 
@@ -184,18 +181,18 @@ class PulsPage extends Page
             $l = $this->lunaSelectata;
             $statLuna = fn (int $an) => DB::table('winmentor_vanzari_raw')
                 ->where('an', $an)->where('luna', $l)
-                ->whereNotNull('den_articol')->where('den_articol', '!=', '')
-                ->selectRaw('ROUND(COALESCE(SUM(cantitate*pret),0)) lei, COUNT(DISTINCT nr_factura) documente')->first();
+                ->selectRaw('ROUND(COALESCE(SUM(lei_net),0)) lei,
+                    COUNT(DISTINCT CASE WHEN COALESCE(lei_net,0) != 0 THEN nr_factura END) documente')->first();
             $detaliuLuna = [
                 'curent' => $statLuna(now()->year),
                 'trecut' => $statLuna(now()->year - 1),
                 'topProduse' => DB::table('winmentor_vanzari_raw')
                     ->where('an', now()->year)->where('luna', $l)
-                    ->where('cantitate', '>', 0)->whereNotNull('den_articol')->where('den_articol', '!=', '')
-                    ->whereRaw("den_articol NOT REGEXP 'SERVICII|TRANSPORT|AVANS|TAXA|ACHITAT|TRANSFER|REFACTURAT|Utilitati|Deseu|PALET'")
+                    ->where('cantitate', '>', 0)->whereNull('motiv_exclus')
+                    ->whereRaw("den_articol NOT REGEXP 'SERVICII|TRANSPORT|TAXA|ACHITAT|TRANSFER|REFACTURAT|Utilitati|Deseu|PALET'")
                     ->groupBy('den_articol')
-                    ->selectRaw('den_articol, ROUND(SUM(cantitate)) buc, ROUND(SUM(cantitate*pret)) lei')
-                    ->orderByDesc(DB::raw('SUM(cantitate*pret)'))->limit(5)->get(),
+                    ->selectRaw('den_articol, ROUND(SUM(cantitate)) buc, ROUND(SUM(lei_net)) lei')
+                    ->orderByDesc(DB::raw('SUM(lei_net)'))->limit(5)->get(),
             ];
         }
 
@@ -229,11 +226,11 @@ class PulsPage extends Page
 
         // top produse (perioadă + sortare comutabile)
         $topProduse = $this->whereZile(DB::table('winmentor_vanzari_raw'), $fromPerioada)
-            ->where('cantitate', '>', 0)->whereNotNull('den_articol')->where('den_articol', '!=', '')
-            ->whereRaw("den_articol NOT REGEXP 'SERVICII|TRANSPORT|AVANS|TAXA|ACHITAT|TRANSFER|REFACTURAT|Utilitati|Deseu|PALET'")
+            ->where('cantitate', '>', 0)->whereNull('motiv_exclus')
+            ->whereRaw("den_articol NOT REGEXP 'SERVICII|TRANSPORT|TAXA|ACHITAT|TRANSFER|REFACTURAT|Utilitati|Deseu|PALET'")
             ->groupBy('den_articol')
-            ->selectRaw('den_articol, MAX(sku) sku, ROUND(SUM(cantitate)) buc, ROUND(SUM(cantitate*pret)) lei')
-            ->orderByDesc(DB::raw($this->sortTop === 'buc' ? 'SUM(cantitate)' : 'SUM(cantitate*pret)'))
+            ->selectRaw('den_articol, MAX(sku) sku, ROUND(SUM(cantitate)) buc, ROUND(SUM(lei_net)) lei')
+            ->orderByDesc(DB::raw($this->sortTop === 'buc' ? 'SUM(cantitate)' : 'SUM(lei_net)'))
             ->limit(10)->get();
 
         // stoc ERP în timp real pentru top — interogare separată, doar 10 SKU-uri
@@ -249,12 +246,12 @@ class PulsPage extends Page
         // «OFERTE CLIENTI» = partener generic pentru oferte → excluse
         $topClienti = $this->whereZile(DB::table('winmentor_vanzari_raw as v'), $fromPerioada)
             ->join('winmentor_parteneri as wp', 'wp.wm_id', '=', 'v.part_id')
-            ->where('v.cantitate', '>', 0)
+            ->where('v.cantitate', '>', 0)->whereNull('v.motiv_exclus')
             ->whereNotIn('wp.clasa', ['A', 'PF INACTIVI'])
             ->whereRaw("wp.denumire NOT REGEXP 'OFERTE|PERSOANE FIZICE|DIVERSI|INTERN|^TEST'")
             ->groupBy('wp.denumire')
-            ->selectRaw('wp.denumire, ROUND(SUM(v.cantitate*v.pret)) lei, COUNT(DISTINCT v.nr_factura) facturi')
-            ->orderByDesc(DB::raw('SUM(v.cantitate*v.pret)'))->limit(10)->get();
+            ->selectRaw('wp.denumire, ROUND(SUM(v.lei_net)) lei, COUNT(DISTINCT v.nr_factura) facturi')
+            ->orderByDesc(DB::raw('SUM(v.lei_net)'))->limit(10)->get();
 
         // detaliu client: ultimele facturi
         $detaliuClient = null;
@@ -263,9 +260,9 @@ class PulsPage extends Page
                 ->join('winmentor_parteneri as wp', 'wp.wm_id', '=', 'v.part_id')
                 ->whereNotIn('wp.clasa', ['A', 'PF INACTIVI'])
                 ->where('wp.denumire', $this->clientSelectat)
-                ->where('v.cantitate', '>', 0)
+                ->where('v.cantitate', '>', 0)->whereNull('v.motiv_exclus')
                 ->groupBy('v.nr_factura', 'v.an', 'v.luna', 'v.zi')
-                ->selectRaw("v.nr_factura, CONCAT(LPAD(v.zi,2,'0'),'.',LPAD(v.luna,2,'0'),'.',v.an) data_fact, ROUND(SUM(v.cantitate*v.pret)) lei, COUNT(*) linii")
+                ->selectRaw("v.nr_factura, CONCAT(LPAD(v.zi,2,'0'),'.',LPAD(v.luna,2,'0'),'.',v.an) data_fact, ROUND(SUM(v.lei_net)) lei, COUNT(*) linii")
                 ->orderByDesc(DB::raw('v.an*10000 + v.luna*100 + v.zi'))->limit(8)->get();
         }
 
@@ -273,11 +270,11 @@ class PulsPage extends Page
         $alerteStoc = $this->whereZile(DB::table('winmentor_vanzari_raw as v'), now()->subDays(14)->toDateString())
             ->join('woo_products as p', fn ($j) => $j->on('p.sku', '=', 'v.sku'))
             ->leftJoin('product_stocks as s', 's.woo_product_id', '=', 'p.id')
-            ->where('v.cantitate', '>', 0)
+            ->where('v.cantitate', '>', 0)->whereNull('v.motiv_exclus')
             ->groupBy('p.id', 'p.name')
             ->havingRaw('COALESCE(SUM(DISTINCT s.quantity), 0) <= 0')
-            ->selectRaw('p.id pid, p.name, ROUND(SUM(v.cantitate)) buc_14z, ROUND(SUM(v.cantitate*v.pret)) lei_14z')
-            ->orderByDesc(DB::raw('SUM(v.cantitate*v.pret)'))->limit(10)->get();
+            ->selectRaw('p.id pid, p.name, ROUND(SUM(v.cantitate)) buc_14z, ROUND(SUM(v.lei_net)) lei_14z')
+            ->orderByDesc(DB::raw('SUM(v.lei_net)'))->limit(10)->get();
 
         // sistemul
         $produsePublicate = DB::table('woo_products')->where('status', 'publish')->count();

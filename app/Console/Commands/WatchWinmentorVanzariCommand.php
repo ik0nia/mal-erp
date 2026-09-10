@@ -181,6 +181,10 @@ class WatchWinmentorVanzariCommand extends Command
             collect($rows)->chunk(500)->each(fn ($c) => DB::table('winmentor_vanzari_raw')->insert($c->all()));
         });
 
+        // lei_net + motiv_exclus pe anul lunii importate (refacturările se
+        // detectează la nivel de an, deci recalculăm tot anul — ieftin, set-based)
+        app(\App\Services\Winmentor\VanzariNetService::class)->recomputeAn($an, $firma);
+
         Log::channel('winmentor_sync')->info("[WinMentor WatchVanzari] {$luna}/{$an} firma={$firma}: " . count($rows) . " linii (refill complet)");
 
         DB::table('winmentor_vanzari_sync')->upsert([

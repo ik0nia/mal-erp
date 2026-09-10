@@ -329,6 +329,14 @@ Schedule::command('winmentor:watch-vanzari --firma=MAL2019')
     ->withoutOverlapping(30)
     ->runInBackground();
 
+// WinMentor — recalcul lei_net/motiv_exclus pe toți anii (plasă de siguranță;
+// watch-ul recalculează deja anul curent după fiecare import). Doar SQL local.
+Schedule::command('winmentor:recompute-vanzari-net')
+    ->dailyAt('05:40')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping(60)
+    ->runInBackground();
+
 // WinMentor — bonuri emulare casă (Magazin Practic) în winmentor_emulare_raw.
 // READ-ONLY; luna curentă, re-fetch complet, zilnic după program (nu se bate cu watch-vanzari: același Cache lock).
 Schedule::command('winmentor:fetch-emulare --curenta')

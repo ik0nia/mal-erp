@@ -132,6 +132,8 @@ class RefetchWinmentorVanzariIstoricCommand extends WatchWinmentorVanzariCommand
                     collect($rows)->chunk(500)->each(fn ($c) => DB::table('winmentor_vanzari_raw')->insert($c->all()));
                 });
 
+                app(\App\Services\Winmentor\VanzariNetService::class)->recomputeAn($an, $firma);
+
                 $tipuri = collect($rows)->countBy('tip_document')->map(fn ($v, $k) => "{$k}:{$v}")->implode(', ');
                 $this->info("  [{$luna}/{$an}] ✓ {$oldCount} → " . count($rows) . " rânduri ({$tipuri})");
                 Log::channel('winmentor_sync')->info("[RefetchIstoric] {$luna}/{$an}: {$oldCount} → " . count($rows) . " ({$tipuri})");

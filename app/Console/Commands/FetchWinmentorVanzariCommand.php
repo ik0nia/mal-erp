@@ -106,6 +106,7 @@ class FetchWinmentorVanzariCommand extends Command
 
             $saved = $this->saveVanzari($firma, $an, $luna, $vanzari);
             $totalSaved += $saved;
+            app(\App\Services\Winmentor\VanzariNetService::class)->recomputeAn($an, $firma);
 
             $this->info("  [{$luna}/{$an}] ✓ {$saved} rânduri salvate");
 
