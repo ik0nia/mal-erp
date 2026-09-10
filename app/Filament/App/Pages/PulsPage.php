@@ -165,12 +165,14 @@ class PulsPage extends Page
             ->selectRaw('p.sku, SUM(s.quantity) stoc')->pluck('stoc', 'sku');
         $topProduse->each(fn ($p) => $p->stoc = $stocuri->has($p->sku) ? (float) $stocuri[$p->sku] : null);
 
-        // top clienți (aceeași perioadă)
+        // top clienți (aceeași perioadă) — DOAR clienți reali:
+        // clasa 'A' = conturi interne/angajați (vânzări magazin bătute pe agent),
+        // «OFERTE CLIENTI» = partener generic pentru oferte → excluse
         $topClienti = $this->whereZile(DB::table('winmentor_vanzari_raw as v'), $fromPerioada)
-            ->leftJoin('winmentor_parteneri as wp', 'wp.wm_id', '=', 'v.part_id')
+            ->join('winmentor_parteneri as wp', 'wp.wm_id', '=', 'v.part_id')
             ->where('v.cantitate', '>', 0)
-            ->whereNotNull('wp.denumire')
-            ->whereRaw("wp.denumire NOT REGEXP 'PERSOANE FIZICE|DIVERSI'")
+            ->whereNotIn('wp.clasa', ['A', 'PF INACTIVI'])
+            ->whereRaw("wp.denumire NOT REGEXP 'OFERTE|PERSOANE FIZICE|DIVERSI|INTERN|^TEST'")
             ->groupBy('wp.denumire')
             ->selectRaw('wp.denumire, ROUND(SUM(v.cantitate*v.pret)) lei, COUNT(DISTINCT v.nr_factura) facturi')
             ->orderByDesc(DB::raw('SUM(v.cantitate*v.pret)'))->limit(10)->get();
@@ -180,6 +182,7 @@ class PulsPage extends Page
         if ($this->clientSelectat) {
             $detaliuClient = $this->whereZile(DB::table('winmentor_vanzari_raw as v'), now()->subDays(90)->toDateString())
                 ->join('winmentor_parteneri as wp', 'wp.wm_id', '=', 'v.part_id')
+                ->whereNotIn('wp.clasa', ['A', 'PF INACTIVI'])
                 ->where('wp.denumire', $this->clientSelectat)
                 ->where('v.cantitate', '>', 0)
                 ->groupBy('v.nr_factura', 'v.an', 'v.luna', 'v.zi')
