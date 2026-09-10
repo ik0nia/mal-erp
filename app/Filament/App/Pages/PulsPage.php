@@ -129,6 +129,31 @@ class PulsPage extends Page
             ];
         }
 
+        // defalcare azi pe tip document (S=bonuri, AE=avize, F=facturi)
+        $aziTipuri = $this->whereZile(DB::table('winmentor_vanzari_raw'), $today, $today)
+            ->whereNotNull('den_articol')->where('den_articol', '!=', '')
+            ->groupBy('tip_document')
+            ->selectRaw('tip_document, ROUND(SUM(cantitate*pret)) lei')
+            ->pluck('lei', 'tip_document');
+
+        // grafic lunar: anul curent vs anul trecut
+        $luniAn = DB::table('winmentor_vanzari_raw')
+            ->whereIn('an', [now()->year - 1, now()->year])
+            ->whereNotNull('den_articol')->where('den_articol', '!=', '')
+            ->groupBy('an', 'luna')
+            ->selectRaw('an, luna, ROUND(SUM(cantitate*pret)) lei')
+            ->get()->groupBy('luna')
+            ->map(fn ($g) => $g->keyBy('an')->map(fn ($r) => (float) $r->lei));
+
+        // anul la zi vs anul trecut la aceeași zi
+        $ytd = $salesRange(now()->startOfYear()->toDateString(), $today);
+        $ytdTrecut = $salesRange(now()->subYear()->startOfYear()->toDateString(), now()->subYear()->toDateString());
+
+        // încasări (bani efectiv intrați)
+        $incasariAzi = (float) DB::table('winmentor_incasari_raw')->whereDate('data', $today)->sum('suma');
+        $incasariLuna = (float) DB::table('winmentor_incasari_raw')
+            ->whereBetween('data', [now()->startOfMonth()->toDateString(), $today])->sum('suma');
+
         // comenzi online
         $procesare = DB::table('woo_orders')->where('status', 'processing')->count();
         $onlineAzi = DB::table('woo_orders')->whereDate('order_date', $today)
@@ -215,6 +240,10 @@ class PulsPage extends Page
             'saptLei' => $sapt, 'saptTrecutaLei' => $saptTrecuta,
             'lunaLei' => $luna, 'lunaTrecutaLaZiLei' => $lunaTrecutaLaZi,
             'zileGrafic' => $zileGrafic,
+            'aziTipuri' => $aziTipuri,
+            'luniAn' => $luniAn,
+            'ytd' => $ytd, 'ytdTrecut' => $ytdTrecut,
+            'incasariAzi' => $incasariAzi, 'incasariLuna' => $incasariLuna,
             'detaliuZi' => $detaliuZi,
             'procesare' => $procesare,
             'onlineAziC' => (int) ($onlineAzi->c ?? 0), 'onlineAziLei' => (float) ($onlineAzi->lei ?? 0),

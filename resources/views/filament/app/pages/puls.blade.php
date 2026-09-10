@@ -41,6 +41,16 @@
         <div style="{{ $label }}">Vânzări azi (WinMentor)</div>
         <div style="{{ $big }}">{{ $lei($aziLei) }} lei{!! $chip($delta($aziLei, $ieriLei)) !!}</div>
         <div style="font-size:12px;color:#9ca3af;margin-top:3px">{{ $aziDoc }} documente · ieri: {{ $lei($ieriLei) }} lei</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:4px;display:flex;gap:10px;flex-wrap:wrap">
+            <span>🧾 bonuri <b>{{ $lei($aziTipuri['S'] ?? 0) }}</b></span>
+            <span>🚚 avize <b>{{ $lei($aziTipuri['AE'] ?? 0) }}</b></span>
+            <span>📄 facturi <b>{{ $lei($aziTipuri['F'] ?? 0) }}</b></span>
+        </div>
+    </div>
+    <div style="{{ $card }}">
+        <div style="{{ $label }}">💵 Încasat (bani intrați)</div>
+        <div style="{{ $big }}">{{ $lei($incasariAzi) }} lei</div>
+        <div style="font-size:12px;color:#9ca3af;margin-top:3px">azi · luna curentă: <b style="color:#374151">{{ $lei($incasariLuna) }} lei</b></div>
     </div>
     <div style="{{ $card }}">
         <div style="{{ $label }}">Săptămâna curentă</div>
@@ -74,17 +84,34 @@
         <div style="{{ $label }};margin:0">📈 Vânzări pe zi — ultimele 30 de zile <span style="text-transform:none;color:#9ca3af">(click pe o zi pentru detaliu)</span></div>
         <div style="font-size:11.5px;color:#9ca3af">vârf: {{ $lei($maxZi) }} lei</div>
     </div>
-    <div style="display:flex;align-items:flex-end;gap:3px;height:110px;margin-top:10px">
-        @foreach ($zileGrafic as $zi => $val)
-            @php
-                $h = max(3, (int) round($val / $maxZi * 100));
-                $e = \Carbon\Carbon::parse($zi);
-                $weekend = $e->isWeekend();
-                $activa = $ziSelectata === $zi;
-            @endphp
-            <div wire:click="selecteazaZi('{{ $zi }}')" class="puls-bar" title="{{ $e->format('d.m') }} — {{ $lei($val) }} lei"
-                style="flex:1;height:{{ $h }}%;border-radius:3px 3px 0 0;{{ $activa ? 'background:#c8102e' : ($weekend ? 'background:#f3cfd4' : 'background:#e88f9b') }}"></div>
-        @endforeach
+    @php
+        // media mobilă pe 7 zile — puncte pentru polilinia de tendință
+        $vals = array_values($zileGrafic);
+        $ma = [];
+        foreach ($vals as $i => $v) {
+            $win = array_slice($vals, max(0, $i - 6), min(7, $i + 1));
+            $ma[] = array_sum($win) / max(1, count($win));
+        }
+        $n = count($vals);
+        $pts = collect($ma)->map(fn ($v, $i) => round(($i + 0.5) / $n * 1000, 1) . ',' . round(100 - min(100, $v / $maxZi * 100), 1))->implode(' ');
+    @endphp
+    <div style="position:relative;margin-top:10px">
+        <div style="display:flex;align-items:flex-end;gap:3px;height:110px">
+            @foreach ($zileGrafic as $zi => $val)
+                @php
+                    $h = max(3, (int) round($val / $maxZi * 100));
+                    $e = \Carbon\Carbon::parse($zi);
+                    $weekend = $e->isWeekend();
+                    $activa = $ziSelectata === $zi;
+                @endphp
+                <div wire:click="selecteazaZi('{{ $zi }}')" class="puls-bar" title="{{ $e->format('d.m') }} — {{ $lei($val) }} lei"
+                    style="flex:1;height:{{ $h }}%;border-radius:3px 3px 0 0;{{ $activa ? 'background:#c8102e' : ($weekend ? 'background:#f3cfd4' : 'background:#e88f9b') }}"></div>
+            @endforeach
+        </div>
+        {{-- tendința: medie mobilă 7 zile --}}
+        <svg viewBox="0 0 1000 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:110px;pointer-events:none">
+            <polyline points="{{ $pts }}" fill="none" stroke="#111827" stroke-width="2" stroke-dasharray="5,4" opacity=".55" vector-effect="non-scaling-stroke"/>
+        </svg>
     </div>
     <div style="display:flex;justify-content:space-between;font-size:10.5px;color:#9ca3af;margin-top:4px">
         <span>{{ \Carbon\Carbon::parse(array_key_first($zileGrafic))->format('d.m') }}</span>
@@ -233,6 +260,42 @@
                 <tr><td style="color:#9ca3af;font-size:13px;padding:8px 0">Nicio comandă încă.</td></tr>
             @endforelse
         </table>
+    </div>
+</div>
+
+{{-- grafic lunar: anul curent vs anul trecut --}}
+@php
+    $anCurent = now()->year;
+    $anTrecut = $anCurent - 1;
+    $maxLuna = 1;
+    foreach ($luniAn as $g) { $maxLuna = max($maxLuna, $g[$anCurent] ?? 0, $g[$anTrecut] ?? 0); }
+    $numeLuni = ['ian','feb','mar','apr','mai','iun','iul','aug','sep','oct','nov','dec'];
+@endphp
+<div style="{{ $card }};margin-top:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div style="{{ $label }};margin:0">📊 Vânzări lunare — {{ $anCurent }} vs {{ $anTrecut }}</div>
+        <div style="display:flex;gap:14px;align-items:center;font-size:11.5px;color:#6b7280">
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#c8102e;vertical-align:-1px"></span> {{ $anCurent }}: <b>{{ $lei($ytd) }} lei</b> la zi{!! $chip($delta($ytd, $ytdTrecut)) !!}</span>
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#d1d5db;vertical-align:-1px"></span> {{ $anTrecut }} la aceeași zi: <b>{{ $lei($ytdTrecut) }} lei</b></span>
+        </div>
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:10px;height:130px;margin-top:12px">
+        @for ($l = 1; $l <= 12; $l++)
+            @php
+                $vC = $luniAn[$l][$anCurent] ?? 0;
+                $vT = $luniAn[$l][$anTrecut] ?? 0;
+                $hC = $vC > 0 ? max(3, (int) round($vC / $maxLuna * 100)) : 0;
+                $hT = $vT > 0 ? max(3, (int) round($vT / $maxLuna * 100)) : 0;
+                $lunaViitoare = $l > now()->month;
+            @endphp
+            <div style="flex:1;display:flex;flex-direction:column;height:100%;justify-content:flex-end">
+                <div style="display:flex;align-items:flex-end;gap:2px;flex:1">
+                    <div title="{{ $numeLuni[$l-1] }} {{ $anTrecut }} — {{ $lei($vT) }} lei" style="flex:1;height:{{ $hT }}%;background:#d1d5db;border-radius:3px 3px 0 0"></div>
+                    <div title="{{ $numeLuni[$l-1] }} {{ $anCurent }} — {{ $lei($vC) }} lei" style="flex:1;height:{{ $hC }}%;background:{{ $l === (int) now()->month ? '#c8102e' : '#e0637a' }};border-radius:3px 3px 0 0;{{ $lunaViitoare ? 'opacity:.25' : '' }}"></div>
+                </div>
+                <div style="text-align:center;font-size:10px;color:{{ $l === (int) now()->month ? '#c8102e' : '#9ca3af' }};font-weight:{{ $l === (int) now()->month ? '700' : '400' }};margin-top:3px">{{ $numeLuni[$l-1] }}</div>
+            </div>
+        @endfor
     </div>
 </div>
 
