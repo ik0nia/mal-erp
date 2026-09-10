@@ -78,6 +78,14 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
+            \Illuminate\Support\Facades\Log::warning('[ErrorPage] redirect', [
+                'code'    => $code,
+                'user_id' => auth()->id(),
+                'url'     => $request->fullUrl(),
+                'method'  => $request->method(),
+                'referer' => $request->headers->get('referer'),
+            ]);
+
             $url = route('filament.app.pages.error-page', ['code' => $code]);
             return new \Illuminate\Http\RedirectResponse($url);
         });
