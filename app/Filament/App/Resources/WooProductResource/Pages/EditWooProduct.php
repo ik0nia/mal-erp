@@ -13,6 +13,14 @@ class EditWooProduct extends EditRecord
 {
     protected static string $resource = WooProductResource::class;
 
+    /** Permite editarea și pentru placeholder-e (getEloquentQuery le exclude din listă), la fel ca ViewWooProduct. */
+    protected function resolveRecord(int|string $key): \Illuminate\Database\Eloquent\Model
+    {
+        return WooProductResource::applyUserVisibilityFilter(
+            WooProduct::query()
+        )->findOrFail($key);
+    }
+
     protected function getHeaderActions(): array
     {
         return [
@@ -110,8 +118,9 @@ class EditWooProduct extends EditRecord
                 'on_demand_label'  => $isOnDemand ? ($this->data['on_demand_label'] ?? null) : null,
             ]);
 
-            // Push backorders la WooCommerce dacă produsul are woo_id
-            if ($product->woo_id) {
+            // Push backorders la WooCommerce dacă produsul există real pe site
+            // (woo_id >= 1e15 = placeholder sintetic, la fel ca guard-ul din SyncProductSupplierMetaJob)
+            if ($product->woo_id && ! $product->is_placeholder && $product->woo_id < 1_000_000_000_000_000) {
                 try {
                     $connection = $product->connection;
                     $client     = new WooClient($connection);
