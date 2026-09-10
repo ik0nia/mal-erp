@@ -58,7 +58,9 @@ class SamedayAwb extends Model
         $cs = (string) $this->courier_status;
         if ($cs === '') return false;
         if ($cs === 'indisponibil') return true;
-        if (preg_match('/retur|rambur|anulat|refuz/i', $cs)) return true;
+        // «rambur» singur NU e terminal — eticheta noastră «(ramburs în așteptare)»
+        // îl conține; terminal e doar transferul efectiv al banilor
+        if (preg_match('/retur|anulat|refuz|rambur.*transferat/i', $cs)) return true;
 
         return (bool) preg_match('/livrat/i', $cs) && (float) $this->cod_amount <= 0;
     }

@@ -34,7 +34,7 @@ class RefreshAwbCourierStatusCommand extends Command
                 // «Livrat» e terminal DOAR fără ramburs — la COD așteptăm și transferul banilor.
                 $q->whereNull('sameday_awbs.courier_status')
                     ->orWhere(function ($w) {
-                        $w->whereRaw("sameday_awbs.courier_status NOT REGEXP 'retur|rambur|anulat|refuz'")
+                        $w->whereRaw("sameday_awbs.courier_status NOT REGEXP 'retur|anulat|refuz|rambur.*transferat'")
                             ->where('sameday_awbs.courier_status', '!=', 'indisponibil')
                             ->where(function ($v) {
                                 $v->whereRaw("sameday_awbs.courier_status NOT REGEXP 'livrat'")
