@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Jobs\PushProductContentToWooJob;
 use App\Jobs\PushProductPriceToWooJob;
 use App\Jobs\PushProductSkuToWooJob;
 use App\Models\WooProduct;
@@ -9,7 +10,8 @@ use App\Models\WooProduct;
 class WooProductObserver
 {
     /**
-     * Când regular_price sau sku se schimbă în ERP, împingem valoarea automat pe site.
+     * Când regular_price, sku sau conținutul (nume/descrieri) se schimbă în ERP,
+     * împingem valoarea automat pe site.
      * Nu acționăm dacă schimbarea vine din WooWebhookController (evităm loop).
      */
     public function updated(WooProduct $product): void
@@ -28,6 +30,10 @@ class WooProductObserver
 
         if ($product->wasChanged('sku') && filled($product->sku)) {
             PushProductSkuToWooJob::dispatch($product->id)->onQueue('default');
+        }
+
+        if ($product->wasChanged(['name', 'short_description', 'description'])) {
+            PushProductContentToWooJob::dispatch($product->id)->onQueue('default');
         }
     }
 }

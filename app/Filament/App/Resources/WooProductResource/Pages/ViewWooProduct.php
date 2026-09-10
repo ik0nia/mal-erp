@@ -178,7 +178,11 @@ class ViewWooProduct extends ViewRecord
                         }
 
                         if ($created) {
-                            $product->update(['woo_id' => $created['id'], 'status' => 'publish']);
+                            $product->update(['woo_id' => $created['id'], 'status' => 'publish', 'is_placeholder' => false]);
+
+                            // Produsul e acum real pe site — trimitem galeria și descrierile
+                            \App\Jobs\SyncProductImagesToWooJob::dispatch($product->id)->onQueue('default');
+                            \App\Jobs\PushProductContentToWooJob::dispatch($product->id)->onQueue('default');
                             Notification::make()->success()
                                 ->title('Produs creat în WooCommerce')
                                 ->body('woo_id: ' . $created['id'] . ($payload['images'] ?? null ? '' : ' (fără imagine — URL incompatibil)'))
