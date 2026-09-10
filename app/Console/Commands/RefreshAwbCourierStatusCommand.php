@@ -66,6 +66,11 @@ class RefreshAwbCourierStatusCommand extends Command
                 $last = $tracking['history'][0] ?? null;
                 $deliveredAt = $tracking['summary']['delivered_at'] ?? null;
 
+                // momentul ridicării = cel mai vechi eveniment «ridicat» din istoric
+                $pickedUp = collect($tracking['history'])
+                    ->filter(fn ($h) => preg_match('/ridicat/i', (string) ($h['label'] ?? '')))
+                    ->pluck('date')->filter()->sort()->first();
+
                 $label = $last['label'] ?? $awb->courier_status;
                 // după livrare, evenimentele de ramburs/retur au prioritate (închid ciclul COD)
                 if ($deliveredAt && ! preg_match('/rambur|retur/i', (string) $label)) {
@@ -75,6 +80,8 @@ class RefreshAwbCourierStatusCommand extends Command
                 $awb->update([
                     'courier_status'    => $label,
                     'courier_status_at' => $last['date'] ?? $awb->courier_status_at,
+                    'picked_up_at'      => $pickedUp ?? $awb->picked_up_at,
+                    'delivered_at'      => $deliveredAt ?? $awb->delivered_at,
                 ]);
                 $updated++;
                 if ($deliveredAt) $delivered++;

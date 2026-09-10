@@ -335,33 +335,38 @@ class WooOrderResource extends Resource
                                         : null)
                                     ->hintAction(
                                         Actions\Action::make('refresh_status')
-                                            ->label('Verifică')
-                                            ->icon('heroicon-o-arrow-path')
+                                            ->label('Istoric')
+                                            ->icon('heroicon-o-clock')
                                             ->visible(fn ($record): bool => filled($record->awb_number))
-                                            ->action(function ($record): void {
+                                            ->modalHeading(fn ($record): string => 'Tracking AWB ' . $record->awb_number)
+                                            ->modalSubmitAction(false)
+                                            ->modalCancelActionLabel('Închide')
+                                            ->modalWidth('lg')
+                                            ->modalContent(function ($record) {
                                                 try {
                                                     $connection = $record->connection
                                                         ?? IntegrationConnection::find($record->integration_connection_id)
                                                         ?? IntegrationConnection::where('provider', IntegrationConnection::PROVIDER_SAMEDAY)->where('is_active', true)->first();
                                                     $tracking = app(SamedayAwbService::class)->getAwbStatusHistory($connection, $record->awb_number);
                                                     $last = $tracking['history'][0] ?? null;
-                                                    $record->update([
-                                                        'courier_status'    => $last['label'] ?? null,
-                                                        'courier_status_at' => $last['date'] ?? null,
-                                                    ]);
-                                                    $body = collect(array_slice($tracking['history'], 0, 6))
-                                                        ->map(fn ($h) => ($h['date'] ?? '?') . ' — ' . ($h['label'] ?? '?') . (filled($h['county'] ?? null) ? ' (' . $h['county'] . ')' : ''))
-                                                        ->implode("\n");
-                                                    if ($tracking['summary']['delivered_at'] ?? null) {
-                                                        $body = '✅ LIVRAT la ' . $tracking['summary']['delivered_at'] . "\n" . $body;
+                                                    $deliveredAt = $tracking['summary']['delivered_at'] ?? null;
+                                                    $pickedUp = collect($tracking['history'])
+                                                        ->filter(fn ($h) => preg_match('/ridicat/i', (string) ($h['label'] ?? '')))
+                                                        ->pluck('date')->filter()->sort()->first();
+                                                    $label = $last['label'] ?? $record->courier_status;
+                                                    if ($deliveredAt && ! preg_match('/rambur|retur/i', (string) $label)) {
+                                                        $label = 'Livrat — ' . $deliveredAt . ((float) $record->cod_amount > 0 ? ' (ramburs în așteptare)' : '');
                                                     }
-                                                    \Filament\Notifications\Notification::make()->success()
-                                                        ->title('AWB ' . $record->awb_number)
-                                                        ->body($body ?: 'Fără evenimente încă.')
-                                                        ->persistent()->send();
+                                                    $record->update([
+                                                        'courier_status'    => $label,
+                                                        'courier_status_at' => $last['date'] ?? $record->courier_status_at,
+                                                        'picked_up_at'      => $pickedUp ?? $record->picked_up_at,
+                                                        'delivered_at'      => $deliveredAt ?? $record->delivered_at,
+                                                    ]);
+
+                                                    return view('filament.app.awb-tracking-timeline', ['tracking' => $tracking, 'awb' => $record->fresh()]);
                                                 } catch (\Throwable $e) {
-                                                    \Filament\Notifications\Notification::make()->danger()
-                                                        ->title('Tracking indisponibil')->body($e->getMessage())->send();
+                                                    return view('filament.app.awb-tracking-timeline', ['error' => 'Tracking indisponibil: ' . $e->getMessage(), 'awb' => $record]);
                                                 }
                                             })
                                     ),
@@ -371,6 +376,20 @@ class WooOrderResource extends Resource
                                     ->getStateUsing(fn ($record): string => (int) $record->package_count . ' colet(e), ' . rtrim(rtrim(number_format((float) $record->package_weight_kg, 2), '0'), '.') . ' kg'
                                         . ((float) $record->cod_amount > 0 ? ' · ramburs ' . number_format((float) $record->cod_amount, 2) . ' RON' : '')),
                                 TextEntry::make('created_at')->label('Creat la')->dateTime('d.m.Y H:i')->columnSpan(2),
+                                TextEntry::make('delivery_time')
+                                    ->label('Durată livrare')
+                                    ->placeholder('—')
+                                    ->columnSpan(2)
+                                    ->getStateUsing(function ($record): ?string {
+                                        if (! $record->picked_up_at || ! $record->delivered_at) {
+                                            return null;
+                                        }
+                                        $ore = $record->picked_up_at->diffInHours($record->delivered_at);
+
+                                        return $ore < 48
+                                            ? $ore . ' ore'
+                                            : number_format($ore / 24, 1, ',', '') . ' zile';
+                                    }),
                                 TextEntry::make('error_message')
                                     ->label('Eroare')
                                     ->color('danger')

@@ -44,6 +44,8 @@ class SamedayAwb extends Model
         'error_message',
         'courier_status',
         'courier_status_at',
+        'picked_up_at',
+        'delivered_at',
     ];
 
     protected function casts(): array
@@ -57,6 +59,8 @@ class SamedayAwb extends Model
             'package_count' => 'integer',
             'package_weight_kg' => 'decimal:3',
             'courier_status_at' => 'datetime',
+            'picked_up_at' => 'datetime',
+            'delivered_at' => 'datetime',
             'cod_amount' => 'decimal:2',
             'insured_value' => 'decimal:2',
             'shipping_cost' => 'decimal:2',
