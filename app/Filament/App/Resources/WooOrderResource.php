@@ -9,6 +9,8 @@ use App\Filament\App\Resources\WooOrderResource\Pages;
 use App\Models\ProductStock;
 use App\Models\WooOrder;
 use App\Models\WooProduct;
+use App\Models\IntegrationConnection;
+use App\Services\Courier\SamedayAwbService;
 use Filament\Support\Enums\TextSize;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Schemas\Components\Section;
@@ -216,56 +218,12 @@ class WooOrderResource extends Resource
                     ->columnSpanFull()
                     ->view('filament.app.woo-order-header'),
 
-                Section::make('WinMentor')
-                    ->columnSpanFull()
-                    ->columns(4)
-                    ->schema([
-                        TextEntry::make('winmentor_sync_status')
-                            ->label('Status import')
-                            ->badge()
-                            ->getStateUsing(fn (WooOrder $record): string => match ($record->winmentor_sync_status) {
-                                'synced' => 'Trimisă în WinMentor',
-                                'failed' => 'Eșuat',
-                                default  => 'Netrimisă',
-                            })
-                            ->color(fn (WooOrder $record): string => match ($record->winmentor_sync_status) {
-                                'synced' => 'success',
-                                'failed' => 'danger',
-                                default  => 'gray',
-                            }),
-                        TextEntry::make('winmentor_synced_at')
-                            ->label('Data trimiterii')
-                            ->dateTime('d.m.Y H:i')
-                            ->placeholder('-'),
-                        TextEntry::make('synced_by_name')
-                            ->label('Trimisă de')
-                            ->getStateUsing(fn (WooOrder $record): string => $record->syncedBy?->name ?? '-'),
-                        TextEntry::make('winmentor_client_id')
-                            ->label('ID client WinMentor')
-                            ->placeholder('-'),
-                        TextEntry::make('winmentor_sync_error')
-                            ->label('Motiv eșec')
-                            ->columnSpanFull()
-                            ->color('danger')
-                            ->visible(fn (WooOrder $record): bool => $record->winmentor_sync_status === 'failed' && ! empty($record->winmentor_sync_error)),
-                    ]),
-
                 Section::make('Produse')
                     ->columnSpanFull()
                     ->schema([
                         \Filament\Infolists\Components\ViewEntry::make('items_editor')
                             ->label('')
                             ->view('filament.app.woo-order-items-editor'),
-                    ]),
-
-                Section::make('Istoric modificări (din ERP)')
-                    ->columnSpanFull()
-                    ->collapsible()
-                    ->visible(fn ($record): bool => $record->edits()->exists())
-                    ->schema([
-                        \Filament\Infolists\Components\ViewEntry::make('edits_history')
-                            ->label('')
-                            ->view('filament.app.woo-order-edits-history'),
                     ]),
 
                 Section::make('AWB-uri Sameday')
@@ -310,20 +268,134 @@ class WooOrderResource extends Resource
                         RepeatableEntry::make('samedayAwbs')
                             ->label('')
                             ->schema([
-                                TextEntry::make('awb_number')->label('AWB')->copyable()->copyMessage('Copiat!')->placeholder('-'),
+                                TextEntry::make('awb_number')
+                                    ->label('AWB')
+                                    ->copyable()->copyMessage('Copiat!')->placeholder('-')
+                                    ->weight('bold')
+                                    ->columnSpan(3)
+                                    ->hintActions([
+                                        Actions\Action::make('print_a6')
+                                            ->label('Print A6')
+                                            ->icon('heroicon-o-printer')
+                                            ->color('primary')
+                                            ->visible(fn ($record): bool => filled($record->awb_number) && ! in_array($record->status, ['cancelled', 'failed'], true))
+                                            ->url(fn ($record): string => route('awb.pdf', ['awb' => $record->id, 'format' => 'A6']))
+                                            ->openUrlInNewTab(),
+                                        Actions\Action::make('print_a4')
+                                            ->label('A4')
+                                            ->icon('heroicon-o-document')
+                                            ->color('gray')
+                                            ->visible(fn ($record): bool => filled($record->awb_number) && ! in_array($record->status, ['cancelled', 'failed'], true))
+                                            ->url(fn ($record): string => route('awb.pdf', ['awb' => $record->id, 'format' => 'A4']))
+                                            ->openUrlInNewTab(),
+                                    ]),
                                 TextEntry::make('status')
-                                    ->label('Status')
+                                    ->label('Status ERP')
                                     ->badge()
+                                    ->columnSpan(2)
                                     ->color(fn (string $state): string => match ($state) {
                                         'created' => 'success',
                                         'cancelled' => 'gray',
                                         'failed' => 'danger',
                                         default => 'gray',
                                     }),
-                                TextEntry::make('created_at')->label('Creat la')->dateTime('d.m.Y H:i'),
+                                TextEntry::make('courier_status')
+                                    ->label('Status curier')
+                                    ->placeholder('neverificat')
+                                    ->columnSpan(3)
+                                    ->getStateUsing(fn ($record): ?string => $record->courier_status
+                                        ? $record->courier_status . ($record->courier_status_at ? ' (' . $record->courier_status_at->format('d.m H:i') . ')' : '')
+                                        : null)
+                                    ->hintAction(
+                                        Actions\Action::make('refresh_status')
+                                            ->label('Verifică')
+                                            ->icon('heroicon-o-arrow-path')
+                                            ->visible(fn ($record): bool => filled($record->awb_number))
+                                            ->action(function ($record): void {
+                                                try {
+                                                    $connection = $record->connection
+                                                        ?? IntegrationConnection::find($record->integration_connection_id)
+                                                        ?? IntegrationConnection::where('provider', IntegrationConnection::PROVIDER_SAMEDAY)->where('is_active', true)->first();
+                                                    $tracking = app(SamedayAwbService::class)->getAwbStatusHistory($connection, $record->awb_number);
+                                                    $last = $tracking['history'][0] ?? null;
+                                                    $record->update([
+                                                        'courier_status'    => $last['label'] ?? null,
+                                                        'courier_status_at' => $last['date'] ?? null,
+                                                    ]);
+                                                    $body = collect(array_slice($tracking['history'], 0, 6))
+                                                        ->map(fn ($h) => ($h['date'] ?? '?') . ' — ' . ($h['label'] ?? '?') . (filled($h['county'] ?? null) ? ' (' . $h['county'] . ')' : ''))
+                                                        ->implode("\n");
+                                                    if ($tracking['summary']['delivered_at'] ?? null) {
+                                                        $body = '✅ LIVRAT la ' . $tracking['summary']['delivered_at'] . "\n" . $body;
+                                                    }
+                                                    \Filament\Notifications\Notification::make()->success()
+                                                        ->title('AWB ' . $record->awb_number)
+                                                        ->body($body ?: 'Fără evenimente încă.')
+                                                        ->persistent()->send();
+                                                } catch (\Throwable $e) {
+                                                    \Filament\Notifications\Notification::make()->danger()
+                                                        ->title('Tracking indisponibil')->body($e->getMessage())->send();
+                                                }
+                                            })
+                                    ),
+                                TextEntry::make('package_info')
+                                    ->label('Colete / Ramburs')
+                                    ->columnSpan(2)
+                                    ->getStateUsing(fn ($record): string => (int) $record->package_count . ' colet(e), ' . rtrim(rtrim(number_format((float) $record->package_weight_kg, 2), '0'), '.') . ' kg'
+                                        . ((float) $record->cod_amount > 0 ? ' · ramburs ' . number_format((float) $record->cod_amount, 2) . ' RON' : '')),
+                                TextEntry::make('created_at')->label('Creat la')->dateTime('d.m.Y H:i')->columnSpan(2),
+                                TextEntry::make('error_message')
+                                    ->label('Eroare')
+                                    ->color('danger')
+                                    ->columnSpanFull()
+                                    ->visible(fn ($record): bool => $record->status === 'failed' && filled($record->error_message)),
                             ])
-                            ->columns(3),
+                            ->columns(12),
                     ]),
+                Section::make('WinMentor')
+                    ->columnSpanFull()
+                    ->columns(4)
+                    ->schema([
+                        TextEntry::make('winmentor_sync_status')
+                            ->label('Status import')
+                            ->badge()
+                            ->getStateUsing(fn (WooOrder $record): string => match ($record->winmentor_sync_status) {
+                                'synced' => 'Trimisă în WinMentor',
+                                'failed' => 'Eșuat',
+                                default  => 'Netrimisă',
+                            })
+                            ->color(fn (WooOrder $record): string => match ($record->winmentor_sync_status) {
+                                'synced' => 'success',
+                                'failed' => 'danger',
+                                default  => 'gray',
+                            }),
+                        TextEntry::make('winmentor_synced_at')
+                            ->label('Data trimiterii')
+                            ->dateTime('d.m.Y H:i')
+                            ->placeholder('-'),
+                        TextEntry::make('synced_by_name')
+                            ->label('Trimisă de')
+                            ->getStateUsing(fn (WooOrder $record): string => $record->syncedBy?->name ?? '-'),
+                        TextEntry::make('winmentor_client_id')
+                            ->label('ID client WinMentor')
+                            ->placeholder('-'),
+                        TextEntry::make('winmentor_sync_error')
+                            ->label('Motiv eșec')
+                            ->columnSpanFull()
+                            ->color('danger')
+                            ->visible(fn (WooOrder $record): bool => $record->winmentor_sync_status === 'failed' && ! empty($record->winmentor_sync_error)),
+                    ]),
+
+                Section::make('Istoric modificări (din ERP)')
+                    ->columnSpanFull()
+                    ->collapsible()
+                    ->visible(fn ($record): bool => $record->edits()->exists())
+                    ->schema([
+                        \Filament\Infolists\Components\ViewEntry::make('edits_history')
+                            ->label('')
+                            ->view('filament.app.woo-order-edits-history'),
+                    ]),
+
             ]);
     }
 

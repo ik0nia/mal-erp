@@ -669,6 +669,24 @@ Route::middleware(['web', 'auth'])->get('/rapoarte/{raport}', function (string $
     return response()->file($path, ['Content-Type' => 'text/html; charset=UTF-8']);
 })->where('raport', '[a-z0-9-]+')->name('rapoarte.privat');
 
+// PDF AWB Sameday — inline (print din browser), format A6/A4 la alegere
+Route::get('/awb/{awb}/pdf', function (\App\Models\SamedayAwb $awb) {
+    abort_unless(\App\Models\RolePermission::check(\App\Filament\App\Resources\SamedayAwbResource::class, 'can_access'), 403);
+    abort_if(blank($awb->awb_number), 404, 'AWB fără număr.');
+
+    $format = strtoupper(request()->query('format', 'A6')) === 'A4' ? 'A4' : 'A6';
+    $connection = $awb->connection
+        ?? \App\Models\IntegrationConnection::find($awb->integration_connection_id)
+        ?? \App\Models\IntegrationConnection::where('provider', \App\Models\IntegrationConnection::PROVIDER_SAMEDAY)->where('is_active', true)->first();
+
+    $pdf = app(\App\Services\Courier\SamedayAwbService::class)->downloadAwbPdf($connection, $awb->awb_number, $format);
+
+    return response($pdf, 200, [
+        'Content-Type'        => 'application/pdf',
+        'Content-Disposition' => 'inline; filename="AWB-' . $awb->awb_number . '-' . $format . '.pdf"',
+    ]);
+})->middleware(['web', 'auth'])->name('awb.pdf');
+
 // Documente comerciale private (mutate din public/ la auditul de securitate 2026-09-08)
 // — doar codrut@ikonia.ro; index + servire cu protecție anti-traversal
 Route::middleware(['web', 'auth'])->group(function () {

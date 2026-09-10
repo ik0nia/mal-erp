@@ -468,7 +468,7 @@ class SamedayAwbResource extends Resource
                     ->visible(fn (SamedayAwb $record): bool => filled($record->awb_number) && ! in_array($record->status, [SamedayAwb::STATUS_CANCELLED, SamedayAwb::STATUS_FAILED], true))
                     ->action(function (SamedayAwb $record) {
                         try {
-                            $connection = $record->connection ?? IntegrationConnection::find($record->integration_connection_id);
+                            $connection = $record->connection ?? IntegrationConnection::find($record->integration_connection_id) ?? IntegrationConnection::where('provider', IntegrationConnection::PROVIDER_SAMEDAY)->where('is_active', true)->first();
                             $pdf = app(SamedayAwbService::class)->downloadAwbPdf($connection, $record->awb_number);
 
                             return response()->streamDownload(
@@ -489,7 +489,7 @@ class SamedayAwbResource extends Resource
                     ->visible(fn (SamedayAwb $record): bool => filled($record->awb_number))
                     ->action(function (SamedayAwb $record): void {
                         try {
-                            $connection = $record->connection ?? IntegrationConnection::find($record->integration_connection_id);
+                            $connection = $record->connection ?? IntegrationConnection::find($record->integration_connection_id) ?? IntegrationConnection::where('provider', IntegrationConnection::PROVIDER_SAMEDAY)->where('is_active', true)->first();
                             $tracking = app(SamedayAwbService::class)->getAwbStatusHistory($connection, $record->awb_number);
                             $last = $tracking['history'][0] ?? null;
                             $record->update([
