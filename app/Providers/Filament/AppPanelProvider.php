@@ -273,6 +273,10 @@ class AppPanelProvider extends PanelProvider
 </style>'),
             )
             ->renderHook(
+                \Filament\View\PanelsRenderHook::SIDEBAR_NAV_START,
+                fn () => view('filament.components.sidebar-search'),
+            )
+            ->renderHook(
                 \Filament\View\PanelsRenderHook::USER_MENU_BEFORE,
                 fn () => view('filament.components.user-info'),
             )

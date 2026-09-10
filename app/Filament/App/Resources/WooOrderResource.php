@@ -45,6 +45,24 @@ class WooOrderResource extends Resource
 
     protected static ?int $navigationSort = 10;
 
+    /** Badge în meniu: câte comenzi sunt în procesare (necesită atenție). */
+    public static function getNavigationBadge(): ?string
+    {
+        $count = WooOrder::where('status', 'processing')->count();
+
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'warning';
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return 'Comenzi în procesare';
+    }
+
     public static function canCreate(): bool
     {
         return false;
