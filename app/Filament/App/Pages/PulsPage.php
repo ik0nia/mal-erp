@@ -144,9 +144,9 @@ class PulsPage extends Page
             ->selectRaw('tip_document, ROUND(SUM(cantitate*pret)) lei')
             ->pluck('lei', 'tip_document');
 
-        // grafic lunar: anul curent vs anul trecut
+        // grafic lunar: bare an curent vs an trecut + tendință pe ultimii 4 ani
         $luniAn = DB::table('winmentor_vanzari_raw')
-            ->whereIn('an', [now()->year - 1, now()->year])
+            ->whereIn('an', range(now()->year - 3, now()->year))
             ->whereNotNull('den_articol')->where('den_articol', '!=', '')
             ->groupBy('an', 'luna')
             ->selectRaw('an, luna, ROUND(SUM(cantitate*pret)) lei')

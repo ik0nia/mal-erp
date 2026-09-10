@@ -279,17 +279,6 @@
             <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#d1d5db;vertical-align:-1px"></span> {{ $anTrecut }} la aceeași zi: <b>{{ $lei($ytdTrecut) }} lei</b></span>
         </div>
     </div>
-    @php
-        // liniile de tendință: câte un punct per lună (centru coloană), pt fiecare an
-        $ptsT = []; $ptsC = [];
-        for ($l = 1; $l <= 12; $l++) {
-            $x = round(($l - 0.5) / 12 * 1000, 1);
-            $vT = $luniAn[$l][$anTrecut] ?? 0;
-            if ($vT > 0) $ptsT[] = $x . ',' . round(100 - min(100, $vT / $maxLuna * 100), 1);
-            $vC = $luniAn[$l][$anCurent] ?? 0;
-            if ($vC > 0 && $l <= (int) now()->month) $ptsC[] = $x . ',' . round(100 - min(100, $vC / $maxLuna * 100), 1);
-        }
-    @endphp
     <div style="position:relative;margin-top:12px">
         <div style="display:flex;align-items:flex-end;gap:10px;height:130px">
             @for ($l = 1; $l <= 12; $l++)
@@ -314,11 +303,6 @@
                 </div>
             @endfor
         </div>
-        {{-- tendințe: gri = anul trecut, roșu = anul curent --}}
-        <svg viewBox="0 0 1000 100" preserveAspectRatio="none" style="position:absolute;left:0;top:13px;width:100%;bottom:17px;height:auto;pointer-events:none">
-            <polyline points="{{ implode(' ', $ptsT) }}" fill="none" stroke="#6b7280" stroke-width="2" stroke-dasharray="5,4" opacity=".6" vector-effect="non-scaling-stroke"/>
-            <polyline points="{{ implode(' ', $ptsC) }}" fill="none" stroke="#c8102e" stroke-width="2.5" opacity=".75" vector-effect="non-scaling-stroke"/>
-        </svg>
     </div>
 
     @if ($lunaSelectata && $detaliuLuna)
@@ -362,6 +346,66 @@
             @endif
         </div>
     @endif
+</div>
+
+{{-- tendința lunară pe ultimii 4 ani --}}
+@php
+    $aniTrend = range($anCurent - 3, $anCurent);
+    $culoriTrend = [$anCurent => ['#c8102e', 3, ''], $anCurent - 1 => ['#374151', 2, ''], $anCurent - 2 => ['#9ca3af', 2, '6,4'], $anCurent - 3 => ['#d4d4d8', 2, '6,4']];
+    $maxTrend = 1;
+    foreach ($luniAn as $g) foreach ($aniTrend as $a) $maxTrend = max($maxTrend, $g[$a] ?? 0);
+    $liniiTrend = [];
+    $totaluriTrend = [];
+    foreach ($aniTrend as $a) {
+        $pts = [];
+        $totaluriTrend[$a] = 0;
+        for ($l = 1; $l <= 12; $l++) {
+            $v = $luniAn[$l][$a] ?? 0;
+            $totaluriTrend[$a] += $v;
+            if ($v > 0 && ! ($a === $anCurent && $l > (int) now()->month)) {
+                $pts[] = round(($l - 0.5) / 12 * 1000, 1) . ',' . round(100 - min(100, $v / $maxTrend * 100), 1);
+            }
+        }
+        $liniiTrend[$a] = implode(' ', $pts);
+    }
+@endphp
+<div style="{{ $card }};margin-top:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div style="{{ $label }};margin:0">📉 Tendința lunară — ultimii 4 ani</div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:#6b7280">
+            @foreach (array_reverse($aniTrend) as $a)
+                <span><span style="display:inline-block;width:14px;height:3px;border-radius:2px;background:{{ $culoriTrend[$a][0] }};vertical-align:3px"></span>
+                    <b style="color:{{ $a === $anCurent ? '#c8102e' : '#374151' }}">{{ $a }}</b> · {{ number_format($totaluriTrend[$a] / 1000000, 1, ',', '') }} mil.{{ $a === $anCurent ? ' (la zi)' : '' }}</span>
+            @endforeach
+        </div>
+    </div>
+    <div style="position:relative;height:170px;margin-top:12px">
+        {{-- gridlines orizontale cu valori --}}
+        @foreach ([0.25, 0.5, 0.75] as $g)
+            <div style="position:absolute;left:0;right:0;top:{{ $g * 100 }}%;border-top:1px dashed #f3f4f6"></div>
+            <span style="position:absolute;right:2px;top:calc({{ $g * 100 }}% - 14px);font-size:9.5px;color:#d1d5db">{{ number_format($maxTrend * (1 - $g) / 1000000, 1, ',', '') }} mil.</span>
+        @endforeach
+        <svg viewBox="0 0 1000 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none">
+            @foreach ($aniTrend as $a)
+                <polyline points="{{ $liniiTrend[$a] }}" fill="none" stroke="{{ $culoriTrend[$a][0] }}" stroke-width="{{ $culoriTrend[$a][1] }}"
+                    @if($culoriTrend[$a][2]) stroke-dasharray="{{ $culoriTrend[$a][2] }}" @endif
+                    opacity="{{ $a === $anCurent ? '.9' : '.65' }}" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+            @endforeach
+        </svg>
+        {{-- puncte cu tooltip pe anul curent --}}
+        @for ($l = 1; $l <= (int) now()->month; $l++)
+            @php $v = $luniAn[$l][$anCurent] ?? 0; @endphp
+            @if ($v > 0)
+                <div title="{{ $numeLuni[$l-1] }} {{ $anCurent }} — {{ $lei($v) }} lei"
+                    style="position:absolute;left:calc({{ round(($l - 0.5) / 12 * 100, 2) }}% - 4px);top:calc({{ round(100 - min(100, $v / $maxTrend * 100), 1) }}% - 4px);width:8px;height:8px;border-radius:50%;background:#c8102e;border:2px solid #fff;box-shadow:0 0 0 1px #c8102e"></div>
+            @endif
+        @endfor
+    </div>
+    <div style="display:flex;margin-top:6px">
+        @for ($l = 1; $l <= 12; $l++)
+            <span style="flex:1;text-align:center;font-size:10px;color:{{ $l === (int) now()->month ? '#c8102e' : '#9ca3af' }};font-weight:{{ $l === (int) now()->month ? '700' : '400' }}">{{ $numeLuni[$l-1] }}</span>
+        @endfor
+    </div>
 </div>
 
 {{-- bara de sistem --}}
