@@ -70,6 +70,20 @@ class SyncToyaPricesJob implements ShouldQueue
         $stocks = $this->fetchBulk($apiKey, 'getStocksRo');
         Log::info('[SyncToyaPrices] Prețuri: ' . count($prices) . ' | Stocuri: ' . count($stocks));
 
+        // Feed de stocuri gol = statusurile „În stoc furnizor" rămân înghețate; alertă (max una la 6h)
+        if (empty($stocks)) {
+            Log::warning('[SyncToyaPrices] Feedul de stocuri (getStocksRo) a venit GOL — statusurile de stoc furnizor nu se actualizează.');
+            if (\Illuminate\Support\Facades\Cache::add('toya_stocks_empty_alert', 1, now()->addHours(6))) {
+                \Illuminate\Support\Facades\Mail::html(
+                    '<p>Feedul de stocuri Toya (<code>getStocksRo</code>) a returnat <b>0 înregistrări</b> la sincronizarea din ' . now()->format('d.m.Y H:i') . '.</p>'
+                    . '<p>Prețurile se actualizează normal, dar statusurile „În stoc furnizor" de pe site rămân înghețate până revine feedul.</p>',
+                    function ($m) {
+                        $m->to('codrut@ikonia.ro')->subject('[ERP] Feed stocuri Toya gol — statusuri înghețate');
+                    }
+                );
+            }
+        }
+
         // 2. Produsele furnizorului din DB
         $rows = DB::table('product_suppliers as ps')
             ->join('woo_products as wp', 'wp.id', '=', 'ps.woo_product_id')
@@ -126,12 +140,14 @@ class SyncToyaPricesJob implements ShouldQueue
             $newSellPrice     = round($purchasePrice * $sellMultiplier, 2);
             $oldSellPrice     = (float) $row->regular_price;
 
-            // purchase_price — mereu actualizat
-            $psUpdates[] = [
-                'id'             => $row->ps_id,
-                'purchase_price' => $purchasePrice,
-                'updated_at'     => $now,
-            ];
+            // purchase_price — scriem doar când s-a schimbat efectiv (altfel ~12.5k UPDATE-uri/oră degeaba)
+            if (abs($purchasePrice - $oldPurchasePrice) >= 0.0001) {
+                $psUpdates[] = [
+                    'id'             => $row->ps_id,
+                    'purchase_price' => $purchasePrice,
+                    'updated_at'     => $now,
+                ];
+            }
 
             // Produse cu stoc WinMentor — nu modificăm preț/stoc (gestionat de Bridge sync)
             $hasWmStock = isset($wmStockProductIds[$row->product_id]);
@@ -145,11 +161,14 @@ class SyncToyaPricesJob implements ShouldQueue
             };
 
             if ($stockStatus !== null && ! $hasWmStock) {
-                $wpStockUpdates[] = [
-                    'id'           => $row->product_id,
-                    'stock_status' => $stockStatus,
-                    'updated_at'   => $now,
-                ];
+                // scriem în ERP doar la schimbare reală (înainte: ~12k rescrieri identice pe oră)
+                if ($stockStatus !== $row->stock_status) {
+                    $wpStockUpdates[] = [
+                        'id'           => $row->product_id,
+                        'stock_status' => $stockStatus,
+                        'updated_at'   => $now,
+                    ];
+                }
 
                 if ($row->woo_id && $row->status === 'publish' && $stockStatus !== $row->stock_status) {
                     $wooStockPushRows[] = [
