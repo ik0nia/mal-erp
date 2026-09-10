@@ -609,24 +609,27 @@ class SamedayAwbService
      */
     public function getAllLockersFromApi(IntegrationConnection $connection): array
     {
+        // /api/client/ooh-locations — înlocuitorul modern al /api/client/lockers:
+        // același spațiu de ID-uri (verificat live pe 6.772 comune), dar fără
+        // lockerele dezafectate pe care endpoint-ul vechi le mai raporta.
+        // Păstrăm doar easybox-urile (oohType 0) — PUDO ar cere serviciul PP.
         $sameday = $this->newSamedayInstance($connection);
-        $requestClass = '\\Sameday\\Requests\\SamedayGetLockersRequest';
 
         $lockers = [];
         $page = 1;
         $pages = 1;
 
         do {
-            $request = new $requestClass();
+            $request = new \Sameday\Requests\SamedayGetOohLocationsRequest();
             $request->setCountPerPage(500);
             $request->setPage($page);
 
-            $response = $sameday->getLockers($request);
+            $response = $sameday->getOohLocations($request);
             $pages = max(1, (int) $response->getPages());
 
-            foreach ($response->getLockers() as $locker) {
+            foreach ($response->getLocations() as $locker) {
                 $id = (int) $locker->getId();
-                if ($id <= 0) {
+                if ($id <= 0 || $locker->getServiceTypeCode() !== \Sameday\Objects\Location\LocationObject::OOH_EASYBOX_CODE) {
                     continue;
                 }
                 $lockers[$id] = [
