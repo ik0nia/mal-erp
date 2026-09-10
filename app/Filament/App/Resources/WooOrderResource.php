@@ -72,6 +72,7 @@ class WooOrderResource extends Resource
                 Tables\Columns\TextColumn::make('number')
                     ->label('Comandă')
                     ->formatStateUsing(fn (WooOrder $record): string => '#'.$record->number)
+                    ->description(fn (WooOrder $record): ?string => $record->order_date?->format('d.m.Y H:i'))
                     ->searchable()
                     ->sortable(),
 
@@ -111,7 +112,8 @@ class WooOrderResource extends Resource
                 Tables\Columns\TextColumn::make('order_date')
                     ->label('Data')
                     ->dateTime('d.m.Y H:i')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('awb_info')
                     ->label('AWB')
