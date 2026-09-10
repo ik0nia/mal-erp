@@ -36,7 +36,7 @@ class PurchaseOrderReceivedPartialNotification extends Notification
             ->line("Comanda **{$this->order->number}** de la **{$this->order->supplier?->name}** a fost recepționată parțial.")
             ->line("**Produse cu lipsuri:** {$productList}")
             ->line('Produsele nelivrate au fost returnate automat în coada de achiziții.')
-            ->action('Vezi comanda', url("/app/purchase-orders/{$this->order->id}"))
+            ->action('Vezi comanda', \App\Filament\App\Resources\PurchaseOrderResource::getUrl('view', ['record' => $this->order->id], panel: 'app'))
             ->line('Verifică necesarele tale pentru statusul actualizat.');
     }
 
@@ -50,7 +50,7 @@ class PurchaseOrderReceivedPartialNotification extends Notification
             'body'   => "{$this->order->supplier?->name} — {$count} " . ($count === 1 ? 'produs' : 'produse') . ' cu lipsuri',
             'icon'   => 'heroicon-o-exclamation-triangle',
             'color'  => 'warning',
-            'url'    => "/app/purchase-orders/{$this->order->id}",
+            'url'    => "/purchase-orders/{$this->order->id}",
         ];
     }
 }

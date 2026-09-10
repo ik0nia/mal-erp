@@ -38,7 +38,7 @@ class PurchaseRequestSubmittedNotification extends Notification
         }
 
         return $mail
-            ->action('Vezi necesarul', url("/app/purchase-requests/{$this->request->id}"))
+            ->action('Vezi necesarul', \App\Filament\App\Resources\PurchaseRequestResource::getUrl('view', ['record' => $this->request->id], panel: 'app'))
             ->line('Accesează dashboard-ul de achiziții pentru a procesa necesarul.');
     }
 
@@ -52,7 +52,7 @@ class PurchaseRequestSubmittedNotification extends Notification
             'body'   => "De la {$this->request->user?->name}" . ($urgent > 0 ? " — {$urgent} urgente" : '') . " ({$this->request->location?->name})",
             'icon'   => 'heroicon-o-clipboard-document-list',
             'color'  => $urgent > 0 ? 'warning' : 'info',
-            'url'    => "/app/purchase-requests/{$this->request->id}",
+            'url'    => "/purchase-requests/{$this->request->id}",
         ];
     }
 }

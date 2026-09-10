@@ -32,7 +32,7 @@ class PurchaseOrderNeedsApprovalNotification extends Notification
             ->line("**Furnizor:** {$this->order->supplier?->name}")
             ->line("**Valoare totală:** {$total}")
             ->line("**Creat de:** {$this->order->buyer?->name}")
-            ->action('Aprobă / Respinge', url("/app/purchase-orders/{$this->order->id}"))
+            ->action('Aprobă / Respinge', \App\Filament\App\Resources\PurchaseOrderResource::getUrl('view', ['record' => $this->order->id], panel: 'app'))
             ->line('Accesează comanda pentru a aproba sau respinge.');
     }
 
@@ -46,7 +46,7 @@ class PurchaseOrderNeedsApprovalNotification extends Notification
             'body'   => "{$this->order->supplier?->name} — {$total}",
             'icon'   => 'heroicon-o-clock',
             'color'  => 'warning',
-            'url'    => "/app/purchase-orders/{$this->order->id}",
+            'url'    => "/purchase-orders/{$this->order->id}",
         ];
     }
 }

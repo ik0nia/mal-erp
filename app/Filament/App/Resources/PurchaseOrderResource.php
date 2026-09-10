@@ -895,7 +895,12 @@ class PurchaseOrderResource extends Resource
 
         $user = auth()->user();
         if ($user && $user->role === User::ROLE_CONSULTANT_VANZARI) {
-            $query->whereHas('supplier', fn ($q) => $q->whereHas('buyers', fn ($q2) => $q2->where('users.id', $user->id)));
+            // Furnizorii pe care e buyer + PO-urile care îi acoperă propriile cereri
+            // (primește notificare la recepție parțială și trebuie să poată deschide comanda)
+            $query->where(function (Builder $q) use ($user): void {
+                $q->whereHas('supplier', fn ($sq) => $sq->whereHas('buyers', fn ($q2) => $q2->where('users.id', $user->id)))
+                    ->orWhereHas('items.purchaseRequestItem.purchaseRequest', fn ($rq) => $rq->where('user_id', $user->id));
+            });
         }
 
         return $query;

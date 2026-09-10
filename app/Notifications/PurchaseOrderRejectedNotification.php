@@ -31,7 +31,7 @@ class PurchaseOrderRejectedNotification extends Notification
             ->line("Comanda **{$this->order->number}** a fost **respinsă** de {$this->rejectedByName}.")
             ->line("**Furnizor:** {$this->order->supplier?->name}")
             ->line("**Motiv:** {$this->order->rejection_reason}")
-            ->action('Vezi comanda', url("/app/purchase-orders/{$this->order->id}"))
+            ->action('Vezi comanda', \App\Filament\App\Resources\PurchaseOrderResource::getUrl('view', ['record' => $this->order->id], panel: 'app'))
             ->line('Accesează comanda pentru detalii sau pentru a corecta și retrimite.');
     }
 
@@ -44,7 +44,7 @@ class PurchaseOrderRejectedNotification extends Notification
             'body'   => "{$this->order->supplier?->name} — {$this->order->rejection_reason}",
             'icon'   => 'heroicon-o-x-circle',
             'color'  => 'danger',
-            'url'    => "/app/purchase-orders/{$this->order->id}",
+            'url'    => "/purchase-orders/{$this->order->id}",
         ];
     }
 }
