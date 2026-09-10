@@ -86,14 +86,18 @@ class PulsPage extends Page
     {
         $today = now()->toDateString();
 
+        // banii: FĂRĂ filtrul cantitate>0 (stornările/retururile se compensează —
+        // altfel dublăm avizele refacturate) și FĂRĂ liniile centralizatoare fără
+        // articol (bonuri «INTERNE» care dublează bonurile individuale)
         $salesDay = fn (string $date) => $this->whereZile(DB::table('winmentor_vanzari_raw'), $date, $date)
-            ->where('cantitate', '>', 0)
+            ->whereNotNull('den_articol')->where('den_articol', '!=', '')
             ->selectRaw('ROUND(SUM(cantitate * pret)) lei, COUNT(DISTINCT nr_factura) documente')->first();
         $azi = $salesDay($today);
         $ieri = $salesDay(now()->subDay()->toDateString());
 
         $salesRange = fn ($from, $to) => (float) $this->whereZile(DB::table('winmentor_vanzari_raw'), $from, $to)
-            ->where('cantitate', '>', 0)->selectRaw('COALESCE(SUM(cantitate * pret),0) lei')->value('lei');
+            ->whereNotNull('den_articol')->where('den_articol', '!=', '')
+            ->selectRaw('COALESCE(SUM(cantitate * pret),0) lei')->value('lei');
         $sapt = $salesRange(now()->startOfWeek()->toDateString(), $today);
         $saptTrecuta = $salesRange(now()->subWeek()->startOfWeek()->toDateString(), now()->subWeek()->endOfWeek()->toDateString());
         $luna = $salesRange(now()->startOfMonth()->toDateString(), $today);
@@ -101,7 +105,7 @@ class PulsPage extends Page
 
         // grafic: vânzări pe zi, ultimele 30 zile
         $grafic = $this->whereZile(DB::table('winmentor_vanzari_raw'), now()->subDays(29)->toDateString())
-            ->where('cantitate', '>', 0)
+            ->whereNotNull('den_articol')->where('den_articol', '!=', '')
             ->groupBy('an', 'luna', 'zi')
             ->selectRaw("CONCAT(an,'-',LPAD(luna,2,'0'),'-',LPAD(zi,2,'0')) ziua, ROUND(SUM(cantitate*pret)) lei")
             ->pluck('lei', 'ziua')->all();
