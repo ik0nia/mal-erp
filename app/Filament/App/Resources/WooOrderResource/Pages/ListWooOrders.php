@@ -15,6 +15,13 @@ class ListWooOrders extends ListRecords
 {
     protected static string $resource = WooOrderResource::class;
 
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            \App\Filament\App\Widgets\AwbDeliveryStatsWidget::class,
+        ];
+    }
+
     protected function getHeaderActions(): array
     {
         return [
