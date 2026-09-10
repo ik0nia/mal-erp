@@ -421,6 +421,11 @@ class SamedayAwbResource extends Resource
                         SamedayAwb::STATUS_FAILED => 'danger',
                         default => 'gray',
                     }),
+                Tables\Columns\TextColumn::make('courier_status')
+                    ->label('Status curier')
+                    ->placeholder('—')
+                    ->description(fn (SamedayAwb $record): ?string => $record->courier_status_at?->format('d.m H:i'))
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('location.name')
                     ->label('Magazin')
                     ->sortable(),
@@ -456,6 +461,55 @@ class SamedayAwbResource extends Resource
             ])
             ->deferFilters(false)
             ->recordActions([
+                Actions\Action::make('download_pdf')
+                    ->label('Printează')
+                    ->icon('heroicon-o-printer')
+                    ->color('primary')
+                    ->visible(fn (SamedayAwb $record): bool => filled($record->awb_number) && ! in_array($record->status, [SamedayAwb::STATUS_CANCELLED, SamedayAwb::STATUS_FAILED], true))
+                    ->action(function (SamedayAwb $record) {
+                        try {
+                            $connection = $record->connection ?? IntegrationConnection::find($record->integration_connection_id);
+                            $pdf = app(SamedayAwbService::class)->downloadAwbPdf($connection, $record->awb_number);
+
+                            return response()->streamDownload(
+                                fn () => print($pdf),
+                                'AWB-' . $record->awb_number . '.pdf',
+                                ['Content-Type' => 'application/pdf']
+                            );
+                        } catch (Throwable $e) {
+                            Notification::make()->danger()->title('PDF indisponibil')->body($e->getMessage())->send();
+
+                            return null;
+                        }
+                    }),
+                Actions\Action::make('check_status')
+                    ->label('Status curier')
+                    ->icon('heroicon-o-truck')
+                    ->color('gray')
+                    ->visible(fn (SamedayAwb $record): bool => filled($record->awb_number))
+                    ->action(function (SamedayAwb $record): void {
+                        try {
+                            $connection = $record->connection ?? IntegrationConnection::find($record->integration_connection_id);
+                            $tracking = app(SamedayAwbService::class)->getAwbStatusHistory($connection, $record->awb_number);
+                            $last = $tracking['history'][0] ?? null;
+                            $record->update([
+                                'courier_status'    => $last['label'] ?? null,
+                                'courier_status_at' => $last['date'] ?? null,
+                            ]);
+                            $body = collect(array_slice($tracking['history'], 0, 6))
+                                ->map(fn ($h) => ($h['date'] ?? '?') . ' — ' . ($h['label'] ?? '?') . (filled($h['county'] ?? null) ? ' (' . $h['county'] . ')' : ''))
+                                ->implode("\n");
+                            if ($tracking['summary']['delivered_at'] ?? null) {
+                                $body = '✅ LIVRAT la ' . $tracking['summary']['delivered_at'] . "\n" . $body;
+                            }
+                            Notification::make()->success()
+                                ->title('AWB ' . $record->awb_number)
+                                ->body($body ?: 'Fără evenimente încă.')
+                                ->persistent()->send();
+                        } catch (Throwable $e) {
+                            Notification::make()->danger()->title('Tracking indisponibil')->body($e->getMessage())->send();
+                        }
+                    }),
                 Actions\Action::make('cancel_awb')
                     ->label('Anulează')
                     ->icon('heroicon-o-x-circle')

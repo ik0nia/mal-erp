@@ -99,6 +99,37 @@ class WooDirectSqlService
      * @param  array<int, array{id: int, regular_price?: string, stock_quantity?: int|null, stock_status?: string, manage_stock?: bool, backorders?: string}>  $updates
      * @return array{updated: int, failed: int}
      */
+    /**
+     * Update greutate + dimensiuni direct în postmeta (INSERT dacă meta lipsește, apoi UPDATE).
+     * Woo citește _weight/_length/_width/_height din postmeta la calculul transportului.
+     *
+     * @param  array<int, array{id: int, weight: string, length: string, width: string, height: string}>  $updates
+     */
+    public function updateDimensions(array $updates): array
+    {
+        if (empty($updates)) {
+            return ['updated' => 0, 'failed' => 0];
+        }
+
+        $sql = '';
+        foreach ($updates as $item) {
+            $wooId = (int) $item['id'];
+            if ($wooId <= 0) {
+                continue;
+            }
+            foreach (['_weight' => 'weight', '_length' => 'length', '_width' => 'width', '_height' => 'height'] as $meta => $key) {
+                $val = $this->sanitizeString((string) ($item[$key] ?? ''));
+                if ($val === '') {
+                    continue;
+                }
+                $sql .= "INSERT INTO wp_postmeta (post_id, meta_key, meta_value) SELECT {$wooId}, '{$meta}', '{$val}' WHERE NOT EXISTS (SELECT 1 FROM wp_postmeta pm WHERE pm.post_id = {$wooId} AND pm.meta_key = '{$meta}');\n";
+                $sql .= "UPDATE wp_postmeta SET meta_value = '{$val}' WHERE post_id = {$wooId} AND meta_key = '{$meta}';\n";
+            }
+        }
+
+        return $this->executeSql($sql, count($updates), 'dimensions');
+    }
+
     public function updatePricesAndStock(array $updates): array
     {
         if (empty($updates)) {

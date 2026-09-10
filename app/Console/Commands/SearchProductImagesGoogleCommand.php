@@ -123,6 +123,7 @@ class SearchProductImagesGoogleCommand extends Command
         $failed    = 0;
 
         foreach ($products as $product) {
+            usleep(1200000); // throttle: cota Google e per minut
             $processed++;
             $searchQuery = $this->buildQuery($product->name);
 

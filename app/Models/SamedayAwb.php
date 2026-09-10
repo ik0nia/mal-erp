@@ -42,6 +42,8 @@ class SamedayAwb extends Model
         'request_payload',
         'response_payload',
         'error_message',
+        'courier_status',
+        'courier_status_at',
     ];
 
     protected function casts(): array
@@ -54,6 +56,7 @@ class SamedayAwb extends Model
             'pickup_point_id' => 'integer',
             'package_count' => 'integer',
             'package_weight_kg' => 'decimal:3',
+            'courier_status_at' => 'datetime',
             'cod_amount' => 'decimal:2',
             'insured_value' => 'decimal:2',
             'shipping_cost' => 'decimal:2',

@@ -21,7 +21,8 @@ class PreparePlaceholderProductsCommand extends Command
 {
     protected $signature = 'products:prepare-placeholders
         {--dry-run : Doar raport}
-        {--skip-ai : Doar asocierea furnizorilor, fără nume/descrieri}';
+        {--skip-ai : Doar asocierea furnizorilor, fără nume/descrieri}
+        {--only-missing : Doar produsele încă neprocesate (fără winmentor_name salvat)}';
 
     protected $description = 'Pregătește placeholder-ele WinMentor cu stoc (furnizor + nume + descriere), fără push pe site';
 
@@ -33,6 +34,7 @@ class PreparePlaceholderProductsCommand extends Command
             ->whereIn('source', [WooProduct::SOURCE_WINMENTOR_CSV, WooProduct::SOURCE_WINMENTOR_BRIDGE])
             ->whereHas('stocks', fn ($q) => $q->where('quantity', '>', 0))
             ->where('name', 'not like', '%maxcl%')
+            ->when($this->option('only-missing'), fn ($q) => $q->whereNull('winmentor_name'))
             ->get(['id', 'sku', 'name', 'winmentor_name', 'description']);
 
         $this->info('Produse țintă: ' . $products->count());

@@ -259,6 +259,69 @@ class SamedayAwbService
      *
      * @return array<string, mixed>
      */
+    /**
+     * Descarcă PDF-ul AWB de la Sameday (format A6 pentru imprimante de etichete, A4 pentru birou).
+     */
+    public function downloadAwbPdf(IntegrationConnection $connection, string $awbNumber, string $format = 'A6'): string
+    {
+        if (! $connection->isSameday() || ! $connection->is_active) {
+            throw new RuntimeException('Conexiunea selectată nu este Sameday activă.');
+        }
+
+        $sameday = $this->newSamedayInstance($connection);
+        $pdfType = new \Sameday\Objects\Types\AwbPdfType(
+            $format === 'A4' ? \Sameday\Objects\Types\AwbPdfType::A4 : \Sameday\Objects\Types\AwbPdfType::A6
+        );
+        $response = $sameday->getAwbPdf(new \Sameday\Requests\SamedayGetAwbPdfRequest(trim($awbNumber), $pdfType));
+
+        $pdf = (string) $response->getPdf();
+        if ($pdf === '') {
+            throw new RuntimeException('Sameday a returnat un PDF gol pentru AWB ' . $awbNumber . '.');
+        }
+
+        return $pdf;
+    }
+
+    /**
+     * Istoricul de status al unui AWB (tracking) — sumar + evenimente.
+     *
+     * @return array{summary: array<string,mixed>, history: list<array<string,mixed>>}
+     */
+    public function getAwbStatusHistory(IntegrationConnection $connection, string $awbNumber): array
+    {
+        if (! $connection->isSameday() || ! $connection->is_active) {
+            throw new RuntimeException('Conexiunea selectată nu este Sameday activă.');
+        }
+
+        $sameday = $this->newSamedayInstance($connection);
+        $response = $sameday->getAwbStatusHistory(
+            new \Sameday\Requests\SamedayGetAwbStatusHistoryRequest(trim($awbNumber))
+        );
+
+        $summaryObj = $response->getSummary();
+        $summary = [
+            'delivered_at'     => $summaryObj && $summaryObj->getDeliveredAt() ? $summaryObj->getDeliveredAt()->format('Y-m-d H:i') : null,
+            'delivery_attempts' => $summaryObj ? $summaryObj->getDeliveryAttempts() : null,
+            'awb_weight'       => $summaryObj ? $summaryObj->getAwbWeight() : null,
+            'cash_on_delivery' => $summaryObj ? $summaryObj->getCashOnDelivery() : null,
+        ];
+
+        $history = [];
+        foreach ($response->getHistory() as $event) {
+            $history[] = [
+                'label'  => $event->getLabel(),
+                'state'  => $event->getState(),
+                'date'   => $event->getDate() ? $event->getDate()->format('Y-m-d H:i') : null,
+                'county' => $event->getCounty(),
+                'transit' => $event->getTransitLocation(),
+            ];
+        }
+        // cel mai recent primul
+        usort($history, fn ($a, $b) => strcmp($b['date'] ?? '', $a['date'] ?? ''));
+
+        return ['summary' => $summary, 'history' => $history];
+    }
+
     public function cancelAwb(IntegrationConnection $connection, string $awbNumber): array
     {
         if (! $connection->isSameday() || ! $connection->is_active) {

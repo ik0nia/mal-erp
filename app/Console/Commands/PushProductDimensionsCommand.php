@@ -43,9 +43,9 @@ class PushProductDimensionsCommand extends Command
 
         $ok = 0;
         $fail = 0;
-        $bar = $this->output->createProgressBar((int) ceil($products->count() / 100));
+        $bar = $this->output->createProgressBar((int) ceil($products->count() / 20));
 
-        foreach ($products->chunk(100) as $chunk) {
+        foreach ($products->chunk(20) as $chunk) {
             $items = $chunk->map(fn ($p) => [
                 'id'         => (int) $p->woo_id,
                 'weight'     => (string) $p->weight,
