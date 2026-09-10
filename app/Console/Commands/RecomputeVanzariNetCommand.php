@@ -12,7 +12,7 @@ class RecomputeVanzariNetCommand extends Command
                             {--an= : Doar anul specificat (implicit toți anii cu date)}
                             {--firma=MAL2019 : Firma WinMentor}';
 
-    protected $description = 'Recalculează lei_net + motiv_exclus pe winmentor_vanzari_raw (vezi VanzariNetService)';
+    protected $description = 'Recalculează lei_cu_tva + motiv_exclus pe winmentor_vanzari_raw (vezi VanzariNetService)';
 
     public function handle(VanzariNetService $service): int
     {
@@ -26,8 +26,8 @@ class RecomputeVanzariNetCommand extends Command
         foreach ($ani as $an) {
             $n = $service->recomputeAn($an, $firma);
             $total = DB::table('winmentor_vanzari_raw')
-                ->where('firma', $firma)->where('an', $an)->sum('lei_net');
-            $this->info("  {$an}: {$n} rânduri, total net = " . number_format($total, 0, ',', '.') . ' lei');
+                ->where('firma', $firma)->where('an', $an)->sum('lei_cu_tva');
+            $this->info("  {$an}: {$n} rânduri, total cu TVA = " . number_format($total, 0, ',', '.') . ' lei');
         }
 
         return self::SUCCESS;
