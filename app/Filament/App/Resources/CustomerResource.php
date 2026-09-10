@@ -549,7 +549,10 @@ class CustomerResource extends Resource
             $fmtDate = fn ($d) => $d ? \Carbon\Carbon::parse($d)->format('d.m.Y') : '';
             $fmtNum  = fn ($v) => number_format((float) $v, 2, ',', '.');
 
-            // Facturi de încasat + sold: din scadențarul oficial (rest > 0)
+            // Facturi de încasat + sold: din scadențarul oficial. Se includ și
+            // stornourile (rest negativ) — altfel lista nu bate cu soldul, care
+            // le însumează (caz real Ikonia: F 70610 anulată de 2 stornouri
+            // necompensate; lista arăta 10.923 iar soldul 8.650)
             $solduri = DB::table('winmentor_solduri_raw')
                 ->where('directie', 'client')
                 ->whereIn('part_id', $partIds)
@@ -557,7 +560,7 @@ class CustomerResource extends Resource
                 ->orderByDesc('data_factura')
                 ->get();
 
-            $facturi = $solduri->where('rest_de_plata', '>', 0)->map(fn ($f) => [
+            $facturi = $solduri->map(fn ($f) => [
                 'tip'          => $f->tip_document,
                 'nrDocument'   => $f->nr_factura,
                 'dataDocument' => $fmtDate($f->data_factura),
