@@ -64,12 +64,19 @@ class VanzariNetService
             WHERE firma = ? AND an = ?
         ", [$firma, $an]);
 
-        // Pas 2: refacturări de avize — F pozitive pe perechi (partener, sku)
-        // unde avizele anului acoperă cel puțin PRAG din cantitatea facturată
+        // Pas 2: refacturări de avize — F pozitive pe perechi (partener, sku) unde
+        // avizele anului acoperă cel puțin PRAG din cantitatea facturată ȘI bilanțul
+        // cantitativ al SKU-ului e rupt (ieșirile cumulate depășesc intrările cumulate
+        // — dovada dublei descărcări aviz+factură). Exportul conține în principiu doar
+        // documente care mișcă stocul (facturile de decontare a avizelor NU apar), deci
+        // o factură cu marfă e implicit vânzare reală — o excludem numai când fizic
+        // n-a existat marfă și pentru ea și pentru avize (constatat pe cărămida Cemacon:
+        // ieșiri 198K buc vs intrări 79K în 2025; paleții, cu bilanț închis, rămân numărați).
         DB::update("
             UPDATE winmentor_vanzari_raw v
             JOIN (
-                SELECT part_id, sku
+                SELECT part_id, sku,
+                    SUM(CASE WHEN tip_document = 'F' AND cantitate > 0 THEN cantitate ELSE 0 END) f_qty
                 FROM winmentor_vanzari_raw
                 WHERE firma = ? AND an = ? AND den_articol IS NOT NULL AND den_articol != ''
                 GROUP BY part_id, sku
@@ -78,10 +85,26 @@ class VanzariNetService
                    AND SUM(CASE WHEN tip_document = 'AE' AND cantitate > 0 THEN cantitate ELSE 0 END)
                     >= ? * SUM(CASE WHEN tip_document = 'F' AND cantitate > 0 THEN cantitate ELSE 0 END)
             ) c ON c.part_id = v.part_id AND c.sku = v.sku
+            JOIN (
+                SELECT o.sku, o.out_cum - COALESCE(i.in_cum, 0) exces
+                FROM (
+                    SELECT sku, SUM(cantitate) out_cum
+                    FROM winmentor_vanzari_raw
+                    WHERE firma = ? AND an <= ?
+                      AND den_articol IS NOT NULL AND den_articol != ''
+                    GROUP BY sku
+                ) o
+                LEFT JOIN (
+                    SELECT sku, SUM(cantitate) in_cum
+                    FROM winmentor_intrari_raw
+                    WHERE firma = ? AND YEAR(data_intrare) <= ?
+                    GROUP BY sku
+                ) i ON i.sku = o.sku
+            ) b ON b.sku = v.sku AND b.exces >= 0.5 * c.f_qty
             SET v.motiv_exclus = 'refacturare_aviz', v.lei_cu_tva = 0
             WHERE v.firma = ? AND v.an = ? AND v.tip_document = 'F'
               AND v.cantitate > 0 AND v.motiv_exclus IS NULL
-        ", [$firma, $an, self::PRAG_ACOPERIRE, $firma, $an]);
+        ", [$firma, $an, self::PRAG_ACOPERIRE, $firma, $an, $firma, $an, $firma, $an]);
 
         return $afectate;
     }
