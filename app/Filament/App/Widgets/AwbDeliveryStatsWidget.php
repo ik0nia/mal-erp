@@ -19,7 +19,7 @@ class AwbDeliveryStatsWidget extends StatsOverviewWidget
 
     protected function getColumns(): int
     {
-        return 4; // toate pe un singur rând — ocupă minim din pagină
+        return 5; // toate pe un singur rând — ocupă minim din pagină
     }
 
     protected function getStats(): array
@@ -52,6 +52,23 @@ class AwbDeliveryStatsWidget extends StatsOverviewWidget
             ->selectRaw('COUNT(*) c, COALESCE(SUM(cod_amount), 0) s')
             ->first();
 
+        // în rotația de verificare automată (non-terminale, inclusiv cele încă neinterogate)
+        $inTracking = DB::table('sameday_awbs')
+            ->whereNotNull('awb_number')->where('awb_number', '!=', '')
+            ->whereNotIn('status', ['cancelled', 'failed'])
+            ->where(function ($q) {
+                $q->whereNull('courier_status')
+                    ->orWhere(function ($w) {
+                        $w->whereRaw("courier_status NOT REGEXP 'retur|rambur|anulat|refuz'")
+                            ->where('courier_status', '!=', 'indisponibil')
+                            ->where(function ($v) {
+                                $v->whereRaw("courier_status NOT REGEXP 'livrat'")
+                                    ->orWhere('cod_amount', '>', 0);
+                            });
+                    });
+            })
+            ->count();
+
         $delivered30 = DB::table('sameday_awbs')
             ->whereNotNull('delivered_at')
             ->where('delivered_at', '>=', now()->subDays(30))
@@ -70,6 +87,9 @@ class AwbDeliveryStatsWidget extends StatsOverviewWidget
             Stat::make('Livrate (30 zile)', $delivered30)
                 ->description('confirmate de curier')
                 ->color('success'),
+            Stat::make('În urmărire', $inTracking)
+                ->description('verificate automat la 30 min')
+                ->color('gray'),
         ];
     }
 }
