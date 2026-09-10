@@ -103,11 +103,13 @@ class WooOrderResource extends Resource
                 Tables\Columns\TextColumn::make('total')
                     ->label('Total')
                     ->formatStateUsing(fn (WooOrder $record): string => number_format((float) $record->total, 2).' '.$record->currency)
+                    ->description(fn (WooOrder $record): ?string => $record->payment_method_title ?: null)
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('payment_method_title')
                     ->label('Plată')
-                    ->placeholder('-'),
+                    ->placeholder('-')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('order_date')
                     ->label('Data')
