@@ -297,6 +297,22 @@ Schedule::command('winmentor:fetch-incasari-plati')
     ->withoutOverlapping(30)
     ->runInBackground();
 
+// WinMentor — istoric COMPLET încasări bancare per client (GetIncasariClienti).
+// GetIncasariLuna omite majoritatea încasărilor (Mivinia: 3/25, constatat 2026-09-11).
+// Zilnic clienții cu vânzări recente; duminică noaptea toți (~1-2h).
+Schedule::command('winmentor:fetch-incasari-clienti --zile=10')
+    ->dailyAt('21:50')
+    ->timezone('Europe/Bucharest')
+    ->days([1, 2, 3, 4, 5, 6])
+    ->withoutOverlapping(90)
+    ->runInBackground();
+
+Schedule::command('winmentor:fetch-incasari-clienti --toti')
+    ->weeklyOn(0, '02:30')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping(240)
+    ->runInBackground();
+
 // WinMentor Bridge — detectare modificări SKU/denumire articole (la fiecare 5 minute).
 // Când detectează o modificare, actualizează ERP + WooCommerce și trimite e-mail.
 Schedule::command('winmentor:detect-article-changes')

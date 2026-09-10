@@ -571,8 +571,10 @@ class CustomerResource extends Resource
                 'dataScadenta' => $fmtDate($f->termen_plata),
             ])->values()->all();
 
-            // Încasări (toate, cele mai recente primele)
-            $incasari = DB::table('winmentor_incasari_raw')
+            // Încasări: preferăm istoricul complet per client (GetIncasariClienti,
+            // sincronizat nocturn); fallback pe exportul lunar (incomplet) dacă
+            // partenerul n-a fost încă acoperit de sync-ul per client
+            $incasari = DB::table('winmentor_incasari_clienti')
                 ->whereIn('part_id', $partIds)
                 ->orderByDesc('data')
                 ->limit(60)
@@ -581,8 +583,22 @@ class CustomerResource extends Resource
                     'data'           => $fmtDate($i->data),
                     'documentRef'    => $i->document_ref,
                     'suma'           => $fmtNum($i->suma),
-                    'detaliiFacturi' => '',
+                    'detaliiFacturi' => $i->detalii_facturi ?? '',
                 ])->all();
+
+            if (empty($incasari)) {
+                $incasari = DB::table('winmentor_incasari_raw')
+                    ->whereIn('part_id', $partIds)
+                    ->orderByDesc('data')
+                    ->limit(60)
+                    ->get()
+                    ->map(fn ($i) => [
+                        'data'           => $fmtDate($i->data),
+                        'documentRef'    => $i->document_ref,
+                        'suma'           => $fmtNum($i->suma),
+                        'detaliiFacturi' => '',
+                    ])->all();
+            }
 
             // Sedii / puncte de livrare
             $sedii = DB::table('winmentor_sedii')
@@ -619,8 +635,8 @@ class CustomerResource extends Resource
             return $data;
         }
 
-        // Interval pentru încasări: 1 ian. anul trecut → luna curentă (acoperă restanțe).
-        $an1 = (int) now()->subYear()->year;
+        // Interval pentru încasări: tot istoricul (2019 → luna curentă).
+        $an1 = 2019;
         $an2 = (int) now()->year;
         $luna2 = (int) now()->month;
 
