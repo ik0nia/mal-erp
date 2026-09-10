@@ -406,8 +406,11 @@ class CustomerResource extends Resource
                         ->getStateUsing(fn (Customer $record): string => self::facturiHtml(self::wmFinanceCached($record)['facturi'] ?? [])),
                 ]),
 
-            Section::make('Încasări')
-                ->description(fn (Customer $record): ?string => self::wmFinanceCached($record)['interval'] ?? null)
+            Section::make('Încasări prin bancă')
+                ->description(fn (Customer $record): ?string => trim(
+                    (self::wmFinanceCached($record)['interval'] ?? '') .
+                    ' · doar încasările din jurnalul de bancă/trezorerie — plățile la casă (numerar/card) nu sunt expuse de WinMentor; reperul plății la zi e Soldul curent'
+                , ' ·'))
                 ->visible(fn (Customer $record): bool => self::wmFinanceCached($record) !== null && empty(self::wmFinanceCached($record)['eroare']))
                 ->schema([
                     TextEntry::make('wm_incasari')->hiddenLabel()->html()->columnSpanFull()
@@ -763,7 +766,7 @@ class CustomerResource extends Resource
     protected static function incasariHtml(array $incasari): string
     {
         if (empty($incasari)) {
-            return '<p class="text-sm text-gray-500">Nu sunt încasări în intervalul selectat.</p>';
+            return '<p class="text-sm text-gray-500">Nu sunt încasări prin bancă în intervalul selectat (plățile la casă nu apar aici).</p>';
         }
         $rows = '';
         $total = 0.0;
