@@ -170,12 +170,21 @@ Schedule::command('awb:sync-courier-status')
     ->withoutOverlapping(10)
     ->runInBackground();
 
-// Plasă de siguranță: verificare per AWB pentru cele ratate de status-sync
-// (ex. evenimente mai vechi de 24h) — de 2 ori pe zi e suficient
-Schedule::command('awb:refresh-courier-status')
-    ->cron('5 12,20 * * *')
+// Picurare pentru AWB-urile fără status / nelivrate ratate de status-sync:
+// loturi MICI orare (rafalele scurte trec de rate-limitul Sameday, sweep-urile lungi nu).
+// Golește treptat restanța istorică; când nu mai e nimic de verificat, nu face apeluri.
+Schedule::command('awb:refresh-courier-status --limit=6 --delay=10')
+    ->cron('35 8-21 * * *')
     ->timezone('Europe/Bucharest')
     ->withoutOverlapping(55)
+    ->runInBackground();
+
+// Rambursuri: livrate cu banii netransferați încă — o singură verificare pe zi
+// (transferul apare oricum și în status-sync; asta e doar plasa de siguranță)
+Schedule::command('awb:refresh-courier-status --cod --limit=40 --delay=5')
+    ->dailyAt('09:30')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping(30)
     ->runInBackground();
 
 // Alerte prețuri achiziție — zilnic la 08:30 (Europe/Bucharest).
