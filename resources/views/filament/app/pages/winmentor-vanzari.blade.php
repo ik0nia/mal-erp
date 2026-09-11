@@ -285,7 +285,9 @@
               <span class="wm-obs" title="{{ $row->observatii }}">{{ $row->observatii }}</span>
             @else
               <span style="font-size:12px;color:#d1d5db;">
-                {{ $row->detected_at ? \Carbon\Carbon::parse($row->detected_at)->format('d.m H:i') : '' }}
+                @php $det = $row->detected_at ? \Carbon\Carbon::parse($row->detected_at) : null; @endphp
+                {{-- ora se afișează doar când e o detecție reală; miezul nopții = valoare la nivel de zi (WinMentor nu dă oră) --}}
+                {{ $det ? ($det->format('H:i') === '00:00' ? $det->format('d.m.Y') : $det->format('d.m H:i')) : '' }}
               </span>
             @endif
           </td>
