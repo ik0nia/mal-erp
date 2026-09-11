@@ -207,10 +207,16 @@
 <div class="card">
   <table class="plan">
     <tr><th>Prio</th><th>Acțiune</th><th>Efort</th><th>Impact</th></tr>
-    <tr><td class="p1">P1</td>
-        <td><b>updateArticol → <code>id-art-field</code></b> (nu id-part-field). Elimină definitiv sursa
-        otrăvirii listelor de parteneri; ERP începe să folosească endpoint-ul corect, deja existent.</td>
-        <td>~15 min (ERP)</td><td>închide clasa de bug-uri „eroare 213"</td></tr>
+    <tr><td class="p1">P1 ✅</td>
+        <td><b>REZOLVAT 11.09 (commit b5c6940), altfel decât planificat.</b> Testul pe firma ERP + verificarea
+        în producție au arătat că <code>ModiProduct</code> e un <b>no-op tăcut</b> (returnează succes, dar
+        redenumirea NU se aplică — norocos: altfel ar fi suprascris nomenclatorul contabilei cu nume de web).
+        Redenumirea a fost scoasă din push (rămâne log de drift); au dispărut ~10-13 apeluri/push și toate
+        comutările id-part-field din calea articolelor. <code>updateArticol</code> păstrat pentru apeluri
+        explicite, mutat pe knob-ul corect <code>id-art-field</code>. Descoperire colaterală: și la articole
+        primul câmp din listare e mode-dependent (id-ul conform SetIDArtField), iar în ambele firme toate
+        articolele au codIntern==codExtern.</td>
+        <td>făcut</td><td>închide clasa de bug-uri „eroare 213"</td></tr>
     <tr><td class="p1">P2</td>
         <td><b>Parametri per-request atomici în MentorAPI</b>: <code>idPartField</code>/<code>idArtField</code>
         (+ guard <code>firma</code>) acceptați de endpoint-urile dependente și aplicați <b>în același comDo</b>
