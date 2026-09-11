@@ -49,7 +49,27 @@ class SamedayAwbCreator
         $fallbackAddress = $this->composeAddressFromData($data);
 
         try {
-            $result = app(SamedayAwbService::class)->createAwb($connection, $data);
+            // Sameday cere client_internal_reference (= referința noastră = nr. comandă)
+            // UNIC global. La retrimiterea unei comenzi (încercare anterioară care a
+            // ajuns la Sameday, sau AWB creat de pluginul site-ului) referința e deja
+            // luată → „Campul client_internal_reference nu este unic". Reîncercăm cu
+            // sufix incremental (156746, 156746-2, 156746-3…) păstrând nr. comenzii lizibil.
+            $baseReference = filled($data['reference'] ?? null) ? trim((string) $data['reference']) : null;
+            $result = null;
+            for ($attempt = 1; $attempt <= 5; $attempt++) {
+                if ($baseReference !== null) {
+                    $data['reference'] = $attempt === 1 ? $baseReference : $baseReference.'-'.$attempt;
+                }
+                try {
+                    $result = app(SamedayAwbService::class)->createAwb($connection, $data);
+                    break;
+                } catch (\Sameday\Exceptions\SamedayBadRequestException $e) {
+                    if ($baseReference !== null && $attempt < 5 && $this->isDuplicateReferenceError($e)) {
+                        continue; // referința e luată — încercăm cu sufixul următor
+                    }
+                    throw $e;
+                }
+            }
 
             $resolvedPackageCount = max(
                 1,
@@ -190,6 +210,14 @@ class SamedayAwbCreator
         return $human
             ? 'Sameday a respins AWB-ul — verifică: '.implode(', ', $human).'.'
             : 'Sameday a respins AWB-ul (date invalide). Verifică datele destinatarului și coletul.';
+    }
+
+    /** Detectează eroarea Sameday „client_internal_reference nu este unic". */
+    private function isDuplicateReferenceError(\Sameday\Exceptions\SamedayBadRequestException $e): bool
+    {
+        $blob = mb_strtolower(json_encode($e->getErrors(), JSON_UNESCAPED_UNICODE) ?: '');
+
+        return str_contains($blob, 'client_internal_reference') || str_contains($blob, 'clientinternalreference');
     }
 
     /** Oglindire pe site + notă și meta pe comanda WooCommerce. */
