@@ -22,6 +22,14 @@ class WooClient
                 (string) $this->connection->consumer_key,
                 (string) $this->connection->consumer_secret,
             )
+            // LiteSpeed/Redis de pe site cache-uiau răspunsurile REST autentificate →
+            // sync-ul citea status vechi și „reverta" comenzi (ex. 156746 completed→processing,
+            // 2026-09-11). Forțăm ocolirea cache-ului la fiecare apel API.
+            ->withHeaders([
+                'Cache-Control' => 'no-cache, no-store, max-age=0',
+                'Pragma'        => 'no-cache',
+                'X-LSCACHE'     => 'no-cache',
+            ])
             ->timeout($this->connection->resolveTimeoutSeconds())
             ->withOptions([
                 'verify' => $this->connection->verify_ssl,
