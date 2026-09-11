@@ -227,6 +227,18 @@ class ImportWooOrderToWinmentorService
         ];
     }
 
+    /**
+     * MentorAPI serializează partenerul ca înregistrare separată prin ";" (și "~" pentru
+     * sub-liste). Un ";" venit din checkout (ex. adresa „Strada zona garii ;bl c3 ;scA",
+     * comanda 156746) decalează toate câmpurile următoare → AdaugaPartener pică cu
+     * 409/410 (clasa parteneri / categorie preț „cu simbolul precizat" = de fapt telefonul
+     * și numele ajunse pe poziții greșite).
+     */
+    private function sanitizeField(string $value): string
+    {
+        return trim(str_replace([';', '~'], ',', $value));
+    }
+
     /** @return array{ok:bool, id?:string, name?:string, created?:bool, error?:string} */
     private function createClient(string $name, string $cui, string $nrReg, array $billing, string $phone, string $email): array
     {
@@ -250,16 +262,16 @@ class ImportWooOrderToWinmentorService
 
         $add = $this->post('/api/parteneri/add', [
             'id'              => $id,
-            'denumire'        => $name,
-            'codFiscal'       => $cui,                 // ex. „RO36663535"; gol pentru persoană fizică
-            'nrRegCom'        => $nrReg,               // nr. registrul comerțului (din av_facturare)
+            'denumire'        => $this->sanitizeField($name),
+            'codFiscal'       => $this->sanitizeField($cui), // ex. „RO36663535"; gol pentru persoană fizică
+            'nrRegCom'        => $this->sanitizeField($nrReg), // nr. registrul comerțului (din av_facturare)
             'flagPF'          => $estePF ? 'PF' : '',  // "PF" = persoană fizică; gol = juridică (confirmat live 2026-06-23)
-            'localitate'      => $localitate,
-            'judetSediu'      => $judet,
-            'adresa'          => $adresa,
-            'telefon'         => $phone,
-            'persoaneContact' => $name,
-            'emailSediu'      => $email,               // câmpul corect WinMentor (nu „email")
+            'localitate'      => $this->sanitizeField($localitate),
+            'judetSediu'      => $this->sanitizeField($judet),
+            'adresa'          => $this->sanitizeField($adresa),
+            'telefon'         => $this->sanitizeField($phone),
+            'persoaneContact' => $this->sanitizeField($name),
+            'emailSediu'      => $this->sanitizeField($email), // câmpul corect WinMentor (nu „email")
         ]);
 
         if (($add['success'] ?? false) !== true) {
