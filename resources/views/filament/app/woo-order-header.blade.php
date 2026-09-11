@@ -19,6 +19,20 @@
     $meaningful = array_filter(array_diff_key($s, ['first_name' => 1, 'last_name' => 1]));
     $sLines = empty(array_filter($meaningful)) ? null : $fmtAddr($s);
     $shipLine = collect($record->data['shipping_lines'] ?? [])->first();
+
+    $money = fn ($v) => number_format((float) $v, 2, ',', '.') . ' lei';
+
+    // Fișa clientului 360° — link dacă găsim clientul după email sau telefon
+    $custEmail = trim((string) ($b['email'] ?? ''));
+    $custPhone = preg_replace('/\D+/', '', (string) ($b['phone'] ?? ''));
+    $customer = null;
+    if ($custEmail !== '' || $custPhone !== '') {
+        $customer = \App\Models\Customer::query()
+            ->when($custEmail !== '', fn ($q) => $q->orWhere('email', $custEmail))
+            ->when(strlen($custPhone) >= 6, fn ($q) => $q->orWhereRaw("REPLACE(REPLACE(phone,' ',''),'-','') LIKE ?", ["%{$custPhone}%"]))
+            ->first();
+    }
+    $customerUrl = $customer ? \App\Filament\App\Resources\CustomerResource::getUrl('view', ['record' => $customer]) : null;
 @endphp
 
 <style>
@@ -65,6 +79,9 @@
     @endforelse
     @if(!empty($b['email']))<p class="oh-muted">✉ {{ $b['email'] }}</p>@endif
     @if(!empty($b['phone']))<p class="oh-muted">☎ {{ $b['phone'] }}</p>@endif
+    @if($customerUrl)
+      <p style="margin-top:.35rem;"><a href="{{ $customerUrl }}" style="font-size:.8rem;font-weight:600;color:#4f46e5;text-decoration:none;">👤 Fișă client 360° →</a></p>
+    @endif
   </div>
 
   {{-- LIVRARE --}}
@@ -100,3 +117,24 @@
     @endif
   </div>
 </div>
+
+{{-- SUMAR FINANCIAR --}}
+@php
+    $disc = (float) ($record->discount_total ?? 0);
+    $ship = (float) ($record->shipping_total ?? 0);
+    $tax  = (float) ($record->tax_total ?? 0);
+    $fee  = (float) ($record->fee_total ?? 0);
+@endphp
+<div class="oh-totals">
+  <div class="oh-totals-row"><span>Subtotal produse</span><span>{{ $money($record->subtotal) }}</span></div>
+  @if($ship != 0)<div class="oh-totals-row"><span>Transport</span><span>{{ $money($ship) }}</span></div>@endif
+  @if($fee != 0)<div class="oh-totals-row"><span>Taxe suplimentare</span><span>{{ $money($fee) }}</span></div>@endif
+  @if($disc != 0)<div class="oh-totals-row" style="color:#b91c1c;"><span>Discount</span><span>−{{ $money($disc) }}</span></div>@endif
+  @if($tax != 0)<div class="oh-totals-row oh-muted"><span>din care TVA</span><span>{{ $money($tax) }}</span></div>@endif
+  <div class="oh-totals-row oh-totals-final"><span>TOTAL</span><span>{{ $money($record->total) }} {{ $record->currency }}</span></div>
+</div>
+<style>
+.oh-totals{margin-top:1rem;margin-left:auto;max-width:340px;border:1px solid #f3f4f6;border-radius:.6rem;padding:.5rem .9rem;background:#fafafa;}
+.oh-totals-row{display:flex;justify-content:space-between;gap:1rem;font-size:.86rem;color:#374151;padding:.2rem 0;}
+.oh-totals-final{border-top:1px solid #e5e7eb;margin-top:.25rem;padding-top:.5rem;font-size:1.05rem;font-weight:800;color:#111827;}
+</style>

@@ -4,11 +4,14 @@ namespace App\Filament\App\Resources\WooOrderResource\Pages;
 
 use App\Filament\App\Resources\WooOrderResource;
 use App\Models\IntegrationConnection;
+use App\Models\WooOrder;
 use App\Services\WooCommerce\WooClient;
 use App\Services\WooCommerce\WooOrderSyncService;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Schemas\Components\Tabs\Tab;
+use Illuminate\Database\Eloquent\Builder;
 use Throwable;
 
 class ListWooOrders extends ListRecords
@@ -19,6 +22,40 @@ class ListWooOrders extends ListRecords
     {
         return [
             \App\Filament\App\Widgets\AwbDeliveryStatsWidget::class,
+        ];
+    }
+
+    /** Tab-uri de status cu contoare — fluxul zilnic la un click. */
+    public function getTabs(): array
+    {
+        $countBadge = fn (array $statuses): ?string => ($n = WooOrder::query()->whereIn('status', $statuses)->count()) > 0 ? (string) $n : null;
+
+        $deProcesat = ['pending', 'processing', 'on-hold'];
+
+        return [
+            'toate' => Tab::make('Toate'),
+
+            'de_procesat' => Tab::make('De procesat')
+                ->modifyQueryUsing(fn (Builder $q) => $q->whereIn('status', $deProcesat))
+                ->badge($countBadge($deProcesat))
+                ->badgeColor('warning'),
+
+            // În procesare, dar nefacturate în WinMentor SAU cu discrepanță de total.
+            'de_atentie' => Tab::make('⚠ De atenție')
+                ->modifyQueryUsing(fn (Builder $q) => $q
+                    ->whereIn('status', $deProcesat)
+                    ->where(fn (Builder $s) => $s
+                        ->whereNull('winmentor_invoice_nr')
+                        ->orWhereRaw('ABS(total - COALESCE(winmentor_invoice_total, total)) > 0.05')))
+                ->badgeColor('danger'),
+
+            'finalizate' => Tab::make('Finalizate')
+                ->modifyQueryUsing(fn (Builder $q) => $q->where('status', 'completed'))
+                ->badge($countBadge(['completed']))
+                ->badgeColor('success'),
+
+            'anulate' => Tab::make('Anulate')
+                ->modifyQueryUsing(fn (Builder $q) => $q->whereIn('status', ['cancelled', 'refunded', 'failed'])),
         ];
     }
 

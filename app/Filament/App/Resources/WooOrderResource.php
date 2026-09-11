@@ -118,6 +118,17 @@ class WooOrderResource extends Resource
                     })
                     ->toggleable(isToggledHiddenByDefault: true),
 
+                Tables\Columns\TextColumn::make('customer_phone')
+                    ->label('Telefon')
+                    ->icon('heroicon-m-phone')
+                    ->getStateUsing(fn (WooOrder $record): ?string => $record->customer_phone ?: data_get($record->billing, 'phone'))
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        $digits = preg_replace('/\D+/', '', $search);
+                        return $query->orWhereRaw("REPLACE(REPLACE(JSON_UNQUOTE(JSON_EXTRACT(billing, '$.phone')), ' ', ''), '-', '') LIKE ?", ["%{$digits}%"]);
+                    })
+                    ->copyable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 Tables\Columns\TextColumn::make('total')
                     ->label('Total')
                     ->formatStateUsing(fn (WooOrder $record): string => number_format((float) $record->total, 2).' '.$record->currency)
@@ -206,6 +217,7 @@ class WooOrderResource extends Resource
             ])
             ->defaultSort('order_date', 'desc')
             ->defaultPaginationPageOption(25)
+            ->poll('30s')
             ->filters([
                 SelectFilter::make('status')
                     ->label('Status')
