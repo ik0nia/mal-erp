@@ -103,6 +103,11 @@ class ImportWooOrderToWinmentorService
             // 3. Construiește liniile COMANDA + validează + importă
             $lines = $this->buildLines($order, (string) $client['id'], $items);
 
+            // Firma și idPartField sunt stare GLOBALĂ pe COM — orice proces paralel
+            // le poate comuta între pașii de mai sus și import (vezi 62946c1).
+            // Le refixăm imediat înainte de fiecare apel de import: CodClient e
+            // ID-ul intern al partenerului, deci importul cere modul CodIntern.
+            $this->pinComContext();
             $val = $this->post('/api/import/comenzi?validateOnly=true', ['lines' => $lines]);
             if (($val['data']['isValid'] ?? false) !== true) {
                 return $this->markFailed($order, $fail(
@@ -111,6 +116,7 @@ class ImportWooOrderToWinmentorService
                 ));
             }
 
+            $this->pinComContext();
             $imp   = $this->post('/api/import/comenzi', ['lines' => $lines]);
             $count = (int) ($imp['data']['importedCount'] ?? 0);
 
@@ -242,6 +248,10 @@ class ImportWooOrderToWinmentorService
     /** @return array{ok:bool, id?:string, name?:string, created?:bool, error?:string} */
     private function createClient(string $name, string $cui, string $nrReg, array $billing, string $phone, string $email): array
     {
+        // Context COM fixat înainte de next-id + AdaugaPartener: ID-ul generat și
+        // trimis e cod INTERN, iar starea globală poate fi comutată de alt proces.
+        $this->pinComContext();
+
         // next-id are flakiness pe COM → reîncercări
         $id = null;
         for ($i = 0; $i < 6 && ! $id; $i++) {
@@ -287,6 +297,10 @@ class ImportWooOrderToWinmentorService
 
     private function findPartenerByCui(string $cui): ?array
     {
+        // «idPartener» din listă = câmpul selectat de idPartField (stare globală COM)
+        // — fixăm modul chiar înainte, altfel un proces paralel ne poate da codExtern
+        // pe post de id și am lega comanda de un cod greșit (vezi 62946c1).
+        $this->pinComContext();
         $page = 1;
         do {
             $r = $this->get('/api/parteneri', ['page' => $page, 'pageSize' => 500]);
@@ -308,6 +322,8 @@ class ImportWooOrderToWinmentorService
 
     private function findPartenerByName(string $name, string $phone): ?array
     {
+        // Fixăm modul înainte de listare — vezi comentariul din findPartenerByCui().
+        $this->pinComContext();
         $target = $this->normalizeName($name);
         $phoneN = preg_replace('/[^0-9]/', '', $phone);
         $page   = 1;
@@ -478,6 +494,19 @@ class ImportWooOrderToWinmentorService
     private function selectFirma(string $firma, int $an, int $luna): array
     {
         return $this->post('/api/firme/select', ['firma' => $firma, 'an' => $an, 'luna' => $luna]);
+    }
+
+    /**
+     * Refixează contextul COM (firma + idPartField=CodIntern) chiar înainte de un
+     * apel care depinde de el. Starea e globală pe bridge — nu ne bazăm pe ce s-a
+     * setat cu câțiva pași (sau alt proces) în urmă. CodIntern e necesar și la
+     * listările de parteneri («idPartener» = câmpul selectat de idPartField) și
+     * la import (CodClient = ID-ul intern al partenerului).
+     */
+    private function pinComContext(): void
+    {
+        $this->selectFirma(self::FIRMA, now()->year, now()->month);
+        $this->post('/api/config/id-part-field', ['fieldName' => 'CodIntern']);
     }
 
     private function get(string $path, array $query = []): array

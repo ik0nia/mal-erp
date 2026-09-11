@@ -530,6 +530,8 @@ class WinmentorBridgeClient
     public function getSediiLivrare(string $cui, ?string $wmId = null): array
     {
         $this->selectFirma();
+        // Comparăm idPartener cu wm_id (ID intern) — fixăm modul înainte de listare.
+        $this->setIdPartField('CodIntern');
         $result = $this->get('/api/parteneri', ['search' => $cui, 'pageSize' => 20, 'page' => 1], timeout: 30);
         $items = $result['data']['items'] ?? [];
         $item = null;
@@ -571,6 +573,10 @@ class WinmentorBridgeClient
      */
     public function getAllParteneri(): array
     {
+        // Indexăm după idPartener = câmpul selectat de idPartField (global) —
+        // fixăm modul înainte de listare (vezi searchPartenerById).
+        $this->setIdPartField('CodIntern');
+
         $index = [];
         $page  = 1;
 

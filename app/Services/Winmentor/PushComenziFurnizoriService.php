@@ -125,41 +125,45 @@ class PushComenziFurnizoriService
         $this->bridge->selectFirma();
         $this->bridge->setIdPartField('CodFiscal');
 
-        // Obținem next ID disponibil
-        $nextId = $this->getNextPartenerId();
-
-        if (!$nextId || $nextId === '0') {
-            $this->log('error', "Nu s-a putut obține un ID valid pentru furnizor nou [{$supplier->name}] — next-id a returnat [{$nextId}]");
-            return ['success' => false, 'error' => "Nu s-a putut genera un ID furnizor valid în WinMentor. Adăugați furnizorul manual."];
-        }
-
-        $fields = array_fill(0, 35, '');
-        $fields[0]  = $nextId;                              // 1  ID Partener
-        $fields[1]  = $supplier->name;                      // 2  Denumire
-        $fields[2]  = $supplier->vat_number ?? '';          // 3  Cod Fiscal
-        $fields[3]  = '';                                   // 4  Localitate sediu
-        $fields[4]  = $supplier->address ?? '';             // 5  Adresa sediu
-        $fields[5]  = $supplier->phone ?? '';               // 6  Telefon
-        $fields[6]  = $supplier->contact_person ?? '';      // 7  Persoana contact
-        $fields[7]  = '';                                   // 8  Simbol Clasa
-        $fields[8]  = '';                                   // 9  Simbol categorie pret
-        $fields[9]  = '';                                   // 10 ID Agent implicit
-        $fields[10] = $supplier->reg_number ?? '';          // 11 Nr. Registrul comertului
-        $fields[11] = $supplier->notes ?? '';               // 12 Observatii
-        $fields[12] = '';                                   // 13 Simbol banca
-        $fields[13] = $supplier->bank_name ?? '';           // 14 Nume banca
-        $fields[14] = '';                                   // 15 Localitate banca
-        $fields[15] = $supplier->bank_account ?? '';        // 16 Cont banca
-        // 17-29 goale
-        $fields[22] = '';                                   // 23 CodExtern
-        // 30 email sediu social
-        $fields[29] = $supplier->email ?? '';               // 30 email
-
-        $info = implode(';', $fields);
-
-        $this->log('info', "AdaugaPartener [{$supplier->name}]", ['info' => $info]);
-
         try {
+            // Obținem next ID disponibil
+            $nextId = $this->getNextPartenerId();
+
+            if (!$nextId || $nextId === '0') {
+                $this->log('error', "Nu s-a putut obține un ID valid pentru furnizor nou [{$supplier->name}] — next-id a returnat [{$nextId}]");
+                return ['success' => false, 'error' => "Nu s-a putut genera un ID furnizor valid în WinMentor. Adăugați furnizorul manual."];
+            }
+
+            // Separatorii de înregistrare WinMentor din datele libere rup structura
+            // AdaugaPartener (decalează câmpurile — vezi bug-ul «;» din adresă, 7c90cf2).
+            $san = fn (?string $v): string => trim(str_replace([';', '~'], ',', (string) $v));
+
+            $fields = array_fill(0, 35, '');
+            $fields[0]  = $nextId;                              // 1  ID Partener
+            $fields[1]  = $san($supplier->name);                // 2  Denumire
+            $fields[2]  = $san($supplier->vat_number);          // 3  Cod Fiscal
+            $fields[3]  = '';                                   // 4  Localitate sediu
+            $fields[4]  = $san($supplier->address);             // 5  Adresa sediu
+            $fields[5]  = $san($supplier->phone);               // 6  Telefon
+            $fields[6]  = $san($supplier->contact_person);      // 7  Persoana contact
+            $fields[7]  = '';                                   // 8  Simbol Clasa
+            $fields[8]  = '';                                   // 9  Simbol categorie pret
+            $fields[9]  = '';                                   // 10 ID Agent implicit
+            $fields[10] = $san($supplier->reg_number);          // 11 Nr. Registrul comertului
+            $fields[11] = $san($supplier->notes);               // 12 Observatii
+            $fields[12] = '';                                   // 13 Simbol banca
+            $fields[13] = $san($supplier->bank_name);           // 14 Nume banca
+            $fields[14] = '';                                   // 15 Localitate banca
+            $fields[15] = $san($supplier->bank_account);        // 16 Cont banca
+            // 17-29 goale
+            $fields[22] = '';                                   // 23 CodExtern
+            // 30 email sediu social
+            $fields[29] = $san($supplier->email);               // 30 email
+
+            $info = implode(';', $fields);
+
+            $this->log('info', "AdaugaPartener [{$supplier->name}]", ['info' => $info]);
+
             $result = $this->post('/api/parteneri/add', ['info' => $info]);
 
             if ($result['success'] ?? false) {
@@ -174,6 +178,11 @@ class PushComenziFurnizoriService
         } catch (\Throwable $e) {
             $this->log('error', "Excepție creare furnizor [{$supplier->name}]: {$e->getMessage()}");
             return ['success' => false, 'error' => $e->getMessage()];
+        } finally {
+            // Readucem starea globală la default pe TOATE căile de ieșire —
+            // altfel listările paralele de parteneri ar primi codFiscal pe post
+            // de idPartener (aceeași clasă de bug ca updateArticol, 62946c1).
+            $this->bridge->setIdPartField('CodIntern');
         }
     }
 
