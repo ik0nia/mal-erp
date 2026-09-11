@@ -223,6 +223,11 @@ class WinmentorBridgeClient
             return ['success' => false, 'error' => $error];
         } catch (\Throwable $e) {
             return ['success' => false, 'error' => $e->getMessage()];
+        } finally {
+            // Readucem starea globală la default — altfel următoarea listare de
+            // parteneri (proces paralel sau pasul următor din push) ar returna
+            // codExtern pe post de idPartener (vezi searchPartenerById).
+            $this->setIdPartField('CodIntern');
         }
     }
 
@@ -589,6 +594,12 @@ class WinmentorBridgeClient
 
     public function searchPartenerById(string $partId): ?array
     {
+        // idPartField e stare GLOBALĂ pe COM și „idPartener" din listă înseamnă
+        // câmpul selectat de ea. Un flux paralel (ex. updateArticol → CodExtern)
+        // o poate comuta → lista ar returna codExtern pe post de idPartener și am
+        // scrie coduri greșite în suppliers.winmentor_id (cauza erorii 213 la import,
+        // TEMAD/ELETERM 2026-09-11). O fixăm explicit înainte de fiecare căutare.
+        $this->setIdPartField('CodIntern');
         $page = 1;
         do {
             $result = $this->get('/api/parteneri', ['pageSize' => 500, 'page' => $page]);
@@ -659,6 +670,8 @@ class WinmentorBridgeClient
     public function searchParteneriByCui(string $cui): array
     {
         $this->selectFirma();
+        // Fixăm modul înainte de listare — vezi comentariul din searchPartenerById().
+        $this->setIdPartField('CodIntern');
 
         $cuiNormalized = preg_replace('/[^0-9]/', '', $cui);
 

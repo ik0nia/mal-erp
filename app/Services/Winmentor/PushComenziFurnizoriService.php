@@ -42,11 +42,12 @@ class PushComenziFurnizoriService
         }
 
         $this->bridge->selectFirma();
-        // ImportDocument identifică partenerul după CodExtern (728xxx), nu după codul
-        // intern padded (0000000024952) — lookup-ul trebuie făcut cu aceeași cheie,
-        // altfel ensurePartenerExists "corectează" winmentor_id cu un cod pe care
-        // importul nu-l recunoaște (eroare 213: "Nu gasesc informatii privind partenerul").
-        $this->bridge->setIdPartField('CodExtern');
+        // CodIntern e limbajul întregului flux: importDocument() forțează oricum
+        // CodIntern chiar înainte de import, deci CodFurnizor trebuie să fie ID-ul
+        // INTERN. Lookup-urile de parteneri își fixează singure CodIntern (vezi
+        // searchPartenerById/searchParteneriByCui) — setarea de aici doar readuce
+        // starea globală la default după alte fluxuri care o comută (ex. updateArticol).
+        $this->bridge->setIdPartField('CodIntern');
 
         // 2. Furnizor — verifică sau creează
         $partenerResult = $this->ensureFurnizorExists($po->supplier);
@@ -263,8 +264,8 @@ class PushComenziFurnizoriService
         }
 
         $this->bridge->selectFirma();
-        // CodExtern — vezi comentariul din push()
-        $this->bridge->setIdPartField('CodExtern');
+        // CodIntern — vezi comentariul din push()
+        $this->bridge->setIdPartField('CodIntern');
 
         $partenerResult = $this->ensureFurnizorExists($first->supplier);
         if (! $partenerResult['ok']) {
@@ -330,8 +331,8 @@ class PushComenziFurnizoriService
         }
 
         $this->bridge->selectFirma();
-        // CodExtern — vezi comentariul din push()
-        $this->bridge->setIdPartField('CodExtern');
+        // CodIntern — vezi comentariul din push()
+        $this->bridge->setIdPartField('CodIntern');
 
         $partenerResult = $this->ensureFurnizorExists($po->supplier);
         if (! $partenerResult['ok']) {
