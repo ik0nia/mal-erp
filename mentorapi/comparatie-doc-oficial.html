@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MentorAPI × Documentația oficială DocImpServer — comparație & plan</title>
+<style>
+  :root { --bg:#0f172a; --card:#1e293b; --line:#334155; --tx:#e2e8f0; --mut:#94a3b8;
+          --acc:#38bdf8; --ok:#4ade80; --warn:#fbbf24; --bad:#f87171; --new:#c084fc; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:32px 16px; background:var(--bg); color:var(--tx);
+         font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .wrap { max-width:1000px; margin:0 auto; }
+  h1 { font-size:1.6rem; margin:0 0 4px; }
+  h2 { font-size:1.2rem; margin:36px 0 12px; color:var(--acc); border-bottom:1px solid var(--line); padding-bottom:6px; }
+  h3 { font-size:1rem; margin:20px 0 8px; }
+  .sub { color:var(--mut); margin-bottom:24px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 20px; margin:14px 0; }
+  .headline { border-left:4px solid var(--bad); }
+  table { width:100%; border-collapse:collapse; margin:10px 0; font-size:0.9rem; }
+  th, td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--mut); font-weight:600; white-space:nowrap; }
+  code { background:#0b1220; border:1px solid var(--line); border-radius:4px; padding:1px 6px;
+         font:0.85em ui-monospace,Menlo,monospace; color:#7dd3fc; }
+  .tag { display:inline-block; font-size:0.72rem; font-weight:700; border-radius:99px; padding:1px 10px; margin-right:6px; }
+  .t-ok   { background:#052e16; color:var(--ok); border:1px solid #14532d; }
+  .t-new  { background:#2e1065; color:var(--new); border:1px solid #6d28d9; }
+  .t-warn { background:#451a03; color:var(--warn); border:1px solid #92400e; }
+  .t-bad  { background:#450a0a; color:var(--bad); border:1px solid #991b1b; }
+  ul { margin:8px 0; padding-left:22px; }
+  li { margin:4px 0; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin:14px 0; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; text-align:center; }
+  .stat b { display:block; font-size:1.7rem; color:var(--acc); }
+  .stat span { color:var(--mut); font-size:0.82rem; }
+  .mono { font:0.85em ui-monospace,Menlo,monospace; color:var(--mut); }
+  .plan td:first-child { white-space:nowrap; font-weight:700; }
+  .p1 { color:var(--bad); } .p2 { color:var(--warn); } .p3 { color:var(--acc); } .p4 { color:var(--mut); }
+</style>
+</head>
+<body><div class="wrap">
+
+<h1>MentorAPI × Documentația oficială DocImpServer</h1>
+<div class="sub">
+  Analiză: 11.09.2026 · Surse: <b>PDF „Funcții pentru interfațarea cu WinMENTOR" Rev 1.5 (22.05.2026)</b>,
+  directorul oficial <span class="mono">download.winmentor.ro/…/24_DocImpServer/</span> — exemple C#/Delphi/PHP,
+  <span class="mono">FactIes.ini</span>, <span class="mono">partener.txt</span>, type library <span class="mono">DocImpServer_TLB.pas</span> (2008, 89 metode, dispid-uri complete)
+</div>
+
+<div class="grid">
+  <div class="stat"><b>129 / 129</b><span>funcții din documentație — toate implementate deja în MentorAPI</span></div>
+  <div class="stat"><b>+27</b><span>funcții LA NOI care NU apar în documentația publică</span></div>
+  <div class="stat"><b>38 → 49</b><span>câmpuri parteneri: documentate oficial → returnate real de server</span></div>
+  <div class="stat"><b>24 → 40</b><span>câmpuri articole: documentate oficial → returnate real de server</span></div>
+</div>
+
+<h2>1. Descoperirea principală — knob-ul greșit la articole</h2>
+<div class="card headline">
+  <p><span class="tag t-bad">CRITIC · CONFIRMAT OFICIAL</span>
+  Documentația separă explicit două setări globale diferite (funcțiile 39 și 40):</p>
+  <ul>
+    <li><code>SetIDPartField(CodExtern|CodFiscal|CodIntern)</code> — identificarea <b>PARTENERILOR</b>;</li>
+    <li><code>SetIDArtField(CodExtern|CodIntern)</code> — identificarea <b>ARTICOLELOR</b>.</li>
+  </ul>
+  <p><b>ERP-ul nostru folosea knob-ul de parteneri pentru articole</b>: <code>updateArticol()</code> din
+  <span class="mono">WinmentorBridgeClient</span> seta <code>id-part-field=CodExtern</code> înainte de
+  <code>ModiProduct</code>. Endpoint-ul corect <code>/api/config/id-art-field</code> <b>există în MentorAPI
+  dar ERP nu-l apelează nicăieri</b>. Comutarea inutilă a knob-ului de parteneri a fost chiar sursa
+  otrăvirii <span class="mono">suppliers.winmentor_id</span> din incidentul „eroare 213" (11.09.2026, commit <span class="mono">62946c1</span>).
+  <br><b>Acțiune:</b> updateArticol să seteze <code>id-art-field=CodExtern</code> (dacă e necesar măcar)
+  și să NU mai atingă id-part-field. — vezi planul, P1.</p>
+</div>
+
+<h2>2. Comparație funcții: documentație vs MentorAPI</h2>
+<div class="card">
+  <p><span class="tag t-ok">ACOPERIRE 100%</span> Toate cele ~129 de funcții enumerate în PDF (inclusiv lista finală fără descrieri)
+  sunt deja implementate și expuse HTTP în MentorAPI — inclusiv cele pe care nu le știam documentate:
+  <code>GetIstoricVanzari</code>+<code>GetListRecord</code> (API-ul cursor, la noi <span class="mono">/api/vanzari/istoric</span>),
+  <code>GetIncasariFactura</code>, <code>CheckDocument</code>, <code>GetStocArticoleExt2</code>.</p>
+
+  <h3>Funcții existente la noi, NEdocumentate public (+27) <span class="tag t-new">AVANTAJ</span></h3>
+  <p class="mono">GetVanzariEmulare · GetEmulareNedescarcata · GetPlatiLuna · GetIncasariClientiExt ·
+  GetReceptiiNeoperate · GetArtComenziInterne · GetMatComenziInterne · GetStadiuComanda · GetCmdSubunitActive ·
+  GetArticoleDisc · GetIntervaleDisc · GetValoriAtribute · GetUM · GetReteteActive · GetReziduale ·
+  GetListaCarneteExt · ImportaReglareInventar · ReglareInventarValida · ModificaArticol · LogOn ·
+  SetArtAnalizat · SetCantReceptii · SetCatPretImplicita · SetCodCmdAnalizata · SetDataReferinta ·
+  SetFiltruDocNeoperate · SetInclusivCmdFurn / SetInclusivFactAviz</p>
+  <p>Acestea au fost descoperite de noi prin probing — documentația oficială nici azi nu le menționează.
+  Concluzie: <b>MentorAPI acoperă mai mult decât documentația publică WinMentor.</b></p>
+
+  <h3>Semnături clarificate de type library (TLB)</h3>
+  <table>
+    <tr><th>Funcție</th><th>Ce aflăm nou</th></tr>
+    <tr><td><code>GetStocArticol(ArtID, GestID)</code></td><td>are parametru <b>GestID</b> — stoc per gestiune direct (PDF-ul îl omite!)</td></tr>
+    <tr><td><code>GetStocArtDetaliat(ArtID, GestID)</code></td><td>idem — detaliere stoc pe gestiune</td></tr>
+    <tr><td><code>GetIstoricVanzari → GetListRecord(out EOF)</code></td><td>model oficial de iterare rând-cu-rând (cursor) — confirmă implementarea noastră</td></tr>
+    <tr><td><code>GetVersiuni(out VerMentor, VerServer)</code></td><td>două OUT-uri Double — semnătura exactă pentru vtable</td></tr>
+    <tr><td><code>SetIndexNart</code></td><td>declarată oficial <b>învechită</b> („nu-și mai are rostul") — predecesoarea lui SetIDArtField</td></tr>
+  </table>
+  <p><span class="tag t-warn">LIMITĂ</span> TLB-ul public e din <b>2008</b> (89 metode) — cele 4 metode „nefixabile"
+  la noi (<code>GetSoldFactNeop</code>, <code>GetReceivingStatus</code>, <code>GetListaCarneteExt</code>,
+  <code>SetInventoryOrders</code> → E_UNEXPECTED) <b>nu apar în el</b>, deci nu ne dă semnăturile lor.
+  Un TLB actual de la WinMentor le-ar rezolva (vezi planul, P4).</p>
+</div>
+
+<h2>3. Descoperiri pe câmpuri (structuri documentate oficial acum)</h2>
+
+<div class="card">
+  <h3>GetListaParteneri — 38 de câmpuri oficiale (serverul returnează 49)</h3>
+  <p>Documentația dă în sfârșit lista completă 1–38, cu proveniența din tabele
+  (<span class="mono">NCLASEP.DB, NCATPRET.DB, NPERS.DB, NPART.DB</span>). Ne confirmă maparea existentă și
+  <b>etichetează pozițiile pe care le țineam ca necunoscute</b> în analiza noastră statistică:</p>
+  <table>
+    <tr><th>Poziție doc</th><th>Semnificație oficială</th><th>Starea la noi</th></tr>
+    <tr><td>28</td><td>Flag (D) sediu social, per sediu <span class="mono">~</span></td><td>mapat ✓</td></tr>
+    <tr><td>31</td><td><b>Numere de telefon persoane de contact</b></td><td>era „necunoscut [29]" în analiză — identificat acum</td></tr>
+    <tr><td>34</td><td><b>Data adăugării în baza de date</b></td><td>era „necunoscut [33]" (valori tip 08.10.2009) — identificat</td></tr>
+    <tr><td>35 / 36</td><td>Trasee asignate · Puncte acumulate</td><td>mapate ✓ (confirmate)</td></tr>
+    <tr><td>37 / 38</td><td>Coduri fiscale sedii · Tip sediu (per sediu <span class="mono">~</span>)</td><td>mapate ✓ (confirmate)</td></tr>
+    <tr><td>—</td><td>pozițiile 39–49 (flagPlataCard, serie/nr. buletin sedii…)</td><td><span class="tag t-new">DOAR LA NOI</span> serverul actual returnează 11 câmpuri peste documentație</td></tr>
+  </table>
+  <p><span class="tag t-warn">DE VERIFICAT</span> Poziția 22 e listată oficial „Cod fiscal" (a doua oară) —
+  noi o expunem ca <code>nrRegCom</code>. De testat pe un PJ real care are J-number diferit de CUI.</p>
+</div>
+
+<div class="card">
+  <h3>AdaugaPartener / ModificaPartener — 35 câmpuri, confirmate 1:1</h3>
+  <p>Structura oficială coincide exact cu maparea noastră JSON (35 câmpuri). Bonusuri din exemple:</p>
+  <ul>
+    <li><span class="mono">partener.txt</span> oficial: partener cu <b>ID=108 și CodExtern=105</b> —
+        coduri divergente sunt convenție normală WinMentor, nu anomalia noastră (cazul TEMAD).</li>
+    <li><code>GenCodParteneri</code>: returnează următorul cod <b>intern, extern sau fiscal în funcție de
+        constanta „Cod pentru identificare partener"</b> (Constante generale → Import date din alte aplicații) —
+        explică de ce <code>next-id</code> depinde de configurarea firmei.</li>
+    <li>Regula oficială a golurilor: câmpurile negestionate se trimit șir vid, dar <b>numărul de „;" trebuie respectat</b> —
+        validează fix-urile noastre de sanitizare (『;』 din date rupe structura — commit 7c90cf2).</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>GetNomenclatorArticole — 24 câmpuri oficiale (serverul returnează 40)</h3>
+  <p>Documentația confirmă primele 24 (inclusiv <b>UM secundară + paritate, Serviciu, CodVamal, PretMinim,
+  CantImplicita, PretValuta, PretVCuTVA, Locatie, PretReferinta</b>) — toate deja mapate la noi.
+  Pozițiile 25–40 rămân nedocumentate oficial (noi le-am identificat parțial: FlagActiv, CodAlternativ, CotaTVA2…).</p>
+  <h3>Alte structuri confirmate/completate de PDF</h3>
+  <table>
+    <tr><th>Funcție</th><th>Structura oficială</th></tr>
+    <tr><td><code>GetComenziNefacturate</code></td><td><span class="mono">IDArticol; NrComanda; Cant; DenArticol</span> — o țineam „structură necunoscută"</td></tr>
+    <tr><td><code>GetInfoIesiri</code></td><td>18 câmpuri, inclusiv <b>CodExternPart + CodInternPart simultan</b> (utile la reconciliere fără dependență de idPartField!)</td></tr>
+    <tr><td><code>GetOferte</code></td><td>14 câmpuri: IDPart, IDArticol, DataInreg/Expir, Pret, CantMin, discount, moneda, CodLaFurn…</td></tr>
+    <tr><td><code>GetSolduri</code></td><td>încasări per agent: <span class="mono">NrDoc;DataDoc;Rest;Termen;Agent;Valoare</span> + linii avans</td></tr>
+    <tr><td><code>GetSolduriFurn</code></td><td>oficial: aceeași structură cu GetSolduriExt (furnizori) — confirmă presupunerea noastră</td></tr>
+    <tr><td><code>GetStocArticole</code></td><td>include <b>StocRezervat de comenzi</b> pe ultima poziție + flag TVA inclus în preț</td></tr>
+    <tr><td><code>GetProducts / GetStergeriProduse</code></td><td>sincronizare <b>incrementală</b> pe <span class="mono">LastSyncDate</span> („dd.mm.yyyy hh:mm:ss") — inclusiv articole ȘTERSE</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h3>FactIes.ini oficial — câmpuri de header pe care nu le folosim</h3>
+  <p>Exemplul oficial de pachet facturi ieșire conține câmpuri utile neexploatate de importurile noastre:</p>
+  <p class="mono">DelegatPropriu=D · CodDelegat · Operat=D (operare automată!) · Discountx=9.00 (discount global
+  pe document) · Majorari · Scadenta · Curs · Locatie</p>
+  <p>De evaluat adoptarea la <span class="mono">facturi-iesire</span> / <span class="mono">comenzi</span> (ex.
+  scadența din termenul de plată al clientului, Operat=D ca opțiune).</p>
+</div>
+
+<h2>4. Importurile blocate — verdictul documentației</h2>
+<div class="card">
+  <table>
+    <tr><th>Import</th><th>Funcții (confirmate de doc)</th><th>Formatul INI?</th></tr>
+    <tr><td>Încasări</td><td><code>IncasariValideExt / ImportaIncasariExt</code> ✓</td><td><span class="tag t-bad">LIPSEȘTE</span> secțiunea „Reprezinta" nedocumentată</td></tr>
+    <tr><td>Plăți</td><td><code>PlatiValideExt / ImportaPlatiExt</code> ✓</td><td><span class="tag t-bad">LIPSEȘTE</span></td></tr>
+    <tr><td>Note contabile</td><td><code>NCValide / ImportaNoteContabile</code> ✓</td><td><span class="tag t-bad">LIPSEȘTE</span> flag tranzacție necunoscut</td></tr>
+    <tr><td>Monetare</td><td><code>MonetareValide / ImportaMonetare</code> ✓</td><td><span class="tag t-bad">LIPSEȘTE</span> numele casei de marcat</td></tr>
+  </table>
+  <p>PDF-ul documentează <b>funcțiile</b>, nu formatele pachetelor. Exemplele publice conțin doar
+  <span class="mono">FactIes.ini</span>. <b>Vestea bună:</b> notele oficiale dau un contact tehnic direct —
+  <b>gseica@winmentor.ro</b> (Gabi, distribuie DocImpServer.exe/.tlb). Un singur exemplu INI valid per tip
+  ne deblochează toate cele 4 importuri.</p>
+</div>
+
+<h2>5. Planul de îmbunătățiri</h2>
+<div class="card">
+  <table class="plan">
+    <tr><th>Prio</th><th>Acțiune</th><th>Efort</th><th>Impact</th></tr>
+    <tr><td class="p1">P1</td>
+        <td><b>updateArticol → <code>id-art-field</code></b> (nu id-part-field). Elimină definitiv sursa
+        otrăvirii listelor de parteneri; ERP începe să folosească endpoint-ul corect, deja existent.</td>
+        <td>~15 min (ERP)</td><td>închide clasa de bug-uri „eroare 213"</td></tr>
+    <tr><td class="p1">P2</td>
+        <td><b>Parametri per-request atomici în MentorAPI</b>: <code>idPartField</code>/<code>idArtField</code>
+        (+ guard <code>firma</code>) acceptați de endpoint-urile dependente și aplicați <b>în același comDo</b>
+        cu apelul propriu-zis → zero race prin construcție. ERP migrat treptat, compatibil înapoi.</td>
+        <td>~3-4 h (Go) + redeploy Windows</td><td>elimină definitiv starea globală partajată</td></tr>
+    <tr><td class="p2">P3</td>
+        <td><b>Email la gseica@winmentor.ro</b>: cerem (1) exemple INI pentru încasări/plăți/note contabile/monetare,
+        (2) TLB-ul actual (post-2008) pentru semnăturile celor 4 metode E_UNEXPECTED.</td>
+        <td>~15 min + așteptare</td><td>deblochează 4 importuri + 4 metode</td></tr>
+    <tr><td class="p2">P4</td>
+        <td><b>Sincronizare incrementală articole</b> cu <code>GetProducts(LastSyncDate)</code> +
+        <code>GetStergeriProduse</code> — azi scanăm nomenclatorul integral; incremental = mai rapid,
+        plus detectăm articolele șterse din Mentor (azi invizibile pentru ERP).</td>
+        <td>~2-3 h (ERP)</td><td>sync mai rapid + curățenie automată</td></tr>
+    <tr><td class="p3">P5</td>
+        <td><b>Etichetare câmpuri noi</b>: telefoane persoane contact (poz. 31) și data adăugării (poz. 34) expuse
+        în JSON parteneri; verificat poz. 22 (CodFiscal vs nrRegCom); expus <code>GestID</code> la
+        <span class="mono">/api/stocuri/articol</span> (stoc per gestiune); StocRezervat din GetStocArticole.</td>
+        <td>~2 h (Go)</td><td>date noi gata-de-folosit în ERP (fișa client, stocuri)</td></tr>
+    <tr><td class="p3">P6</td>
+        <td><b>Câmpuri header import</b> din FactIes.ini oficial (Scadenta, Discountx, Operat, Delegat) —
+        evaluat + adoptat unde au sens la facturi-iesire/comenzi.</td>
+        <td>~1-2 h</td><td>documente mai complete în Mentor</td></tr>
+    <tr><td class="p4">P7</td>
+        <td><b>Igienă documentație</b>: TODO.md adus la zi (încă zice v1.2.0/luna 5), notat oficial
+        <code>SetIndexNart</code> ca deprecated, link către acest raport din pagina de audit.</td>
+        <td>~30 min</td><td>întreținere</td></tr>
+  </table>
+</div>
+
+<div class="sub" style="margin-top:28px">
+  Generat automat la 11.09.2026 · Fișiere sursă analizate local în <span class="mono">/tmp/wmdoc/</span> ·
+  Raport: <span class="mono">mentorapi/comparatie-doc-oficial.html</span>
+</div>
+
+</div></body>
+</html>

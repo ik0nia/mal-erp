@@ -25,6 +25,12 @@ Route::middleware(['web', 'auth'])->group(function () {
         return response()->file(base_path('mentorapi/docs.html'));
     });
 
+    // Comparație documentația oficială DocImpServer (PDF Rev 1.5 / 22.05.2026) vs MentorAPI
+    Route::get('/mentorapi/comparatie-doc', function () {
+        abort_unless(auth()->user()?->isSuperAdmin(), 404);
+        return response()->file(base_path('mentorapi/comparatie-doc-oficial.html'));
+    });
+
     Route::get('/mentorapi/openapi-docs.json', function () {
         abort_unless(auth()->user()?->isSuperAdmin(), 404);
         $path = base_path('mentorapi/openapi-docs.json');
