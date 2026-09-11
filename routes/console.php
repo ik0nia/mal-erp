@@ -332,6 +332,14 @@ Schedule::command('winmentor:detect-article-changes')
     ->withoutOverlapping(30)
     ->runInBackground();
 
+// WinMentor — articole ȘTERSE din nomenclator (READ-ONLY, GetStergeriProduse).
+// Întreține și snapshot.cod_intern; alertează pe email când un produs publicat dispare din Mentor.
+Schedule::command('winmentor:check-articole-sterse')
+    ->dailyAt('05:40')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping(30)
+    ->runInBackground();
+
 // WinMentor — detectare intrări noi și procesare automată (la fiecare 15 minute).
 // Rulează doar luni–sâmbătă între 08:00–17:30 (Europe/Bucharest).
 // Se oprește singur dacă COM nu e conectat (WinMentor închis).

@@ -49,6 +49,49 @@ class WinmentorBridgeClient
     }
 
     /**
+     * Articolele ȘTERSE din nomenclator după o dată (READ-ONLY, GetStergeriProduse).
+     * Returnează [['codInternWinMentor','dataOraStergerii'], ...] sau null la eroare.
+     */
+    public function getStergeriProduse(string $lastSync): ?array
+    {
+        $result = $this->get('/api/produse/stergeri', ['lastSync' => $lastSync], timeout: 90);
+
+        if (($result['success'] ?? false) !== true) {
+            return null;
+        }
+
+        return $result['data'] ?? [];
+    }
+
+    /**
+     * Mapa cod_extern → cod_intern din nomenclatorul de articole (READ-ONLY, paginat).
+     */
+    public function fetchArticoleCodInternMap(int $pageSize = 5000): array
+    {
+        $map  = [];
+        $page = 1;
+
+        do {
+            $result = $this->get('/api/articole', ['page' => $page, 'pageSize' => $pageSize], timeout: 120);
+            $data   = $result['data'] ?? [];
+
+            foreach ($data['items'] ?? [] as $item) {
+                $ce = trim((string) ($item['codExtern'] ?? ''));
+                $ci = trim((string) ($item['codIntern'] ?? ''));
+                if ($ce !== '' && $ci !== '') {
+                    $map[$ce] = $ci;
+                }
+            }
+
+            $hasNext    = $data['hasNextPage'] ?? false;
+            $totalPages = (int) ($data['totalPages'] ?? 1);
+            $page++;
+        } while ($hasNext && $page <= $totalPages);
+
+        return $map;
+    }
+
+    /**
      * Decodează numărul GetVersiuni (ex. 3226071.03) în formatul oficial „26.071/3"
      * (an.lunăversiune/minoră — schema din changelog-ul WinMentor).
      */
@@ -233,7 +276,12 @@ class WinmentorBridgeClient
         }
 
         $this->selectFirma();
-        $this->setIdPartField('CodExtern');
+        // Knob-ul corect pentru articole e SetIDArtField (doc oficial, funcția 40) —
+        // NU id-part-field, care e al partenerilor (folosit greșit până în 2026-09-11
+        // și sursa otrăvirii listelor de parteneri, vezi 62946c1).
+        // ⚠️ Verificat live 2026-09-11: ModiProduct NU aplică redenumirea (returnează
+        // succes dar denumirea rămâne neschimbată) — nefolosit din ensureArticoleExist.
+        $this->setIdArtField('CodExtern');
 
         // ModiProduct: CodExtern;Producator;Clasa;Pret;(gol);Denumire;(gol)
         $info = "{$sku};;;;;{$newName};";
@@ -250,11 +298,6 @@ class WinmentorBridgeClient
             return ['success' => false, 'error' => $error];
         } catch (\Throwable $e) {
             return ['success' => false, 'error' => $e->getMessage()];
-        } finally {
-            // Readucem starea globală la default — altfel următoarea listare de
-            // parteneri (proces paralel sau pasul următor din push) ar returna
-            // codExtern pe post de idPartener (vezi searchPartenerById).
-            $this->setIdPartField('CodIntern');
         }
     }
 
@@ -866,18 +909,21 @@ class WinmentorBridgeClient
             if (isset($articoleMap[$key])) {
                 $umMap[$sku] = $articoleMap[$key]['denUM'] ?? null;
 
-                // Verifică dacă denumirea s-a schimbat — dacă da, update în WinMentor
+                // NU mai redenumim articolele în WinMentor (scos 2026-09-11):
+                //  1) ModiProduct e un no-op tăcut — returnează succes dar NU aplică
+                //     redenumirea (verificat live: numele trimise la 16:14 nu s-au aplicat);
+                //  2) dacă ar fi funcționat, ar fi suprascris nomenclatorul contabilei cu
+                //     nume de web ori de câte ori winmentor_name era gol;
+                //  3) apelul comuta id-part-field (knob-ul de PARTENERI, greșit — doc oficial:
+                //     articolele folosesc SetIDArtField) → sursa otrăvirii din 62946c1.
+                // Ținem doar evidența drift-ului de denumire, fără nicio scriere.
                 $wmName  = trim($articoleMap[$key]['denumire'] ?? '');
-                $erpName = trim($item['product_name'] ?? '');
                 $product = ! empty($item['woo_product_id']) ? WooProduct::find($item['woo_product_id']) : null;
-                $expectedName = $product ? trim($product->winmentor_name ?? $product->name) : $erpName;
-
+                $expectedName = $product ? trim($product->winmentor_name ?? '') : '';
                 if ($wmName !== '' && $expectedName !== '' && $wmName !== $expectedName) {
-                    $updateResult = $this->updateArticol($sku, $expectedName);
-                    if ($updateResult['success']) {
-                        $updated[] = "{$expectedName} [{$sku}]";
-                    }
-                    // Nu e eroare blocantă — continuăm oricum
+                    Log::channel('winmentor_bridge')->info('[WinMentor] Drift denumire articol (doar informativ)', [
+                        'sku' => $sku, 'mentor' => $wmName, 'erp_winmentor_name' => $expectedName,
+                    ]);
                 }
             } else {
                 // Bulk map poate rata produse cu codExtern nepopulat → fallback search direct
@@ -1125,6 +1171,15 @@ class WinmentorBridgeClient
     public function setIdPartField(string $fieldName): void
     {
         $this->post('/api/config/id-part-field', ['fieldName' => $fieldName]);
+    }
+
+    /**
+     * Câmpul de identificare a ARTICOLELOR (SetIDArtField: CodExtern|CodIntern).
+     * Knob separat de cel al partenerilor — doc oficial DocImpServer, funcția 40.
+     */
+    public function setIdArtField(string $fieldName): void
+    {
+        $this->post('/api/config/id-art-field', ['fieldName' => $fieldName]);
     }
 
     /**
