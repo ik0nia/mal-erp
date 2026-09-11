@@ -42,7 +42,11 @@ class PushComenziFurnizoriService
         }
 
         $this->bridge->selectFirma();
-        $this->bridge->setIdPartField('CodIntern');
+        // ImportDocument identifică partenerul după CodExtern (728xxx), nu după codul
+        // intern padded (0000000024952) — lookup-ul trebuie făcut cu aceeași cheie,
+        // altfel ensurePartenerExists "corectează" winmentor_id cu un cod pe care
+        // importul nu-l recunoaște (eroare 213: "Nu gasesc informatii privind partenerul").
+        $this->bridge->setIdPartField('CodExtern');
 
         // 2. Furnizor — verifică sau creează
         $partenerResult = $this->ensureFurnizorExists($po->supplier);
@@ -259,7 +263,8 @@ class PushComenziFurnizoriService
         }
 
         $this->bridge->selectFirma();
-        $this->bridge->setIdPartField('CodIntern');
+        // CodExtern — vezi comentariul din push()
+        $this->bridge->setIdPartField('CodExtern');
 
         $partenerResult = $this->ensureFurnizorExists($first->supplier);
         if (! $partenerResult['ok']) {
@@ -325,7 +330,8 @@ class PushComenziFurnizoriService
         }
 
         $this->bridge->selectFirma();
-        $this->bridge->setIdPartField('CodIntern');
+        // CodExtern — vezi comentariul din push()
+        $this->bridge->setIdPartField('CodExtern');
 
         $partenerResult = $this->ensureFurnizorExists($po->supplier);
         if (! $partenerResult['ok']) {
