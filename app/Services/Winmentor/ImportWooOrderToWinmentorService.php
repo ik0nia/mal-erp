@@ -259,6 +259,7 @@ class ImportWooOrderToWinmentorService
         $adresa     = trim(((string) ($billing['address_1'] ?? '')).' '.((string) ($billing['address_2'] ?? '')));
         $judet      = trim((string) ($billing['state'] ?? ''));
         $estePF     = $cui === ''; // fără CUI → persoană fizică
+        $name       = mb_strtoupper($name); // convenția WinMentor: denumirile partenerilor cu majuscule
 
         $add = $this->post('/api/parteneri/add', [
             'id'              => $id,
