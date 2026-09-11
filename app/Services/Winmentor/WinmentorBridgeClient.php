@@ -37,6 +37,33 @@ class WinmentorBridgeClient
         return $this->get('/api/health', auth: false);
     }
 
+    /**
+     * Versiunile Mentor.exe și DocImpServer (READ-ONLY, GetVersiuni).
+     * Returnează ['resultCode','verMentor','verServer'] sau [].
+     */
+    public function getVersiuni(): array
+    {
+        $result = $this->get('/api/versiuni', timeout: 30);
+
+        return $result['data'] ?? [];
+    }
+
+    /**
+     * Decodează numărul GetVersiuni (ex. 3226071.03) în formatul oficial „26.071/3"
+     * (an.lunăversiune/minoră — schema din changelog-ul WinMentor).
+     */
+    public static function formatVersiuneWinmentor(float|int|string|null $v): ?string
+    {
+        $v = (float) $v;
+        if ($v <= 0) {
+            return null;
+        }
+        $core  = substr((string) (int) floor($v), -5); // ultimele 5 cifre: AALLN (an, lună, nr. versiune)
+        $minor = (int) round(($v - floor($v)) * 100);
+
+        return substr($core, 0, 2) . '.' . substr($core, 2) . '/' . $minor;
+    }
+
     public function isReachable(): bool
     {
         try {

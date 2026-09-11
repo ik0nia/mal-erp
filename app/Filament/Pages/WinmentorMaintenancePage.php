@@ -30,6 +30,7 @@ class WinmentorMaintenancePage extends Page
     public ?array $health = null;
     public bool $reachable = false;
     public bool $connecting = false;
+    public ?array $versiuni = null;
 
     public static function canAccess(): bool
     {
@@ -63,6 +64,22 @@ class WinmentorMaintenancePage extends Page
         }
 
         $this->connecting = cache()->has(self::CONNECTING_CACHE_KEY) && ! $this->isComConnected();
+
+        // Versiunile Mentor/DocImpServer — citire COM ieftină, dar nu la fiecare poll de 10s
+        if ($this->isComConnected()) {
+            try {
+                $this->versiuni = cache()->remember('winmentor_versiuni', 3600, function (): array {
+                    $v = app(WinmentorBridgeClient::class)->getVersiuni();
+
+                    return [
+                        'mentor' => WinmentorBridgeClient::formatVersiuneWinmentor($v['verMentor'] ?? null),
+                        'server' => WinmentorBridgeClient::formatVersiuneWinmentor($v['verServer'] ?? null),
+                    ];
+                });
+            } catch (\Throwable) {
+                $this->versiuni = null;
+            }
+        }
     }
 
     public function isComConnected(): bool

@@ -11,7 +11,7 @@
             </div>
         </x-filament::section>
     @else
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
             <x-filament::section>
                 <div class="text-center">
                     <p class="text-sm text-gray-500 mb-2">Conexiune COM WinMentor</p>
@@ -41,6 +41,14 @@
                     <p class="text-sm text-gray-500 mb-2">Versiune MentorAPI</p>
                     <p class="text-lg font-semibold">v{{ $health['version'] ?? '—' }}</p>
                     <p class="text-xs text-gray-400">pornit de {{ preg_replace('/\.\d+s/', 's', $health['uptime'] ?? '—') }}</p>
+                </div>
+            </x-filament::section>
+
+            <x-filament::section>
+                <div class="text-center">
+                    <p class="text-sm text-gray-500 mb-2">Versiune WinMentor</p>
+                    <p class="text-lg font-semibold">{{ $versiuni['mentor'] ?? '—' }}</p>
+                    <p class="text-xs text-gray-400">DocImpServer: {{ $versiuni['server'] ?? '—' }}</p>
                 </div>
             </x-filament::section>
         </div>
