@@ -71,7 +71,31 @@
   și să NU mai atingă id-part-field. — vezi planul, P1.</p>
 </div>
 
-<h2>2. Comparație funcții: documentație vs MentorAPI</h2>
+<h2>2. Rev 1.5 = update de documentație, nu server nou</h2>
+<div class="card">
+  <p>Verificat pe două căi (11.09.2026):</p>
+  <table>
+    <tr><th>Sursă</th><th>Rezultat</th></tr>
+    <tr><td><code>GET /api/versiuni</code> (live, serverul nostru COM)</td>
+        <td><span class="mono">verServer=3226071.03 → DocImpServer 26.071/3 (kit iulie 2026)</span><br>
+            <span class="mono">verMentor=3226071.02 → Mentor.exe 26.071/2</span></td></tr>
+    <tr><td>Kitul curent pe download.winmentor.ro</td>
+        <td><b>26.071/4</b> (06.08.2026); <span class="mono">DocImpServer.exe.zip</span> datat 05.08.2026</td></tr>
+  </table>
+  <p>Schema oficială de versionare: <b>an.lună.versiune/minoră</b> — GetVersiuni o codifică numeric
+  (<span class="mono">3226071.03</span> = 26.071/3). Diferența /3→/4 e o minoră cu fix-uri la Salarii și
+  cursul BNR — <b>nimic legat de DocImpServer</b>; upgrade-ul în aceeași familie 26.071 nici nu cere
+  verificare de structuri. Concluzii:</p>
+  <ul>
+    <li><span class="tag t-ok">LA ZI</span> Serverul nostru e practic curent (o minoră în urmă, irelevantă pentru API) — nimic de upgradat urgent pe Windows.</li>
+    <li><span class="tag t-ok">CONFIRMAT</span> PDF-ul Rev 1.5 (mai 2026) e <b>documentație care prinde din urmă serverul</b> — serverul se livrează lunar cu kitul WinMentor.</li>
+    <li><span class="tag t-new">BONUS</span> Binarul din kitul curent, scanat: <b>conține toate metodele moderne</b>, inclusiv cele 4 „nefixabile" la noi
+        (<span class="mono">GetSoldFactNeop, GetIncasariLuna, GetSolduriFurn, GetIstoricVanzari…</span>) —
+        deci E_UNEXPECTED e problemă de semnătură/marshalling la apel, NU de versiune de server. Întărește P3 (TLB actual).</li>
+  </ul>
+</div>
+
+<h2>3. Comparație funcții: documentație vs MentorAPI</h2>
 <div class="card">
   <p><span class="tag t-ok">ACOPERIRE 100%</span> Toate cele ~129 de funcții enumerate în PDF (inclusiv lista finală fără descrieri)
   sunt deja implementate și expuse HTTP în MentorAPI — inclusiv cele pe care nu le știam documentate:
@@ -103,7 +127,7 @@
   Un TLB actual de la WinMentor le-ar rezolva (vezi planul, P4).</p>
 </div>
 
-<h2>3. Descoperiri pe câmpuri (structuri documentate oficial acum)</h2>
+<h2>4. Descoperiri pe câmpuri (structuri documentate oficial acum)</h2>
 
 <div class="card">
   <h3>GetListaParteneri — 38 de câmpuri oficiale (serverul returnează 49)</h3>
@@ -164,7 +188,7 @@
   scadența din termenul de plată al clientului, Operat=D ca opțiune).</p>
 </div>
 
-<h2>4. Importurile blocate — verdictul documentației</h2>
+<h2>5. Importurile blocate — verdictul documentației</h2>
 <div class="card">
   <table>
     <tr><th>Import</th><th>Funcții (confirmate de doc)</th><th>Formatul INI?</th></tr>
@@ -179,7 +203,7 @@
   ne deblochează toate cele 4 importuri.</p>
 </div>
 
-<h2>5. Planul de îmbunătățiri</h2>
+<h2>6. Planul de îmbunătățiri</h2>
 <div class="card">
   <table class="plan">
     <tr><th>Prio</th><th>Acțiune</th><th>Efort</th><th>Impact</th></tr>
