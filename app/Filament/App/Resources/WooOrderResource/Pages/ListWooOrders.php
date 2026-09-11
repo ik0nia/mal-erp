@@ -25,37 +25,38 @@ class ListWooOrders extends ListRecords
         ];
     }
 
-    /** Tab-uri de status cu contoare — fluxul zilnic la un click. */
+    /** Tab-uri de status cu contoare — fluxul zilnic la un click.
+     *  ⚠ Parametrul closure-ului TREBUIE să se numească $query (Filament îl injectează
+     *  după nume). Un alt nume + type-hint Builder → Filament rezolvă un Builder gol
+     *  din container (fără model) → eroare „newQueryWithoutRelationships on null". */
     public function getTabs(): array
     {
-        $countBadge = fn (array $statuses): ?string => ($n = WooOrder::query()->whereIn('status', $statuses)->count()) > 0 ? (string) $n : null;
-
         $deProcesat = ['pending', 'processing', 'on-hold'];
+
+        $count = fn (array $statuses): ?string => ($n = WooOrder::query()->whereIn('status', $statuses)->count()) > 0 ? (string) $n : null;
 
         return [
             'toate' => Tab::make('Toate'),
 
             'de_procesat' => Tab::make('De procesat')
-                ->modifyQueryUsing(fn (Builder $q) => $q->whereIn('status', $deProcesat))
-                ->badge($countBadge($deProcesat))
+                ->modifyQueryUsing(fn ($query) => $query->whereIn('status', $deProcesat))
+                ->badge($count($deProcesat))
                 ->badgeColor('warning'),
 
             // În procesare, dar nefacturate în WinMentor SAU cu discrepanță de total.
             'de_atentie' => Tab::make('⚠ De atenție')
-                ->modifyQueryUsing(fn (Builder $q) => $q
+                ->modifyQueryUsing(fn ($query) => $query
                     ->whereIn('status', $deProcesat)
-                    ->where(fn (Builder $s) => $s
-                        ->whereNull('winmentor_invoice_nr')
-                        ->orWhereRaw('ABS(total - COALESCE(winmentor_invoice_total, total)) > 0.05')))
+                    ->whereRaw('(winmentor_invoice_nr IS NULL OR ABS(total - COALESCE(winmentor_invoice_total, total)) > 0.05)'))
                 ->badgeColor('danger'),
 
             'finalizate' => Tab::make('Finalizate')
-                ->modifyQueryUsing(fn (Builder $q) => $q->where('status', 'completed'))
-                ->badge($countBadge(['completed']))
+                ->modifyQueryUsing(fn ($query) => $query->where('status', 'completed'))
+                ->badge($count(['completed']))
                 ->badgeColor('success'),
 
             'anulate' => Tab::make('Anulate')
-                ->modifyQueryUsing(fn (Builder $q) => $q->whereIn('status', ['cancelled', 'refunded', 'failed'])),
+                ->modifyQueryUsing(fn ($query) => $query->whereIn('status', ['cancelled', 'refunded', 'failed'])),
         ];
     }
 
