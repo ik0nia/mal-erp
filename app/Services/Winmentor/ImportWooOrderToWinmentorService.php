@@ -263,6 +263,7 @@ class ImportWooOrderToWinmentorService
 
         $add = $this->post('/api/parteneri/add', [
             'id'              => $id,
+            'codExtern'       => (string) $id,         // convenția firmei: codul 728xxx și pe extern (AdaugaPartener îl pune doar pe intern)
             'denumire'        => $this->sanitizeField($name),
             'codFiscal'       => $this->sanitizeField($cui), // ex. „RO36663535"; gol pentru persoană fizică
             'nrRegCom'        => $this->sanitizeField($nrReg), // nr. registrul comerțului (din av_facturare)
