@@ -267,6 +267,8 @@ class ImportWooOrderToWinmentorService
             'codFiscal'       => $this->sanitizeField($cui), // ex. „RO36663535"; gol pentru persoană fizică
             'nrRegCom'        => $this->sanitizeField($nrReg), // nr. registrul comerțului (din av_facturare)
             'flagPF'          => $estePF ? 'PF' : '',  // "PF" = persoană fizică; gol = juridică (confirmat live 2026-06-23)
+            'simbolClasa'     => 'SITE',               // clasa «CLIENTI SITE» (testat live 2026-09-11, partener 728026693)
+            'idAgent'         => '9',                  // agent implicit pentru clienții de pe site (marca 9)
             'localitate'      => $this->sanitizeField($localitate),
             'judetSediu'      => $this->sanitizeField($judet),
             'adresa'          => $this->sanitizeField($adresa),
