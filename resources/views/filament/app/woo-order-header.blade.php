@@ -125,12 +125,19 @@
     $tax  = (float) ($record->tax_total ?? 0);
     $fee  = (float) ($record->fee_total ?? 0);
 @endphp
+@php
+    // WooCommerce (RO) stochează subtotal produse și transport ca NETE, iar TVA separat
+    // → toate se ADUNĂ la total. Verificăm dacă suma dă totalul (altfel prețurile
+    // includ deja TVA și nu mai afișăm TVA ca linie separată, ca să nu inducem în eroare).
+    $sumaNeta = (float) $record->subtotal + $ship + $fee - $disc;
+    $tvaAditiv = $tax != 0 && abs($sumaNeta + $tax - (float) $record->total) < 0.05;
+@endphp
 <div class="oh-totals">
   <div class="oh-totals-row"><span>Subtotal produse</span><span>{{ $money($record->subtotal) }}</span></div>
   @if($ship != 0)<div class="oh-totals-row"><span>Transport</span><span>{{ $money($ship) }}</span></div>@endif
   @if($fee != 0)<div class="oh-totals-row"><span>Taxe suplimentare</span><span>{{ $money($fee) }}</span></div>@endif
   @if($disc != 0)<div class="oh-totals-row" style="color:#b91c1c;"><span>Discount</span><span>−{{ $money($disc) }}</span></div>@endif
-  @if($tax != 0)<div class="oh-totals-row oh-muted"><span>din care TVA</span><span>{{ $money($tax) }}</span></div>@endif
+  @if($tax != 0)<div class="oh-totals-row"><span>{{ $tvaAditiv ? 'TVA' : 'din care TVA' }}</span><span>{{ ($tvaAditiv ? '' : '') }}{{ $money($tax) }}</span></div>@endif
   <div class="oh-totals-row oh-totals-final"><span>TOTAL</span><span>{{ $money($record->total) }} {{ $record->currency }}</span></div>
 </div>
 <style>
