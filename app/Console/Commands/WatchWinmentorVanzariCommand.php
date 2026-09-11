@@ -25,11 +25,13 @@ class WatchWinmentorVanzariCommand extends Command
 
         $health = $bridge->health();
         if (! ($health['data']['comConnected'] ?? false)) {
+            Log::channel('winmentor_sync')->info("[WatchVanzari] skip: COM neconectat (firma={$firma})");
             return self::SUCCESS;
         }
 
         // Previne rulări concurente cu fetch-ul de backfill
         if (Cache::has("winmentor_fetch_vanzari_{$firma}")) {
+            Log::channel('winmentor_sync')->info("[WatchVanzari] skip: backfill în curs (firma={$firma})");
             return self::SUCCESS;
         }
 
@@ -37,6 +39,7 @@ class WatchWinmentorVanzariCommand extends Command
         // două rulări simultane ar șterge+reinsera luna concurent (dubluri)
         $lock = Cache::lock("winmentor_watch_vanzari_{$firma}", 240);
         if (! $lock->get()) {
+            Log::channel('winmentor_sync')->info("[WatchVanzari] skip: rulare deja în curs (lock, firma={$firma})");
             return self::SUCCESS;
         }
 
@@ -157,6 +160,24 @@ class WatchWinmentorVanzariCommand extends Command
         }
 
         if (empty($rows)) return self::SUCCESS;
+
+        // ── GARDĂ ANTI-CORUPȚIE (incident 2026-09-11) ────────────────────────────
+        // Refill-ul e DISTRUCTIV (delete+reinsert al lunii). Dacă o cursă pe starea
+        // globală COM (firma partajată — vezi un test/altă firmă) face ca fetch-ul să
+        // citească din firma greșită, am scrie datele altei firme peste MAL2019.
+        // Semnătura: număr de linii mult peste ce aveam (13321 vs 5216 la 17:05).
+        // Când avem deja o lună consolidată, un salt brusc >40% într-o singură rulare
+        // e imposibil din vânzări reale (~50 linii/5 min) → refuzăm suprascrierea.
+        $existingCount = DB::table('winmentor_vanzari_raw')
+            ->where('firma', $firma)->where('an', $an)->where('luna', $luna)->count();
+        if ($existingCount >= 1000 && count($rows) > $existingCount * 1.4) {
+            Log::channel('winmentor_sync')->warning(
+                "[WatchVanzari] ANOMALIE — refill ANULAT: fetch " . count($rows) .
+                " linii vs {$existingCount} existente (>1.4x) pe {$luna}/{$an} firma={$firma}. " .
+                "Posibilă citire din firma greșită (cursă COM). Datele existente NU au fost atinse."
+            );
+            return self::SUCCESS;
+        }
 
         // Sync incremental: păstrăm created_at original (momentul primei detectări).
         // Cheie de unicitate: firma+an+luna+nr_factura+sku+zi (un rând per linie document).
