@@ -792,6 +792,11 @@ class CustomerResource extends Resource
             $suma = (string) ($i['suma'] ?? '');
             $total += (float) str_replace([' ', '.', ','], ['', '', '.'], $suma);
             $detalii = array_values(array_filter(explode('~', (string) ($i['detaliiFacturi'] ?? ''))));
+            // Curăță artefactele float din sumele legate de factură: „=94,2400000000016” → „=94,24”
+            $detalii = array_map(
+                fn ($d) => preg_replace_callback('/=(-?\d+(?:[.,]\d+)?)/', fn ($m) => '=' . number_format((float) str_replace(',', '.', $m[1]), 2, ',', '.'), $d),
+                $detalii
+            );
             $detaliiHtml = $detalii ? implode('<br>', array_map(fn ($d) => e($d), $detalii)) : '—';
             $rows .= '<tr>'
                 . '<td style="padding:4px 8px;vertical-align:top">' . e($i['data'] ?? '') . '</td>'
