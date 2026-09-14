@@ -470,6 +470,52 @@ class SupplierResource extends Resource
         ]);
     }
 
+    /** Scorecard furnizor: metrici de performanță achiziții (cache 10 min). */
+    public static function scorecard(\App\Models\Supplier $record): array
+    {
+        return \Illuminate\Support\Facades\Cache::remember("sup_scorecard_{$record->id}", 600, function () use ($record) {
+            $sid = $record->id;
+
+            // Fill-rate (primit / comandat)
+            $items = \Illuminate\Support\Facades\DB::table('purchase_order_items as i')
+                ->join('purchase_orders as p', 'p.id', '=', 'i.purchase_order_id')
+                ->where('p.supplier_id', $sid)
+                ->where('p.status', 'received');
+            $ordered  = (float) (clone $items)->sum('quantity');
+            $received = (float) (clone $items)->sum('received_quantity');
+            $fillRate = $ordered > 0 ? round($received / $ordered * 100, 1) : null;
+
+            // Lead time
+            $lead = \App\Models\PurchaseOrder::where('supplier_id', $sid)->whereNotNull('lead_time_days');
+            $avgLead = $lead->exists() ? round((float) $lead->avg('lead_time_days'), 1) : null;
+
+            // Volum & fiabilitate
+            $pos        = \App\Models\PurchaseOrder::where('supplier_id', $sid);
+            $poCount    = (clone $pos)->count();
+            $totalValue = (float) (clone $pos)->sum('total_value');
+            $rejected   = (clone $pos)->where('status', 'rejected')->count();
+            $rejectRate = $poCount > 0 ? round($rejected / $poCount * 100, 1) : 0.0;
+
+            // Stabilitate preț: % înregistrări cu anomalie
+            $priceLogs = \Illuminate\Support\Facades\DB::table('product_purchase_price_logs')->where('supplier_id', $sid);
+            $priceN    = (clone $priceLogs)->count();
+            $anomalies = (clone $priceLogs)->where('has_anomaly', true)->count();
+            $anomalyRate = $priceN > 0 ? round($anomalies / $priceN * 100, 1) : null;
+
+            // Notă generală (0-100): fill-rate 40% + lead-time 25% + fiabilitate 20% + preț 15%
+            $score = null;
+            if ($fillRate !== null) {
+                $sLead  = $avgLead !== null ? max(0, 100 - $avgLead * 5) : 70; // 0 zile=100, 20 zile=0
+                $sRely  = 100 - $rejectRate;
+                $sPrice = $anomalyRate !== null ? max(0, 100 - $anomalyRate * 3) : 80;
+                $score  = (int) round($fillRate * 0.40 + $sLead * 0.25 + $sRely * 0.20 + $sPrice * 0.15);
+            }
+            $grade = $score === null ? '—' : ($score >= 90 ? 'A' : ($score >= 75 ? 'B' : ($score >= 60 ? 'C' : ($score >= 45 ? 'D' : 'E'))));
+
+            return compact('fillRate', 'avgLead', 'poCount', 'totalValue', 'rejectRate', 'anomalyRate', 'priceN', 'score', 'grade');
+        });
+    }
+
     public static function infolist(Schema $schema): Schema
     {
         $deptLabel = fn ($state) => match ($state) {
@@ -485,38 +531,37 @@ class SupplierResource extends Resource
         };
 
         return $schema->schema([
-            \Filament\Schemas\Components\Section::make('Performanță livrări')
-                ->columns(4)
+            \Filament\Schemas\Components\Section::make('Scorecard furnizor')
+                ->description('Performanță achiziții — fill-rate, livrare, fiabilitate, preț')
+                ->columns(6)
                 ->columnSpanFull()
-                ->visible(fn (\App\Models\Supplier $record): bool =>
-                    \App\Models\PurchaseOrder::where('supplier_id', $record->id)
-                        ->whereNotNull('lead_time_days')->exists()
-                )
+                ->visible(fn (\App\Models\Supplier $record): bool => (self::scorecard($record)['poCount'] ?? 0) > 0)
                 ->schema([
-                    Infolists\Components\TextEntry::make('avg_lead_time')
+                    Infolists\Components\TextEntry::make('sc_grade')
+                        ->label('Notă generală')
+                        ->getStateUsing(fn (\App\Models\Supplier $record): string => self::scorecard($record)['grade'] . (self::scorecard($record)['score'] !== null ? ' · ' . self::scorecard($record)['score'] . '/100' : ''))
+                        ->badge()->size(TextSize::Large)
+                        ->color(fn (\App\Models\Supplier $record): string => match (self::scorecard($record)['grade']) {
+                            'A' => 'success', 'B' => 'info', 'C' => 'warning', 'D', 'E' => 'danger', default => 'gray',
+                        }),
+                    Infolists\Components\TextEntry::make('sc_fill')
+                        ->label('Fill-rate')
+                        ->getStateUsing(fn (\App\Models\Supplier $record): string => ($f = self::scorecard($record)['fillRate']) !== null ? $f . '%' : '—')
+                        ->badge()
+                        ->color(fn (\App\Models\Supplier $record): string => ($f = self::scorecard($record)['fillRate']) === null ? 'gray' : ($f >= 95 ? 'success' : ($f >= 85 ? 'warning' : 'danger'))),
+                    Infolists\Components\TextEntry::make('sc_lead')
                         ->label('Lead time mediu')
-                        ->getStateUsing(fn (\App\Models\Supplier $record): string =>
-                            round(\App\Models\PurchaseOrder::where('supplier_id', $record->id)
-                                ->whereNotNull('lead_time_days')->avg('lead_time_days'), 1) . ' zile'
-                        ),
-                    Infolists\Components\TextEntry::make('min_lead_time')
-                        ->label('Cel mai rapid')
-                        ->getStateUsing(fn (\App\Models\Supplier $record): string =>
-                            \App\Models\PurchaseOrder::where('supplier_id', $record->id)
-                                ->whereNotNull('lead_time_days')->min('lead_time_days') . ' zile'
-                        ),
-                    Infolists\Components\TextEntry::make('max_lead_time')
-                        ->label('Cel mai lent')
-                        ->getStateUsing(fn (\App\Models\Supplier $record): string =>
-                            \App\Models\PurchaseOrder::where('supplier_id', $record->id)
-                                ->whereNotNull('lead_time_days')->max('lead_time_days') . ' zile'
-                        ),
-                    Infolists\Components\TextEntry::make('po_count_lead')
-                        ->label('Comenzi măsurate')
-                        ->getStateUsing(fn (\App\Models\Supplier $record): string =>
-                            \App\Models\PurchaseOrder::where('supplier_id', $record->id)
-                                ->whereNotNull('lead_time_days')->count() . ' PO-uri'
-                        ),
+                        ->getStateUsing(fn (\App\Models\Supplier $record): string => ($l = self::scorecard($record)['avgLead']) !== null ? $l . ' zile' : '—'),
+                    Infolists\Components\TextEntry::make('sc_po')
+                        ->label('Comenzi')
+                        ->getStateUsing(fn (\App\Models\Supplier $record): string => self::scorecard($record)['poCount'] . ' PO-uri'),
+                    Infolists\Components\TextEntry::make('sc_val')
+                        ->label('Volum total')
+                        ->getStateUsing(fn (\App\Models\Supplier $record): string => number_format(self::scorecard($record)['totalValue'], 0, ',', '.') . ' lei'),
+                    Infolists\Components\TextEntry::make('sc_reject')
+                        ->label('Respinse / anomalii preț')
+                        ->getStateUsing(fn (\App\Models\Supplier $record): string => self::scorecard($record)['rejectRate'] . '% · ' . (($a = self::scorecard($record)['anomalyRate']) !== null ? $a . '%' : '—'))
+                        ->color(fn (\App\Models\Supplier $record): string => self::scorecard($record)['rejectRate'] > 10 ? 'danger' : 'gray'),
                 ]),
 
             \Filament\Schemas\Components\Section::make('Informații generale')
