@@ -8,6 +8,7 @@ use App\Filament\App\Concerns\HasDynamicNavSort;
 use App\Filament\App\Resources\CustomerResource\Pages;
 use App\Filament\App\Resources\WooOrderResource;
 use App\Filament\App\Resources\WooProductResource;
+use Filament\Schemas\Components\Tabs;
 use App\Models\Customer;
 use App\Models\Supplier;
 use App\Services\CompanyData\OpenApiCompanyLookupService;
@@ -345,7 +346,7 @@ class CustomerResource extends Resource
      */
     public static function infolist(Schema $schema): Schema
     {
-        return $schema->columns(2)->schema([
+        return $schema->columns(1)->schema([
             // Hero KPI — sinteza relației, sus de tot
             Section::make()
                 ->columnSpanFull()
@@ -363,15 +364,82 @@ class CustomerResource extends Resource
                         ->getStateUsing(fn (Customer $record): string => self::linkedMembersHtml($record)),
                 ]),
 
-            Section::make('Evoluție activitate')
-                ->description('Vânzări lunare + semnal de trend')
-                ->columnSpanFull()
-                ->visible(fn (Customer $record): bool => ! empty(self::monthlySales($record)))
-                ->schema([
-                    TextEntry::make('activitate')->hiddenLabel()->html()->columnSpanFull()
-                        ->getStateUsing(fn (Customer $record): string => self::monthlySalesHtml(self::monthlySales($record))),
-                ]),
+            Tabs::make()->columnSpanFull()->tabs([
 
+                Tabs\Tab::make('Prezentare generală')
+                    ->icon('heroicon-o-chart-bar')
+                    ->schema([
+                        Section::make('Evoluție activitate')
+                            ->description('Vânzări lunare (cu TVA) + semnal de trend')
+                            ->columnSpanFull()
+                            ->visible(fn (Customer $record): bool => ! empty(self::monthlySales($record)))
+                            ->schema([
+                                TextEntry::make('activitate')->hiddenLabel()->html()->columnSpanFull()
+                                    ->getStateUsing(fn (Customer $record): string => self::monthlySalesHtml(self::monthlySales($record))),
+                            ]),
+
+                        Section::make('Top produse cumpărate')
+                            ->description('Filtrează pe perioadă · click pentru fișa produsului')
+                            ->columnSpanFull()
+                            ->visible(fn (Customer $record): bool => ! empty(self::topProducts($record, 'all')))
+                            ->schema([
+                                TextEntry::make('top_produse')->hiddenLabel()->html()->columnSpanFull()
+                                    ->getStateUsing(fn (Customer $record): string => self::topProductsHtml([
+                                        'all' => self::topProducts($record, 'all'),
+                                        '1y'  => self::topProducts($record, '1y'),
+                                        '6m'  => self::topProducts($record, '6m'),
+                                    ])),
+                            ]),
+                    ]),
+
+                Tabs\Tab::make('Financiar')
+                    ->icon('heroicon-o-banknotes')
+                    ->columns(2)
+                    ->schema([
+                        Section::make('Facturi de încasat')
+                            ->columnSpan(1)
+                            ->visible(fn (Customer $record): bool => ! empty(self::wmFinanceCached($record)['facturi'] ?? []))
+                            ->schema([
+                                TextEntry::make('wm_facturi')->hiddenLabel()->html()->columnSpanFull()
+                                    ->getStateUsing(fn (Customer $record): string => self::facturiHtml(self::wmFinanceCached($record)['facturi'] ?? [])),
+                            ]),
+
+                        Section::make('Încasări prin bancă')
+                            ->columnSpan(1)
+                            ->description(fn (Customer $record): ?string => trim((self::wmFinanceCached($record)['interval'] ?? '') . ' · doar din jurnalul de bancă/trezorerie (nu numerar/card)', ' ·'))
+                            ->visible(fn (Customer $record): bool => self::wmFinanceCached($record) !== null && empty(self::wmFinanceCached($record)['eroare']))
+                            ->schema([
+                                TextEntry::make('wm_incasari')->hiddenLabel()->html()->columnSpanFull()
+                                    ->getStateUsing(fn (Customer $record): string => self::incasariHtml(self::wmFinanceCached($record)['incasari'] ?? [])),
+                            ]),
+                    ]),
+
+                Tabs\Tab::make('Comenzi & documente')
+                    ->icon('heroicon-o-shopping-bag')
+                    ->schema([
+                        Section::make('Comenzi online (site)')
+                            ->columnSpanFull()
+                            ->description(fn (Customer $record): string => count(self::onlineOrders($record)) . ' comenzi WooCommerce · click pe comandă pentru detalii')
+                            ->visible(fn (Customer $record): bool => ! empty(self::onlineOrders($record)))
+                            ->schema([
+                                TextEntry::make('comenzi_online')->hiddenLabel()->html()->columnSpanFull()
+                                    ->getStateUsing(fn (Customer $record): string => self::comenziOnlineHtml(self::onlineOrders($record))),
+                            ]),
+
+                        Section::make('Istoric facturi / vânzări')
+                            ->columnSpanFull()
+                            ->description('Click pe o factură pentru produse · 🛒 = comandă online')
+                            ->visible(fn (Customer $record): bool => ! empty(self::salesHistory($record)))
+                            ->schema([
+                                TextEntry::make('wm_istoric')->hiddenLabel()->html()->columnSpanFull()
+                                    ->getStateUsing(fn (Customer $record): string => self::salesHtml(self::salesHistory($record))),
+                            ]),
+                    ]),
+
+                Tabs\Tab::make('Date & contact')
+                    ->icon('heroicon-o-identification')
+                    ->columns(2)
+                    ->schema([
             Section::make('Date client')
                 ->columns(2)
                 ->columnSpan(1)
@@ -429,64 +497,16 @@ class CustomerResource extends Resource
                         ->color('danger')->columnSpanFull(),
                 ]),
 
-            Section::make('Facturi de încasat')
-                ->columnSpan(1)
-                ->visible(fn (Customer $record): bool => ! empty(self::wmFinanceCached($record)['facturi'] ?? []))
-                ->schema([
-                    TextEntry::make('wm_facturi')->hiddenLabel()->html()->columnSpanFull()
-                        ->getStateUsing(fn (Customer $record): string => self::facturiHtml(self::wmFinanceCached($record)['facturi'] ?? [])),
-                ]),
+                        Section::make('Sedii de livrare alternative')
+                            ->columnSpanFull()
+                            ->visible(fn (Customer $record): bool => ! empty(self::wmFinanceCached($record)['sedii'] ?? []))
+                            ->schema([
+                                TextEntry::make('wm_sedii')->hiddenLabel()->html()->columnSpanFull()
+                                    ->getStateUsing(fn (Customer $record): string => self::sediiHtml(self::wmFinanceCached($record)['sedii'] ?? [])),
+                            ]),
+                    ]), // end Tab „Date & contact"
 
-            Section::make('Încasări prin bancă')
-                ->columnSpan(1)
-                ->description(fn (Customer $record): ?string => trim(
-                    (self::wmFinanceCached($record)['interval'] ?? '') .
-                    ' · doar încasările din jurnalul de bancă/trezorerie — plățile la casă (numerar/card) nu sunt expuse de WinMentor; reperul plății la zi e Soldul curent'
-                , ' ·'))
-                ->visible(fn (Customer $record): bool => self::wmFinanceCached($record) !== null && empty(self::wmFinanceCached($record)['eroare']))
-                ->schema([
-                    TextEntry::make('wm_incasari')->hiddenLabel()->html()->columnSpanFull()
-                        ->getStateUsing(fn (Customer $record): string => self::incasariHtml(self::wmFinanceCached($record)['incasari'] ?? [])),
-                ]),
-
-            Section::make('Sedii de livrare alternative')
-                ->columnSpan(1)
-                ->visible(fn (Customer $record): bool => ! empty(self::wmFinanceCached($record)['sedii'] ?? []))
-                ->schema([
-                    TextEntry::make('wm_sedii')->hiddenLabel()->html()->columnSpanFull()
-                        ->getStateUsing(fn (Customer $record): string => self::sediiHtml(self::wmFinanceCached($record)['sedii'] ?? [])),
-                ]),
-
-            Section::make('Comenzi online (site)')
-                ->columnSpan(1)
-                ->description(fn (Customer $record): string => 'Comenzi WooCommerce asociate acestui client (' . count(self::onlineOrders($record)) . ')')
-                ->visible(fn (Customer $record): bool => ! empty(self::onlineOrders($record)))
-                ->schema([
-                    TextEntry::make('comenzi_online')->hiddenLabel()->html()->columnSpanFull()
-                        ->getStateUsing(fn (Customer $record): string => self::comenziOnlineHtml(self::onlineOrders($record))),
-                ]),
-
-            Section::make('Top produse cumpărate')
-                ->description('Produsele preferate ale clientului — filtrează pe perioadă, click pentru fișa produsului')
-                ->columnSpan(1)
-                ->visible(fn (Customer $record): bool => ! empty(self::topProducts($record, 'all')))
-                ->schema([
-                    TextEntry::make('top_produse')->hiddenLabel()->html()->columnSpanFull()
-                        ->getStateUsing(fn (Customer $record): string => self::topProductsHtml([
-                            'all' => self::topProducts($record, 'all'),
-                            '1y'  => self::topProducts($record, '1y'),
-                            '6m'  => self::topProducts($record, '6m'),
-                        ])),
-                ]),
-
-            Section::make('Istoric facturi / vânzări')
-                ->columnSpanFull()
-                ->description('Ultimele facturi — click pe una pentru produse, 🛒 = comandă online')
-                ->visible(fn (Customer $record): bool => ! empty(self::salesHistory($record)))
-                ->schema([
-                    TextEntry::make('wm_istoric')->hiddenLabel()->html()->columnSpanFull()
-                        ->getStateUsing(fn (Customer $record): string => self::salesHtml(self::salesHistory($record))),
-                ]),
+            ]), // end Tabs
         ]);
     }
 
