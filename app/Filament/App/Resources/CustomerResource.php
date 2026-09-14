@@ -387,9 +387,18 @@ class CustomerResource extends Resource
                             ->schema([
                                 // Filtru de perioadă = Tabs NATIV Filament; conținut = RepeatableEntry nativ
                                 Tabs::make()->tabs([
-                                    Tabs\Tab::make('Toată perioada')->schema([self::topProductsEntry('all')]),
-                                    Tabs\Tab::make('Ultimul an')->schema([self::topProductsEntry('1y')]),
-                                    Tabs\Tab::make('Ultimele 6 luni')->schema([self::topProductsEntry('6m')]),
+                                    Tabs\Tab::make('Toată perioada')->schema([
+                                        TextEntry::make('tp_all')->hiddenLabel()->html()->columnSpanFull()
+                                            ->getStateUsing(fn (Customer $r): string => self::renderTopTable(self::topProducts($r, 'all'))),
+                                    ]),
+                                    Tabs\Tab::make('Ultimul an')->schema([
+                                        TextEntry::make('tp_1y')->hiddenLabel()->html()->columnSpanFull()
+                                            ->getStateUsing(fn (Customer $r): string => self::renderTopTable(self::topProducts($r, '1y'))),
+                                    ]),
+                                    Tabs\Tab::make('Ultimele 6 luni')->schema([
+                                        TextEntry::make('tp_6m')->hiddenLabel()->html()->columnSpanFull()
+                                            ->getStateUsing(fn (Customer $r): string => self::renderTopTable(self::topProducts($r, '6m'))),
+                                    ]),
                                 ]),
                             ]),
                     ]),
@@ -424,30 +433,8 @@ class CustomerResource extends Resource
                             ->description(fn (Customer $record): string => count(self::onlineOrders($record)) . ' comenzi WooCommerce · click pe comandă pentru detalii')
                             ->visible(fn (Customer $record): bool => ! empty(self::onlineOrders($record)))
                             ->schema([
-                                RepeatableEntry::make('comenzi')
-                                    ->hiddenLabel()
-                                    ->getStateUsing(fn (Customer $record): array => self::onlineOrders($record))
-                                    ->columns(12)
-                                    ->schema([
-                                        TextEntry::make('number')->label('Comandă')->columnSpan(3)
-                                            ->weight(FontWeight::Bold)->color('primary')
-                                            ->formatStateUsing(fn ($state): string => '#' . $state)
-                                            ->url(function ($record) {
-                                                $id = is_array($record) ? ($record['id'] ?? null) : null;
-                                                return $id ? WooOrderResource::getUrl('view', ['record' => $id]) : null;
-                                            })->openUrlInNewTab(),
-                                        TextEntry::make('data')->label('Dată')->columnSpan(2),
-                                        TextEntry::make('status')->label('Status')->columnSpan(3)->badge()
-                                            ->color(fn ($state): string => match ($state) {
-                                                'completed' => 'success', 'processing' => 'info',
-                                                'cancelled', 'refunded', 'failed' => 'danger',
-                                                'on-hold', 'pending' => 'warning', default => 'gray',
-                                            }),
-                                        TextEntry::make('total')->label('Total')->columnSpan(2)
-                                            ->weight(FontWeight::Bold)->formatStateUsing(fn ($state): string => $state . ' lei'),
-                                        TextEntry::make('factura')->label('Factură WM')->columnSpan(2)->badge()->color('success')
-                                            ->placeholder('—')->formatStateUsing(fn ($state): ?string => $state ? '✓ ' . $state : null),
-                                    ]),
+                                TextEntry::make('comenzi_online')->hiddenLabel()->html()->columnSpanFull()
+                                    ->getStateUsing(fn (Customer $record): string => self::comenziOnlineHtml(self::onlineOrders($record))),
                             ]),
 
                         Section::make('Istoric facturi / vânzări')
@@ -656,6 +643,13 @@ class CustomerResource extends Resource
                 'ultima'    => $r->ultima,
             ])->all();
         });
+    }
+
+    /** Storno = rest negativ pe o linie de sold. */
+    protected static function isStorno($record): bool
+    {
+        $rest = is_array($record) ? ($record['rest'] ?? '') : '';
+        return str_starts_with(trim((string) $rest), '-');
     }
 
     /** Top produse pe o perioadă, ca RepeatableEntry NATIV Filament. */
