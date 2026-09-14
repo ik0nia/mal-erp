@@ -494,14 +494,50 @@ class CustomerResource extends Resource
                 ->limit(50)
                 ->get(['number', 'status', 'total', 'order_date', 'winmentor_invoice_nr', 'winmentor_sync_status']);
 
-            return $orders->map(fn ($o) => [
-                'number'    => $o->number,
-                'status'    => $o->status,
-                'total'     => number_format((float) $o->total, 2, ',', '.'),
-                'data'      => $o->order_date ? \Carbon\Carbon::parse($o->order_date)->format('d.m.Y') : '',
-                'factura'   => $o->winmentor_invoice_nr,
-                'sincron'   => $o->winmentor_sync_status,
-            ])->all();
+            // Rezolvă factura lipsă (scoped pe client): index F-facturi după dată+sumă.
+            $invIndex = [];
+            if ($orders->filter(fn ($o) => blank($o->winmentor_invoice_nr))->isNotEmpty()) {
+                $cui   = trim((string) ($record->winmentor_id ?: $record->cui ?: ''));
+                $wmId  = self::wmLink($record)['wm_id'] ?? null;
+                $codEx = $wmId ? (string) (DB::table('winmentor_parteneri')->where('wm_id', $wmId)->value('cod_extern') ?? '') : '';
+                if ($cui !== '' || $wmId) {
+                    $invs = DB::table('winmentor_vanzari_raw')
+                        ->where(function ($q) use ($cui, $wmId, $codEx) {
+                            if ($cui !== '') $q->orWhere('cod_fiscal_client', $cui);
+                            if ($wmId) $q->orWhere('part_id', $wmId);
+                            if ($codEx !== '') $q->orWhere('part_id', $codEx);
+                        })
+                        ->where('serie_document', 'like', 'F%')
+                        ->selectRaw('nr_factura, an, luna, zi, MAX(valoare_factura) val')
+                        ->groupBy('nr_factura', 'an', 'luna', 'zi')
+                        ->get();
+                    foreach ($invs as $iv) {
+                        $key = sprintf('%02d.%02d.%04d', $iv->zi, $iv->luna, $iv->an);
+                        $invIndex[$key][] = ['nr' => $iv->nr_factura, 'val' => (float) $iv->val];
+                    }
+                }
+            }
+
+            return $orders->map(function ($o) use ($invIndex) {
+                $data    = $o->order_date ? \Carbon\Carbon::parse($o->order_date)->format('d.m.Y') : '';
+                $factura = $o->winmentor_invoice_nr;
+                if (! $factura && $data && isset($invIndex[$data])) {
+                    foreach ($invIndex[$data] as $cand) {
+                        if (abs($cand['val'] - (float) $o->total) < 0.5) {
+                            $factura = $cand['nr'];
+                            break;
+                        }
+                    }
+                }
+                return [
+                    'number'  => $o->number,
+                    'status'  => $o->status,
+                    'total'   => number_format((float) $o->total, 2, ',', '.'),
+                    'data'    => $data,
+                    'factura' => $factura,
+                    'sincron' => $o->winmentor_sync_status,
+                ];
+            })->all();
         });
     }
 
