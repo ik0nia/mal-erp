@@ -451,6 +451,18 @@ Schedule::command('winmentor:sync-supplier-sku')
     ->withoutOverlapping(360)
     ->runInBackground();
 
+// WinMentor — verifică ultima versiune publicată pe portal (pentru badge-ul de update din widget) — zilnic 07:15.
+Schedule::command('winmentor:check-latest-version')
+    ->dailyAt('07:15')
+    ->timezone('Europe/Bucharest')
+    ->runInBackground();
+
+// WinMentor — înregistrează schimbările de versiune pe server (istoric update-uri) — orar 08–20.
+Schedule::command('winmentor:record-versions')
+    ->cron('7 8-20 * * *')
+    ->timezone('Europe/Bucharest')
+    ->runInBackground();
+
 // WinMentor — retry automat PO-uri failed (la fiecare 30 min, luni–sâmbătă 08:00–18:00).
 Schedule::command('winmentor:retry-failed-po-sync')
     ->everyThirtyMinutes()
