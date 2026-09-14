@@ -6,6 +6,8 @@ use App\Filament\App\Concerns\EnforcesLocationScope;
 use App\Filament\App\Concerns\ChecksRolePermissions;
 use App\Filament\App\Concerns\HasDynamicNavSort;
 use App\Filament\App\Resources\CustomerResource\Pages;
+use App\Filament\App\Resources\WooOrderResource;
+use App\Filament\App\Resources\WooProductResource;
 use App\Models\Customer;
 use App\Models\Supplier;
 use App\Services\CompanyData\OpenApiCompanyLookupService;
@@ -465,14 +467,16 @@ class CustomerResource extends Resource
                 ]),
 
             Section::make('Top produse cumpărate')
-                ->description('Din tot istoricul de vânzări local (după valoare)')
+                ->description('Produsele preferate ale clientului — filtrează pe perioadă, click pentru fișa produsului')
                 ->columnSpan(1)
-                ->collapsible()
-                ->collapsed()
-                ->visible(fn (Customer $record): bool => ! empty(self::topProducts($record)))
+                ->visible(fn (Customer $record): bool => ! empty(self::topProducts($record, 'all')))
                 ->schema([
                     TextEntry::make('top_produse')->hiddenLabel()->html()->columnSpanFull()
-                        ->getStateUsing(fn (Customer $record): string => self::topProductsHtml(self::topProducts($record))),
+                        ->getStateUsing(fn (Customer $record): string => self::topProductsHtml([
+                            'all' => self::topProducts($record, 'all'),
+                            '1y'  => self::topProducts($record, '1y'),
+                            '6m'  => self::topProducts($record, '6m'),
+                        ])),
                 ]),
 
             Section::make('Istoric facturi / vânzări')
@@ -519,7 +523,7 @@ class CustomerResource extends Resource
                 })
                 ->orderByDesc('order_date')
                 ->limit(50)
-                ->get(['number', 'status', 'total', 'order_date', 'winmentor_invoice_nr', 'winmentor_sync_status']);
+                ->get(['id', 'number', 'status', 'total', 'order_date', 'winmentor_invoice_nr', 'winmentor_sync_status']);
 
             // Rezolvă factura lipsă (scoped pe client): index F-facturi după dată+sumă.
             $invIndex = [];
@@ -553,6 +557,7 @@ class CustomerResource extends Resource
                     }
                 }
                 return [
+                    'id'      => $o->id,
                     'number'  => $o->number,
                     'status'  => $o->status,
                     'total'   => number_format((float) $o->total, 2, ',', '.'),
@@ -568,19 +573,26 @@ class CustomerResource extends Resource
      * Top produse cumpărate de client (agregat din TOT istoricul de vânzări local,
      * pe toate identitățile lui: CUI + part_id intern + cod extern).
      */
-    public static function topProducts(Customer $record, int $limit = 15): array
+    public static function topProducts(Customer $record, string $period = 'all', int $limit = 30): array
     {
-        return Cache::remember("cust_topprod_{$record->id}", 600, function () use ($record, $limit) {
+        return Cache::remember("cust_topprod_{$record->id}_{$period}", 600, function () use ($record, $period, $limit) {
             $ids = self::identities($record);
             if (empty($ids['cuis']) && empty($ids['part_ids'])) {
                 return [];
             }
+
+            $cutoff = match ($period) {
+                '6m' => now()->subMonths(6),
+                '1y' => now()->subYear(),
+                default => null,
+            };
 
             $rows = DB::table('winmentor_vanzari_raw')
                 ->where(function ($q) use ($ids) {
                     if ($ids['cuis']) $q->orWhereIn('cod_fiscal_client', $ids['cuis']);
                     if ($ids['part_ids']) $q->orWhereIn('part_id', $ids['part_ids']);
                 })
+                ->when($cutoff, fn ($q) => $q->whereRaw('CONCAT(an, LPAD(luna,2,"0"), LPAD(zi,2,"0")) >= ?', [$cutoff->format('Ymd')]))
                 ->whereNotNull('sku')->where('sku', '!=', '')
                 ->selectRaw('sku, MAX(uom) uom, SUM(cantitate) cant, SUM(lei_cu_tva) valoare, COUNT(DISTINCT CONCAT(serie_document,nr_factura)) nr_facturi, MAX(CONCAT(an,"-",LPAD(luna,2,"0"),"-",LPAD(zi,2,"0"))) ultima')
                 ->groupBy('sku')
@@ -588,10 +600,12 @@ class CustomerResource extends Resource
                 ->limit($limit)
                 ->get();
 
-            $names = DB::table('woo_products')->whereIn('sku', $rows->pluck('sku'))->pluck('name', 'sku');
+            $prods = DB::table('woo_products')->whereIn('sku', $rows->pluck('sku'))->get(['id', 'sku', 'name'])->keyBy('sku');
+            $names = $prods->map(fn ($p) => $p->name);
 
             return $rows->map(fn ($r) => [
                 'sku'       => $r->sku,
+                'prod_id'   => $prods[$r->sku]->id ?? null,
                 'nume'      => $names[$r->sku] ?? $r->sku,
                 'cant'      => (float) $r->cant,
                 'uom'       => $r->uom,
@@ -602,29 +616,60 @@ class CustomerResource extends Resource
         });
     }
 
-    protected static function topProductsHtml(array $prods): string
+    protected static function topProductsHtml(array $byPeriod): string
+    {
+        $periods = ['all' => 'Toată perioada', '1y' => 'Ultimul an', '6m' => 'Ultimele 6 luni'];
+
+        if (empty(array_filter($byPeriod))) {
+            return '<p class="text-sm text-gray-500">Fără produse în istoricul de vânzări.</p>';
+        }
+
+        $tabs = '';
+        foreach ($periods as $key => $lbl) {
+            $tabs .= '<button type="button" @click="p=\'' . $key . '\'" '
+                . ':style="p===\'' . $key . '\' ? \'background:#7c3aed;color:#fff\' : \'background:#f3f4f6;color:#374151\'" '
+                . 'style="border:none;border-radius:9999px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer;margin-right:6px">' . e($lbl) . '</button>';
+        }
+
+        $panels = '';
+        foreach ($periods as $key => $lbl) {
+            $panels .= '<div x-show="p===\'' . $key . '\'" x-cloak>' . self::renderTopTable($byPeriod[$key] ?? []) . '</div>';
+        }
+
+        return '<div x-data="{p:\'all\'}">'
+            . '<div style="margin-bottom:10px">' . $tabs . '</div>'
+            . $panels . '</div>';
+    }
+
+    protected static function renderTopTable(array $prods): string
     {
         if (empty($prods)) {
-            return '<p class="text-sm text-gray-500">Fără produse în istoricul de vânzări.</p>';
+            return '<p style="font-size:13px;color:#9ca3af;padding:8px">Fără produse în această perioadă.</p>';
         }
         $fmt = fn ($v) => number_format((float) $v, 2, ',', '.');
         $maxVal = max(array_map(fn ($p) => $p['valoare'], $prods)) ?: 1;
         $rows = '';
         foreach ($prods as $p) {
             $pct = round($p['valoare'] / $maxVal * 100);
-            $rows .= '<tr>'
-                . '<td style="padding:5px 8px">' . e(\Illuminate\Support\Str::limit($p['nume'], 48))
-                    . '<div style="height:4px;background:#e5e7eb;border-radius:2px;margin-top:3px"><div style="height:4px;width:' . $pct . '%;background:#7c3aed;border-radius:2px"></div></div></td>'
-                . '<td style="padding:5px 8px;text-align:right;white-space:nowrap;color:#6b7280">' . e($fmt($p['cant'])) . ' ' . e($p['uom']) . '</td>'
-                . '<td style="padding:5px 8px;text-align:right;white-space:nowrap;font-weight:600">' . e($fmt($p['valoare'])) . ' lei</td>'
-                . '<td style="padding:5px 8px;text-align:right;color:#9ca3af">' . $p['nr_facturi'] . '×</td>'
+            $url = ! empty($p['prod_id']) ? WooProductResource::getUrl('view', ['record' => $p['prod_id']]) : null;
+            $nume = e(\Illuminate\Support\Str::limit($p['nume'], 50));
+            $numeCell = $url
+                ? '<a href="' . $url . '" style="color:#6b21a8;text-decoration:none;font-weight:500">' . $nume . ' ↗</a>'
+                : $nume;
+            $rows .= '<tr style="border-bottom:1px solid #f3f4f6">'
+                . '<td style="padding:6px 8px">' . $numeCell
+                    . '<div style="height:4px;background:#eef2f7;border-radius:2px;margin-top:4px"><div style="height:4px;width:' . $pct . '%;background:#7c3aed;border-radius:2px"></div></div></td>'
+                . '<td style="padding:6px 8px;text-align:right;white-space:nowrap;color:#6b7280">' . e($fmt($p['cant'])) . ' ' . e($p['uom']) . '</td>'
+                . '<td style="padding:6px 8px;text-align:right;white-space:nowrap;font-weight:700">' . e($fmt($p['valoare'])) . ' lei</td>'
+                . '<td style="padding:6px 8px;text-align:right;color:#9ca3af">' . $p['nr_facturi'] . '×</td>'
                 . '</tr>';
         }
-        return '<table style="width:100%;border-collapse:collapse;font-size:13px">'
-            . '<thead><tr style="text-align:left;border-bottom:1px solid #ddd;color:#6b7280">'
-            . '<th style="padding:4px 8px">Produs</th><th style="padding:4px 8px;text-align:right">Cantitate</th>'
-            . '<th style="padding:4px 8px;text-align:right">Valoare</th><th style="padding:4px 8px;text-align:right">Facturi</th>'
-            . '</tr></thead><tbody>' . $rows . '</tbody></table>';
+        return '<div style="max-height:340px;overflow-y:auto;border:1px solid #eceff3;border-radius:8px">'
+            . '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+            . '<thead style="position:sticky;top:0;background:#fff;box-shadow:0 1px 0 #e5e7eb"><tr style="text-align:left;color:#6b7280">'
+            . '<th style="padding:6px 8px">Produs</th><th style="padding:6px 8px;text-align:right">Cantitate</th>'
+            . '<th style="padding:6px 8px;text-align:right">Valoare</th><th style="padding:6px 8px;text-align:right">Facturi</th>'
+            . '</tr></thead><tbody>' . $rows . '</tbody></table></div>';
     }
 
     /**
@@ -723,8 +768,11 @@ class CustomerResource extends Resource
             $fact = $o['factura']
                 ? '<span style="color:#059669">✓ ' . e($o['factura']) . '</span>'
                 : '<span style="color:#9ca3af">—</span>';
+            $nrCell = ! empty($o['id'])
+                ? '<a href="' . WooOrderResource::getUrl('view', ['record' => $o['id']]) . '" style="color:#6b21a8;text-decoration:none;font-weight:600">#' . e($o['number']) . ' ↗</a>'
+                : '#' . e($o['number']);
             $rows .= '<tr>'
-                . '<td style="padding:4px 8px">#' . e($o['number']) . '</td>'
+                . '<td style="padding:4px 8px">' . $nrCell . '</td>'
                 . '<td style="padding:4px 8px">' . e($o['data']) . '</td>'
                 . '<td style="padding:4px 8px"><span style="color:' . $statusColor($o['status']) . ';font-weight:600">' . e($o['status']) . '</span></td>'
                 . '<td style="padding:4px 8px;text-align:right">' . e($o['total']) . ' lei</td>'
@@ -1355,16 +1403,17 @@ class CustomerResource extends Resource
         }
         $totalFmt = number_format($total, 2, ',', '.');
         return '<p style="font-size:11px;color:#9ca3af;margin:0 0 6px">Click pe o factură pentru a vedea produsele.</p>'
+            . '<div style="max-height:420px;overflow-y:auto;border:1px solid #eceff3;border-radius:8px">'
             . '<table style="width:100%;border-collapse:collapse;font-size:13px">'
-            . '<thead><tr style="text-align:left;border-bottom:1px solid #ddd">'
+            . '<thead style="position:sticky;top:0;background:#fff;box-shadow:0 1px 0 #e5e7eb"><tr style="text-align:left">'
             . '<th style="padding:4px 8px">Factură</th><th style="padding:4px 8px">Dată</th>'
             . '<th style="padding:4px 8px">Tip</th><th style="padding:4px 8px">Scadență</th>'
             . '<th style="padding:4px 8px;text-align:right">Valoare</th>'
             . '</tr></thead>' . $bodies
-            . '<tfoot><tr style="border-top:1px solid #ddd;font-weight:600">'
+            . '<tfoot><tr style="position:sticky;bottom:0;background:#fff;border-top:1px solid #ddd;font-weight:600">'
             . '<td style="padding:4px 8px" colspan="4">Total (' . count($facturi) . ' facturi)</td>'
             . '<td style="padding:4px 8px;text-align:right">' . e($totalFmt) . '</td>'
-            . '</tr></tfoot></table>';
+            . '</tr></tfoot></table></div>';
     }
 
     protected static function incasariHtml(array $incasari): string
@@ -1392,14 +1441,15 @@ class CustomerResource extends Resource
                 . '</tr>';
         }
         $totalFmt = number_format($total, 2, ',', '.');
-        return '<table style="width:100%;border-collapse:collapse;font-size:13px">'
-            . '<thead><tr style="text-align:left;border-bottom:1px solid #ddd">'
+        return '<div style="max-height:360px;overflow-y:auto;border:1px solid #eceff3;border-radius:8px">'
+            . '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+            . '<thead style="position:sticky;top:0;background:#fff;box-shadow:0 1px 0 #e5e7eb"><tr style="text-align:left">'
             . '<th style="padding:4px 8px">Dată</th><th style="padding:4px 8px">Document</th>'
             . '<th style="padding:4px 8px;text-align:right">Sumă</th><th style="padding:4px 8px">Facturi</th>'
             . '</tr></thead><tbody>' . $rows . '</tbody>'
-            . '<tfoot><tr style="border-top:1px solid #ddd;font-weight:600">'
+            . '<tfoot><tr style="position:sticky;bottom:0;background:#fff;border-top:1px solid #ddd;font-weight:600">'
             . '<td style="padding:4px 8px" colspan="2">Total încasări (' . count($incasari) . ')</td>'
             . '<td style="padding:4px 8px;text-align:right">' . e($totalFmt) . '</td><td></td>'
-            . '</tr></tfoot></table>';
+            . '</tr></tfoot></table></div>';
     }
 }
