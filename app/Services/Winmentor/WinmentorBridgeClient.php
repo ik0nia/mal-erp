@@ -1251,6 +1251,13 @@ class WinmentorBridgeClient
 
     private function bridgeLog(string $level, string $message, array $context = []): void
     {
+        // Fiecare apel este deja salvat structurat în winmentor_api_logs (vezi WinmentorApiLog::record)
+        // și afișat în pagina „Log MentorAPI". Nu mai dublăm GET/POST/Response în fișier (I/O inutil);
+        // păstrăm în fișier doar warning/error, ca plasă de siguranță la debugging.
+        if ($level === 'info') {
+            return;
+        }
+
         Log::channel('winmentor_bridge')->{$level}('[WinMentor Bridge] ' . $message, $context);
     }
 
