@@ -377,10 +377,10 @@ class CustomerResource extends Resource
                 ->columnSpan(1)
                 ->schema([
                     TextEntry::make('name')->label('Denumire'),
-                    TextEntry::make('type')->label('Tip')
-                        ->formatStateUsing(fn ($state): string => Customer::typeOptions()[$state] ?? (string) $state)
+                    TextEntry::make('kind')->label('Tip')
+                        ->getStateUsing(fn (Customer $record): string => self::customerKind($record)['label'])
                         ->badge()
-                        ->color(fn ($state): string => $state === Customer::TYPE_COMPANY ? 'info' : 'gray'),
+                        ->color(fn (Customer $record): string => self::customerKind($record)['key'] === 'pj' ? 'info' : 'warning'),
                     TextEntry::make('cui')->label('CUI / CNP')->placeholder('—'),
                     TextEntry::make('phone')->label('Telefon')->placeholder('—'),
                     TextEntry::make('email')->label('Email')->placeholder('—'),
@@ -481,9 +481,7 @@ class CustomerResource extends Resource
 
             Section::make('Istoric facturi / vânzări')
                 ->columnSpanFull()
-                ->description('Din baza locală (ultimele 60 facturi)')
-                ->collapsible()
-                ->collapsed()
+                ->description('Ultimele facturi — click pe una pentru produse, 🛒 = comandă online')
                 ->visible(fn (Customer $record): bool => ! empty(self::salesHistory($record)))
                 ->schema([
                     TextEntry::make('wm_istoric')->hiddenLabel()->html()->columnSpanFull()
@@ -924,6 +922,24 @@ class CustomerResource extends Resource
         }
     }
 
+    /**
+     * Tip client FIABIL: după prezența codului fiscal (CUI/CIF), nu după câmpul `type`
+     * care e adesea greșit (PF marcate ca „company"). Firmă = are cod fiscal; PF = nu are.
+     */
+    public static function customerKind(Customer $record): array
+    {
+        $fiscal = trim((string) ($record->cui ?: ''));
+        // winmentor_id ține adesea CUI-ul (nu id intern)
+        if ($fiscal === '' && preg_match('/^\s*(RO)?\d{4,}\s*$/i', (string) $record->winmentor_id)) {
+            $fiscal = trim((string) $record->winmentor_id);
+        }
+        $esteFirma = $fiscal !== '';
+
+        return $esteFirma
+            ? ['key' => 'pj', 'label' => 'Firmă', 'icon' => '🏢', 'bg' => '#dbeafe', 'fg' => '#1e40af', 'cui' => $fiscal]
+            : ['key' => 'pf', 'label' => 'Persoană fizică', 'icon' => '👤', 'bg' => '#f3e8ff', 'fg' => '#6b21a8', 'cui' => null];
+    }
+
     /** KPI-uri sintetice pentru antetul fișei. */
     public static function kpis(Customer $record): array
     {
@@ -1002,7 +1018,16 @@ class CustomerResource extends Resource
         $ultimaTxt = $k['ultima'] ? \Carbon\Carbon::parse($k['ultima'])->format('d.m.Y') : '—';
         $ultimaSub = $k['zile_ultima'] !== null ? 'acum ' . $k['zile_ultima'] . ' zile' : '';
 
-        return '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:stretch">'
+        // Badge tip client (PF / Firmă) — fiabil, după cod fiscal
+        $kind = self::customerKind($record);
+        $kindBadge = '<div style="margin-bottom:10px">'
+            . '<span style="display:inline-flex;align-items:center;gap:5px;background:' . $kind['bg'] . ';color:' . $kind['fg'] . ';border-radius:9999px;padding:4px 12px;font-size:12px;font-weight:700">'
+            . $kind['icon'] . ' ' . $kind['label']
+            . ($kind['cui'] ? '<span style="opacity:.7;font-weight:500"> · CUI ' . e($kind['cui']) . '</span>' : '')
+            . '</span></div>';
+
+        return $kindBadge
+            . '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:stretch">'
             . $card('Sold curent', number_format($k['sold_raw'], 2, ',', '.') . ' lei', $soldSub . ' (cu TVA)', $soldColor)
             . $card('Vânzări 18 luni', $fmt($k['vanzari18']) . ' lei', 'cu TVA', '#111827')
             . $card('Facturi (total)', number_format($k['nr_facturi'], 0, ',', '.'), $k['online'] > 0 ? $k['online'] . ' comenzi online' : 'în istoric', '#111827')
@@ -1020,11 +1045,11 @@ class CustomerResource extends Resource
         foreach (self::groupMembers($record) as $m) {
             $isSelf = $m->id === $record->id;
             $url = self::getUrl('view', ['record' => $m->id]);
-            $tip = $m->cui ? 'PJ · ' . e($m->cui) : 'PF';
+            $kind = self::customerKind($m);
             $k = self::kpis($m); // sold + vânzări PROPRII acestei fișe
             $cards .= '<a href="' . $url . '" style="display:block;border:1px solid ' . ($isSelf ? '#7c3aed' : '#e5e7eb') . ';border-radius:10px;padding:10px 14px;margin:0 8px 8px 0;text-decoration:none;background:' . ($isSelf ? '#f5f3ff' : '#fff') . ';flex:1;min-width:200px">'
                 . '<div style="font-weight:700;color:#111827;font-size:13px">' . e($m->name) . ($isSelf ? ' <span style="color:#7c3aed;font-size:10px">● aici</span>' : ' <span style="color:#9ca3af;font-size:11px">↗</span>') . '</div>'
-                . '<div style="font-size:11px;color:#9ca3af;margin-bottom:6px">' . $tip . '</div>'
+                . '<div style="margin:3px 0 6px"><span style="background:' . $kind['bg'] . ';color:' . $kind['fg'] . ';border-radius:9999px;padding:1px 8px;font-size:10px;font-weight:600">' . $kind['icon'] . ' ' . $kind['label'] . '</span></div>'
                 . '<div style="display:flex;gap:14px">'
                     . '<div><span style="font-size:10px;color:#9ca3af;text-transform:uppercase">Sold</span><br><span style="font-weight:700;color:' . ($k['sold_raw'] > 0.5 ? '#b45309' : '#059669') . '">' . number_format($k['sold_raw'], 0, ',', '.') . ' lei</span></div>'
                     . '<div><span style="font-size:10px;color:#9ca3af;text-transform:uppercase">Vânzări 18l</span><br><span style="font-weight:700;color:#111827">' . $fmt($k['vanzari18']) . ' lei</span></div>'
@@ -1364,55 +1389,60 @@ class CustomerResource extends Resource
         $bodies = '';
         $total = 0.0;
         $fmt = fn ($v) => number_format((float) $v, 2, ',', '.');
+        $th = 'padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#9aa5b1;font-weight:600';
+        $td = 'padding:8px 10px;border-top:1px solid #f1f3f5';
         foreach ($facturi as $f) {
-            $val = (string) ($f['valoare'] ?? '');
-            $total += (float) str_replace([' ', ','], ['', '.'], $val);
+            $valNum = (float) str_replace([' ', '.', ','], ['', '', '.'], (string) ($f['valoare'] ?? '')); // aprox pt culoare
+            $total += (float) str_replace([' ', ','], ['', '.'], (string) ($f['valoare'] ?? ''));
+            $negativ = $valNum < 0 || str_starts_with(trim((string) ($f['valoare'] ?? '')), '-');
             $lines = $f['lines'] ?? [];
 
-            // Rândurile produselor (afișate la expandare)
             $lineRows = '';
             foreach ($lines as $ln) {
-                $lineRows .= '<tr style="background:#fafbfc">'
-                    . '<td style="padding:3px 8px 3px 24px;color:#374151" colspan="2">' . e(\Illuminate\Support\Str::limit($ln['nume'] ?? $ln['sku'], 55)) . '</td>'
-                    . '<td style="padding:3px 8px;text-align:right;color:#6b7280">' . e($fmt($ln['cant'])) . ' ' . e($ln['uom'] ?? '') . '</td>'
-                    . '<td style="padding:3px 8px;text-align:right;color:#6b7280">' . e($fmt($ln['pret'])) . '</td>'
-                    . '<td style="padding:3px 8px;text-align:right;color:#111827">' . e($fmt($ln['val'])) . '</td>'
+                $url = ! empty($ln['sku']) ? '' : '';
+                $lineRows .= '<tr>'
+                    . '<td style="padding:4px 10px 4px 34px;color:#374151" colspan="2">' . e(\Illuminate\Support\Str::limit($ln['nume'] ?? $ln['sku'], 55)) . '</td>'
+                    . '<td style="padding:4px 10px;text-align:right;color:#6b7280">' . e($fmt($ln['cant'])) . ' ' . e($ln['uom'] ?? '') . '</td>'
+                    . '<td style="padding:4px 10px;text-align:right;color:#6b7280">' . e($fmt($ln['pret'])) . '</td>'
+                    . '<td style="padding:4px 10px;text-align:right;color:#111827;font-weight:600">' . e($fmt($ln['val'])) . '</td>'
                     . '</tr>';
             }
             $hasLines = $lines !== [];
-            $arrow = $hasLines ? '<span x-show="!open">▸</span><span x-show="open" x-cloak>▾</span> ' : '';
+            $arrow = $hasLines ? '<span style="color:#9ca3af" x-show="!open">▸</span><span style="color:#7c3aed" x-show="open" x-cloak>▾</span> ' : '<span style="display:inline-block;width:11px"></span>';
 
             $onlineBadge = ! empty($f['online'])
-                ? ' <span style="background:#ede9fe;color:#6b21a8;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600;white-space:nowrap">🛒 online #' . e($f['online']) . '</span>'
+                ? ' <span style="background:#ede9fe;color:#6b21a8;border-radius:5px;padding:1px 7px;font-size:10px;font-weight:700;white-space:nowrap">🛒 #' . e($f['online']) . '</span>'
                 : '';
+            $tip = trim((string) ($f['tip'] ?? ''));
+            $tipBadge = $tip !== '' ? '<span style="background:#f1f3f5;color:#3e4c59;border-radius:5px;padding:1px 7px;font-size:10px;font-weight:600">' . e($tip) . '</span>' : '';
 
-            $bodies .= '<tbody x-data="{open:false}">'
-                . '<tr ' . ($hasLines ? '@click="open=!open" style="cursor:pointer"' : '') . '>'
-                . '<td style="padding:4px 8px">' . $arrow . e(trim(($f['serie'] ?? '') . ' ' . ($f['nr'] ?? ''))) . $onlineBadge . '</td>'
-                . '<td style="padding:4px 8px">' . e($f['data'] ?? '') . '</td>'
-                . '<td style="padding:4px 8px">' . e($f['tip'] ?? '') . '</td>'
-                . '<td style="padding:4px 8px">' . e($f['scadenta'] ?? '') . '</td>'
-                . '<td style="padding:4px 8px;text-align:right">' . e($val) . '</td>'
+            $bodies .= '<tbody x-data="{open:false}" style="' . ($hasLines ? 'cursor:pointer' : '') . '" class="fh-grp">'
+                . '<tr ' . ($hasLines ? '@click="open=!open"' : '') . '>'
+                . '<td style="' . $td . '">' . $arrow . '<span style="font-weight:600;color:#111827">' . e(trim(($f['serie'] ?? '') . ' ' . ($f['nr'] ?? ''))) . '</span>' . $onlineBadge . '</td>'
+                . '<td style="' . $td . ';color:#52606d">' . e($f['data'] ?? '') . '</td>'
+                . '<td style="' . $td . '">' . $tipBadge . '</td>'
+                . '<td style="' . $td . ';color:#52606d">' . e($f['scadenta'] ?? '—') . '</td>'
+                . '<td style="' . $td . ';text-align:right;font-weight:700;color:' . ($negativ ? '#dc2626' : '#111827') . '">' . e($f['valoare'] ?? '') . '</td>'
                 . '</tr>'
                 . ($hasLines
-                    ? '<tr x-show="open" x-cloak><td colspan="5" style="padding:0 8px 8px"><table style="width:100%;border-collapse:collapse;font-size:12px;background:#fafbfc;border-radius:6px">'
-                        . '<tr style="color:#9ca3af;text-align:left"><td style="padding:3px 8px 3px 24px" colspan="2">Produs</td><td style="padding:3px 8px;text-align:right">Cant.</td><td style="padding:3px 8px;text-align:right">Preț</td><td style="padding:3px 8px;text-align:right">Valoare</td></tr>'
-                        . $lineRows . '</table></td></tr>'
+                    ? '<tr x-show="open" x-cloak><td colspan="5" style="padding:0 10px 10px 10px"><div style="background:#fafbfc;border:1px solid #f1f3f5;border-radius:8px;overflow:hidden"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+                        . '<tr style="color:#9aa5b1;text-align:left;background:#f6f8fa"><td style="padding:5px 10px 5px 34px" colspan="2">Produs</td><td style="padding:5px 10px;text-align:right">Cant.</td><td style="padding:5px 10px;text-align:right">Preț</td><td style="padding:5px 10px;text-align:right">Valoare</td></tr>'
+                        . $lineRows . '</table></div></td></tr>'
                     : '')
                 . '</tbody>';
         }
         $totalFmt = number_format($total, 2, ',', '.');
-        return '<p style="font-size:11px;color:#9ca3af;margin:0 0 6px">Click pe o factură pentru a vedea produsele.</p>'
-            . '<div style="max-height:420px;overflow-y:auto;border:1px solid #eceff3;border-radius:8px">'
+        return '<style>.fh-grp:hover > tr:first-child > td{background:#faf9ff}</style>'
+            . '<div style="max-height:440px;overflow-y:auto;border:1px solid #eceff3;border-radius:10px">'
             . '<table style="width:100%;border-collapse:collapse;font-size:13px">'
-            . '<thead style="position:sticky;top:0;background:#fff;box-shadow:0 1px 0 #e5e7eb"><tr style="text-align:left">'
-            . '<th style="padding:4px 8px">Factură</th><th style="padding:4px 8px">Dată</th>'
-            . '<th style="padding:4px 8px">Tip</th><th style="padding:4px 8px">Scadență</th>'
-            . '<th style="padding:4px 8px;text-align:right">Valoare</th>'
+            . '<thead style="position:sticky;top:0;background:#fff;z-index:1;box-shadow:0 1px 0 #e5e7eb"><tr style="text-align:left">'
+            . '<th style="' . $th . '">Factură</th><th style="' . $th . '">Dată</th>'
+            . '<th style="' . $th . '">Tip</th><th style="' . $th . '">Scadență</th>'
+            . '<th style="' . $th . ';text-align:right">Valoare</th>'
             . '</tr></thead>' . $bodies
-            . '<tfoot><tr style="position:sticky;bottom:0;background:#fff;border-top:1px solid #ddd;font-weight:600">'
-            . '<td style="padding:4px 8px" colspan="4">Total (' . count($facturi) . ' facturi)</td>'
-            . '<td style="padding:4px 8px;text-align:right">' . e($totalFmt) . '</td>'
+            . '<tfoot><tr style="position:sticky;bottom:0;background:#fff;border-top:2px solid #eceff3;font-weight:700">'
+            . '<td style="padding:8px 10px" colspan="4">Total · ' . count($facturi) . ' facturi</td>'
+            . '<td style="padding:8px 10px;text-align:right">' . e($totalFmt) . ' lei</td>'
             . '</tr></tfoot></table></div>';
     }
 
