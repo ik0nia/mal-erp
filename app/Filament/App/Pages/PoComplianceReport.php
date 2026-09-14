@@ -132,10 +132,12 @@ class PoComplianceReport extends Page implements HasTable
         $start   = self::systemStart();
         $startStr = $start->format('Y-m-d');
 
-        // Cantitativ: recepții WinMentor vs PO recepționate
+        // Cantitativ: recepții WinMentor vs PO recepționate.
+        // nr_receptie NU e unic global (se repetă între furnizori) → numărăm documentul real: (nr_receptie, part_id).
         $receptii   = (int) DB::table('winmentor_intrari_raw')
             ->whereRaw('STR_TO_DATE(CONCAT(an,"-",LPAD(luna,2,"0"),"-01"), "%Y-%m-%d") >= ?', [$startStr])
-            ->distinct()->count('nr_receptie');
+            ->where('nr_receptie', '!=', '')->whereNotNull('nr_receptie')
+            ->selectRaw('COUNT(DISTINCT nr_receptie, part_id) c')->value('c');
         $poReceived = PurchaseOrder::where('status', 'received')->where('received_at', '>=', $startStr)->count();
         $pctFaraCount = $receptii > 0 ? (int) round((1 - min($poReceived, $receptii) / $receptii) * 100) : 0;
 
@@ -156,7 +158,8 @@ class PoComplianceReport extends Page implements HasTable
     {
         $start = self::systemStart();
         $intrari = DB::table('winmentor_intrari_raw')
-            ->selectRaw('an, luna, COUNT(DISTINCT nr_receptie) receptii, SUM(cantitate*pret) val')
+            ->where('nr_receptie', '!=', '')->whereNotNull('nr_receptie')
+            ->selectRaw('an, luna, COUNT(DISTINCT nr_receptie, part_id) receptii, SUM(cantitate*pret) val')
             ->groupBy('an', 'luna')->get()
             ->keyBy(fn ($r) => sprintf('%04d-%02d', $r->an, $r->luna));
         $pos = PurchaseOrder::where('status', 'received')->whereNotNull('received_at')
@@ -223,10 +226,20 @@ class PoComplianceReport extends Page implements HasTable
                     }
                 });
 
+            // Responsabili: întâi din pivotul supplier_buyers (sursa oficială)…
             $buyers = [];
             DB::table('supplier_buyers as sb')->join('users as u', 'u.id', '=', 'sb.user_id')
                 ->select('sb.supplier_id', 'u.name')->orderBy('u.name')->get()
                 ->each(function ($r) use (&$buyers) { $buyers[$r->supplier_id][] = $r->name; });
+            // …iar unde pivotul e gol, deducem din cine face PO-urile (ex. Toya → Teo)
+            $poBuyers = [];
+            DB::table('purchase_orders as p')->join('users as u', 'u.id', '=', 'p.buyer_id')
+                ->selectRaw('p.supplier_id, u.name, COUNT(*) n')->groupBy('p.supplier_id', 'u.name')
+                ->orderByDesc('n')->get()
+                ->each(function ($r) use (&$poBuyers) { $poBuyers[$r->supplier_id][] = $r->name; });
+            foreach ($poBuyers as $sid => $names) {
+                $buyers[$sid] ??= $names;
+            }
 
             return compact('wmToSup', 'nameToSup', 'denToSup', 'name', 'buyers');
         });
@@ -243,10 +256,10 @@ class PoComplianceReport extends Page implements HasTable
         return $res['denToSup'][$den] ?? $res['nameToSup'][self::nameKey($den)] ?? null;
     }
 
-    /** Cheie de nume normalizată (fără spații/punctuație, primele 8 caractere) pentru potrivire. */
+    /** Cheie de nume normalizată (fără spații/punctuație, nume complet) pentru potrivire fără coliziuni. */
     private static function nameKey(?string $name): string
     {
-        return substr(strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $name)), 0, 8);
+        return strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $name));
     }
 
     /** PO-uri recepționate per supplier_id de la start (opțional pe lună: ym => sid => n). */
@@ -277,6 +290,7 @@ class PoComplianceReport extends Page implements HasTable
         $intr = DB::table('winmentor_intrari_raw')
             ->whereRaw('STR_TO_DATE(CONCAT(an,"-",LPAD(luna,2,"0"),"-01"),"%Y-%m-%d") >= ?', [$start])
             ->whereNotNull('den_furnizor')->where('den_furnizor', '!=', '')
+            ->where('nr_receptie', '!=', '')->whereNotNull('nr_receptie')
             ->selectRaw('part_id, den_furnizor, COUNT(DISTINCT nr_receptie) receptii')
             ->groupBy('part_id', 'den_furnizor')->get();
 
@@ -328,6 +342,7 @@ class PoComplianceReport extends Page implements HasTable
         $intr = DB::table('winmentor_intrari_raw')
             ->whereRaw('STR_TO_DATE(CONCAT(an,"-",LPAD(luna,2,"0"),"-01"),"%Y-%m-%d") >= ?', [$startStr])
             ->whereNotNull('den_furnizor')->where('den_furnizor', '!=', '')
+            ->where('nr_receptie', '!=', '')->whereNotNull('nr_receptie')
             ->selectRaw('an, luna, part_id, den_furnizor, COUNT(DISTINCT nr_receptie) receptii')
             ->groupBy('an', 'luna', 'part_id', 'den_furnizor')->get();
 
