@@ -116,6 +116,51 @@ class PoComplianceReport extends Page implements HasTable
             ->paginated([25, 50, 100]);
     }
 
+    /** KPI-uri de ansamblu (anul curent). */
+    public function overview(): array
+    {
+        $an = (int) now()->year;
+        $intrariVal = (float) DB::table('winmentor_intrari_raw')->where('an', $an)->selectRaw('SUM(cantitate*pret) v')->value('v');
+        $poVal      = (float) PurchaseOrder::where('status', 'received')->whereYear('received_at', $an)->sum('total_value');
+        $pctFaraPo  = $intrariVal > 0 ? round((1 - min($poVal, $intrariVal) / $intrariVal) * 100) : 0;
+        $poReceived = PurchaseOrder::where('status', 'received')->whereYear('received_at', $an)->count();
+        $anomalii   = static::baseQuery()->count();
+
+        return compact('an', 'intrariVal', 'poVal', 'pctFaraPo', 'poReceived', 'anomalii');
+    }
+
+    /** Achiziții (intrări WinMentor) vs PO-uri, pe lună — % fără PO. */
+    public function monthlyWithoutPo(int $months = 12): array
+    {
+        $intrari = DB::table('winmentor_intrari_raw')
+            ->selectRaw('an, luna, COUNT(DISTINCT nr_receptie) receptii, SUM(cantitate*pret) val')
+            ->groupBy('an', 'luna')->get()
+            ->keyBy(fn ($r) => sprintf('%04d-%02d', $r->an, $r->luna));
+        $pos = PurchaseOrder::where('status', 'received')->whereNotNull('received_at')
+            ->selectRaw('YEAR(received_at) an, MONTH(received_at) luna, COUNT(*) n, SUM(total_value) val')
+            ->groupBy('an', 'luna')->get()
+            ->keyBy(fn ($r) => sprintf('%04d-%02d', $r->an, $r->luna));
+
+        $out = [];
+        $cursor = now()->startOfMonth()->subMonths($months - 1);
+        for ($i = 0; $i < $months; $i++) {
+            $ym = $cursor->format('Y-m');
+            $iVal = (float) ($intrari[$ym]->val ?? 0);
+            $pVal = (float) ($pos[$ym]->val ?? 0);
+            $out[] = [
+                'ym'      => $ym,
+                'label'   => $cursor->locale('ro')->isoFormat('MMM YY'),
+                'intrari' => $iVal,
+                'po'      => $pVal,
+                'po_n'    => (int) ($pos[$ym]->n ?? 0),
+                'receptii'=> (int) ($intrari[$ym]->receptii ?? 0),
+                'pct_fara'=> $iVal > 0 ? (int) round((1 - min($pVal, $iVal) / $iVal) * 100) : 0,
+            ];
+            $cursor->addMonth();
+        }
+        return $out;
+    }
+
     /** Sumar pentru header: nr. abateri per tip + per cumpărător. */
     public function getStats(): array
     {
