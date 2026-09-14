@@ -333,6 +333,12 @@ class CustomerResource extends Resource
         return static::applyLocationFilter(parent::getEloquentQuery());
     }
 
+    /** Din căutarea globală → fișa clientului (view), nu editare. */
+    public static function getGlobalSearchResultUrl(\Illuminate\Database\Eloquent\Model $record): ?string
+    {
+        return static::getUrl('view', ['record' => $record]);
+    }
+
     public static function getPages(): array
     {
         return [
