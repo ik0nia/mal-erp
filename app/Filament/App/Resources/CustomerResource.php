@@ -379,16 +379,25 @@ class CustomerResource extends Resource
                             ]),
 
                         Section::make('Top produse cumpărate')
-                            ->description('Filtrează pe perioadă · click pentru fișa produsului')
+                            ->description('Ce cumpără cel mai mult · click pe produs pentru fișă')
                             ->columnSpanFull()
                             ->visible(fn (Customer $record): bool => ! empty(self::topProducts($record, 'all')))
                             ->schema([
-                                TextEntry::make('top_produse')->hiddenLabel()->html()->columnSpanFull()
-                                    ->getStateUsing(fn (Customer $record): string => self::topProductsHtml([
-                                        'all' => self::topProducts($record, 'all'),
-                                        '1y'  => self::topProducts($record, '1y'),
-                                        '6m'  => self::topProducts($record, '6m'),
-                                    ])),
+                                // Filtru de perioadă = Tabs NATIV Filament (funcționează prin Livewire)
+                                Tabs::make()->tabs([
+                                    Tabs\Tab::make('Toată perioada')->schema([
+                                        TextEntry::make('tp_all')->hiddenLabel()->html()->columnSpanFull()
+                                            ->getStateUsing(fn (Customer $record): string => self::renderTopTable(self::topProducts($record, 'all'))),
+                                    ]),
+                                    Tabs\Tab::make('Ultimul an')->schema([
+                                        TextEntry::make('tp_1y')->hiddenLabel()->html()->columnSpanFull()
+                                            ->getStateUsing(fn (Customer $record): string => self::renderTopTable(self::topProducts($record, '1y'))),
+                                    ]),
+                                    Tabs\Tab::make('Ultimele 6 luni')->schema([
+                                        TextEntry::make('tp_6m')->hiddenLabel()->html()->columnSpanFull()
+                                            ->getStateUsing(fn (Customer $record): string => self::renderTopTable(self::topProducts($record, '6m'))),
+                                    ]),
+                                ]),
                             ]),
                     ]),
 
