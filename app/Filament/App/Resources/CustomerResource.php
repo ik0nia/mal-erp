@@ -600,7 +600,7 @@ class CustomerResource extends Resource
                     $q->orWhere('part_id', $codExtern);
                 }
             })
-            ->select('serie_document', 'nr_factura', 'data_emitere', 'data_scadenta', 'tip_document', 'valoare_factura', 'an', 'luna', 'zi')
+            ->select('serie_document', 'nr_factura', 'data_emitere', 'data_scadenta', 'tip_document', 'valoare_factura', 'an', 'luna', 'zi', 'sku', 'cantitate', 'uom', 'pret', 'lei_cu_tva')
             ->orderByDesc('an')->orderByDesc('luna')->orderByDesc('zi')
             ->limit(3000)->get();
 
@@ -615,11 +615,67 @@ class CustomerResource extends Resource
                     'scadenta' => $r->data_scadenta,
                     'tip'      => $r->tip_document,
                     'valoare'  => $r->valoare_factura,
+                    'lines'    => [],
+                ];
+            }
+            if (filled($r->sku)) {
+                $byFact[$key]['lines'][] = [
+                    'sku'  => $r->sku,
+                    'cant' => $r->cantitate,
+                    'uom'  => $r->uom,
+                    'pret' => $r->pret,
+                    'val'  => $r->lei_cu_tva,
                 ];
             }
         }
 
-        return self::$salesMemo[$record->id] = array_slice(array_values($byFact), 0, 60);
+        $facturi = array_slice(array_values($byFact), 0, 60);
+
+        // Nume produs în bloc, după SKU (o singură interogare)
+        $skus = collect($facturi)->flatMap(fn ($f) => array_column($f['lines'], 'sku'))->filter()->unique()->values();
+        $names = $skus->isNotEmpty()
+            ? DB::table('woo_products')->whereIn('sku', $skus)->pluck('name', 'sku')
+            : collect();
+        foreach ($facturi as &$f) {
+            foreach ($f['lines'] as &$ln) {
+                $ln['nume'] = $names[$ln['sku']] ?? $ln['sku'];
+            }
+        }
+        unset($f, $ln);
+
+        // Marcaj comenzi online: leagă factura de comanda de pe site
+        // (după nr. factură dacă e deja legată, altfel euristic după dată + sumă).
+        $online = self::onlineOrders($record);
+        // Parser robust: „1.557,00" (RO) și „73.20" (zecimal punct) → float corect
+        $parse = function ($s): float {
+            $s = (string) $s;
+            return str_contains($s, ',')
+                ? (float) str_replace(',', '.', str_replace('.', '', $s)) // format RO
+                : (float) $s;                                             // zecimal simplu
+        };
+        $byNr = [];
+        $byDateAmt = [];
+        foreach ($online as $o) {
+            if (filled($o['factura'])) {
+                $byNr[(string) $o['factura']] = $o['number'];
+            }
+            $byDateAmt[$o['data']] = ['nr' => $o['number'], 'amt' => $parse($o['total'])];
+        }
+        foreach ($facturi as &$f) {
+            $f['online'] = null;
+            $nr = (string) $f['nr'];
+            if (isset($byNr[$nr])) {
+                $f['online'] = $byNr[$nr];
+                continue;
+            }
+            $dataFmt = $f['data'] ? \Carbon\Carbon::parse($f['data'])->format('d.m.Y') : '';
+            if ($dataFmt && isset($byDateAmt[$dataFmt]) && abs($byDateAmt[$dataFmt]['amt'] - $parse($f['valoare'])) < 0.5) {
+                $f['online'] = $byDateAmt[$dataFmt]['nr'];
+            }
+        }
+        unset($f);
+
+        return self::$salesMemo[$record->id] = $facturi;
     }
 
     /**
@@ -845,26 +901,54 @@ class CustomerResource extends Resource
         if (empty($facturi)) {
             return '<p class="text-sm text-gray-500">Nu există facturi pentru acest client.</p>';
         }
-        $rows = '';
+        $bodies = '';
         $total = 0.0;
+        $fmt = fn ($v) => number_format((float) $v, 2, ',', '.');
         foreach ($facturi as $f) {
             $val = (string) ($f['valoare'] ?? '');
             $total += (float) str_replace([' ', ','], ['', '.'], $val);
-            $rows .= '<tr>'
-                . '<td style="padding:4px 8px">' . e(trim(($f['serie'] ?? '') . ' ' . ($f['nr'] ?? ''))) . '</td>'
+            $lines = $f['lines'] ?? [];
+
+            // Rândurile produselor (afișate la expandare)
+            $lineRows = '';
+            foreach ($lines as $ln) {
+                $lineRows .= '<tr style="background:#fafbfc">'
+                    . '<td style="padding:3px 8px 3px 24px;color:#374151" colspan="2">' . e(\Illuminate\Support\Str::limit($ln['nume'] ?? $ln['sku'], 55)) . '</td>'
+                    . '<td style="padding:3px 8px;text-align:right;color:#6b7280">' . e($fmt($ln['cant'])) . ' ' . e($ln['uom'] ?? '') . '</td>'
+                    . '<td style="padding:3px 8px;text-align:right;color:#6b7280">' . e($fmt($ln['pret'])) . '</td>'
+                    . '<td style="padding:3px 8px;text-align:right;color:#111827">' . e($fmt($ln['val'])) . '</td>'
+                    . '</tr>';
+            }
+            $hasLines = $lines !== [];
+            $arrow = $hasLines ? '<span x-show="!open">▸</span><span x-show="open" x-cloak>▾</span> ' : '';
+
+            $onlineBadge = ! empty($f['online'])
+                ? ' <span style="background:#ede9fe;color:#6b21a8;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600;white-space:nowrap">🛒 online #' . e($f['online']) . '</span>'
+                : '';
+
+            $bodies .= '<tbody x-data="{open:false}">'
+                . '<tr ' . ($hasLines ? '@click="open=!open" style="cursor:pointer"' : '') . '>'
+                . '<td style="padding:4px 8px">' . $arrow . e(trim(($f['serie'] ?? '') . ' ' . ($f['nr'] ?? ''))) . $onlineBadge . '</td>'
                 . '<td style="padding:4px 8px">' . e($f['data'] ?? '') . '</td>'
                 . '<td style="padding:4px 8px">' . e($f['tip'] ?? '') . '</td>'
                 . '<td style="padding:4px 8px">' . e($f['scadenta'] ?? '') . '</td>'
                 . '<td style="padding:4px 8px;text-align:right">' . e($val) . '</td>'
-                . '</tr>';
+                . '</tr>'
+                . ($hasLines
+                    ? '<tr x-show="open" x-cloak><td colspan="5" style="padding:0 8px 8px"><table style="width:100%;border-collapse:collapse;font-size:12px;background:#fafbfc;border-radius:6px">'
+                        . '<tr style="color:#9ca3af;text-align:left"><td style="padding:3px 8px 3px 24px" colspan="2">Produs</td><td style="padding:3px 8px;text-align:right">Cant.</td><td style="padding:3px 8px;text-align:right">Preț</td><td style="padding:3px 8px;text-align:right">Valoare</td></tr>'
+                        . $lineRows . '</table></td></tr>'
+                    : '')
+                . '</tbody>';
         }
         $totalFmt = number_format($total, 2, ',', '.');
-        return '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+        return '<p style="font-size:11px;color:#9ca3af;margin:0 0 6px">Click pe o factură pentru a vedea produsele.</p>'
+            . '<table style="width:100%;border-collapse:collapse;font-size:13px">'
             . '<thead><tr style="text-align:left;border-bottom:1px solid #ddd">'
             . '<th style="padding:4px 8px">Factură</th><th style="padding:4px 8px">Dată</th>'
             . '<th style="padding:4px 8px">Tip</th><th style="padding:4px 8px">Scadență</th>'
             . '<th style="padding:4px 8px;text-align:right">Valoare</th>'
-            . '</tr></thead><tbody>' . $rows . '</tbody>'
+            . '</tr></thead>' . $bodies
             . '<tfoot><tr style="border-top:1px solid #ddd;font-weight:600">'
             . '<td style="padding:4px 8px" colspan="4">Total (' . count($facturi) . ' facturi)</td>'
             . '<td style="padding:4px 8px;text-align:right">' . e($totalFmt) . '</td>'
