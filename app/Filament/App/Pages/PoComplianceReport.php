@@ -116,22 +116,45 @@ class PoComplianceReport extends Page implements HasTable
             ->paginated([25, 50, 100]);
     }
 
-    /** KPI-uri de ansamblu (anul curent). */
-    public function overview(): array
+    /** Începutul folosirii sistemului = luna primei recepții PO (dinamic, cache 1h). */
+    public static function systemStart(): \Carbon\Carbon
     {
-        $an = (int) now()->year;
-        $intrariVal = (float) DB::table('winmentor_intrari_raw')->where('an', $an)->selectRaw('SUM(cantitate*pret) v')->value('v');
-        $poVal      = (float) PurchaseOrder::where('status', 'received')->whereYear('received_at', $an)->sum('total_value');
-        $pctFaraPo  = $intrariVal > 0 ? round((1 - min($poVal, $intrariVal) / $intrariVal) * 100) : 0;
-        $poReceived = PurchaseOrder::where('status', 'received')->whereYear('received_at', $an)->count();
-        $anomalii   = static::baseQuery()->count();
-
-        return compact('an', 'intrariVal', 'poVal', 'pctFaraPo', 'poReceived', 'anomalii');
+        return \Illuminate\Support\Facades\Cache::remember('po_report_system_start', 3600, function () {
+            $first = PurchaseOrder::whereNotNull('received_at')->min('received_at')
+                ?? PurchaseOrder::min('created_at');
+            return $first ? \Carbon\Carbon::parse($first)->startOfMonth() : now()->startOfMonth();
+        });
     }
 
-    /** Achiziții (intrări WinMentor) vs PO-uri, pe lună — % fără PO. */
-    public function monthlyWithoutPo(int $months = 12): array
+    /** KPI-uri de ansamblu — DOAR de când se folosește sistemul. */
+    public function overview(): array
     {
+        $start   = self::systemStart();
+        $startStr = $start->format('Y-m-d');
+
+        // Cantitativ: recepții WinMentor vs PO recepționate
+        $receptii   = (int) DB::table('winmentor_intrari_raw')
+            ->whereRaw('STR_TO_DATE(CONCAT(an,"-",LPAD(luna,2,"0"),"-01"), "%Y-%m-%d") >= ?', [$startStr])
+            ->distinct()->count('nr_receptie');
+        $poReceived = PurchaseOrder::where('status', 'received')->where('received_at', '>=', $startStr)->count();
+        $pctFaraCount = $receptii > 0 ? (int) round((1 - min($poReceived, $receptii) / $receptii) * 100) : 0;
+
+        // Valoric
+        $intrariVal = (float) DB::table('winmentor_intrari_raw')
+            ->whereRaw('STR_TO_DATE(CONCAT(an,"-",LPAD(luna,2,"0"),"-01"), "%Y-%m-%d") >= ?', [$startStr])
+            ->selectRaw('SUM(cantitate*pret) v')->value('v');
+        $poVal     = (float) PurchaseOrder::where('status', 'received')->where('received_at', '>=', $startStr)->sum('total_value');
+        $pctFaraVal = $intrariVal > 0 ? (int) round((1 - min($poVal, $intrariVal) / $intrariVal) * 100) : 0;
+
+        $anomalii = static::baseQuery()->count();
+
+        return compact('start', 'receptii', 'poReceived', 'pctFaraCount', 'intrariVal', 'poVal', 'pctFaraVal', 'anomalii');
+    }
+
+    /** Achiziții (intrări WinMentor) vs PO-uri, pe lună — DOAR de la startul sistemului. */
+    public function monthlyWithoutPo(): array
+    {
+        $start = self::systemStart();
         $intrari = DB::table('winmentor_intrari_raw')
             ->selectRaw('an, luna, COUNT(DISTINCT nr_receptie) receptii, SUM(cantitate*pret) val')
             ->groupBy('an', 'luna')->get()
@@ -142,22 +165,151 @@ class PoComplianceReport extends Page implements HasTable
             ->keyBy(fn ($r) => sprintf('%04d-%02d', $r->an, $r->luna));
 
         $out = [];
-        $cursor = now()->startOfMonth()->subMonths($months - 1);
-        for ($i = 0; $i < $months; $i++) {
+        $cursor = $start->copy();
+        $end = now()->startOfMonth();
+        while ($cursor->lte($end)) {
             $ym = $cursor->format('Y-m');
             $iVal = (float) ($intrari[$ym]->val ?? 0);
             $pVal = (float) ($pos[$ym]->val ?? 0);
+            $rec  = (int) ($intrari[$ym]->receptii ?? 0);
+            $poN  = (int) ($pos[$ym]->n ?? 0);
             $out[] = [
-                'ym'      => $ym,
-                'label'   => $cursor->locale('ro')->isoFormat('MMM YY'),
-                'intrari' => $iVal,
-                'po'      => $pVal,
-                'po_n'    => (int) ($pos[$ym]->n ?? 0),
-                'receptii'=> (int) ($intrari[$ym]->receptii ?? 0),
-                'pct_fara'=> $iVal > 0 ? (int) round((1 - min($pVal, $iVal) / $iVal) * 100) : 0,
+                'ym'            => $ym,
+                'label'         => $cursor->locale('ro')->isoFormat('MMM YY'),
+                'intrari'       => $iVal,
+                'po'            => $pVal,
+                'receptii'      => $rec,
+                'po_n'          => $poN,
+                'pct_fara'      => $iVal > 0 ? (int) round((1 - min($pVal, $iVal) / $iVal) * 100) : 0,
+                'pct_fara_count'=> $rec > 0 ? (int) round((1 - min($poN, $rec) / $rec) * 100) : 0,
             ];
             $cursor->addMonth();
         }
+        return $out;
+    }
+
+    /**
+     * Responsabilul fiecărui furnizor, indexat pe prefixul numelui (10 caractere UPPER).
+     * Preferă atribuirea explicită (suppliers.buyer_id); altfel îl deduce din cine face
+     * cele mai multe PO-uri pentru acel furnizor.
+     */
+    public static function buyerMap(): array
+    {
+        return \Illuminate\Support\Facades\Cache::remember('po_report_buyer_map', 600, function () {
+            $map = [];
+            // Dedus din PO-uri (buyer cel mai frecvent per furnizor)
+            $rows = DB::table('purchase_orders as p')
+                ->join('suppliers as s', 's.id', '=', 'p.supplier_id')
+                ->join('users as u', 'u.id', '=', 'p.buyer_id')
+                ->selectRaw('UPPER(SUBSTRING(TRIM(s.name),1,10)) k, u.name buyer, COUNT(*) n')
+                ->groupBy('k', 'buyer')->orderByDesc('n')->get();
+            foreach ($rows as $r) {
+                $map[$r->k] ??= $r->buyer; // primul = cel mai frecvent (ordonat desc)
+            }
+            // Suprascrie cu atribuirea explicită, dacă există
+            $explicit = DB::table('suppliers as s')->join('users as u', 'u.id', '=', 's.buyer_id')
+                ->selectRaw('UPPER(SUBSTRING(TRIM(s.name),1,10)) k, u.name buyer')->get();
+            foreach ($explicit as $r) {
+                $map[$r->k] = $r->buyer;
+            }
+            return $map;
+        });
+    }
+
+    /** Top furnizori la care se cumpără fără PO (cele mai multe recepții fără procedură). */
+    public function topSuppliersWithoutPo(int $limit = 12): array
+    {
+        $start = self::systemStart()->format('Y-m-d');
+        $buyers = self::buyerMap();
+
+        $intr = DB::table('winmentor_intrari_raw')
+            ->whereRaw('STR_TO_DATE(CONCAT(an,"-",LPAD(luna,2,"0"),"-01"),"%Y-%m-%d") >= ?', [$start])
+            ->whereNotNull('den_furnizor')->where('den_furnizor', '!=', '')
+            ->selectRaw('den_furnizor, COUNT(DISTINCT nr_receptie) receptii')
+            ->groupBy('den_furnizor')->having('receptii', '>=', 3)
+            ->orderByDesc('receptii')->limit(40)->get();
+
+        $out = [];
+        foreach ($intr as $r) {
+            $key = strtoupper(substr(trim($r->den_furnizor), 0, 10));
+            $poN = DB::table('purchase_orders as p')->join('suppliers as s', 's.id', '=', 'p.supplier_id')
+                ->where('p.status', 'received')->where('p.received_at', '>=', $start)
+                ->whereRaw('UPPER(s.name) LIKE ?', ['%' . $key . '%'])->count();
+            $faraPo = max($r->receptii - $poN, 0);
+            $out[] = [
+                'furnizor'   => $r->den_furnizor,
+                'responsabil'=> $buyers[$key] ?? null,
+                'receptii'   => (int) $r->receptii,
+                'po'         => $poN,
+                'fara_po'    => $faraPo,
+                'pct'        => (int) round($faraPo / $r->receptii * 100),
+            ];
+        }
+        // Ordonează după nr. recepții fără PO (cele mai multe abateri de procedură)
+        usort($out, fn ($a, $b) => $b['fara_po'] <=> $a['fara_po']);
+        return array_slice($out, 0, $limit);
+    }
+
+    /**
+     * Detaliere lunară pe furnizor: câte recepții (documente de intrare) nu au PO,
+     * și câte sunt „suspecte" (marfa a ajuns fără să se fi făcut comandă în prealabil).
+     * @return array<int, array{ym:string,label:string,receptii:int,fara_po:int,suppliers:array}>
+     */
+    public function monthlySupplierBreakdown(): array
+    {
+        $start = self::systemStart();
+        $startStr = $start->format('Y-m-d');
+        $buyers = self::buyerMap();
+
+        // Recepții per (lună, furnizor)
+        $intr = DB::table('winmentor_intrari_raw')
+            ->whereRaw('STR_TO_DATE(CONCAT(an,"-",LPAD(luna,2,"0"),"-01"),"%Y-%m-%d") >= ?', [$startStr])
+            ->whereNotNull('den_furnizor')->where('den_furnizor', '!=', '')
+            ->selectRaw('an, luna, den_furnizor, COUNT(DISTINCT nr_receptie) receptii')
+            ->groupBy('an', 'luna', 'den_furnizor')->get();
+
+        // PO-uri recepționate per (lună, prefix nume furnizor) — o singură interogare
+        $poRows = DB::table('purchase_orders as p')->join('suppliers as s', 's.id', '=', 'p.supplier_id')
+            ->where('p.status', 'received')->where('p.received_at', '>=', $startStr)
+            ->selectRaw('YEAR(p.received_at) an, MONTH(p.received_at) luna, UPPER(SUBSTRING(TRIM(s.name),1,10)) k, COUNT(*) n')
+            ->groupBy('an', 'luna', 'k')->get();
+        $poMap = [];
+        foreach ($poRows as $r) {
+            $poMap[sprintf('%04d-%02d', $r->an, $r->luna)][$r->k] = (int) $r->n;
+        }
+
+        $months = [];
+        foreach ($intr as $r) {
+            $ym  = sprintf('%04d-%02d', $r->an, $r->luna);
+            $key = strtoupper(substr(trim($r->den_furnizor), 0, 10));
+            $po  = $poMap[$ym][$key] ?? 0;
+            $rec = (int) $r->receptii;
+            $fara = max($rec - $po, 0);
+            $months[$ym]['suppliers'][] = [
+                'furnizor'   => $r->den_furnizor,
+                'responsabil'=> $buyers[$key] ?? null,
+                'receptii'   => $rec,
+                'po'         => min($po, $rec),
+                'fara_po'    => $fara,
+            ];
+        }
+
+        $out = [];
+        foreach ($months as $ym => $data) {
+            $sup = $data['suppliers'];
+            usort($sup, fn ($a, $b) => $b['fara_po'] <=> $a['fara_po']);
+            $recT  = array_sum(array_column($sup, 'receptii'));
+            $faraT = array_sum(array_column($sup, 'fara_po'));
+            $out[] = [
+                'ym'        => $ym,
+                'label'     => \Carbon\Carbon::createFromFormat('Y-m-d', $ym . '-01')->locale('ro')->isoFormat('MMMM YYYY'),
+                'receptii'  => $recT,
+                'fara_po'   => $faraT,
+                'suppliers' => array_values(array_filter($sup, fn ($s) => $s['fara_po'] > 0)),
+            ];
+        }
+        // cronologic descrescător (luna curentă sus)
+        usort($out, fn ($a, $b) => strcmp($b['ym'], $a['ym']));
         return $out;
     }
 
