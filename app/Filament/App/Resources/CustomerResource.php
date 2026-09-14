@@ -432,6 +432,24 @@ class CustomerResource extends Resource
                         ->getStateUsing(fn (Customer $record): string => self::comenziOnlineHtml(self::onlineOrders($record))),
                 ]),
 
+            Section::make('Evoluție activitate')
+                ->description('Vânzări lunare + semnal de trend (relație în creștere/scădere)')
+                ->visible(fn (Customer $record): bool => ! empty(self::monthlySales($record)))
+                ->schema([
+                    TextEntry::make('activitate')->hiddenLabel()->html()->columnSpanFull()
+                        ->getStateUsing(fn (Customer $record): string => self::monthlySalesHtml(self::monthlySales($record))),
+                ]),
+
+            Section::make('Top produse cumpărate')
+                ->description('Din tot istoricul de vânzări local (după valoare)')
+                ->collapsible()
+                ->collapsed()
+                ->visible(fn (Customer $record): bool => ! empty(self::topProducts($record)))
+                ->schema([
+                    TextEntry::make('top_produse')->hiddenLabel()->html()->columnSpanFull()
+                        ->getStateUsing(fn (Customer $record): string => self::topProductsHtml(self::topProducts($record))),
+                ]),
+
             Section::make('Istoric facturi / vânzări')
                 ->description('Din baza locală (ultimele 60 facturi)')
                 ->collapsible()
@@ -485,6 +503,155 @@ class CustomerResource extends Resource
                 'sincron'   => $o->winmentor_sync_status,
             ])->all();
         });
+    }
+
+    /**
+     * Top produse cumpărate de client (agregat din TOT istoricul de vânzări local,
+     * pe toate identitățile lui: CUI + part_id intern + cod extern).
+     */
+    public static function topProducts(Customer $record, int $limit = 15): array
+    {
+        return Cache::remember("cust_topprod_{$record->id}", 600, function () use ($record, $limit) {
+            $cui   = trim((string) ($record->winmentor_id ?: $record->cui ?: ''));
+            $wmId  = self::wmLink($record)['wm_id'] ?? null;
+            $codEx = $wmId ? (string) (DB::table('winmentor_parteneri')->where('wm_id', $wmId)->value('cod_extern') ?? '') : '';
+
+            if ($cui === '' && ! $wmId) {
+                return [];
+            }
+
+            $rows = DB::table('winmentor_vanzari_raw')
+                ->where(function ($q) use ($cui, $wmId, $codEx) {
+                    if ($cui !== '') $q->orWhere('cod_fiscal_client', $cui);
+                    if ($wmId) $q->orWhere('part_id', $wmId);
+                    if ($codEx !== '') $q->orWhere('part_id', $codEx);
+                })
+                ->whereNotNull('sku')->where('sku', '!=', '')
+                ->selectRaw('sku, MAX(uom) uom, SUM(cantitate) cant, SUM(lei_cu_tva) valoare, COUNT(DISTINCT CONCAT(serie_document,nr_factura)) nr_facturi, MAX(CONCAT(an,"-",LPAD(luna,2,"0"),"-",LPAD(zi,2,"0"))) ultima')
+                ->groupBy('sku')
+                ->orderByDesc('valoare')
+                ->limit($limit)
+                ->get();
+
+            $names = DB::table('woo_products')->whereIn('sku', $rows->pluck('sku'))->pluck('name', 'sku');
+
+            return $rows->map(fn ($r) => [
+                'sku'       => $r->sku,
+                'nume'      => $names[$r->sku] ?? $r->sku,
+                'cant'      => (float) $r->cant,
+                'uom'       => $r->uom,
+                'valoare'   => (float) $r->valoare,
+                'nr_facturi'=> (int) $r->nr_facturi,
+                'ultima'    => $r->ultima,
+            ])->all();
+        });
+    }
+
+    protected static function topProductsHtml(array $prods): string
+    {
+        if (empty($prods)) {
+            return '<p class="text-sm text-gray-500">Fără produse în istoricul de vânzări.</p>';
+        }
+        $fmt = fn ($v) => number_format((float) $v, 2, ',', '.');
+        $maxVal = max(array_map(fn ($p) => $p['valoare'], $prods)) ?: 1;
+        $rows = '';
+        foreach ($prods as $p) {
+            $pct = round($p['valoare'] / $maxVal * 100);
+            $rows .= '<tr>'
+                . '<td style="padding:5px 8px">' . e(\Illuminate\Support\Str::limit($p['nume'], 48))
+                    . '<div style="height:4px;background:#e5e7eb;border-radius:2px;margin-top:3px"><div style="height:4px;width:' . $pct . '%;background:#7c3aed;border-radius:2px"></div></div></td>'
+                . '<td style="padding:5px 8px;text-align:right;white-space:nowrap;color:#6b7280">' . e($fmt($p['cant'])) . ' ' . e($p['uom']) . '</td>'
+                . '<td style="padding:5px 8px;text-align:right;white-space:nowrap;font-weight:600">' . e($fmt($p['valoare'])) . ' lei</td>'
+                . '<td style="padding:5px 8px;text-align:right;color:#9ca3af">' . $p['nr_facturi'] . '×</td>'
+                . '</tr>';
+        }
+        return '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+            . '<thead><tr style="text-align:left;border-bottom:1px solid #ddd;color:#6b7280">'
+            . '<th style="padding:4px 8px">Produs</th><th style="padding:4px 8px;text-align:right">Cantitate</th>'
+            . '<th style="padding:4px 8px;text-align:right">Valoare</th><th style="padding:4px 8px;text-align:right">Facturi</th>'
+            . '</tr></thead><tbody>' . $rows . '</tbody></table>';
+    }
+
+    /**
+     * Vânzări lunare (ultimele 18 luni) pe toate identitățile clientului — pentru
+     * graficul de activitate + semnal de „relație în scădere".
+     */
+    public static function monthlySales(Customer $record, int $months = 18): array
+    {
+        return Cache::remember("cust_monthly_{$record->id}", 600, function () use ($record, $months) {
+            $cui   = trim((string) ($record->winmentor_id ?: $record->cui ?: ''));
+            $wmId  = self::wmLink($record)['wm_id'] ?? null;
+            $codEx = $wmId ? (string) (DB::table('winmentor_parteneri')->where('wm_id', $wmId)->value('cod_extern') ?? '') : '';
+
+            if ($cui === '' && ! $wmId) {
+                return [];
+            }
+
+            $raw = DB::table('winmentor_vanzari_raw')
+                ->where(function ($q) use ($cui, $wmId, $codEx) {
+                    if ($cui !== '') $q->orWhere('cod_fiscal_client', $cui);
+                    if ($wmId) $q->orWhere('part_id', $wmId);
+                    if ($codEx !== '') $q->orWhere('part_id', $codEx);
+                })
+                ->selectRaw('an, luna, SUM(lei_cu_tva) val')
+                ->groupBy('an', 'luna')
+                ->get()
+                ->keyBy(fn ($r) => sprintf('%04d-%02d', $r->an, $r->luna));
+
+            $out = [];
+            $cursor = now()->startOfMonth()->subMonths($months - 1);
+            for ($i = 0; $i < $months; $i++) {
+                $ym = $cursor->format('Y-m');
+                $out[] = [
+                    'ym'    => $ym,
+                    'label' => $cursor->locale('ro')->isoFormat('MMM'),
+                    'an'    => $cursor->format('y'),
+                    'val'   => round((float) ($raw[$ym]->val ?? 0), 2),
+                ];
+                $cursor->addMonth();
+            }
+            return $out;
+        });
+    }
+
+    protected static function monthlySalesHtml(array $luni): string
+    {
+        if (empty($luni)) {
+            return '<p class="text-sm text-gray-500">Fără date de vânzări.</p>';
+        }
+        $vals   = array_column($luni, 'val');
+        $max    = max($vals) ?: 1;
+        $fmt    = fn ($v) => $v >= 1000 ? number_format($v / 1000, 1, ',', '.') . 'k' : number_format($v, 0, ',', '.');
+
+        // Semnal trend: media ultimelor 3 luni vs 3 anterioare
+        $n = count($vals);
+        $last3  = $n >= 3 ? array_sum(array_slice($vals, -3)) / 3 : end($vals);
+        $prev3  = $n >= 6 ? array_sum(array_slice($vals, -6, 3)) / 3 : $last3;
+        $trend  = $prev3 > 0 ? round(($last3 - $prev3) / $prev3 * 100) : 0;
+        if ($last3 < 1 && $prev3 > 1) {
+            $badge = '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:600">⚠ Fără activitate recentă</span>';
+        } elseif ($trend <= -30) {
+            $badge = '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:600">↓ În scădere ' . abs($trend) . '%</span>';
+        } elseif ($trend >= 30) {
+            $badge = '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:600">↑ În creștere ' . $trend . '%</span>';
+        } else {
+            $badge = '<span style="background:#eef2f7;color:#3e4c59;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:600">→ Stabil</span>';
+        }
+
+        $bars = '';
+        foreach ($luni as $m) {
+            $h = (int) round($m['val'] / $max * 90);
+            $color = $m['val'] > 0 ? '#7c3aed' : '#e5e7eb';
+            $bars .= '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;min-width:0">'
+                . '<div style="font-size:9px;color:#9ca3af;white-space:nowrap">' . ($m['val'] > 0 ? $fmt($m['val']) : '') . '</div>'
+                . '<div title="' . e($m['ym']) . ': ' . number_format($m['val'], 2, ',', '.') . ' lei" style="width:70%;height:' . max($h, 2) . 'px;background:' . $color . ';border-radius:3px 3px 0 0"></div>'
+                . '<div style="font-size:9px;color:#6b7280;white-space:nowrap">' . e($m['label']) . '</div>'
+                . '</div>';
+        }
+
+        return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+            . '<span style="font-size:12px;color:#6b7280">Vânzări lunare (cu TVA) — ultimele ' . count($luni) . ' luni</span>' . $badge . '</div>'
+            . '<div style="display:flex;align-items:flex-end;gap:2px;height:130px;padding-top:10px">' . $bars . '</div>';
     }
 
     protected static function comenziOnlineHtml(array $orders): string
