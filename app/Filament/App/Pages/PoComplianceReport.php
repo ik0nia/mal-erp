@@ -27,6 +27,18 @@ class PoComplianceReport extends Page implements HasTable
     protected static ?string $title = 'Conformitate flux comenzi furnizori';
     protected string $view = 'filament.app.pages.po-compliance-report';
 
+    /** Denumiri de „furnizor" care nu sunt achiziții externe (depozite interne / transferuri) — excluse din raport. */
+    public const IGNORED_DEN = ['DEPOZIT CALIN'];
+
+    /** Aplică excluderile de „furnizori" interni pe o interogare de intrări. */
+    private static function excludeIgnored(\Illuminate\Database\Query\Builder $q): \Illuminate\Database\Query\Builder
+    {
+        foreach (self::IGNORED_DEN as $pat) {
+            $q->where('den_furnizor', 'not like', '%' . $pat . '%');
+        }
+        return $q;
+    }
+
     public static function canAccess(): bool
     {
         $u = auth()->user();
@@ -134,16 +146,16 @@ class PoComplianceReport extends Page implements HasTable
 
         // Cantitativ: recepții WinMentor vs PO recepționate.
         // nr_receptie NU e unic global (se repetă între furnizori) → numărăm documentul real: (nr_receptie, part_id).
-        $receptii   = (int) DB::table('winmentor_intrari_raw')
+        $receptii   = (int) self::excludeIgnored(DB::table('winmentor_intrari_raw')
             ->whereRaw('STR_TO_DATE(CONCAT(an,"-",LPAD(luna,2,"0"),"-01"), "%Y-%m-%d") >= ?', [$startStr])
-            ->where('nr_receptie', '!=', '')->whereNotNull('nr_receptie')
+            ->where('nr_receptie', '!=', '')->whereNotNull('nr_receptie'))
             ->selectRaw('COUNT(DISTINCT nr_receptie, part_id) c')->value('c');
         $poReceived = PurchaseOrder::where('status', 'received')->where('received_at', '>=', $startStr)->count();
         $pctFaraCount = $receptii > 0 ? (int) round((1 - min($poReceived, $receptii) / $receptii) * 100) : 0;
 
         // Valoric
-        $intrariVal = (float) DB::table('winmentor_intrari_raw')
-            ->whereRaw('STR_TO_DATE(CONCAT(an,"-",LPAD(luna,2,"0"),"-01"), "%Y-%m-%d") >= ?', [$startStr])
+        $intrariVal = (float) self::excludeIgnored(DB::table('winmentor_intrari_raw')
+            ->whereRaw('STR_TO_DATE(CONCAT(an,"-",LPAD(luna,2,"0"),"-01"), "%Y-%m-%d") >= ?', [$startStr]))
             ->selectRaw('SUM(cantitate*pret) v')->value('v');
         $poVal     = (float) PurchaseOrder::where('status', 'received')->where('received_at', '>=', $startStr)->sum('total_value');
         $pctFaraVal = $intrariVal > 0 ? (int) round((1 - min($poVal, $intrariVal) / $intrariVal) * 100) : 0;
@@ -157,8 +169,8 @@ class PoComplianceReport extends Page implements HasTable
     public function monthlyWithoutPo(): array
     {
         $start = self::systemStart();
-        $intrari = DB::table('winmentor_intrari_raw')
-            ->where('nr_receptie', '!=', '')->whereNotNull('nr_receptie')
+        $intrari = self::excludeIgnored(DB::table('winmentor_intrari_raw')
+            ->where('nr_receptie', '!=', '')->whereNotNull('nr_receptie'))
             ->selectRaw('an, luna, COUNT(DISTINCT nr_receptie, part_id) receptii, SUM(cantitate*pret) val')
             ->groupBy('an', 'luna')->get()
             ->keyBy(fn ($r) => sprintf('%04d-%02d', $r->an, $r->luna));
@@ -287,10 +299,10 @@ class PoComplianceReport extends Page implements HasTable
         $res   = self::supplierResolution();
         $poBySup = self::poCounts($start);
 
-        $intr = DB::table('winmentor_intrari_raw')
+        $intr = self::excludeIgnored(DB::table('winmentor_intrari_raw')
             ->whereRaw('STR_TO_DATE(CONCAT(an,"-",LPAD(luna,2,"0"),"-01"),"%Y-%m-%d") >= ?', [$start])
             ->whereNotNull('den_furnizor')->where('den_furnizor', '!=', '')
-            ->where('nr_receptie', '!=', '')->whereNotNull('nr_receptie')
+            ->where('nr_receptie', '!=', '')->whereNotNull('nr_receptie'))
             ->selectRaw('part_id, den_furnizor, COUNT(DISTINCT nr_receptie) receptii')
             ->groupBy('part_id', 'den_furnizor')->get();
 
@@ -339,10 +351,10 @@ class PoComplianceReport extends Page implements HasTable
         $res = self::supplierResolution();
         $poMap = self::poCounts($startStr, byMonth: true);
 
-        $intr = DB::table('winmentor_intrari_raw')
+        $intr = self::excludeIgnored(DB::table('winmentor_intrari_raw')
             ->whereRaw('STR_TO_DATE(CONCAT(an,"-",LPAD(luna,2,"0"),"-01"),"%Y-%m-%d") >= ?', [$startStr])
             ->whereNotNull('den_furnizor')->where('den_furnizor', '!=', '')
-            ->where('nr_receptie', '!=', '')->whereNotNull('nr_receptie')
+            ->where('nr_receptie', '!=', '')->whereNotNull('nr_receptie'))
             ->selectRaw('an, luna, part_id, den_furnizor, COUNT(DISTINCT nr_receptie) receptii')
             ->groupBy('an', 'luna', 'part_id', 'den_furnizor')->get();
 
