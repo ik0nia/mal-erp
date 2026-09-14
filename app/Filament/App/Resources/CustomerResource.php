@@ -399,6 +399,14 @@ class CustomerResource extends Resource
                         ->color('danger')->columnSpanFull(),
                 ]),
 
+            Section::make('Clienți legați (același client real)')
+                ->description('Fișe grupate — istoricul de mai jos e agregat pe toate')
+                ->visible(fn (Customer $record): bool => self::groupMembers($record)->count() > 1)
+                ->schema([
+                    TextEntry::make('clienti_legati')->hiddenLabel()->html()->columnSpanFull()
+                        ->getStateUsing(fn (Customer $record): string => self::linkedMembersHtml($record)),
+                ]),
+
             Section::make('Facturi de încasat')
                 ->visible(fn (Customer $record): bool => ! empty(self::wmFinanceCached($record)['facturi'] ?? []))
                 ->schema([
@@ -470,24 +478,25 @@ class CustomerResource extends Resource
     public static function onlineOrders(Customer $record): array
     {
         return Cache::remember("cust_online_orders_{$record->id}", 600, function () use ($record) {
-            $wm     = trim((string) ($record->winmentor_partner_id ?? ''));
-            $phone9 = $record->phone ? substr(preg_replace('/\D/', '', $record->phone), -9) : '';
-            $email  = $record->email ? mb_strtolower(trim($record->email)) : '';
+            $ids     = self::identities($record);
+            $partIds = $ids['part_ids'];
+            $phones  = $ids['phones'];
+            $emails  = $ids['emails'];
 
-            if ($wm === '' && $phone9 === '' && $email === '') {
+            if (empty($partIds) && empty($phones) && empty($emails)) {
                 return [];
             }
 
             $orders = \App\Models\WooOrder::query()
-                ->where(function ($w) use ($wm, $phone9, $email) {
-                    if ($wm !== '') {
-                        $w->orWhere('winmentor_client_id', $wm);
+                ->where(function ($w) use ($partIds, $phones, $emails) {
+                    if ($partIds) {
+                        $w->orWhereIn('winmentor_client_id', $partIds);
                     }
-                    if (strlen($phone9) === 9) {
-                        $w->orWhereRaw("RIGHT(REGEXP_REPLACE(JSON_UNQUOTE(JSON_EXTRACT(billing, '$.phone')), '[^0-9]', ''), 9) = ?", [$phone9]);
+                    if ($phones) {
+                        $w->orWhereRaw("RIGHT(REGEXP_REPLACE(JSON_UNQUOTE(JSON_EXTRACT(billing, '$.phone')), '[^0-9]', ''), 9) IN (" . implode(',', array_fill(0, count($phones), '?')) . ')', $phones);
                     }
-                    if ($email !== '') {
-                        $w->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(billing, '$.email'))) = ?", [$email]);
+                    if ($emails) {
+                        $w->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(billing, '$.email'))) IN (" . implode(',', array_fill(0, count($emails), '?')) . ')', $emails);
                     }
                 })
                 ->orderByDesc('order_date')
@@ -497,15 +506,11 @@ class CustomerResource extends Resource
             // Rezolvă factura lipsă (scoped pe client): index F-facturi după dată+sumă.
             $invIndex = [];
             if ($orders->filter(fn ($o) => blank($o->winmentor_invoice_nr))->isNotEmpty()) {
-                $cui   = trim((string) ($record->winmentor_id ?: $record->cui ?: ''));
-                $wmId  = self::wmLink($record)['wm_id'] ?? null;
-                $codEx = $wmId ? (string) (DB::table('winmentor_parteneri')->where('wm_id', $wmId)->value('cod_extern') ?? '') : '';
-                if ($cui !== '' || $wmId) {
+                if ($ids['cuis'] || $ids['part_ids']) {
                     $invs = DB::table('winmentor_vanzari_raw')
-                        ->where(function ($q) use ($cui, $wmId, $codEx) {
-                            if ($cui !== '') $q->orWhere('cod_fiscal_client', $cui);
-                            if ($wmId) $q->orWhere('part_id', $wmId);
-                            if ($codEx !== '') $q->orWhere('part_id', $codEx);
+                        ->where(function ($q) use ($ids) {
+                            if ($ids['cuis']) $q->orWhereIn('cod_fiscal_client', $ids['cuis']);
+                            if ($ids['part_ids']) $q->orWhereIn('part_id', $ids['part_ids']);
                         })
                         ->where('serie_document', 'like', 'F%')
                         ->selectRaw('nr_factura, an, luna, zi, MAX(valoare_factura) val')
@@ -548,19 +553,15 @@ class CustomerResource extends Resource
     public static function topProducts(Customer $record, int $limit = 15): array
     {
         return Cache::remember("cust_topprod_{$record->id}", 600, function () use ($record, $limit) {
-            $cui   = trim((string) ($record->winmentor_id ?: $record->cui ?: ''));
-            $wmId  = self::wmLink($record)['wm_id'] ?? null;
-            $codEx = $wmId ? (string) (DB::table('winmentor_parteneri')->where('wm_id', $wmId)->value('cod_extern') ?? '') : '';
-
-            if ($cui === '' && ! $wmId) {
+            $ids = self::identities($record);
+            if (empty($ids['cuis']) && empty($ids['part_ids'])) {
                 return [];
             }
 
             $rows = DB::table('winmentor_vanzari_raw')
-                ->where(function ($q) use ($cui, $wmId, $codEx) {
-                    if ($cui !== '') $q->orWhere('cod_fiscal_client', $cui);
-                    if ($wmId) $q->orWhere('part_id', $wmId);
-                    if ($codEx !== '') $q->orWhere('part_id', $codEx);
+                ->where(function ($q) use ($ids) {
+                    if ($ids['cuis']) $q->orWhereIn('cod_fiscal_client', $ids['cuis']);
+                    if ($ids['part_ids']) $q->orWhereIn('part_id', $ids['part_ids']);
                 })
                 ->whereNotNull('sku')->where('sku', '!=', '')
                 ->selectRaw('sku, MAX(uom) uom, SUM(cantitate) cant, SUM(lei_cu_tva) valoare, COUNT(DISTINCT CONCAT(serie_document,nr_factura)) nr_facturi, MAX(CONCAT(an,"-",LPAD(luna,2,"0"),"-",LPAD(zi,2,"0"))) ultima')
@@ -615,19 +616,15 @@ class CustomerResource extends Resource
     public static function monthlySales(Customer $record, int $months = 18): array
     {
         return Cache::remember("cust_monthly_{$record->id}", 600, function () use ($record, $months) {
-            $cui   = trim((string) ($record->winmentor_id ?: $record->cui ?: ''));
-            $wmId  = self::wmLink($record)['wm_id'] ?? null;
-            $codEx = $wmId ? (string) (DB::table('winmentor_parteneri')->where('wm_id', $wmId)->value('cod_extern') ?? '') : '';
-
-            if ($cui === '' && ! $wmId) {
+            $ids = self::identities($record);
+            if (empty($ids['cuis']) && empty($ids['part_ids'])) {
                 return [];
             }
 
             $raw = DB::table('winmentor_vanzari_raw')
-                ->where(function ($q) use ($cui, $wmId, $codEx) {
-                    if ($cui !== '') $q->orWhere('cod_fiscal_client', $cui);
-                    if ($wmId) $q->orWhere('part_id', $wmId);
-                    if ($codEx !== '') $q->orWhere('part_id', $codEx);
+                ->where(function ($q) use ($ids) {
+                    if ($ids['cuis']) $q->orWhereIn('cod_fiscal_client', $ids['cuis']);
+                    if ($ids['part_ids']) $q->orWhereIn('part_id', $ids['part_ids']);
                 })
                 ->selectRaw('an, luna, SUM(lei_cu_tva) val')
                 ->groupBy('an', 'luna')
@@ -765,6 +762,115 @@ class CustomerResource extends Resource
         ];
     }
 
+    /** Membrii grupului (fișele legate ale aceluiași client real), inclusiv fișa curentă. */
+    public static function groupMembers(Customer $record): \Illuminate\Support\Collection
+    {
+        if (blank($record->customer_group_id)) {
+            return collect([$record]);
+        }
+        return Customer::where('customer_group_id', $record->customer_group_id)->get();
+    }
+
+    /**
+     * Toate identitățile clientului (agregat pe grup): CUI-uri, part_id-uri WinMentor
+     * (id intern + cod extern), telefoane (ultimele 9 cifre), emailuri.
+     * @return array{cuis:array, part_ids:array, phones:array, emails:array}
+     */
+    public static function identities(Customer $record): array
+    {
+        return Cache::remember("cust_ids_{$record->id}", 600, function () use ($record) {
+            $cuis = $partIds = $phones = $emails = [];
+            foreach (self::groupMembers($record) as $m) {
+                $cui = trim((string) ($m->winmentor_id ?: $m->cui ?: ''));
+                if ($cui !== '') {
+                    $cuis[] = $cui;
+                }
+                $wmId = self::wmLink($m)['wm_id'] ?? null;
+                if ($wmId) {
+                    $partIds[] = (string) $wmId;
+                    $codEx = (string) (DB::table('winmentor_parteneri')->where('wm_id', $wmId)->value('cod_extern') ?? '');
+                    if ($codEx !== '') {
+                        $partIds[] = $codEx;
+                    }
+                }
+                if ($m->phone) {
+                    $p9 = substr(preg_replace('/\D/', '', $m->phone), -9);
+                    if (strlen($p9) === 9) {
+                        $phones[] = $p9;
+                    }
+                }
+                if ($m->email) {
+                    $emails[] = mb_strtolower(trim($m->email));
+                }
+            }
+            return [
+                'cuis'     => array_values(array_unique($cuis)),
+                'part_ids' => array_values(array_unique($partIds)),
+                'phones'   => array_values(array_unique($phones)),
+                'emails'   => array_values(array_unique($emails)),
+            ];
+        });
+    }
+
+    /** Leagă clientul curent cu altul (unește grupurile lor). */
+    public static function linkCustomers(Customer $a, int $bId): void
+    {
+        $b = Customer::find($bId);
+        if (! $b || $b->id === $a->id) {
+            return;
+        }
+        $groupId = $a->customer_group_id ?? $b->customer_group_id ?? min($a->id, $b->id);
+
+        $ids = collect([$a->id, $b->id]);
+        foreach ([$a->customer_group_id, $b->customer_group_id] as $g) {
+            if ($g) {
+                $ids = $ids->merge(Customer::where('customer_group_id', $g)->pluck('id'));
+            }
+        }
+        $allIds = $ids->unique()->values();
+        Customer::whereIn('id', $allIds)->update(['customer_group_id' => $groupId]);
+        self::clearGroupCaches($allIds);
+    }
+
+    /** Scoate clientul din grup. */
+    public static function unlinkCustomer(Customer $record): void
+    {
+        $groupId = $record->customer_group_id;
+        $record->update(['customer_group_id' => null]);
+        if ($groupId) {
+            // dacă rămâne un singur membru, îl scoatem și pe el din grup
+            $rest = Customer::where('customer_group_id', $groupId)->get();
+            if ($rest->count() <= 1) {
+                Customer::where('customer_group_id', $groupId)->update(['customer_group_id' => null]);
+            }
+            self::clearGroupCaches($rest->pluck('id')->push($record->id));
+        }
+    }
+
+    protected static function clearGroupCaches(\Illuminate\Support\Collection $ids): void
+    {
+        foreach ($ids as $id) {
+            foreach (['cust_ids_', 'cust_wm_v2_', 'cust_online_orders_', 'cust_topprod_', 'cust_monthly_'] as $p) {
+                Cache::forget($p . $id);
+            }
+        }
+    }
+
+    protected static function linkedMembersHtml(Customer $record): string
+    {
+        $cards = '';
+        foreach (self::groupMembers($record) as $m) {
+            $isSelf = $m->id === $record->id;
+            $url = self::getUrl('view', ['record' => $m->id]);
+            $tip = $m->cui ? 'PJ · ' . e($m->cui) : 'PF';
+            $cards .= '<a href="' . $url . '" style="display:inline-block;border:1px solid ' . ($isSelf ? '#7c3aed' : '#e5e7eb') . ';border-radius:8px;padding:8px 12px;margin:0 8px 8px 0;text-decoration:none;background:' . ($isSelf ? '#f5f3ff' : '#fff') . '">'
+                . '<div style="font-weight:600;color:#111827;font-size:13px">' . e($m->name) . ($isSelf ? ' <span style="color:#7c3aed;font-size:11px">(fișa curentă)</span>' : '') . '</div>'
+                . '<div style="font-size:11px;color:#6b7280">' . $tip . '</div>'
+                . '</a>';
+        }
+        return '<div style="display:flex;flex-wrap:wrap;align-items:center">' . $cards . '</div>';
+    }
+
     /** Memo per-request pentru istoricul de vânzări (evită query repetat în infolist). */
     protected static array $salesMemo = [];
 
@@ -778,29 +884,19 @@ class CustomerResource extends Resource
             return self::$salesMemo[$record->id];
         }
 
-        $cui = trim((string) ($record->winmentor_id ?: $record->cui ?: ''));
-        $wmId = self::wmLink($record)['wm_id'] ?? null; // ID intern (necesar pt PF fără CUI)
-
-        if ($cui === '' && ! $wmId) {
+        $ids = self::identities($record);
+        if (empty($ids['cuis']) && empty($ids['part_ids'])) {
             return self::$salesMemo[$record->id] = [];
         }
 
-        // ID-ul legacy (cod_extern) — documentele 2025+ îl folosesc adesea ca part_id
-        $codExtern = $wmId
-            ? (string) (DB::table('winmentor_parteneri')->where('wm_id', $wmId)->value('cod_extern') ?? '')
-            : '';
-
-        // Match după CUI (PJ) SAU part_id (ID intern SAU legacy — prinde și PF fără cod fiscal).
+        // Match după CUI (PJ) SAU part_id (ID intern SAU legacy) — pe toate identitățile grupului.
         $rows = DB::table('winmentor_vanzari_raw')
-            ->where(function ($q) use ($cui, $wmId, $codExtern) {
-                if ($cui !== '') {
-                    $q->orWhere('cod_fiscal_client', $cui);
+            ->where(function ($q) use ($ids) {
+                if ($ids['cuis']) {
+                    $q->orWhereIn('cod_fiscal_client', $ids['cuis']);
                 }
-                if ($wmId) {
-                    $q->orWhere('part_id', $wmId);
-                }
-                if ($codExtern !== '') {
-                    $q->orWhere('part_id', $codExtern);
+                if ($ids['part_ids']) {
+                    $q->orWhereIn('part_id', $ids['part_ids']);
                 }
             })
             ->select('serie_document', 'nr_factura', 'data_emitere', 'data_scadenta', 'tip_document', 'valoare_factura', 'an', 'luna', 'zi', 'sku', 'cantitate', 'uom', 'pret', 'lei_cu_tva')
@@ -889,14 +985,12 @@ class CustomerResource extends Resource
         // Calcul LOCAL instant din tabelele sincronizate (solduri/încasări/sedii) —
         // fără COM la randare; butonul din fișă doar golește cache-ul (10 min).
         return Cache::remember("cust_wm_v2_{$record->id}", 600, function () use ($record) {
-            $link = self::wmLink($record);
-            if (! ($link['asociat'] ?? false)) {
+            $ids     = self::identities($record); // agregat pe grup
+            $partIds = $ids['part_ids'];
+            if (empty($partIds)) {
                 return null;
             }
-
-            $wmId      = (string) $link['wm_id'];
-            $codExtern = (string) (DB::table('winmentor_parteneri')->where('wm_id', $wmId)->value('cod_extern') ?? '');
-            $partIds   = array_values(array_filter([$wmId, $codExtern]));
+            $wmId = self::wmLink($record)['wm_id'] ?? ($partIds[0] ?? '');
 
             $fmtDate = fn ($d) => $d ? \Carbon\Carbon::parse($d)->format('d.m.Y') : '';
             $fmtNum  = fn ($v) => number_format((float) $v, 2, ',', '.');
@@ -951,7 +1045,7 @@ class CustomerResource extends Resource
 
             // Sedii / puncte de livrare
             $sedii = DB::table('winmentor_sedii')
-                ->where('partener_wm_id', $wmId)
+                ->whereIn('partener_wm_id', $partIds)
                 ->orderBy('pozitie')
                 ->get()
                 ->map(fn ($sd) => [
