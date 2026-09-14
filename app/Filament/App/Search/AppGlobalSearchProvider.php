@@ -222,7 +222,7 @@ class AppGlobalSearchProvider implements GlobalSearchProvider
 
             return new GlobalSearchResult(
                 title: $customer->name,
-                url: CustomerResource::getUrl('edit', ['record' => $customer->id]),
+                url: CustomerResource::getUrl('view', ['record' => $customer->id]),
                 details: $details,
             );
         });
@@ -289,7 +289,7 @@ class AppGlobalSearchProvider implements GlobalSearchProvider
 
             return new GlobalSearchResult(
                 title: $supplier->name,
-                url: SupplierResource::getUrl('edit', ['record' => $supplier->id]),
+                url: SupplierResource::getUrl('view', ['record' => $supplier->id]),
                 details: $details,
             );
         });
