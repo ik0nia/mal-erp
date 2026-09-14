@@ -343,9 +343,36 @@ class CustomerResource extends Resource
      */
     public static function infolist(Schema $schema): Schema
     {
-        return $schema->schema([
+        return $schema->columns(2)->schema([
+            // Hero KPI — sinteza relației, sus de tot
+            Section::make()
+                ->columnSpanFull()
+                ->schema([
+                    TextEntry::make('hero')->hiddenLabel()->html()->columnSpanFull()
+                        ->getStateUsing(fn (Customer $record): string => self::heroHtml($record)),
+                ]),
+
+            Section::make('Clienți legați (același client real)')
+                ->description('Fișe identificate ca aceeași entitate — rapoarte separate per fișă')
+                ->columnSpanFull()
+                ->visible(fn (Customer $record): bool => self::groupMembers($record)->count() > 1)
+                ->schema([
+                    TextEntry::make('clienti_legati')->hiddenLabel()->html()->columnSpanFull()
+                        ->getStateUsing(fn (Customer $record): string => self::linkedMembersHtml($record)),
+                ]),
+
+            Section::make('Evoluție activitate')
+                ->description('Vânzări lunare + semnal de trend')
+                ->columnSpanFull()
+                ->visible(fn (Customer $record): bool => ! empty(self::monthlySales($record)))
+                ->schema([
+                    TextEntry::make('activitate')->hiddenLabel()->html()->columnSpanFull()
+                        ->getStateUsing(fn (Customer $record): string => self::monthlySalesHtml(self::monthlySales($record))),
+                ]),
+
             Section::make('Date client')
-                ->columns(3)
+                ->columns(2)
+                ->columnSpan(1)
                 ->schema([
                     TextEntry::make('name')->label('Denumire'),
                     TextEntry::make('type')->label('Tip')
@@ -361,7 +388,8 @@ class CustomerResource extends Resource
                 ]),
 
             Section::make('WinMentor')
-                ->columns(3)
+                ->columns(2)
+                ->columnSpan(1)
                 ->schema([
                     TextEntry::make('wm_asociat')->label('Asociere')
                         ->getStateUsing(fn (Customer $record): string => self::wmLink($record)['asociat'] ? 'Asociat' : 'Neasociat')
@@ -399,15 +427,8 @@ class CustomerResource extends Resource
                         ->color('danger')->columnSpanFull(),
                 ]),
 
-            Section::make('Clienți legați (același client real)')
-                ->description('Fișe grupate — istoricul de mai jos e agregat pe toate')
-                ->visible(fn (Customer $record): bool => self::groupMembers($record)->count() > 1)
-                ->schema([
-                    TextEntry::make('clienti_legati')->hiddenLabel()->html()->columnSpanFull()
-                        ->getStateUsing(fn (Customer $record): string => self::linkedMembersHtml($record)),
-                ]),
-
             Section::make('Facturi de încasat')
+                ->columnSpan(1)
                 ->visible(fn (Customer $record): bool => ! empty(self::wmFinanceCached($record)['facturi'] ?? []))
                 ->schema([
                     TextEntry::make('wm_facturi')->hiddenLabel()->html()->columnSpanFull()
@@ -415,6 +436,7 @@ class CustomerResource extends Resource
                 ]),
 
             Section::make('Încasări prin bancă')
+                ->columnSpan(1)
                 ->description(fn (Customer $record): ?string => trim(
                     (self::wmFinanceCached($record)['interval'] ?? '') .
                     ' · doar încasările din jurnalul de bancă/trezorerie — plățile la casă (numerar/card) nu sunt expuse de WinMentor; reperul plății la zi e Soldul curent'
@@ -426,6 +448,7 @@ class CustomerResource extends Resource
                 ]),
 
             Section::make('Sedii de livrare alternative')
+                ->columnSpan(1)
                 ->visible(fn (Customer $record): bool => ! empty(self::wmFinanceCached($record)['sedii'] ?? []))
                 ->schema([
                     TextEntry::make('wm_sedii')->hiddenLabel()->html()->columnSpanFull()
@@ -433,6 +456,7 @@ class CustomerResource extends Resource
                 ]),
 
             Section::make('Comenzi online (site)')
+                ->columnSpan(1)
                 ->description(fn (Customer $record): string => 'Comenzi WooCommerce asociate acestui client (' . count(self::onlineOrders($record)) . ')')
                 ->visible(fn (Customer $record): bool => ! empty(self::onlineOrders($record)))
                 ->schema([
@@ -440,16 +464,9 @@ class CustomerResource extends Resource
                         ->getStateUsing(fn (Customer $record): string => self::comenziOnlineHtml(self::onlineOrders($record))),
                 ]),
 
-            Section::make('Evoluție activitate')
-                ->description('Vânzări lunare + semnal de trend (relație în creștere/scădere)')
-                ->visible(fn (Customer $record): bool => ! empty(self::monthlySales($record)))
-                ->schema([
-                    TextEntry::make('activitate')->hiddenLabel()->html()->columnSpanFull()
-                        ->getStateUsing(fn (Customer $record): string => self::monthlySalesHtml(self::monthlySales($record))),
-                ]),
-
             Section::make('Top produse cumpărate')
                 ->description('Din tot istoricul de vânzări local (după valoare)')
+                ->columnSpan(1)
                 ->collapsible()
                 ->collapsed()
                 ->visible(fn (Customer $record): bool => ! empty(self::topProducts($record)))
@@ -459,6 +476,7 @@ class CustomerResource extends Resource
                 ]),
 
             Section::make('Istoric facturi / vânzări')
+                ->columnSpanFull()
                 ->description('Din baza locală (ultimele 60 facturi)')
                 ->collapsible()
                 ->collapsed()
@@ -780,7 +798,9 @@ class CustomerResource extends Resource
     {
         return Cache::remember("cust_ids_{$record->id}", 600, function () use ($record) {
             $cuis = $partIds = $phones = $emails = [];
-            foreach (self::groupMembers($record) as $m) {
+            // DOAR fișa curentă — rapoartele sunt PER identitate (firmă vs PF vs altă firmă),
+            // nu agregate pe grup. Grupul e doar pentru identificare/navigare.
+            foreach ([$record] as $m) {
                 $cui = trim((string) ($m->winmentor_id ?: $m->cui ?: ''));
                 if ($cui !== '') {
                     $cuis[] = $cui;
@@ -856,19 +876,114 @@ class CustomerResource extends Resource
         }
     }
 
+    /** KPI-uri sintetice pentru antetul fișei. */
+    public static function kpis(Customer $record): array
+    {
+        return Cache::remember("cust_kpis_{$record->id}", 600, function () use ($record) {
+            $ids = self::identities($record);
+            $fin = self::wmFinanceCached($record);
+            $luni = self::monthlySales($record);
+
+            $soldRaw = $fin ? (float) str_replace(['.', ' ', 'lei', ','], ['', '', '', '.'], (string) ($fin['sold'] ?? '0')) : 0.0;
+            $vanzari18 = array_sum(array_column($luni, 'val'));
+
+            $nrFacturi = 0;
+            $ultima = null;
+            if (! empty($ids['cuis']) || ! empty($ids['part_ids'])) {
+                $agg = DB::table('winmentor_vanzari_raw')
+                    ->where(function ($q) use ($ids) {
+                        if ($ids['cuis']) $q->orWhereIn('cod_fiscal_client', $ids['cuis']);
+                        if ($ids['part_ids']) $q->orWhereIn('part_id', $ids['part_ids']);
+                    })
+                    ->selectRaw('COUNT(DISTINCT CONCAT(serie_document,nr_factura)) n, MAX(CONCAT(an,"-",LPAD(luna,2,"0"),"-",LPAD(zi,2,"0"))) ult')
+                    ->first();
+                $nrFacturi = (int) ($agg->n ?? 0);
+                $ultima = $agg->ult ?? null;
+            }
+
+            // Trend (media ult. 3 luni vs 3 anterioare)
+            $vals = array_column($luni, 'val');
+            $n = count($vals);
+            $last3 = $n >= 3 ? array_sum(array_slice($vals, -3)) / 3 : 0;
+            $prev3 = $n >= 6 ? array_sum(array_slice($vals, -6, 3)) / 3 : 0;
+            $trend = $prev3 > 0 ? round(($last3 - $prev3) / $prev3 * 100) : 0;
+
+            return [
+                'sold'      => $fin['sold'] ?? '—',
+                'sold_raw'  => $soldRaw,
+                'vanzari18' => $vanzari18,
+                'nr_facturi'=> $nrFacturi,
+                'ultima'    => $ultima,
+                'zile_ultima' => $ultima ? (int) \Carbon\Carbon::parse($ultima)->diffInDays(now()) : null,
+                'trend'     => $trend,
+                'last3'     => $last3,
+                'prev3'     => $prev3,
+                'online'    => count(self::onlineOrders($record)),
+            ];
+        });
+    }
+
+    protected static function heroHtml(Customer $record): string
+    {
+        $k = self::kpis($record);
+        $fmt = fn ($v) => $v >= 1000 ? number_format($v / 1000, 1, ',', '.') . 'k' : number_format($v, 0, ',', '.');
+
+        // Card sold — colorat după stare
+        $soldColor = $k['sold_raw'] > 0.5 ? '#b45309' : ($k['sold_raw'] < -0.5 ? '#2563eb' : '#059669');
+        $soldSub   = $k['sold_raw'] > 0.5 ? 'de încasat' : ($k['sold_raw'] < -0.5 ? 'avans client' : 'achitat');
+
+        // Trend / risc
+        if ($k['zile_ultima'] !== null && $k['zile_ultima'] > 120 && $k['vanzari18'] > 0) {
+            $trendBadge = ['#b91c1c', '#fee2e2', '⚠ Inactiv ' . $k['zile_ultima'] . ' zile'];
+        } elseif ($k['last3'] < 1 && $k['prev3'] > 1) {
+            $trendBadge = ['#b91c1c', '#fee2e2', '⚠ Fără activitate recentă'];
+        } elseif ($k['trend'] <= -30) {
+            $trendBadge = ['#92400e', '#fef3c7', '↓ În scădere ' . abs($k['trend']) . '%'];
+        } elseif ($k['trend'] >= 30) {
+            $trendBadge = ['#166534', '#dcfce7', '↑ În creștere ' . $k['trend'] . '%'];
+        } else {
+            $trendBadge = ['#3e4c59', '#eef2f7', '→ Stabil'];
+        }
+
+        $card = fn ($label, $value, $sub, $color) =>
+            '<div style="flex:1;min-width:130px;background:#fff;border:1px solid #eceff3;border-radius:12px;padding:12px 14px">'
+            . '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#9aa5b1;margin-bottom:4px">' . $label . '</div>'
+            . '<div style="font-size:20px;font-weight:800;color:' . $color . ';line-height:1.1">' . $value . '</div>'
+            . '<div style="font-size:11px;color:#9aa5b1;margin-top:2px">' . $sub . '</div></div>';
+
+        $ultimaTxt = $k['ultima'] ? \Carbon\Carbon::parse($k['ultima'])->format('d.m.Y') : '—';
+        $ultimaSub = $k['zile_ultima'] !== null ? 'acum ' . $k['zile_ultima'] . ' zile' : '';
+
+        return '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:stretch">'
+            . $card('Sold curent', number_format($k['sold_raw'], 2, ',', '.') . ' lei', $soldSub . ' (cu TVA)', $soldColor)
+            . $card('Vânzări 18 luni', $fmt($k['vanzari18']) . ' lei', 'cu TVA', '#111827')
+            . $card('Facturi (total)', number_format($k['nr_facturi'], 0, ',', '.'), $k['online'] > 0 ? $k['online'] . ' comenzi online' : 'în istoric', '#111827')
+            . $card('Ultima activitate', $ultimaTxt, $ultimaSub, '#111827')
+            . '<div style="flex:1;min-width:130px;background:' . $trendBadge[1] . ';border:1px solid ' . $trendBadge[1] . ';border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;justify-content:center">'
+                . '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:' . $trendBadge[0] . ';opacity:.7;margin-bottom:4px">Relație</div>'
+                . '<div style="font-size:14px;font-weight:700;color:' . $trendBadge[0] . '">' . $trendBadge[2] . '</div></div>'
+            . '</div>';
+    }
+
     protected static function linkedMembersHtml(Customer $record): string
     {
+        $fmt = fn ($v) => $v >= 1000 ? number_format($v / 1000, 1, ',', '.') . 'k' : number_format($v, 0, ',', '.');
         $cards = '';
         foreach (self::groupMembers($record) as $m) {
             $isSelf = $m->id === $record->id;
             $url = self::getUrl('view', ['record' => $m->id]);
             $tip = $m->cui ? 'PJ · ' . e($m->cui) : 'PF';
-            $cards .= '<a href="' . $url . '" style="display:inline-block;border:1px solid ' . ($isSelf ? '#7c3aed' : '#e5e7eb') . ';border-radius:8px;padding:8px 12px;margin:0 8px 8px 0;text-decoration:none;background:' . ($isSelf ? '#f5f3ff' : '#fff') . '">'
-                . '<div style="font-weight:600;color:#111827;font-size:13px">' . e($m->name) . ($isSelf ? ' <span style="color:#7c3aed;font-size:11px">(fișa curentă)</span>' : '') . '</div>'
-                . '<div style="font-size:11px;color:#6b7280">' . $tip . '</div>'
-                . '</a>';
+            $k = self::kpis($m); // sold + vânzări PROPRII acestei fișe
+            $cards .= '<a href="' . $url . '" style="display:block;border:1px solid ' . ($isSelf ? '#7c3aed' : '#e5e7eb') . ';border-radius:10px;padding:10px 14px;margin:0 8px 8px 0;text-decoration:none;background:' . ($isSelf ? '#f5f3ff' : '#fff') . ';flex:1;min-width:200px">'
+                . '<div style="font-weight:700;color:#111827;font-size:13px">' . e($m->name) . ($isSelf ? ' <span style="color:#7c3aed;font-size:10px">● aici</span>' : ' <span style="color:#9ca3af;font-size:11px">↗</span>') . '</div>'
+                . '<div style="font-size:11px;color:#9ca3af;margin-bottom:6px">' . $tip . '</div>'
+                . '<div style="display:flex;gap:14px">'
+                    . '<div><span style="font-size:10px;color:#9ca3af;text-transform:uppercase">Sold</span><br><span style="font-weight:700;color:' . ($k['sold_raw'] > 0.5 ? '#b45309' : '#059669') . '">' . number_format($k['sold_raw'], 0, ',', '.') . ' lei</span></div>'
+                    . '<div><span style="font-size:10px;color:#9ca3af;text-transform:uppercase">Vânzări 18l</span><br><span style="font-weight:700;color:#111827">' . $fmt($k['vanzari18']) . ' lei</span></div>'
+                . '</div></a>';
         }
-        return '<div style="display:flex;flex-wrap:wrap;align-items:center">' . $cards . '</div>';
+        return '<p style="font-size:11px;color:#9ca3af;margin:0 0 8px">Aceeași entitate reală, fișe separate. Rapoartele de mai jos sunt DOAR pentru fișa curentă — click pe alta pentru raportul ei.</p>'
+            . '<div style="display:flex;flex-wrap:wrap">' . $cards . '</div>';
     }
 
     /** Memo per-request pentru istoricul de vânzări (evită query repetat în infolist). */
