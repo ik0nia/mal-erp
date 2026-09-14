@@ -424,6 +424,14 @@ class CustomerResource extends Resource
                         ->getStateUsing(fn (Customer $record): string => self::sediiHtml(self::wmFinanceCached($record)['sedii'] ?? [])),
                 ]),
 
+            Section::make('Comenzi online (site)')
+                ->description(fn (Customer $record): string => 'Comenzi WooCommerce asociate acestui client (' . count(self::onlineOrders($record)) . ')')
+                ->visible(fn (Customer $record): bool => ! empty(self::onlineOrders($record)))
+                ->schema([
+                    TextEntry::make('comenzi_online')->hiddenLabel()->html()->columnSpanFull()
+                        ->getStateUsing(fn (Customer $record): string => self::comenziOnlineHtml(self::onlineOrders($record))),
+                ]),
+
             Section::make('Istoric facturi / vânzări')
                 ->description('Din baza locală (ultimele 60 facturi)')
                 ->collapsible()
@@ -434,6 +442,88 @@ class CustomerResource extends Resource
                         ->getStateUsing(fn (Customer $record): string => self::salesHtml(self::salesHistory($record))),
                 ]),
         ]);
+    }
+
+    /**
+     * Comenzile online (WooCommerce) ale clientului — potrivite pe mai multe chei
+     * (partenerul WinMentor sincronizat + telefon + email), fiindcă un cumpărător
+     * online poate avea mai multe ID-uri de partener WinMentor.
+     */
+    public static function onlineOrders(Customer $record): array
+    {
+        return Cache::remember("cust_online_orders_{$record->id}", 600, function () use ($record) {
+            $wm     = trim((string) ($record->winmentor_partner_id ?? ''));
+            $phone9 = $record->phone ? substr(preg_replace('/\D/', '', $record->phone), -9) : '';
+            $email  = $record->email ? mb_strtolower(trim($record->email)) : '';
+
+            if ($wm === '' && $phone9 === '' && $email === '') {
+                return [];
+            }
+
+            $orders = \App\Models\WooOrder::query()
+                ->where(function ($w) use ($wm, $phone9, $email) {
+                    if ($wm !== '') {
+                        $w->orWhere('winmentor_client_id', $wm);
+                    }
+                    if (strlen($phone9) === 9) {
+                        $w->orWhereRaw("RIGHT(REGEXP_REPLACE(JSON_UNQUOTE(JSON_EXTRACT(billing, '$.phone')), '[^0-9]', ''), 9) = ?", [$phone9]);
+                    }
+                    if ($email !== '') {
+                        $w->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(billing, '$.email'))) = ?", [$email]);
+                    }
+                })
+                ->orderByDesc('order_date')
+                ->limit(50)
+                ->get(['number', 'status', 'total', 'order_date', 'winmentor_invoice_nr', 'winmentor_sync_status']);
+
+            return $orders->map(fn ($o) => [
+                'number'    => $o->number,
+                'status'    => $o->status,
+                'total'     => number_format((float) $o->total, 2, ',', '.'),
+                'data'      => $o->order_date ? \Carbon\Carbon::parse($o->order_date)->format('d.m.Y') : '',
+                'factura'   => $o->winmentor_invoice_nr,
+                'sincron'   => $o->winmentor_sync_status,
+            ])->all();
+        });
+    }
+
+    protected static function comenziOnlineHtml(array $orders): string
+    {
+        if (empty($orders)) {
+            return '<p class="text-sm text-gray-500">Fără comenzi online asociate.</p>';
+        }
+
+        $statusColor = fn ($s) => match ($s) {
+            'completed' => '#059669', 'processing' => '#2563eb', 'cancelled', 'refunded', 'failed' => '#dc2626',
+            'on-hold', 'pending' => '#b45309', default => '#6b7280',
+        };
+
+        $rows = '';
+        $total = 0.0;
+        foreach ($orders as $o) {
+            $total += (float) str_replace(['.', ','], ['', '.'], $o['total']);
+            $fact = $o['factura']
+                ? '<span style="color:#059669">✓ ' . e($o['factura']) . '</span>'
+                : '<span style="color:#9ca3af">—</span>';
+            $rows .= '<tr>'
+                . '<td style="padding:4px 8px">#' . e($o['number']) . '</td>'
+                . '<td style="padding:4px 8px">' . e($o['data']) . '</td>'
+                . '<td style="padding:4px 8px"><span style="color:' . $statusColor($o['status']) . ';font-weight:600">' . e($o['status']) . '</span></td>'
+                . '<td style="padding:4px 8px;text-align:right">' . e($o['total']) . ' lei</td>'
+                . '<td style="padding:4px 8px">' . $fact . '</td>'
+                . '</tr>';
+        }
+
+        return '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+            . '<thead><tr style="text-align:left;border-bottom:1px solid #ddd">'
+            . '<th style="padding:4px 8px">Comandă</th><th style="padding:4px 8px">Dată</th>'
+            . '<th style="padding:4px 8px">Status</th><th style="padding:4px 8px;text-align:right">Total</th>'
+            . '<th style="padding:4px 8px">Factură WM</th>'
+            . '</tr></thead><tbody>' . $rows . '</tbody>'
+            . '<tfoot><tr style="border-top:1px solid #ddd;font-weight:600">'
+            . '<td style="padding:4px 8px" colspan="3">Total (' . count($orders) . ' comenzi)</td>'
+            . '<td style="padding:4px 8px;text-align:right">' . number_format($total, 2, ',', '.') . ' lei</td><td></td>'
+            . '</tr></tfoot></table>';
     }
 
     /**
