@@ -65,12 +65,13 @@ class CheckWinmentorLatestVersionCommand extends Command
                 return self::FAILURE;
             }
 
-            Cache::put(self::CACHE_KEY, [
+            // Persistent în DB (nu cache volatil) — supraviețuiește oricărei goliri de cache.
+            \App\Models\AppSetting::set(self::CACHE_KEY, json_encode([
                 'version'    => $best['version'],
                 'title'      => $best['title'],
                 'date'       => $best['date'],
                 'checked_at' => now()->toDateTimeString(),
-            ], now()->addDays(3));
+            ], JSON_UNESCAPED_UNICODE));
 
             $this->info("Ultima versiune WinMENTOR publicată: {$best['version']}" . ($best['date'] ? " ({$best['date']})" : ''));
             return self::SUCCESS;

@@ -79,10 +79,11 @@ class WinmentorMaintenanceWidget extends Widget implements HasActions, HasForms
         return ($this->health['comConnected'] ?? false) === true;
     }
 
-    /** Ultima versiune WinMENTOR publicată (din cache, populat de winmentor:check-latest-version). */
+    /** Ultima versiune WinMENTOR publicată (din DB, populat de winmentor:check-latest-version). */
     public function latestRelease(): ?array
     {
-        return cache()->get(\App\Console\Commands\CheckWinmentorLatestVersionCommand::CACHE_KEY);
+        $json = \App\Models\AppSetting::get(\App\Console\Commands\CheckWinmentorLatestVersionCommand::CACHE_KEY);
+        return $json ? json_decode($json, true) : null;
     }
 
     /**
