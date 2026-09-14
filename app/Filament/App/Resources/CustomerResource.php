@@ -642,21 +642,29 @@ class CustomerResource extends Resource
             return '<p class="text-sm text-gray-500">Fără produse în istoricul de vânzări.</p>';
         }
 
-        $tabs = '';
+        // Filtrare pe CSS pur (radio + sibling selectors) — fără JS, nu depinde de Alpine
+        // (Filament strip-uiește atributele x-*/@ din HTML-ul din TextEntry).
+        $uid = 'tp' . substr(md5(uniqid('', true)), 0, 7);
+        $radios = $tabs = $panels = $css = '';
         foreach ($periods as $key => $lbl) {
-            $tabs .= '<button type="button" @click="p=\'' . $key . '\'" '
-                . ':style="p===\'' . $key . '\' ? \'background:#7c3aed;color:#fff\' : \'background:#f3f4f6;color:#374151\'" '
-                . 'style="border:none;border-radius:9999px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer;margin-right:6px">' . e($lbl) . '</button>';
+            $radios .= '<input type="radio" name="' . $uid . '" id="' . $uid . '-' . $key . '"' . ($key === 'all' ? ' checked' : '') . '>';
+            $tabs   .= '<label for="' . $uid . '-' . $key . '" class="tpl">' . e($lbl) . '</label>';
+            $panels .= '<div class="tpp tp-' . $key . '">' . self::renderTopTable($byPeriod[$key] ?? []) . '</div>';
+            $css    .= '#' . $uid . '-' . $key . ':checked~.tpt label[for="' . $uid . '-' . $key . '"]{background:#7c3aed;color:#fff}'
+                     . '#' . $uid . '-' . $key . ':checked~.tp-' . $key . '{display:block}';
         }
 
-        $panels = '';
-        foreach ($periods as $key => $lbl) {
-            $panels .= '<div x-show="p===\'' . $key . '\'" x-cloak>' . self::renderTopTable($byPeriod[$key] ?? []) . '</div>';
-        }
-
-        return '<div x-data="{p:\'all\'}">'
-            . '<div style="margin-bottom:10px">' . $tabs . '</div>'
-            . $panels . '</div>';
+        return '<div class="' . $uid . '">'
+            . '<style>'
+            . '.' . $uid . '>input{position:absolute;opacity:0;width:0;height:0}'
+            . '.' . $uid . ' .tpp{display:none}'
+            . '.' . $uid . ' .tpl{display:inline-block;border-radius:9999px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer;margin-right:6px;background:#f3f4f6;color:#374151;user-select:none}'
+            . $css
+            . '</style>'
+            . $radios
+            . '<div class="tpt" style="margin-bottom:10px">' . $tabs . '</div>'
+            . $panels
+            . '</div>';
     }
 
     protected static function renderTopTable(array $prods): string
@@ -1159,7 +1167,7 @@ class CustomerResource extends Resource
             }
         }
 
-        $facturi = array_slice(array_values($byFact), 0, 60);
+        $facturi = array_slice(array_values($byFact), 0, 150);
 
         // Nume produs în bloc, după SKU (o singură interogare)
         $skus = collect($facturi)->flatMap(fn ($f) => array_column($f['lines'], 'sku'))->filter()->unique()->values();
@@ -1429,64 +1437,67 @@ class CustomerResource extends Resource
         if (empty($facturi)) {
             return '<p class="text-sm text-gray-500">Nu există facturi pentru acest client.</p>';
         }
-        $bodies = '';
-        $total = 0.0;
         $fmt = fn ($v) => number_format((float) $v, 2, ',', '.');
-        $th = 'padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#9aa5b1;font-weight:600';
-        $td = 'padding:8px 10px;border-top:1px solid #f1f3f5';
-        foreach ($facturi as $f) {
-            $valNum = (float) str_replace([' ', '.', ','], ['', '', '.'], (string) ($f['valoare'] ?? '')); // aprox pt culoare
-            $total += (float) str_replace([' ', ','], ['', '.'], (string) ($f['valoare'] ?? ''));
-            $negativ = $valNum < 0 || str_starts_with(trim((string) ($f['valoare'] ?? '')), '-');
-            $lines = $f['lines'] ?? [];
+        $uid = 'fh' . substr(md5(uniqid('', true)), 0, 7);
+        $grid = 'display:grid;grid-template-columns:1fr 92px 108px 92px 108px;align-items:center;gap:8px';
+        $nrFacturi = 0; $nrAvize = 0; $total = 0.0; $rows = '';
 
-            $lineRows = '';
+        foreach ($facturi as $f) {
+            $total += (float) str_replace([' ', ','], ['', '.'], (string) ($f['valoare'] ?? ''));
+            $negativ = str_starts_with(trim((string) ($f['valoare'] ?? '')), '-');
+            $lines = $f['lines'] ?? [];
+            $dt = self::docType($f['serie'] ?? '', $f['tip'] ?? '');
+            $dt['label'] === 'Aviz' ? $nrAvize++ : $nrFacturi++;
+
+            $lineTable = '';
             foreach ($lines as $ln) {
-                $url = ! empty($ln['sku']) ? '' : '';
-                $lineRows .= '<tr>'
-                    . '<td style="padding:4px 10px 4px 34px;color:#374151" colspan="2">' . e(\Illuminate\Support\Str::limit($ln['nume'] ?? $ln['sku'], 55)) . '</td>'
-                    . '<td style="padding:4px 10px;text-align:right;color:#6b7280">' . e($fmt($ln['cant'])) . ' ' . e($ln['uom'] ?? '') . '</td>'
-                    . '<td style="padding:4px 10px;text-align:right;color:#6b7280">' . e($fmt($ln['pret'])) . '</td>'
-                    . '<td style="padding:4px 10px;text-align:right;color:#111827;font-weight:600">' . e($fmt($ln['val'])) . '</td>'
-                    . '</tr>';
+                $purl = ! empty($ln['prod_id'] ?? null) ? WooProductResource::getUrl('view', ['record' => $ln['prod_id']]) : null;
+                $nume = e(\Illuminate\Support\Str::limit($ln['nume'] ?? $ln['sku'], 60));
+                $numeCell = $purl ? '<a href="' . $purl . '" style="color:#6b21a8;text-decoration:none">' . $nume . ' ↗</a>' : $nume;
+                $lineTable .= '<div style="display:grid;grid-template-columns:1fr 92px 80px 100px;gap:8px;padding:4px 10px 4px 30px;font-size:12px;border-top:1px solid #eef1f4">'
+                    . '<span style="color:#374151">' . $numeCell . '</span>'
+                    . '<span style="text-align:right;color:#6b7280">' . e($fmt($ln['cant'])) . ' ' . e($ln['uom'] ?? '') . '</span>'
+                    . '<span style="text-align:right;color:#6b7280">' . e($fmt($ln['pret'])) . '</span>'
+                    . '<span style="text-align:right;color:#111827;font-weight:600">' . e($fmt($ln['val'])) . '</span></div>';
             }
-            $hasLines = $lines !== [];
-            $arrow = $hasLines ? '<span style="color:#9ca3af" x-show="!open">▸</span><span style="color:#7c3aed" x-show="open" x-cloak>▾</span> ' : '<span style="display:inline-block;width:11px"></span>';
 
             $onlineBadge = ! empty($f['online'])
                 ? ' <span style="background:#ede9fe;color:#6b21a8;border-radius:5px;padding:1px 7px;font-size:10px;font-weight:700;white-space:nowrap">🛒 #' . e($f['online']) . '</span>'
                 : '';
-            $dt = self::docType($f['serie'] ?? '', $f['tip'] ?? '');
-            $tipBadge = '<span style="display:inline-flex;align-items:center;gap:3px;background:' . $dt['bg'] . ';color:' . $dt['fg'] . ';border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700">' . $dt['icon'] . ' ' . $dt['label'] . '</span>';
+            $tipBadge = '<span style="display:inline-flex;align-items:center;gap:3px;background:' . $dt['bg'] . ';color:' . $dt['fg'] . ';border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;white-space:nowrap">' . $dt['icon'] . ' ' . $dt['label'] . '</span>';
+            $hasLines = $lines !== [];
 
-            $bodies .= '<tbody x-data="{open:false}" style="' . ($hasLines ? 'cursor:pointer' : '') . '" class="fh-grp">'
-                . '<tr ' . ($hasLines ? '@click="open=!open"' : '') . '>'
-                . '<td style="' . $td . '">' . $arrow . '<span style="font-weight:600;color:#111827;font-family:DejaVu Sans Mono,monospace">' . e($f['nr'] ?? '') . '</span>' . $onlineBadge . '</td>'
-                . '<td style="' . $td . ';color:#52606d">' . e($f['data'] ?? '') . '</td>'
-                . '<td style="' . $td . '">' . $tipBadge . '</td>'
-                . '<td style="' . $td . ';color:#52606d">' . e($f['scadenta'] ?? '—') . '</td>'
-                . '<td style="' . $td . ';text-align:right;font-weight:700;color:' . ($negativ ? '#dc2626' : '#111827') . '">' . e($f['valoare'] ?? '') . '</td>'
-                . '</tr>'
-                . ($hasLines
-                    ? '<tr x-show="open" x-cloak><td colspan="5" style="padding:0 10px 10px 10px"><div style="background:#fafbfc;border:1px solid #f1f3f5;border-radius:8px;overflow:hidden"><table style="width:100%;border-collapse:collapse;font-size:12px">'
-                        . '<tr style="color:#9aa5b1;text-align:left;background:#f6f8fa"><td style="padding:5px 10px 5px 34px" colspan="2">Produs</td><td style="padding:5px 10px;text-align:right">Cant.</td><td style="padding:5px 10px;text-align:right">Preț</td><td style="padding:5px 10px;text-align:right">Valoare</td></tr>'
-                        . $lineRows . '</table></div></td></tr>'
-                    : '')
-                . '</tbody>';
+            $summary = '<summary style="' . $grid . ';padding:9px 10px">'
+                . '<span style="min-width:0;overflow:hidden">' . ($hasLines ? '<span class="arw"></span> ' : '<span style="display:inline-block;width:14px"></span>') . '<span style="font-weight:600;color:#111827;font-family:DejaVu Sans Mono,monospace">' . e($f['nr'] ?? '') . '</span>' . $onlineBadge . '</span>'
+                . '<span style="color:#52606d;font-size:12px">' . e($f['data'] ?? '') . '</span>'
+                . '<span>' . $tipBadge . '</span>'
+                . '<span style="color:#52606d;font-size:12px">' . e($f['scadenta'] ?? '—') . '</span>'
+                . '<span style="text-align:right;font-weight:700;color:' . ($negativ ? '#dc2626' : '#111827') . '">' . e($f['valoare'] ?? '') . '</span>'
+                . '</summary>';
+
+            $rows .= $hasLines
+                ? '<details class="fhrow">' . $summary
+                    . '<div style="background:#fafbfc"><div style="display:grid;grid-template-columns:1fr 92px 80px 100px;gap:8px;padding:5px 10px 5px 30px;font-size:10px;text-transform:uppercase;color:#9aa5b1;font-weight:600"><span>Produs</span><span style="text-align:right">Cant.</span><span style="text-align:right">Preț</span><span style="text-align:right">Valoare</span></div>' . $lineTable . '</div></details>'
+                : '<div class="fhrow">' . $summary . '</div>';
         }
+
         $totalFmt = number_format($total, 2, ',', '.');
-        return '<style>.fh-grp:hover > tr:first-child > td{background:#faf9ff}</style>'
-            . '<div style="max-height:440px;overflow-y:auto;border:1px solid #eceff3;border-radius:10px">'
-            . '<table style="width:100%;border-collapse:collapse;font-size:13px">'
-            . '<thead style="position:sticky;top:0;background:#fff;z-index:1;box-shadow:0 1px 0 #e5e7eb"><tr style="text-align:left">'
-            . '<th style="' . $th . '">Nr. doc</th><th style="' . $th . '">Dată</th>'
-            . '<th style="' . $th . '">Tip</th><th style="' . $th . '">Scadență</th>'
-            . '<th style="' . $th . ';text-align:right">Valoare</th>'
-            . '</tr></thead>' . $bodies
-            . '<tfoot><tr style="position:sticky;bottom:0;background:#fff;border-top:2px solid #eceff3;font-weight:700">'
-            . '<td style="padding:8px 10px" colspan="4">Total · ' . count($facturi) . ' facturi</td>'
-            . '<td style="padding:8px 10px;text-align:right">' . e($totalFmt) . ' lei</td>'
-            . '</tr></tfoot></table></div>';
+        return '<style>'
+            . '.' . $uid . ' .fhrow{border-top:1px solid #f1f3f5}'
+            . '.' . $uid . ' summary{list-style:none;cursor:pointer;transition:background .1s}'
+            . '.' . $uid . ' summary::-webkit-details-marker{display:none}'
+            . '.' . $uid . ' summary:hover{background:#faf9ff}'
+            . '.' . $uid . ' details[open]>summary{background:#f5f3ff}'
+            . '.' . $uid . ' .arw::before{content:"▸";color:#9ca3af}'
+            . '.' . $uid . ' details[open] .arw::before{content:"▾";color:#7c3aed}'
+            . '</style>'
+            . '<div class="' . $uid . '">'
+            . '<div style="' . $grid . ';padding:6px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#9aa5b1;font-weight:600;border-bottom:1px solid #eceff3">'
+            . '<span>Nr. doc · click = produse</span><span>Dată</span><span>Tip</span><span>Scadență</span><span style="text-align:right">Valoare</span></div>'
+            . '<div style="max-height:480px;overflow-y:auto;border:1px solid #eceff3;border-top:none;border-radius:0 0 10px 10px">' . $rows . '</div>'
+            . '<div style="' . $grid . ';padding:9px 10px;font-weight:700;border-top:2px solid #eceff3;font-size:13px">'
+            . '<span>📄 ' . $nrFacturi . ' facturi · 🚚 ' . $nrAvize . ' avize</span><span></span><span></span><span></span><span style="text-align:right">' . e($totalFmt) . ' lei</span></div>'
+            . '</div>';
     }
 
     protected static function incasariHtml(array $incasari): string
