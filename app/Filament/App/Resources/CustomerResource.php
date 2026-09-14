@@ -732,20 +732,30 @@ class CustomerResource extends Resource
             $badge = '<span style="background:#eef2f7;color:#3e4c59;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:600">→ Stabil</span>';
         }
 
+        $lastN = count($luni);
         $bars = '';
-        foreach ($luni as $m) {
-            $h = (int) round($m['val'] / $max * 90);
-            $color = $m['val'] > 0 ? '#7c3aed' : '#e5e7eb';
-            $bars .= '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;min-width:0">'
-                . '<div style="font-size:9px;color:#9ca3af;white-space:nowrap">' . ($m['val'] > 0 ? $fmt($m['val']) : '') . '</div>'
-                . '<div title="' . e($m['ym']) . ': ' . number_format($m['val'], 2, ',', '.') . ' lei" style="width:70%;height:' . max($h, 2) . 'px;background:' . $color . ';border-radius:3px 3px 0 0"></div>'
-                . '<div style="font-size:9px;color:#6b7280;white-space:nowrap">' . e($m['label']) . '</div>'
+        foreach ($luni as $i => $m) {
+            $h = (int) round($m['val'] / $max * 120);
+            $isRecent = $i >= $lastN - 3; // ultimele 3 luni evidențiate
+            if ($m['val'] <= 0) {
+                $barStyle = 'background:#eef2f7';
+            } elseif ($isRecent) {
+                $barStyle = 'background:linear-gradient(180deg,#8b5cf6,#6d28d9)';
+            } else {
+                $barStyle = 'background:linear-gradient(180deg,#c4b5fd,#a78bfa)';
+            }
+            $showLabel = $m['val'] > $max * 0.12;
+            $bars .= '<div class="ac-col" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;min-width:0">'
+                . '<div style="font-size:9px;font-weight:600;color:#7c3aed;white-space:nowrap;height:12px">' . ($showLabel ? $fmt($m['val']) : '') . '</div>'
+                . '<div title="' . e($m['ym']) . ': ' . number_format($m['val'], 2, ',', '.') . ' lei" style="width:66%;max-width:22px;height:' . max($h, 3) . 'px;' . $barStyle . ';border-radius:5px 5px 0 0;transition:opacity .15s"></div>'
+                . '<div style="font-size:9px;color:' . ($isRecent ? '#4c1d95' : '#9aa5b1') . ';font-weight:' . ($isRecent ? '700' : '400') . ';white-space:nowrap">' . e($m['label']) . '</div>'
                 . '</div>';
         }
 
-        return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
-            . '<span style="font-size:12px;color:#6b7280">Vânzări lunare (cu TVA) — ultimele ' . count($luni) . ' luni</span>' . $badge . '</div>'
-            . '<div style="display:flex;align-items:flex-end;gap:2px;height:130px;padding-top:10px">' . $bars . '</div>';
+        return '<style>.ac-col:hover > div:nth-child(2){opacity:.75}</style>'
+            . '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
+            . '<span style="font-size:12px;color:#9aa5b1;font-weight:500">Vânzări lunare (cu TVA) · ultimele ' . count($luni) . ' luni</span>' . $badge . '</div>'
+            . '<div style="display:flex;align-items:flex-end;gap:3px;height:160px;border-bottom:1px solid #eef2f7">' . $bars . '</div>';
     }
 
     protected static function comenziOnlineHtml(array $orders): string
@@ -1009,33 +1019,46 @@ class CustomerResource extends Resource
             $trendBadge = ['#3e4c59', '#eef2f7', '→ Stabil'];
         }
 
-        $card = fn ($label, $value, $sub, $color) =>
-            '<div style="flex:1;min-width:130px;background:#fff;border:1px solid #eceff3;border-radius:12px;padding:12px 14px">'
-            . '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#9aa5b1;margin-bottom:4px">' . $label . '</div>'
-            . '<div style="font-size:20px;font-weight:800;color:' . $color . ';line-height:1.1">' . $value . '</div>'
-            . '<div style="font-size:11px;color:#9aa5b1;margin-top:2px">' . $sub . '</div></div>';
+        $card = fn ($label, $value, $sub, $color, $icon, $iconBg) =>
+            '<div style="flex:1;min-width:150px;background:#fff;border:1px solid #eef2f7;border-radius:16px;padding:14px 16px;box-shadow:0 1px 2px rgba(16,24,40,.04)">'
+            . '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
+                . '<span style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#9aa5b1;font-weight:600">' . $label . '</span>'
+                . '<span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:9px;background:' . $iconBg . ';font-size:14px">' . $icon . '</span>'
+            . '</div>'
+            . '<div style="font-size:22px;font-weight:800;color:' . $color . ';line-height:1.05;letter-spacing:-.01em">' . $value . '</div>'
+            . '<div style="font-size:11px;color:#9aa5b1;margin-top:3px">' . $sub . '</div></div>';
 
         $ultimaTxt = $k['ultima'] ? \Carbon\Carbon::parse($k['ultima'])->format('d.m.Y') : '—';
         $ultimaSub = $k['zile_ultima'] !== null ? 'acum ' . $k['zile_ultima'] . ' zile' : '';
 
         // Badge tip client (PF / Firmă) — fiabil, după cod fiscal
         $kind = self::customerKind($record);
-        $kindBadge = '<div style="margin-bottom:10px">'
-            . '<span style="display:inline-flex;align-items:center;gap:5px;background:' . $kind['bg'] . ';color:' . $kind['fg'] . ';border-radius:9999px;padding:4px 12px;font-size:12px;font-weight:700">'
+        $kindBadge = '<div style="margin-bottom:12px">'
+            . '<span style="display:inline-flex;align-items:center;gap:5px;background:' . $kind['bg'] . ';color:' . $kind['fg'] . ';border-radius:9999px;padding:5px 14px;font-size:12px;font-weight:700">'
             . $kind['icon'] . ' ' . $kind['label']
             . ($kind['cui'] ? '<span style="opacity:.7;font-weight:500"> · CUI ' . e($kind['cui']) . '</span>' : '')
             . '</span></div>';
 
         return $kindBadge
-            . '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:stretch">'
-            . $card('Sold curent', number_format($k['sold_raw'], 2, ',', '.') . ' lei', $soldSub . ' (cu TVA)', $soldColor)
-            . $card('Vânzări 18 luni', $fmt($k['vanzari18']) . ' lei', 'cu TVA', '#111827')
-            . $card('Facturi (total)', number_format($k['nr_facturi'], 0, ',', '.'), $k['online'] > 0 ? $k['online'] . ' comenzi online' : 'în istoric', '#111827')
-            . $card('Ultima activitate', $ultimaTxt, $ultimaSub, '#111827')
-            . '<div style="flex:1;min-width:130px;background:' . $trendBadge[1] . ';border:1px solid ' . $trendBadge[1] . ';border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;justify-content:center">'
-                . '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:' . $trendBadge[0] . ';opacity:.7;margin-bottom:4px">Relație</div>'
-                . '<div style="font-size:14px;font-weight:700;color:' . $trendBadge[0] . '">' . $trendBadge[2] . '</div></div>'
+            . '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:stretch">'
+            . $card('Sold curent', number_format($k['sold_raw'], 2, ',', '.') . ' lei', $soldSub . ' (cu TVA)', $soldColor, '💰', '#fef3c7')
+            . $card('Vânzări 18 luni', $fmt($k['vanzari18']) . ' lei', 'cu TVA', '#111827', '📈', '#dcfce7')
+            . $card('Facturi', number_format($k['nr_facturi'], 0, ',', '.'), $k['online'] > 0 ? $k['online'] . ' comenzi online' : 'în istoric', '#111827', '🧾', '#e0e7ff')
+            . $card('Ultima activitate', $ultimaTxt, $ultimaSub, '#111827', '🕐', '#f3e8ff')
+            . '<div style="flex:1;min-width:150px;background:linear-gradient(135deg,' . $trendBadge[1] . ',#fff);border:1px solid ' . $trendBadge[1] . ';border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;justify-content:center;box-shadow:0 1px 2px rgba(16,24,40,.04)">'
+                . '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:' . $trendBadge[0] . ';opacity:.75;margin-bottom:6px;font-weight:600">Starea relației</div>'
+                . '<div style="font-size:15px;font-weight:800;color:' . $trendBadge[0] . '">' . $trendBadge[2] . '</div></div>'
             . '</div>';
+    }
+
+    /** Tip document din seria WinMentor: AE = aviz, F* = factură. */
+    protected static function docType(?string $serie, ?string $tip = null): array
+    {
+        $s = strtoupper(trim((string) $serie));
+        if (str_starts_with($s, 'AE') || stripos((string) $tip, 'aviz') !== false) {
+            return ['label' => 'Aviz', 'icon' => '🚚', 'bg' => '#fef3c7', 'fg' => '#92400e'];
+        }
+        return ['label' => 'Factură', 'icon' => '📄', 'bg' => '#dbeafe', 'fg' => '#1e40af'];
     }
 
     protected static function linkedMembersHtml(Customer $record): string
@@ -1413,12 +1436,12 @@ class CustomerResource extends Resource
             $onlineBadge = ! empty($f['online'])
                 ? ' <span style="background:#ede9fe;color:#6b21a8;border-radius:5px;padding:1px 7px;font-size:10px;font-weight:700;white-space:nowrap">🛒 #' . e($f['online']) . '</span>'
                 : '';
-            $tip = trim((string) ($f['tip'] ?? ''));
-            $tipBadge = $tip !== '' ? '<span style="background:#f1f3f5;color:#3e4c59;border-radius:5px;padding:1px 7px;font-size:10px;font-weight:600">' . e($tip) . '</span>' : '';
+            $dt = self::docType($f['serie'] ?? '', $f['tip'] ?? '');
+            $tipBadge = '<span style="display:inline-flex;align-items:center;gap:3px;background:' . $dt['bg'] . ';color:' . $dt['fg'] . ';border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700">' . $dt['icon'] . ' ' . $dt['label'] . '</span>';
 
             $bodies .= '<tbody x-data="{open:false}" style="' . ($hasLines ? 'cursor:pointer' : '') . '" class="fh-grp">'
                 . '<tr ' . ($hasLines ? '@click="open=!open"' : '') . '>'
-                . '<td style="' . $td . '">' . $arrow . '<span style="font-weight:600;color:#111827">' . e(trim(($f['serie'] ?? '') . ' ' . ($f['nr'] ?? ''))) . '</span>' . $onlineBadge . '</td>'
+                . '<td style="' . $td . '">' . $arrow . '<span style="font-weight:600;color:#111827;font-family:DejaVu Sans Mono,monospace">' . e($f['nr'] ?? '') . '</span>' . $onlineBadge . '</td>'
                 . '<td style="' . $td . ';color:#52606d">' . e($f['data'] ?? '') . '</td>'
                 . '<td style="' . $td . '">' . $tipBadge . '</td>'
                 . '<td style="' . $td . ';color:#52606d">' . e($f['scadenta'] ?? '—') . '</td>'
@@ -1436,7 +1459,7 @@ class CustomerResource extends Resource
             . '<div style="max-height:440px;overflow-y:auto;border:1px solid #eceff3;border-radius:10px">'
             . '<table style="width:100%;border-collapse:collapse;font-size:13px">'
             . '<thead style="position:sticky;top:0;background:#fff;z-index:1;box-shadow:0 1px 0 #e5e7eb"><tr style="text-align:left">'
-            . '<th style="' . $th . '">Factură</th><th style="' . $th . '">Dată</th>'
+            . '<th style="' . $th . '">Nr. doc</th><th style="' . $th . '">Dată</th>'
             . '<th style="' . $th . '">Tip</th><th style="' . $th . '">Scadență</th>'
             . '<th style="' . $th . ';text-align:right">Valoare</th>'
             . '</tr></thead>' . $bodies
