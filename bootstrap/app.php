@@ -42,6 +42,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Observabilitate: agregă excepțiile neprinse în error_events + alertă email (self-contained).
+        $exceptions->report(function (\Throwable $e): void {
+            app(\App\Services\Observability\ErrorReporter::class)->capture($e);
+        });
+
         // Livewire stale snapshot: componenta nu mai are proprietatea din snapshot-ul vechi al browserului
         // Returnăm 419 → Livewire afișează "Page Expired" și utilizatorul reîncarcă pagina
         $exceptions->renderable(function (
