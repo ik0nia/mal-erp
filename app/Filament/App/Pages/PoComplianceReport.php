@@ -189,63 +189,126 @@ class PoComplianceReport extends Page implements HasTable
     }
 
     /**
-     * Responsabilul fiecărui furnizor, indexat pe prefixul numelui (10 caractere UPPER).
-     * Preferă atribuirea explicită (suppliers.buyer_id); altfel îl deduce din cine face
-     * cele mai multe PO-uri pentru acel furnizor.
+     * Hărți pentru rezolvarea furnizorului real din intrările WinMentor:
+     *  - wmToSup:  winmentor_id → supplier_id (legătura principală, part_id = winmentor_id)
+     *  - nameToSup: prefix nume (10 car.) → supplier_id (fallback când part_id nu prinde)
+     *  - name:     supplier_id → denumire oficială din lista de furnizori
+     *  - buyers:   supplier_id → responsabili (pivot supplier_buyers, pot fi mai mulți)
      */
-    public static function buyerMap(): array
+    public static function supplierResolution(): array
     {
-        return \Illuminate\Support\Facades\Cache::remember('po_report_buyer_map', 600, function () {
-            $map = [];
-            // Dedus din PO-uri (buyer cel mai frecvent per furnizor)
-            $rows = DB::table('purchase_orders as p')
-                ->join('suppliers as s', 's.id', '=', 'p.supplier_id')
-                ->join('users as u', 'u.id', '=', 'p.buyer_id')
-                ->selectRaw('UPPER(SUBSTRING(TRIM(s.name),1,10)) k, u.name buyer, COUNT(*) n')
-                ->groupBy('k', 'buyer')->orderByDesc('n')->get();
-            foreach ($rows as $r) {
-                $map[$r->k] ??= $r->buyer; // primul = cel mai frecvent (ordonat desc)
+        return \Illuminate\Support\Facades\Cache::remember('po_report_supplier_resolution', 600, function () {
+            $sups = DB::table('suppliers')->select('id', 'name', 'winmentor_id')->get();
+            $wmToSup = $nameToSup = $name = [];
+            foreach ($sups as $s) {
+                if ($s->winmentor_id !== null && $s->winmentor_id !== '') {
+                    $wmToSup[ltrim(trim((string) $s->winmentor_id), '0')] = $s->id;
+                }
+                if (($k = self::nameKey($s->name)) !== '') {
+                    $nameToSup[$k] ??= $s->id;
+                }
+                $name[$s->id] = $s->name;
             }
-            // Suprascrie cu atribuirea explicită, dacă există
-            $explicit = DB::table('suppliers as s')->join('users as u', 'u.id', '=', 's.buyer_id')
-                ->selectRaw('UPPER(SUBSTRING(TRIM(s.name),1,10)) k, u.name buyer')->get();
-            foreach ($explicit as $r) {
-                $map[$r->k] = $r->buyer;
+
+            // denToSup: dacă ORICE part_id al unei denumiri se leagă la un furnizor (prin
+            // winmentor_id), atribuim aceeași denumire integral acolo — unifică variantele
+            // secundare de part_id (coduri WinMentor padded) fără potrivire fragilă pe nume.
+            $denToSup = [];
+            DB::table('winmentor_intrari_raw')->select('part_id', 'den_furnizor')
+                ->whereNotNull('den_furnizor')->where('den_furnizor', '!=', '')->distinct()->get()
+                ->each(function ($r) use (&$denToSup, $wmToSup) {
+                    $pid = ltrim(trim((string) $r->part_id), '0');
+                    if ($pid !== '' && isset($wmToSup[$pid])) {
+                        $denToSup[trim($r->den_furnizor)] ??= $wmToSup[$pid];
+                    }
+                });
+
+            $buyers = [];
+            DB::table('supplier_buyers as sb')->join('users as u', 'u.id', '=', 'sb.user_id')
+                ->select('sb.supplier_id', 'u.name')->orderBy('u.name')->get()
+                ->each(function ($r) use (&$buyers) { $buyers[$r->supplier_id][] = $r->name; });
+
+            return compact('wmToSup', 'nameToSup', 'denToSup', 'name', 'buyers');
+        });
+    }
+
+    /** Rezolvă un rând de intrare (part_id + den_furnizor) la un supplier_id din lista noastră. */
+    private static function resolveSupplierId(array $r, array $res): ?int
+    {
+        $pid = ltrim(trim((string) ($r['part_id'] ?? '')), '0');
+        if ($pid !== '' && isset($res['wmToSup'][$pid])) {
+            return $res['wmToSup'][$pid];
+        }
+        $den = trim((string) ($r['den_furnizor'] ?? ''));
+        return $res['denToSup'][$den] ?? $res['nameToSup'][self::nameKey($den)] ?? null;
+    }
+
+    /** Cheie de nume normalizată (fără spații/punctuație, primele 8 caractere) pentru potrivire. */
+    private static function nameKey(?string $name): string
+    {
+        return substr(strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $name)), 0, 8);
+    }
+
+    /** PO-uri recepționate per supplier_id de la start (opțional pe lună: ym => sid => n). */
+    private static function poCounts(string $startStr, bool $byMonth = false): array
+    {
+        $q = DB::table('purchase_orders')->where('status', 'received')->where('received_at', '>=', $startStr)
+            ->whereNotNull('supplier_id');
+        if ($byMonth) {
+            $rows = $q->selectRaw('YEAR(received_at) an, MONTH(received_at) luna, supplier_id, COUNT(*) n')
+                ->groupBy('an', 'luna', 'supplier_id')->get();
+            $map = [];
+            foreach ($rows as $r) {
+                $map[sprintf('%04d-%02d', $r->an, $r->luna)][$r->supplier_id] = (int) $r->n;
             }
             return $map;
-        });
+        }
+        return $q->selectRaw('supplier_id, COUNT(*) n')->groupBy('supplier_id')
+            ->pluck('n', 'supplier_id')->all();
     }
 
     /** Top furnizori la care se cumpără fără PO (cele mai multe recepții fără procedură). */
     public function topSuppliersWithoutPo(int $limit = 12): array
     {
         $start = self::systemStart()->format('Y-m-d');
-        $buyers = self::buyerMap();
+        $res   = self::supplierResolution();
+        $poBySup = self::poCounts($start);
 
         $intr = DB::table('winmentor_intrari_raw')
             ->whereRaw('STR_TO_DATE(CONCAT(an,"-",LPAD(luna,2,"0"),"-01"),"%Y-%m-%d") >= ?', [$start])
             ->whereNotNull('den_furnizor')->where('den_furnizor', '!=', '')
-            ->selectRaw('den_furnizor, COUNT(DISTINCT nr_receptie) receptii')
-            ->groupBy('den_furnizor')->having('receptii', '>=', 3)
-            ->orderByDesc('receptii')->limit(40)->get();
+            ->selectRaw('part_id, den_furnizor, COUNT(DISTINCT nr_receptie) receptii')
+            ->groupBy('part_id', 'den_furnizor')->get();
+
+        // Agregă pe supplier_id (unifică variantele de part_id ale aceluiași furnizor)
+        $agg = [];
+        foreach ($intr as $r) {
+            $sid = self::resolveSupplierId((array) $r, $res);
+            $key = $sid !== null ? 's' . $sid : 'n:' . $r->den_furnizor;
+            $agg[$key] ??= [
+                'sid'      => $sid,
+                'furnizor' => $sid !== null ? ($res['name'][$sid] ?? $r->den_furnizor) : $r->den_furnizor,
+                'receptii' => 0,
+            ];
+            $agg[$key]['receptii'] += (int) $r->receptii;
+        }
 
         $out = [];
-        foreach ($intr as $r) {
-            $key = strtoupper(substr(trim($r->den_furnizor), 0, 10));
-            $poN = DB::table('purchase_orders as p')->join('suppliers as s', 's.id', '=', 'p.supplier_id')
-                ->where('p.status', 'received')->where('p.received_at', '>=', $start)
-                ->whereRaw('UPPER(s.name) LIKE ?', ['%' . $key . '%'])->count();
-            $faraPo = max($r->receptii - $poN, 0);
+        foreach ($agg as $a) {
+            if ($a['receptii'] < 3) {
+                continue;
+            }
+            $po = $a['sid'] !== null ? (int) ($poBySup[$a['sid']] ?? 0) : 0;
+            $faraPo = max($a['receptii'] - $po, 0);
             $out[] = [
-                'furnizor'   => $r->den_furnizor,
-                'responsabil'=> $buyers[$key] ?? null,
-                'receptii'   => (int) $r->receptii,
-                'po'         => $poN,
-                'fara_po'    => $faraPo,
-                'pct'        => (int) round($faraPo / $r->receptii * 100),
+                'furnizor'    => $a['furnizor'],
+                'responsabil' => $a['sid'] !== null ? implode(', ', $res['buyers'][$a['sid']] ?? []) : '',
+                'receptii'    => $a['receptii'],
+                'po'          => min($po, $a['receptii']),
+                'fara_po'     => $faraPo,
+                'pct'         => (int) round($faraPo / $a['receptii'] * 100),
             ];
         }
-        // Ordonează după nr. recepții fără PO (cele mai multe abateri de procedură)
         usort($out, fn ($a, $b) => $b['fara_po'] <=> $a['fara_po']);
         return array_slice($out, 0, $limit);
     }
@@ -259,56 +322,52 @@ class PoComplianceReport extends Page implements HasTable
     {
         $start = self::systemStart();
         $startStr = $start->format('Y-m-d');
-        $buyers = self::buyerMap();
+        $res = self::supplierResolution();
+        $poMap = self::poCounts($startStr, byMonth: true);
 
-        // Recepții per (lună, furnizor)
         $intr = DB::table('winmentor_intrari_raw')
             ->whereRaw('STR_TO_DATE(CONCAT(an,"-",LPAD(luna,2,"0"),"-01"),"%Y-%m-%d") >= ?', [$startStr])
             ->whereNotNull('den_furnizor')->where('den_furnizor', '!=', '')
-            ->selectRaw('an, luna, den_furnizor, COUNT(DISTINCT nr_receptie) receptii')
-            ->groupBy('an', 'luna', 'den_furnizor')->get();
+            ->selectRaw('an, luna, part_id, den_furnizor, COUNT(DISTINCT nr_receptie) receptii')
+            ->groupBy('an', 'luna', 'part_id', 'den_furnizor')->get();
 
-        // PO-uri recepționate per (lună, prefix nume furnizor) — o singură interogare
-        $poRows = DB::table('purchase_orders as p')->join('suppliers as s', 's.id', '=', 'p.supplier_id')
-            ->where('p.status', 'received')->where('p.received_at', '>=', $startStr)
-            ->selectRaw('YEAR(p.received_at) an, MONTH(p.received_at) luna, UPPER(SUBSTRING(TRIM(s.name),1,10)) k, COUNT(*) n')
-            ->groupBy('an', 'luna', 'k')->get();
-        $poMap = [];
-        foreach ($poRows as $r) {
-            $poMap[sprintf('%04d-%02d', $r->an, $r->luna)][$r->k] = (int) $r->n;
-        }
-
+        // Agregă pe (lună, supplier_id)
         $months = [];
         foreach ($intr as $r) {
             $ym  = sprintf('%04d-%02d', $r->an, $r->luna);
-            $key = strtoupper(substr(trim($r->den_furnizor), 0, 10));
-            $po  = $poMap[$ym][$key] ?? 0;
-            $rec = (int) $r->receptii;
-            $fara = max($rec - $po, 0);
-            $months[$ym]['suppliers'][] = [
-                'furnizor'   => $r->den_furnizor,
-                'responsabil'=> $buyers[$key] ?? null,
-                'receptii'   => $rec,
-                'po'         => min($po, $rec),
-                'fara_po'    => $fara,
+            $sid = self::resolveSupplierId((array) $r, $res);
+            $key = $sid !== null ? 's' . $sid : 'n:' . $r->den_furnizor;
+            $months[$ym][$key] ??= [
+                'sid'      => $sid,
+                'furnizor' => $sid !== null ? ($res['name'][$sid] ?? $r->den_furnizor) : $r->den_furnizor,
+                'receptii' => 0,
             ];
+            $months[$ym][$key]['receptii'] += (int) $r->receptii;
         }
 
         $out = [];
-        foreach ($months as $ym => $data) {
-            $sup = $data['suppliers'];
-            usort($sup, fn ($a, $b) => $b['fara_po'] <=> $a['fara_po']);
-            $recT  = array_sum(array_column($sup, 'receptii'));
-            $faraT = array_sum(array_column($sup, 'fara_po'));
+        foreach ($months as $ym => $sups) {
+            $rows = [];
+            foreach ($sups as $a) {
+                $po = $a['sid'] !== null ? (int) ($poMap[$ym][$a['sid']] ?? 0) : 0;
+                $fara = max($a['receptii'] - $po, 0);
+                $rows[] = [
+                    'furnizor'    => $a['furnizor'],
+                    'responsabil' => $a['sid'] !== null ? implode(', ', $res['buyers'][$a['sid']] ?? []) : '',
+                    'receptii'    => $a['receptii'],
+                    'po'          => min($po, $a['receptii']),
+                    'fara_po'     => $fara,
+                ];
+            }
+            usort($rows, fn ($x, $y) => $y['fara_po'] <=> $x['fara_po']);
             $out[] = [
                 'ym'        => $ym,
                 'label'     => \Carbon\Carbon::createFromFormat('Y-m-d', $ym . '-01')->locale('ro')->isoFormat('MMMM YYYY'),
-                'receptii'  => $recT,
-                'fara_po'   => $faraT,
-                'suppliers' => array_values(array_filter($sup, fn ($s) => $s['fara_po'] > 0)),
+                'receptii'  => array_sum(array_column($rows, 'receptii')),
+                'fara_po'   => array_sum(array_column($rows, 'fara_po')),
+                'suppliers' => array_values(array_filter($rows, fn ($s) => $s['fara_po'] > 0)),
             ];
         }
-        // cronologic descrescător (luna curentă sus)
         usort($out, fn ($a, $b) => strcmp($b['ym'], $a['ym']));
         return $out;
     }

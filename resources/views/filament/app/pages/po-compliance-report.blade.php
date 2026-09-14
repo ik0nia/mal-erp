@@ -90,7 +90,7 @@
                                     @foreach ($mo['suppliers'] as $s)
                                         <tr style="border-top:1px solid #f8fafc">
                                             <td style="padding:8px 16px;color:#374151;font-weight:500">{{ ucwords(mb_strtolower($s['furnizor'])) }}</td>
-                                            <td style="padding:8px 12px;color:{{ $s['responsabil'] ? '#6b7280' : '#dc2626' }}">👤 {{ $s['responsabil'] ?? 'neatribuit' }}</td>
+                                            <td style="padding:8px 12px;color:{{ filled($s['responsabil']) ? '#6b7280' : '#dc2626' }}">👤 {{ filled($s['responsabil']) ? $s['responsabil'] : 'neatribuit' }}</td>
                                             <td style="padding:8px 12px;text-align:right;font-weight:800;color:#dc2626">{{ $s['fara_po'] }}</td>
                                             <td style="padding:8px 16px;text-align:right;color:#9aa5b1">{{ $s['receptii'] }}</td>
                                         </tr>
@@ -136,7 +136,7 @@
                     <div style="display:flex;align-items:center;gap:12px">
                         <div style="flex:0 0 210px;min-width:0">
                             <div style="font-size:13px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="{{ $s['furnizor'] }}">{{ ucwords(mb_strtolower($s['furnizor'])) }}</div>
-                            <div style="font-size:10px;color:{{ $s['responsabil'] ? '#6b7280' : '#dc2626' }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">👤 {{ $s['responsabil'] ?? 'neatribuit' }}</div>
+                            <div style="font-size:10px;color:{{ filled($s['responsabil']) ? '#6b7280' : '#dc2626' }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="{{ $s['responsabil'] }}">👤 {{ filled($s['responsabil']) ? $s['responsabil'] : 'neatribuit' }}</div>
                         </div>
                         <div style="flex:1;height:22px;border-radius:6px;overflow:hidden;display:flex;background:#f3f4f6;min-width:0">
                             @if ($poW > 0)
