@@ -401,7 +401,7 @@ class CustomerResource extends Resource
                             ->visible(fn (Customer $record): bool => ! empty(self::wmFinanceCached($record)['facturi'] ?? []))
                             ->schema([
                                 TextEntry::make('wm_facturi')->hiddenLabel()->html()->columnSpanFull()
-                                    ->getStateUsing(fn (Customer $record): string => self::facturiHtml(self::wmFinanceCached($record)['facturi'] ?? [])),
+                                    ->getStateUsing(fn (Customer $record): string => self::facturiHtml(self::wmFinanceCached($record)['facturi'] ?? [], $record)),
                             ]),
 
                         Section::make('Încasări prin bancă')
@@ -1346,50 +1346,93 @@ class CustomerResource extends Resource
         });
     }
 
-    protected static function facturiHtml(array $facturi): string
+    protected static function facturiHtml(array $facturi, ?Customer $record = null): string
     {
         if (empty($facturi)) {
             return '<p class="text-sm text-gray-500">Nu sunt facturi de încasat.</p>';
         }
-        // Sortare cronologică; stornourile (rest negativ) evidențiate — ele anulează
-        // facturi din listă dar rămân „deschise" până la compensare în WinMentor
         usort($facturi, fn ($a, $b) => strcmp(
             preg_replace('/(\d{2})\.(\d{2})\.(\d{4})/', '$3$2$1', $a['dataDocument'] ?? ''),
             preg_replace('/(\d{2})\.(\d{2})\.(\d{4})/', '$3$2$1', $b['dataDocument'] ?? '')
         ));
 
-        $rows = '';
-        $total = 0.0;
-        $areStorno = false;
+        // Liniile (produsele) fiecărei facturi deschise — o singură interogare
+        $fmt = fn ($v) => number_format((float) $v, 2, ',', '.');
+        $linesByNr = [];
+        if ($record) {
+            $ids = self::identities($record);
+            $nrs = array_values(array_filter(array_map(fn ($f) => $f['nrDocument'] ?? null, $facturi)));
+            if ($nrs && ($ids['cuis'] || $ids['part_ids'])) {
+                $raw = DB::table('winmentor_vanzari_raw')
+                    ->where(function ($q) use ($ids) {
+                        if ($ids['cuis']) $q->orWhereIn('cod_fiscal_client', $ids['cuis']);
+                        if ($ids['part_ids']) $q->orWhereIn('part_id', $ids['part_ids']);
+                    })
+                    ->whereIn('nr_factura', $nrs)->whereNotNull('sku')
+                    ->get(['nr_factura', 'sku', 'cantitate', 'uom', 'pret', 'lei_cu_tva']);
+                $names = DB::table('woo_products')->whereIn('sku', $raw->pluck('sku'))->get(['id', 'sku', 'name'])->keyBy('sku');
+                foreach ($raw as $r) {
+                    $linesByNr[$r->nr_factura][] = [
+                        'nume' => $names[$r->sku]->name ?? $r->sku, 'prod_id' => $names[$r->sku]->id ?? null,
+                        'cant' => $r->cantitate, 'uom' => $r->uom, 'pret' => $r->pret, 'val' => $r->lei_cu_tva,
+                    ];
+                }
+            }
+        }
+
+        $uid = 'fi' . substr(md5(uniqid('', true)), 0, 7);
+        $grid = 'display:grid;grid-template-columns:110px 1fr 92px 110px 92px;align-items:center;gap:8px';
+        $total = 0.0; $areStorno = false; $rows = '';
         foreach ($facturi as $f) {
             $rest = (float) str_replace(['.', ','], ['', '.'], (string) ($f['rest'] ?? '0'));
             $total += $rest;
             $negativ = $rest < 0;
             $areStorno = $areStorno || $negativ;
-            $style = $negativ ? ';color:#dc2626' : '';
-            $rows .= '<tr>'
-                . '<td style="padding:4px 8px">' . e($f['tip'] ?? '') . ($negativ ? ' <span style="color:#dc2626;font-size:11px">(storno)</span>' : '') . '</td>'
-                . '<td style="padding:4px 8px">' . e($f['nrDocument'] ?? '') . '</td>'
-                . '<td style="padding:4px 8px">' . e($f['dataDocument'] ?? '') . '</td>'
-                . '<td style="padding:4px 8px;text-align:right' . $style . '">' . e($f['rest'] ?? '') . '</td>'
-                . '<td style="padding:4px 8px">' . e($f['dataScadenta'] ?? '') . '</td>'
-                . '</tr>';
+            $dt = self::docType('', $f['tip'] ?? '');
+            $tipBadge = '<span style="display:inline-flex;gap:3px;background:' . ($negativ ? '#fee2e2' : $dt['bg']) . ';color:' . ($negativ ? '#b91c1c' : $dt['fg']) . ';border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;white-space:nowrap">' . ($negativ ? '↩ Storno' : $dt['icon'] . ' ' . $dt['label']) . '</span>';
+            $lines = $linesByNr[$f['nrDocument'] ?? ''] ?? [];
+            $hasLines = $lines !== [];
+
+            $lineTable = '';
+            foreach ($lines as $ln) {
+                $purl = $ln['prod_id'] ? WooProductResource::getUrl('view', ['record' => $ln['prod_id']]) : null;
+                $nume = e(\Illuminate\Support\Str::limit($ln['nume'], 55));
+                $lineTable .= '<div style="display:grid;grid-template-columns:1fr 92px 100px;gap:8px;padding:4px 10px 4px 24px;font-size:12px;border-top:1px solid #eef1f4">'
+                    . '<span style="color:#374151">' . ($purl ? '<a href="' . $purl . '" style="color:#6b21a8;text-decoration:none">' . $nume . ' ↗</a>' : $nume) . '</span>'
+                    . '<span style="text-align:right;color:#6b7280">' . e($fmt($ln['cant'])) . ' ' . e($ln['uom']) . '</span>'
+                    . '<span style="text-align:right;font-weight:600">' . e($fmt($ln['val'])) . '</span></div>';
+            }
+
+            $summary = '<summary style="' . $grid . ';padding:8px 10px">'
+                . '<span>' . ($hasLines ? '<span class="arw"></span> ' : '') . $tipBadge . '</span>'
+                . '<span style="font-family:DejaVu Sans Mono,monospace;font-weight:600;color:#111827">' . e($f['nrDocument'] ?? '') . '</span>'
+                . '<span style="color:#52606d;font-size:12px">' . e($f['dataDocument'] ?? '') . '</span>'
+                . '<span style="text-align:right;font-weight:700;color:' . ($negativ ? '#dc2626' : '#111827') . '">' . e($f['rest'] ?? '') . '</span>'
+                . '<span style="color:#52606d;font-size:12px;text-align:right">' . e($f['dataScadenta'] ?? '—') . '</span>'
+                . '</summary>';
+
+            $rows .= $hasLines
+                ? '<details class="fhrow">' . $summary . '<div style="background:#fafbfc">' . $lineTable . '</div></details>'
+                : '<div class="fhrow">' . $summary . '</div>';
         }
 
-        $footer = '<tr style="border-top:1px solid #ddd;font-weight:600">'
-            . '<td style="padding:4px 8px" colspan="3">Total rest de plată</td>'
-            . '<td style="padding:4px 8px;text-align:right">' . number_format($total, 2, ',', '.') . '</td><td></td></tr>';
-
         $hint = $areStorno
-            ? '<p style="font-size:12px;color:#92400e;margin-top:6px">⚠ Stornouri necompensate în WinMentor: documentele cu rest negativ anulează (parțial sau total) facturi din listă — după compensare în Mentor dispar amândouă din sold.</p>'
+            ? '<p style="font-size:11px;color:#92400e;margin-top:6px">↩ Stornourile (rest negativ) anulează facturi din listă — după compensare în Mentor dispar amândouă din sold.</p>'
             : '';
 
-        return '<table style="width:100%;border-collapse:collapse;font-size:13px">'
-            . '<thead><tr style="text-align:left;border-bottom:1px solid #ddd">'
-            . '<th style="padding:4px 8px">Tip</th><th style="padding:4px 8px">Nr. doc</th>'
-            . '<th style="padding:4px 8px">Dată</th><th style="padding:4px 8px;text-align:right">Rest de plată</th>'
-            . '<th style="padding:4px 8px">Scadență</th>'
-            . '</tr></thead><tbody>' . $rows . $footer . '</tbody></table>' . $hint;
+        return '<style>'
+            . '.' . $uid . ' .fhrow{border-top:1px solid #f1f3f5}'
+            . '.' . $uid . ' summary{list-style:none;cursor:pointer}.' . $uid . ' summary::-webkit-details-marker{display:none}'
+            . '.' . $uid . ' summary:hover{background:#faf9ff}.' . $uid . ' details[open]>summary{background:#f5f3ff}'
+            . '.' . $uid . ' .arw::before{content:"▸";color:#9ca3af}.' . $uid . ' details[open] .arw::before{content:"▾";color:#7c3aed}'
+            . '</style>'
+            . '<div class="' . $uid . '">'
+            . '<div style="' . $grid . ';padding:6px 10px;font-size:10px;text-transform:uppercase;color:#9aa5b1;font-weight:600;border-bottom:1px solid #eceff3">'
+            . '<span>Tip</span><span>Nr. doc</span><span>Dată</span><span style="text-align:right">Rest</span><span style="text-align:right">Scadență</span></div>'
+            . '<div style="max-height:360px;overflow-y:auto">' . $rows . '</div>'
+            . '<div style="' . $grid . ';padding:8px 10px;font-weight:700;border-top:2px solid #eceff3">'
+            . '<span></span><span>Total rest</span><span></span><span style="text-align:right">' . number_format($total, 2, ',', '.') . '</span><span></span></div>'
+            . '</div>' . $hint;
     }
 
     protected static function sediiHtml(array $sedii): string
