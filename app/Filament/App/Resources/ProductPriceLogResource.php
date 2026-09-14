@@ -69,11 +69,40 @@ class ProductPriceLogResource extends Resource
                     ->state(fn (ProductPriceLog $record): float => round((float) $record->new_price - (float) $record->old_price, 4))
                     ->formatStateUsing(fn (float $state): string => ($state >= 0 ? '+' : '') . number_format($state, 2, ',', '.') . ' lei')
                     ->color(fn (ProductPriceLog $record): string => (float) $record->new_price >= (float) $record->old_price ? 'success' : 'danger'),
+                Tables\Columns\TextColumn::make('source')
+                    ->label('Sursă')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'toya_api'         => 'Feed Toya',
+                        'winmentor_bridge' => 'WinMentor API',
+                        'winmentor_csv'    => 'WinMentor CSV',
+                        'manual', 'erp', null, '' => 'Manual ERP',
+                        default            => $state,
+                    })
+                    ->color(fn (?string $state): string => match ($state) {
+                        'toya_api'         => 'warning',
+                        'winmentor_bridge' => 'info',
+                        'winmentor_csv'    => 'gray',
+                        default            => 'primary',
+                    })
+                    ->icon(fn (?string $state): string => match ($state) {
+                        'toya_api'         => 'heroicon-m-rss',
+                        'winmentor_bridge' => 'heroicon-m-signal',
+                        'winmentor_csv'    => 'heroicon-m-document-text',
+                        default            => 'heroicon-m-pencil-square',
+                    }),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('location_id')
                     ->label('Magazin')
                     ->relationship('location', 'name'),
+                Tables\Filters\SelectFilter::make('source')
+                    ->label('Sursă')
+                    ->options([
+                        'toya_api'         => 'Feed Toya',
+                        'winmentor_bridge' => 'WinMentor API',
+                        'winmentor_csv'    => 'WinMentor CSV',
+                    ]),
             ])
             ->deferFilters(false)
             ->defaultSort('changed_at', 'desc')
