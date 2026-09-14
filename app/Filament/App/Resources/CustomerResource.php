@@ -424,8 +424,30 @@ class CustomerResource extends Resource
                             ->description(fn (Customer $record): string => count(self::onlineOrders($record)) . ' comenzi WooCommerce · click pe comandă pentru detalii')
                             ->visible(fn (Customer $record): bool => ! empty(self::onlineOrders($record)))
                             ->schema([
-                                TextEntry::make('comenzi_online')->hiddenLabel()->html()->columnSpanFull()
-                                    ->getStateUsing(fn (Customer $record): string => self::comenziOnlineHtml(self::onlineOrders($record))),
+                                RepeatableEntry::make('comenzi')
+                                    ->hiddenLabel()
+                                    ->getStateUsing(fn (Customer $record): array => self::onlineOrders($record))
+                                    ->columns(12)
+                                    ->schema([
+                                        TextEntry::make('number')->label('Comandă')->columnSpan(3)
+                                            ->weight(FontWeight::Bold)->color('primary')
+                                            ->formatStateUsing(fn ($state): string => '#' . $state)
+                                            ->url(function ($record) {
+                                                $id = is_array($record) ? ($record['id'] ?? null) : null;
+                                                return $id ? WooOrderResource::getUrl('view', ['record' => $id]) : null;
+                                            })->openUrlInNewTab(),
+                                        TextEntry::make('data')->label('Dată')->columnSpan(2),
+                                        TextEntry::make('status')->label('Status')->columnSpan(3)->badge()
+                                            ->color(fn ($state): string => match ($state) {
+                                                'completed' => 'success', 'processing' => 'info',
+                                                'cancelled', 'refunded', 'failed' => 'danger',
+                                                'on-hold', 'pending' => 'warning', default => 'gray',
+                                            }),
+                                        TextEntry::make('total')->label('Total')->columnSpan(2)
+                                            ->weight(FontWeight::Bold)->formatStateUsing(fn ($state): string => $state . ' lei'),
+                                        TextEntry::make('factura')->label('Factură WM')->columnSpan(2)->badge()->color('success')
+                                            ->placeholder('—')->formatStateUsing(fn ($state): ?string => $state ? '✓ ' . $state : null),
+                                    ]),
                             ]),
 
                         Section::make('Istoric facturi / vânzări')
