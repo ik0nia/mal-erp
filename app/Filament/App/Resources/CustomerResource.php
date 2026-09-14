@@ -8,7 +8,9 @@ use App\Filament\App\Concerns\HasDynamicNavSort;
 use App\Filament\App\Resources\CustomerResource\Pages;
 use App\Filament\App\Resources\WooOrderResource;
 use App\Filament\App\Resources\WooProductResource;
+use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Schemas\Components\Tabs;
+use Filament\Support\Enums\FontWeight;
 use App\Models\Customer;
 use App\Models\Supplier;
 use App\Services\CompanyData\OpenApiCompanyLookupService;
@@ -383,20 +385,11 @@ class CustomerResource extends Resource
                             ->columnSpanFull()
                             ->visible(fn (Customer $record): bool => ! empty(self::topProducts($record, 'all')))
                             ->schema([
-                                // Filtru de perioadă = Tabs NATIV Filament (funcționează prin Livewire)
+                                // Filtru de perioadă = Tabs NATIV Filament; conținut = RepeatableEntry nativ
                                 Tabs::make()->tabs([
-                                    Tabs\Tab::make('Toată perioada')->schema([
-                                        TextEntry::make('tp_all')->hiddenLabel()->html()->columnSpanFull()
-                                            ->getStateUsing(fn (Customer $record): string => self::renderTopTable(self::topProducts($record, 'all'))),
-                                    ]),
-                                    Tabs\Tab::make('Ultimul an')->schema([
-                                        TextEntry::make('tp_1y')->hiddenLabel()->html()->columnSpanFull()
-                                            ->getStateUsing(fn (Customer $record): string => self::renderTopTable(self::topProducts($record, '1y'))),
-                                    ]),
-                                    Tabs\Tab::make('Ultimele 6 luni')->schema([
-                                        TextEntry::make('tp_6m')->hiddenLabel()->html()->columnSpanFull()
-                                            ->getStateUsing(fn (Customer $record): string => self::renderTopTable(self::topProducts($record, '6m'))),
-                                    ]),
+                                    Tabs\Tab::make('Toată perioada')->schema([self::topProductsEntry('all')]),
+                                    Tabs\Tab::make('Ultimul an')->schema([self::topProductsEntry('1y')]),
+                                    Tabs\Tab::make('Ultimele 6 luni')->schema([self::topProductsEntry('6m')]),
                                 ]),
                             ]),
                     ]),
@@ -641,6 +634,41 @@ class CustomerResource extends Resource
                 'ultima'    => $r->ultima,
             ])->all();
         });
+    }
+
+    /** Top produse pe o perioadă, ca RepeatableEntry NATIV Filament. */
+    protected static function topProductsEntry(string $period): RepeatableEntry
+    {
+        return RepeatableEntry::make('top_' . $period)
+            ->hiddenLabel()
+            ->getStateUsing(fn (Customer $record): array => self::topProducts($record, $period))
+            ->columns(12)
+            ->schema([
+                TextEntry::make('nume')
+                    ->hiddenLabel()
+                    ->columnSpan(6)
+                    ->weight(FontWeight::Medium)
+                    ->color('primary')
+                    ->url(function ($record) {
+                        $id = is_array($record) ? ($record['prod_id'] ?? null) : ($record->prod_id ?? null);
+                        return $id ? WooProductResource::getUrl('view', ['record' => $id]) : null;
+                    })
+                    ->openUrlInNewTab(),
+                TextEntry::make('cant')
+                    ->label('Cantitate')
+                    ->columnSpan(2)
+                    ->formatStateUsing(fn ($state, $record): string => number_format((float) $state, 2, ',', '.') . ' ' . (is_array($record) ? ($record['uom'] ?? '') : ($record->uom ?? ''))),
+                TextEntry::make('valoare')
+                    ->label('Valoare')
+                    ->columnSpan(2)
+                    ->weight(FontWeight::Bold)
+                    ->formatStateUsing(fn ($state): string => number_format((float) $state, 2, ',', '.') . ' lei'),
+                TextEntry::make('nr_facturi')
+                    ->label('Facturi')
+                    ->columnSpan(2)
+                    ->badge()->color('gray')
+                    ->formatStateUsing(fn ($state): string => $state . '×'),
+            ]);
     }
 
     protected static function topProductsHtml(array $byPeriod): string
