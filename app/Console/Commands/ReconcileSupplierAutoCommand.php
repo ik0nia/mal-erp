@@ -58,12 +58,13 @@ class ReconcileSupplierAutoCommand extends Command
         $codEx = (string) (DB::table('winmentor_parteneri')->where('wm_id', $wm)->value('cod_extern') ?? '');
         $pids = array_values(array_filter(array_unique([$wm, $codEx])));
 
-        $over = DB::table('winmentor_factura_overrides')->whereIn('part_id', $pids)->where('directie', 'furnizor')->pluck('nr_factura')->all();
+        $overSet = array_flip(DB::table('winmentor_factura_overrides')->whereIn('part_id', $pids)->where('directie', 'furnizor')->pluck('row_key')->all());
         $rows = DB::table('winmentor_solduri_raw')
             ->where('directie', 'furnizor')->whereIn('part_id', $pids)
             ->where('rest_de_plata', '>', 0.01)
-            ->whereNotIn('nr_factura', $over ?: ['__none__'])
-            ->get();
+            ->get()
+            ->reject(fn ($r) => isset($overSet[\App\Models\WinmentorFacturaOverride::rowKey($r->nr_factura, $r->data_factura, $r->rest_de_plata)]))
+            ->values();
 
         if ($verbose) {
             $this->info("Verific {$rows->count()} facturi deschise pentru furnizorul {$wm}...");
@@ -91,8 +92,8 @@ class ReconcileSupplierAutoCommand extends Command
                 }
                 if (! $this->option('dry-run')) {
                     DB::table('winmentor_factura_overrides')->updateOrInsert(
-                        ['part_id' => $wm, 'nr_factura' => $r->nr_factura, 'directie' => 'furnizor'],
-                        ['action' => 'settled', 'source' => 'auto_bank', 'settled_amount' => $platit, 'updated_at' => now(), 'created_at' => now()]
+                        ['part_id' => $wm, 'row_key' => \App\Models\WinmentorFacturaOverride::rowKey($r->nr_factura, $r->data_factura, $r->rest_de_plata), 'directie' => 'furnizor'],
+                        ['nr_factura' => $r->nr_factura, 'data_factura' => $r->data_factura, 'action' => 'settled', 'source' => 'auto_bank', 'settled_amount' => $platit, 'updated_at' => now(), 'created_at' => now()]
                     );
                 }
                 $marcate++;

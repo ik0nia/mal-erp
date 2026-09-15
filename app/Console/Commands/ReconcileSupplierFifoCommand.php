@@ -78,14 +78,15 @@ class ReconcileSupplierFifoCommand extends Command
         }
         $target = abs($target);
 
-        // Rânduri deschise (nemarcate deja), cele mai NOI primele
-        $over = DB::table('winmentor_factura_overrides')->whereIn('part_id', $pids)->where('directie', 'furnizor')->pluck('nr_factura')->all();
+        // Rânduri deschise (nemarcate deja, filtru pe row_key), cele mai NOI primele
+        $overSet = array_flip(DB::table('winmentor_factura_overrides')->whereIn('part_id', $pids)->where('directie', 'furnizor')->pluck('row_key')->all());
         $rows = DB::table('winmentor_solduri_raw')
             ->where('directie', 'furnizor')->whereIn('part_id', $pids)
             ->whereRaw('ABS(rest_de_plata) >= 0.01')
-            ->whereNotIn('nr_factura', $over ?: ['__none__'])
             ->orderByDesc('data_factura')->orderByDesc('id')
-            ->get();
+            ->get()
+            ->reject(fn ($r) => isset($overSet[\App\Models\WinmentorFacturaOverride::rowKey($r->nr_factura, $r->data_factura, $r->rest_de_plata)]))
+            ->values();
 
         $totalOpen = (float) $rows->sum('rest_de_plata');
         $tol = max(50.0, $target * 0.05);
@@ -116,8 +117,8 @@ class ReconcileSupplierFifoCommand extends Command
             }
             if (! $this->option('dry-run')) {
                 DB::table('winmentor_factura_overrides')->updateOrInsert(
-                    ['part_id' => $wm, 'nr_factura' => $r->nr_factura, 'directie' => 'furnizor'],
-                    ['action' => 'settled', 'source' => 'auto_fifo', 'updated_at' => now(), 'created_at' => now()]
+                    ['part_id' => $wm, 'row_key' => \App\Models\WinmentorFacturaOverride::rowKey($r->nr_factura, $r->data_factura, $r->rest_de_plata), 'directie' => 'furnizor'],
+                    ['nr_factura' => $r->nr_factura, 'data_factura' => $r->data_factura, 'action' => 'settled', 'source' => 'auto_fifo', 'updated_at' => now(), 'created_at' => now()]
                 );
             }
             $marcate++;

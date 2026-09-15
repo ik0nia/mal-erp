@@ -87,16 +87,23 @@ class ViewSupplier extends ViewRecord
                 ->modalSubmitActionLabel('Salvează reconcilierea')
                 ->fillForm(function (): array {
                     $pids = SupplierResource::wmPartIds($this->record);
-                    $over = \Illuminate\Support\Facades\DB::table('winmentor_factura_overrides')
-                        ->whereIn('part_id', $pids)->where('directie', 'furnizor')->pluck('nr_factura')->all();
-                    $all = \Illuminate\Support\Facades\DB::table('winmentor_solduri_raw')
+                    $overSet = array_flip(\Illuminate\Support\Facades\DB::table('winmentor_factura_overrides')
+                        ->whereIn('part_id', $pids)->where('directie', 'furnizor')->pluck('row_key')->all());
+                    $rows = \Illuminate\Support\Facades\DB::table('winmentor_solduri_raw')
                         ->where('directie', 'furnizor')->whereIn('part_id', $pids)
-                        ->whereRaw('ABS(rest_de_plata) >= 0.01')->pluck('nr_factura')->all();
-                    return ['deschise' => array_values(array_diff($all, $over))];
+                        ->whereRaw('ABS(rest_de_plata) >= 0.01')->get();
+                    $open = [];
+                    foreach ($rows as $r) {
+                        $k = \App\Models\WinmentorFacturaOverride::rowKey($r->nr_factura, $r->data_factura, $r->rest_de_plata);
+                        if (! isset($overSet[$k])) {
+                            $open[] = $k;
+                        }
+                    }
+                    return ['deschise' => $open];
                 })
                 ->form([
                     \Filament\Forms\Components\CheckboxList::make('deschise')
-                        ->label('Facturi în scadențar')
+                        ->label('Facturi în scadențar (bifate = rămân deschise)')
                         ->options(function (): array {
                             $pids = SupplierResource::wmPartIds($this->record);
                             $rows = \Illuminate\Support\Facades\DB::table('winmentor_solduri_raw')
@@ -104,7 +111,8 @@ class ViewSupplier extends ViewRecord
                                 ->whereRaw('ABS(rest_de_plata) >= 0.01')->orderByDesc('data_factura')->get();
                             $opt = [];
                             foreach ($rows as $r) {
-                                $opt[$r->nr_factura] = trim(($r->tip_document ?? '') . ' ' . $r->nr_factura)
+                                $k = \App\Models\WinmentorFacturaOverride::rowKey($r->nr_factura, $r->data_factura, $r->rest_de_plata);
+                                $opt[$k] = trim(($r->tip_document ?? '') . ' ' . $r->nr_factura)
                                     . ' · ' . ($r->data_factura ? \Carbon\Carbon::parse($r->data_factura)->format('d.m.Y') : '')
                                     . ' · ' . number_format((float) $r->rest_de_plata, 2, ',', '.') . ' lei';
                             }
@@ -115,21 +123,22 @@ class ViewSupplier extends ViewRecord
                         ->columns(1),
                 ])
                 ->action(function (array $data): void {
-                    $pids     = SupplierResource::wmPartIds($this->record);
-                    $primary  = (string) $this->record->winmentor_id;
-                    $keepOpen = $data['deschise'] ?? [];
-                    $all = \Illuminate\Support\Facades\DB::table('winmentor_solduri_raw')
+                    $pids    = SupplierResource::wmPartIds($this->record);
+                    $primary = (string) $this->record->winmentor_id;
+                    $keep    = array_flip($data['deschise'] ?? []);
+                    $rows = \Illuminate\Support\Facades\DB::table('winmentor_solduri_raw')
                         ->where('directie', 'furnizor')->whereIn('part_id', $pids)
-                        ->whereRaw('ABS(rest_de_plata) >= 0.01')->pluck('nr_factura')->all();
+                        ->whereRaw('ABS(rest_de_plata) >= 0.01')->get();
                     $marcate = 0;
-                    foreach ($all as $nr) {
-                        if (in_array($nr, $keepOpen, true)) {
+                    foreach ($rows as $r) {
+                        $k = \App\Models\WinmentorFacturaOverride::rowKey($r->nr_factura, $r->data_factura, $r->rest_de_plata);
+                        if (isset($keep[$k])) {
                             \Illuminate\Support\Facades\DB::table('winmentor_factura_overrides')
-                                ->whereIn('part_id', $pids)->where('nr_factura', $nr)->where('directie', 'furnizor')->delete();
+                                ->whereIn('part_id', $pids)->where('row_key', $k)->where('directie', 'furnizor')->delete();
                         } else {
                             \Illuminate\Support\Facades\DB::table('winmentor_factura_overrides')->updateOrInsert(
-                                ['part_id' => $primary, 'nr_factura' => $nr, 'directie' => 'furnizor'],
-                                ['action' => 'settled', 'source' => 'manual', 'user_id' => auth()->id(), 'updated_at' => now(), 'created_at' => now()]
+                                ['part_id' => $primary, 'row_key' => $k, 'directie' => 'furnizor'],
+                                ['nr_factura' => $r->nr_factura, 'data_factura' => $r->data_factura, 'action' => 'settled', 'source' => 'manual', 'user_id' => auth()->id(), 'updated_at' => now(), 'created_at' => now()]
                             );
                             $marcate++;
                         }

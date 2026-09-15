@@ -1131,13 +1131,14 @@ class SupplierResource extends Resource
                 return null;
             }
 
-            // Marcaje de reconciliere locală: facturi WinMentor stinse/fantomă (nu le putem șterge din Mentor)
-            $overrides = DB::table('winmentor_factura_overrides')
+            // Marcaje de reconciliere locală: facturi WinMentor stinse/fantomă (nu le putem șterge din Mentor).
+            // Cheie pe RÂND unic (row_key), nu pe nr_factura — avansurile au nr_factura duplicat.
+            $overSet = array_flip(DB::table('winmentor_factura_overrides')
                 ->whereIn('part_id', $pids)->where('directie', 'furnizor')
-                ->pluck('action', 'nr_factura')->all();
+                ->pluck('row_key')->all());
 
             // Facturile DESCHISE = scadențarul minus cele marcate stinse/fantomă
-            $openRows = $solduri->reject(fn ($f) => isset($overrides[$f->nr_factura]))->values();
+            $openRows = $solduri->reject(fn ($f) => isset($overSet[\App\Models\WinmentorFacturaOverride::rowKey($f->nr_factura, $f->data_factura, $f->rest_de_plata)]))->values();
 
             $facturi = $openRows->map(fn ($f) => [
                 'tip'          => $f->tip_document,
