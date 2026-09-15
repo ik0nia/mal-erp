@@ -106,8 +106,14 @@ class WinmentorSolduriPage extends Page
         $totalInterne = 0.0;
         $rows         = [];
 
-        $esteIntern = fn ($p) => $p && (in_array(trim((string) ($p->clasa ?? '')), $claseInterne, true)
-            || str_starts_with(mb_strtolower(trim((string) ($p->denumire ?? ''))), 'x'));
+        $esteIntern = function ($p) use ($claseInterne) {
+            if (! $p) return false;
+            $nume = mb_strtolower(trim((string) ($p->denumire ?? '')));
+            return in_array(trim((string) ($p->clasa ?? '')), $claseInterne, true)
+                || str_starts_with($nume, 'x')     // parteneri dezactivați
+                || str_starts_with($nume, 'zz')    // conturi tehnice
+                || str_contains($nume, 'hala');    // conturi interne magazin/hală (consum)
+        };
 
         foreach ($docs as $partId => $partDocs) {
             // FIFO: pool-ul de minusuri acoperă plusurile în ordine cronologică
