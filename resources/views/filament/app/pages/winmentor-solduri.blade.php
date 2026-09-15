@@ -55,7 +55,7 @@
       <th>Cel mai vechi doc. neînchis</th>
       <th>Vechime</th>
       <th>Ultimul document</th>
-      <th style="text-align:right;">Sold recent (lei)</th>
+      <th style="text-align:right;">Sold real (lei)</th>
       <th style="text-align:right;">Istoric vechi (lei)</th>
     </tr></thead>
     <tbody>
@@ -82,10 +82,7 @@
           @else <span style="color:#9ca3af;">—</span> @endif
         </td>
         <td style="text-align:right;font-weight:700;">
-          {{ number_format($r->net_recent, 2, ',', '.') }}{!! $r->are_eur ? ' <span style="font-size:.65rem;color:#b45309;font-weight:700;">+EUR</span>' : '' !!}
-          @if(($r->divergent ?? false) && ($r->sold_autoritar ?? null) !== null)
-            <span style="display:block;font-weight:600;font-size:.7rem;color:#b91c1c;" title="Sold real WinMentor — scadențarul diferă (facturi închise apar deschise)">real: {{ number_format($r->sold_autoritar, 0, ',', '.') }}</span>
-          @endif
+          {{ number_format($r->sold_real ?? $r->net_recent, 2, ',', '.') }}{!! $r->are_eur ? ' <span style="font-size:.65rem;color:#b45309;font-weight:700;">+EUR</span>' : '' !!}
         </td>
         <td style="text-align:right;color:#9ca3af;">{{ $r->net_vechi != 0 ? number_format($r->net_vechi, 2, ',', '.') : '—' }}</td>
       </tr>

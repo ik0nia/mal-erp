@@ -148,9 +148,14 @@ class WinmentorSolduriPage extends Page
             $totalVechi += $netVechi;
             $totalAvans += $avans;
 
-            // Ascunde din listă rândurile FĂRĂ sold recent — nu ne interesează istoricul/avansul aici
-            // (rămân totuși în totalurile de mai sus).
-            if ($netRecent < 1) continue;
+            // Sold REAL: la furnizori folosim soldul autoritar (getSoldPartener) — scadențarul
+            // e umflat de facturi închise care apar deschise. La clienți scadențarul e corect
+            // (verificat), deci soldul real = net recent.
+            $soldAut  = $autoritar->has($partId) ? round(abs((float) $autoritar->get($partId)), 2) : null;
+            $soldReal = ($directie === 'furnizor' && $soldAut !== null) ? $soldAut : $netRecent;
+
+            // Ascunde rândurile fără sold REAL (cele stinse nu ne interesează).
+            if ($soldReal < 1) continue;
 
             $url = null;
             if ($directie === 'furnizor' && ($sid = $suppliers->get($partId))) {
@@ -171,10 +176,7 @@ class WinmentorSolduriPage extends Page
                 'denumire' => trim((string) ($ultimulDoc->tip_document ?? '') . ' ' . (string) ($ultimulDoc->nr_factura ?? '')) ?: 'document',
             ] : null;
 
-            // Sold autoritar + marcaj divergență față de scadențar.
-            $soldAut   = $autoritar->has($partId) ? round(abs((float) $autoritar->get($partId)), 2) : null;
             $scadNet   = $netRecent + $netVechi;
-            $divergent = $soldAut !== null && abs($soldAut - $scadNet) > max(50.0, $soldAut * 0.02);
 
             $rows[] = (object) [
                 'partner_name'   => $p?->denumire ?: $partId ?: '—',
@@ -183,8 +185,8 @@ class WinmentorSolduriPage extends Page
                 'net'            => round($scadNet, 2),
                 'net_recent'     => $netRecent,
                 'net_vechi'      => $netVechi,
+                'sold_real'      => $soldReal,
                 'sold_autoritar' => $soldAut,
-                'divergent'      => $divergent,
                 'are_eur'        => $areEur,
                 'docs'           => count($deschise),
                 'vechi'          => $primulDeschis,
@@ -194,7 +196,7 @@ class WinmentorSolduriPage extends Page
             ];
         }
 
-        usort($rows, fn ($a, $b) => $b->net_recent <=> $a->net_recent);
+        usort($rows, fn ($a, $b) => $b->sold_real <=> $a->sold_real);
 
         // Total AUTORITAR real (nu scadențarul umflat): suma soldurilor per partener,
         // excluzând conturile interne/dezactivate. Furnizor: negativ = de plătit; pozitiv = avans.
