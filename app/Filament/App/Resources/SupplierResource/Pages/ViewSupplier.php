@@ -73,6 +73,75 @@ class ViewSupplier extends ViewRecord
                         ->send();
                 }),
 
+            Actions\Action::make('reconciliereScadentar')
+                ->label('Reconciliere scadențar')
+                ->icon('heroicon-o-scale')
+                ->color('primary')
+                ->visible(fn (): bool => auth()->user()?->email === 'codrut@ikonia.ro' && SupplierResource::wmFinance($this->record) !== null)
+                ->modalHeading('Reconciliere scadențar furnizor')
+                ->modalDescription(function (): string {
+                    $f = SupplierResource::wmFinance($this->record);
+                    return 'Sold real (țintă): ' . ($f['sold'] ?? '—')
+                        . '. Bifate = rămân DESCHISE. Debifează facturile deja stinse (plătite/compensate) până când scadențarul deschis bate cu soldul real.';
+                })
+                ->modalSubmitActionLabel('Salvează reconcilierea')
+                ->fillForm(function (): array {
+                    $pids = SupplierResource::wmPartIds($this->record);
+                    $over = \Illuminate\Support\Facades\DB::table('winmentor_factura_overrides')
+                        ->whereIn('part_id', $pids)->where('directie', 'furnizor')->pluck('nr_factura')->all();
+                    $all = \Illuminate\Support\Facades\DB::table('winmentor_solduri_raw')
+                        ->where('directie', 'furnizor')->whereIn('part_id', $pids)
+                        ->whereRaw('ABS(rest_de_plata) >= 0.01')->pluck('nr_factura')->all();
+                    return ['deschise' => array_values(array_diff($all, $over))];
+                })
+                ->form([
+                    \Filament\Forms\Components\CheckboxList::make('deschise')
+                        ->label('Facturi în scadențar')
+                        ->options(function (): array {
+                            $pids = SupplierResource::wmPartIds($this->record);
+                            $rows = \Illuminate\Support\Facades\DB::table('winmentor_solduri_raw')
+                                ->where('directie', 'furnizor')->whereIn('part_id', $pids)
+                                ->whereRaw('ABS(rest_de_plata) >= 0.01')->orderByDesc('data_factura')->get();
+                            $opt = [];
+                            foreach ($rows as $r) {
+                                $opt[$r->nr_factura] = trim(($r->tip_document ?? '') . ' ' . $r->nr_factura)
+                                    . ' · ' . ($r->data_factura ? \Carbon\Carbon::parse($r->data_factura)->format('d.m.Y') : '')
+                                    . ' · ' . number_format((float) $r->rest_de_plata, 2, ',', '.') . ' lei';
+                            }
+                            return $opt;
+                        })
+                        ->searchable()
+                        ->bulkToggleable()
+                        ->columns(1),
+                ])
+                ->action(function (array $data): void {
+                    $pids     = SupplierResource::wmPartIds($this->record);
+                    $primary  = (string) $this->record->winmentor_id;
+                    $keepOpen = $data['deschise'] ?? [];
+                    $all = \Illuminate\Support\Facades\DB::table('winmentor_solduri_raw')
+                        ->where('directie', 'furnizor')->whereIn('part_id', $pids)
+                        ->whereRaw('ABS(rest_de_plata) >= 0.01')->pluck('nr_factura')->all();
+                    $marcate = 0;
+                    foreach ($all as $nr) {
+                        if (in_array($nr, $keepOpen, true)) {
+                            \Illuminate\Support\Facades\DB::table('winmentor_factura_overrides')
+                                ->whereIn('part_id', $pids)->where('nr_factura', $nr)->where('directie', 'furnizor')->delete();
+                        } else {
+                            \Illuminate\Support\Facades\DB::table('winmentor_factura_overrides')->updateOrInsert(
+                                ['part_id' => $primary, 'nr_factura' => $nr, 'directie' => 'furnizor'],
+                                ['action' => 'settled', 'source' => 'manual', 'user_id' => auth()->id(), 'updated_at' => now(), 'created_at' => now()]
+                            );
+                            $marcate++;
+                        }
+                    }
+                    \Illuminate\Support\Facades\Cache::forget("supp_wm_fin_{$this->record->id}");
+                    Notification::make()
+                        ->title('Reconciliere salvată')
+                        ->body("{$marcate} facturi marcate ca stinse. Scadențarul deschis a fost actualizat.")
+                        ->success()
+                        ->send();
+                }),
+
             Actions\Action::make('refreshFinance')
                 ->label('Reîmprospătează financiar')
                 ->icon('heroicon-o-arrow-path')

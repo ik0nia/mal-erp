@@ -784,7 +784,7 @@ class SupplierResource extends Resource
                 ]),
 
             \Filament\Schemas\Components\Section::make('Situație financiară (WinMentor)')
-                ->description(fn (\App\Models\Supplier $record): ?string => ($f = self::wmFinance($record)) ? (($f['sold_source'] ?? '') === 'live' ? 'Sold live din WinMentor' : 'Sold din date locale') . ($f['interval'] ? ' · scadențar actualizat ' . $f['interval'] : '') : null)
+                ->description(fn (\App\Models\Supplier $record): ?string => ($f = self::wmFinance($record)) ? (($f['sold_source'] ?? '') === 'live' ? 'Sold live din WinMentor' : 'Sold din date locale') . (($f['reconciled'] ?? true) ? ' · scadențar reconciliat ✓' : ' · ⚠ scadențar nereconciliat') . ($f['interval'] ? ' · ' . $f['interval'] : '') : null)
                 ->icon('heroicon-o-banknotes')
                 ->collapsible()
                 ->columns(4)
@@ -1131,7 +1131,15 @@ class SupplierResource extends Resource
                 return null;
             }
 
-            $facturi = $solduri->map(fn ($f) => [
+            // Marcaje de reconciliere locală: facturi WinMentor stinse/fantomă (nu le putem șterge din Mentor)
+            $overrides = DB::table('winmentor_factura_overrides')
+                ->whereIn('part_id', $pids)->where('directie', 'furnizor')
+                ->pluck('action', 'nr_factura')->all();
+
+            // Facturile DESCHISE = scadențarul minus cele marcate stinse/fantomă
+            $openRows = $solduri->reject(fn ($f) => isset($overrides[$f->nr_factura]))->values();
+
+            $facturi = $openRows->map(fn ($f) => [
                 'tip'          => $f->tip_document,
                 'nrDocument'   => $f->nr_factura,
                 'dataDocument' => $fmtDate($f->data_factura),
@@ -1152,15 +1160,11 @@ class SupplierResource extends Resource
 
             $ts = DB::table('winmentor_solduri_raw')->where('directie', 'furnizor')->whereIn('part_id', $pids)->max('fetched_at');
 
-            // Restanțe NETE (după avansuri): soldul e deja netat cu avansurile negative.
-            // Restanța = sold − facturile pozitive care NU au ajuns încă la scadență.
-            // Astfel avansurile reduc întâi datoria veche (restantă), iar restanța ≤ sold mereu.
-            // (numărarea brută a facturilor pozitive depășite umfla totalul peste sold — facturile
-            //  stinse prin „Avans …" apar ca linii separate, dar erau numărate integral.)
+            // Restanțe din facturile DESCHISE (după reconciliere): sold − facturile neajunse la scadență.
             $today   = \Carbon\Carbon::today();
-            $soldNum = (float) $solduri->sum('rest_de_plata');
+            $openSum = (float) $openRows->sum('rest_de_plata');
             $neajunse = 0.0; $nrRestante = 0;
-            foreach ($solduri as $f) {
+            foreach ($openRows as $f) {
                 $rest = (float) $f->rest_de_plata;
                 if ($rest <= 0.01) {
                     continue; // avansuri/stornouri (negative) — se reflectă deja în sold
@@ -1176,11 +1180,11 @@ class SupplierResource extends Resource
                     $neajunse += $rest;     // neajunsă la scadență (sau fără scadență)
                 }
             }
-            $restante = max(0.0, $soldNum - $neajunse);
+            $restante = max(0.0, $openSum - $neajunse);
 
-            // Sold AUTORITAR din getSoldPartener (per-partener, live) — scadențarul global
-            // /api/solduri/furnizori e nesigur pt unii furnizori (facturi închise nesincronizate;
-            // ex. Cemacon: local 636k vs real 36k). Fallback pe suma locală dacă Bridge-ul e picat.
+            // Sold AUTORITAR din getSoldPartener (per-partener, live) — ancora de adevăr.
+            // Scadențarul global /api/solduri/furnizori e nesigur (facturi stinse afișate deschise);
+            // reconcilierea = marchezi facturile stinse până când scadențarul deschis bate cu soldul.
             $authSold = null;
             try {
                 $bridge = app(\App\Services\Winmentor\WinmentorBridgeClient::class);
@@ -1191,28 +1195,52 @@ class SupplierResource extends Resource
             } catch (\Throwable $e) {
             }
 
-            // De plată = magnitudinea soldului (furnizor: negativ = datorăm)
-            $soldPlata = $authSold !== null ? abs($authSold) : abs($soldNum);
+            // De plată = magnitudinea soldului autoritar (furnizor: negativ = datorăm)
+            $soldPlata = $authSold !== null ? abs($authSold) : abs($openSum);
 
-            // Scadențarul local e „de încredere" doar dacă bate cu soldul autoritar (±10% sau ±50 lei)
-            $reliable = true;
+            // Reconciliat = scadențarul DESCHIS bate cu soldul autoritar (±10% sau ±50 lei)
+            $reconciled = true; $gap = 0.0;
             if ($authSold !== null) {
-                $reliable = abs(abs($soldNum) - abs($authSold)) <= max(50.0, abs($authSold) * 0.10);
+                $gap = abs($authSold) - abs($openSum);
+                $reconciled = abs($gap) <= max(50.0, abs($authSold) * 0.10);
+            }
+            $nrOverrides = count($overrides);
+
+            $warn = null;
+            if (! $reconciled) {
+                $warn = 'Scadențarul deschis (' . $fmtNum(abs($openSum)) . ' lei, ' . $openRows->count() . ' facturi'
+                    . ($nrOverrides ? ", {$nrOverrides} marcate stinse" : '')
+                    . ') NU bate cu soldul real (' . $fmtNum(abs($authSold ?? 0)) . ' lei). De reconciliat: '
+                    . $fmtNum(abs($gap)) . ' lei — marchează facturile deja stinse (butonul „Reconciliere scadențar").';
             }
 
             return [
-                'sold'        => $fmtNum($soldPlata) . ' lei',
-                'sold_source' => $authSold !== null ? 'live' : 'local',
-                'facturi'     => $reliable ? $facturi : [],
-                'plati'       => $plati,
-                'restante'    => $reliable ? $restante : 0.0,
-                'nr_restante' => $reliable ? $nrRestante : 0,
-                'restante_fmt'=> $fmtNum($reliable ? $restante : 0.0),
-                'reliable'    => $reliable,
-                'warn'        => $reliable ? null : ('Scadențarul local (' . $fmtNum(abs($soldNum)) . ' lei, ' . $solduri->count() . ' linii) diferă de soldul WinMentor — probabil facturi deja stinse nesincronizate. Se afișează doar soldul autoritar per-partener.'),
-                'interval'    => $ts ? \Carbon\Carbon::parse($ts)->format('d.m.Y H:i') : '',
+                'sold'         => $fmtNum($soldPlata) . ' lei',
+                'sold_source'  => $authSold !== null ? 'live' : 'local',
+                'facturi'      => $facturi,        // facturile DESCHISE (mereu afișate, ca să poată fi marcate)
+                'plati'        => $plati,
+                'restante'     => $restante,
+                'nr_restante'  => $nrRestante,
+                'restante_fmt' => $fmtNum($restante),
+                'reconciled'   => $reconciled,
+                'gap'          => $gap,
+                'gap_fmt'      => $fmtNum(abs($gap)),
+                'nr_overrides' => $nrOverrides,
+                'warn'         => $warn,
+                'interval'     => $ts ? \Carbon\Carbon::parse($ts)->format('d.m.Y H:i') : '',
             ];
         });
+    }
+
+    /** part_ids folosite pentru scadențar/plăți: wm_id + cod_extern din winmentor_parteneri. */
+    public static function wmPartIds(\App\Models\Supplier $record): array
+    {
+        $wm = trim((string) ($record->winmentor_id ?? ''));
+        if ($wm === '' || $wm === '0') {
+            return [];
+        }
+        $codEx = (string) (DB::table('winmentor_parteneri')->where('wm_id', $wm)->value('cod_extern') ?? '');
+        return array_values(array_filter(array_unique([$wm, $codEx])));
     }
 
     /** Parsează soldul din getSoldPartener („-35512,468" / „-8395" / „636.744,36") în float. */

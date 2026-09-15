@@ -576,6 +576,38 @@ class WinmentorBridgeClient
     }
 
     /**
+     * Plăți bancare/trezorerie pentru o factură furnizor (READ-ONLY). GET /api/plati/factura
+     * ⚠️ an/luna sunt ale FACTURII (nu ale plății). Returnează [['tip','data','suma'], ...].
+     * Nu modifică nimic în WinMentor.
+     */
+    public function getPlatiFactura(int $an, int $luna, int $nrFact, string $serie, string $partId): array
+    {
+        $this->selectFirma();
+        $this->setIdPartField('CodIntern');
+        $result = $this->get('/api/plati/factura', [
+            'an'     => $an,
+            'luna'   => $luna,
+            'nrFact' => $nrFact,
+            'serie'  => $serie,
+            'partId' => $partId,
+        ], timeout: 60);
+        $data = $result['data'] ?? [];
+        if (! is_array($data)) {
+            return [];
+        }
+        $out = [];
+        foreach ($data as $row) {
+            $f = explode(';', (string) $row); // pozitie;tipDoc;data;suma
+            $out[] = [
+                'tip'  => $f[1] ?? '',
+                'data' => $f[2] ?? '',
+                'suma' => (float) str_replace(',', '.', $f[3] ?? '0'),
+            ];
+        }
+        return $out;
+    }
+
+    /**
      * Încasări ale unui client pe interval (READ-ONLY). GET /api/incasari/ext
      * $id = wm_id (ID intern partener). Câmpuri: data, documentRef, suma, detaliiFacturi.
      */
