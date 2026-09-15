@@ -1210,7 +1210,7 @@ class SupplierResource extends Resource
                 $gap = abs($authSold) - abs($openSum);
                 $reconciled = abs($gap) <= max(50.0, abs($authSold) * 0.10);
             }
-            $nrOverrides = count($overrides);
+            $nrOverrides = count($overSet);
 
             $warn = null;
             if (! $authKnown) {
