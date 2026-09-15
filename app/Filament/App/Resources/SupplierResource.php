@@ -1276,10 +1276,11 @@ class SupplierResource extends Resource
         }
         $today = \Carbon\Carbon::today();
         $rows = '';
-        $totalDepasit = 0.0; $nrDepasit = 0;
+        $totalDepasit = 0.0; $nrDepasit = 0; $netTotal = 0.0;
         foreach ($facturi as $f) {
             $rest = (float) str_replace(['.', ','], ['', '.'], (string) ($f['rest'] ?? '0'));
             $neg  = $rest < 0;
+            $netTotal += $rest;
 
             // Scadență depășită? (doar pentru sume încă de plată, nu stornouri)
             $scad = (string) ($f['dataScadenta'] ?? '');
@@ -1306,12 +1307,16 @@ class SupplierResource extends Resource
                 . '<td style="padding:4px 8px;text-align:right;vertical-align:top;font-weight:' . ($depasit ? '700' : '400') . ';color:' . $restColor . '">' . e($f['rest'] ?? '') . ($neg ? ' ↩' : '') . '</td>'
                 . '</tr>';
         }
-        $foot = $nrDepasit > 0
-            ? '<tfoot><tr style="position:sticky;bottom:0;background:#fff5f5;border-top:1px solid #fecaca;font-weight:700;color:#b91c1c">'
-                . '<td style="padding:5px 8px" colspan="3">⚠ ' . $nrDepasit . ' facturi cu termen depășit</td>'
-                . '<td style="padding:5px 8px;text-align:right">' . e(number_format($totalDepasit, 2, ',', '.')) . '</td>'
-                . '</tr></tfoot>'
-            : '';
+        // Total NET (facturi − avansuri) = ce se datorează efectiv; brutul pozitivelor induce în eroare
+        $foot = '<tfoot>'
+            . '<tr style="position:sticky;bottom:0;background:#fff;border-top:2px solid #e5e7eb;font-weight:700">'
+                . '<td style="padding:5px 8px" colspan="3">Total de plată (net facturi − avansuri)</td>'
+                . '<td style="padding:5px 8px;text-align:right">' . e(number_format($netTotal, 2, ',', '.')) . ' lei</td>'
+            . '</tr>'
+            . ($nrDepasit > 0
+                ? '<tr style="background:#fff5f5;color:#b91c1c;font-size:12px"><td style="padding:4px 8px" colspan="4">⚠ ' . $nrDepasit . ' facturi cu termen depășit (brut ' . e(number_format($totalDepasit, 2, ',', '.')) . ' lei, înainte de avansuri)</td></tr>'
+                : '')
+            . '</tfoot>';
         return '<div style="max-height:320px;overflow-y:auto;border:1px solid #eceff3;border-radius:8px">'
             . '<table style="width:100%;border-collapse:collapse;font-size:13px">'
             . '<thead style="position:sticky;top:0;background:#fff;box-shadow:0 1px 0 #e5e7eb"><tr style="text-align:left">'
