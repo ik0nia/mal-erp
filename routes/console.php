@@ -267,6 +267,16 @@ Schedule::command('winmentor:fetch-solduri')
     ->withoutOverlapping(60)
     ->runInBackground();
 
+// WinMentor — auto-reconciliere scadențar furnizor: marchează facturile plătite bancar ca stinse.
+// Rulează DUPĂ fetch-solduri (care reîmprospătează scadențarul). Marcajele manuale persistă
+// (match pe nr_factura). Facturile stinse prin compensare rămân de marcat manual din fișă.
+Schedule::command('winmentor:reconcile-supplier-auto')
+    ->dailyAt('22:15')
+    ->timezone('Europe/Bucharest')
+    ->days([1, 2, 3, 4, 5, 6])
+    ->withoutOverlapping(180)
+    ->runInBackground();
+
 // WinMentor — partenerii noi devin automat clienți ERP (după sync-ul de parteneri de la 00:05).
 Schedule::command('winmentor:import-parteneri-clienti')
     ->dailyAt('00:20')

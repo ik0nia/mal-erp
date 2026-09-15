@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 class ReconcileSupplierAutoCommand extends Command
 {
     protected $signature = 'winmentor:reconcile-supplier-auto
-                            {wm : wm_id-ul furnizorului}
+                            {wm? : wm_id-ul furnizorului (gol = TOȚI furnizorii cu facturi deschise)}
                             {--dry-run : Doar raportează}';
 
     protected $description = 'Marchează automat facturile furnizor plătite (din plăți bancare) ca stinse';
@@ -28,12 +28,36 @@ class ReconcileSupplierAutoCommand extends Command
             return self::FAILURE;
         }
 
-        $wm = (string) $this->argument('wm');
+        $arg = (string) ($this->argument('wm') ?? '');
+        if ($arg !== '') {
+            $m = $this->processSupplier($bridge, $arg, true);
+            $this->info("Gata: {$m['verificate']} verificate, {$m['marcate']} marcate automat.");
+            return self::SUCCESS;
+        }
+
+        // TOȚI furnizorii cu facturi pozitive deschise în scadențarul furnizor
+        $wmIds = DB::table('winmentor_solduri_raw')->where('directie', 'furnizor')
+            ->where('rest_de_plata', '>', 0.01)->distinct()->pluck('part_id')->all();
+        $wmIds = Supplier::whereIn('winmentor_id', $wmIds)->pluck('winmentor_id')->all();
+
+        $this->info(count($wmIds) . ' furnizori de verificat...');
+        $totalMarcate = 0; $totalVerif = 0;
+        foreach ($wmIds as $wm) {
+            $m = $this->processSupplier($bridge, (string) $wm, false);
+            $totalMarcate += $m['marcate'];
+            $totalVerif += $m['verificate'];
+        }
+        $this->info("Gata: {$totalVerif} facturi verificate, {$totalMarcate} marcate automat ca stinse (plată bancară integrală).");
+        return self::SUCCESS;
+    }
+
+    /** @return array{verificate:int,marcate:int} */
+    private function processSupplier(WinmentorBridgeClient $bridge, string $wm, bool $verbose): array
+    {
         $supplier = Supplier::where('winmentor_id', $wm)->first();
         $codEx = (string) (DB::table('winmentor_parteneri')->where('wm_id', $wm)->value('cod_extern') ?? '');
         $pids = array_values(array_filter(array_unique([$wm, $codEx])));
 
-        // Facturi pozitive deschise (nemarcate deja)
         $over = DB::table('winmentor_factura_overrides')->whereIn('part_id', $pids)->where('directie', 'furnizor')->pluck('nr_factura')->all();
         $rows = DB::table('winmentor_solduri_raw')
             ->where('directie', 'furnizor')->whereIn('part_id', $pids)
@@ -41,7 +65,9 @@ class ReconcileSupplierAutoCommand extends Command
             ->whereNotIn('nr_factura', $over ?: ['__none__'])
             ->get();
 
-        $this->info("Verific {$rows->count()} facturi deschise pentru furnizorul {$wm}...");
+        if ($verbose) {
+            $this->info("Verific {$rows->count()} facturi deschise pentru furnizorul {$wm}...");
+        }
         $marcate = 0; $verificate = 0;
         foreach ($rows as $r) {
             $nrInt = (int) preg_replace('/\D/', '', (string) $r->nr_factura);
@@ -60,7 +86,9 @@ class ReconcileSupplierAutoCommand extends Command
             $valoare = (float) $r->valoare_factura;
             // Plătită integral: ≥99% din valoare ȘI în ±1 leu (conservator — să nu ascundem datorii reale)
             if ($platit > 0 && $platit >= $valoare * 0.99 && $platit >= $valoare - 1.0) {
-                $this->line("  ✓ {$r->nr_factura}: plătit " . number_format($platit, 2) . " / " . number_format($r->valoare_factura, 2) . " → stinsă");
+                if ($verbose) {
+                    $this->line("  ✓ {$r->nr_factura}: plătit " . number_format($platit, 2) . " / " . number_format($valoare, 2) . " → stinsă");
+                }
                 if (! $this->option('dry-run')) {
                     DB::table('winmentor_factura_overrides')->updateOrInsert(
                         ['part_id' => $wm, 'nr_factura' => $r->nr_factura, 'directie' => 'furnizor'],
@@ -71,10 +99,9 @@ class ReconcileSupplierAutoCommand extends Command
             }
         }
 
-        if (! $this->option('dry-run') && $supplier) {
+        if (! $this->option('dry-run') && $supplier && $marcate > 0) {
             Cache::forget("supp_wm_fin_{$supplier->id}");
         }
-        $this->info("Gata: {$verificate} verificate, {$marcate} marcate automat ca stinse (plată bancară integrală).");
-        return self::SUCCESS;
+        return ['verificate' => $verificate, 'marcate' => $marcate];
     }
 }
