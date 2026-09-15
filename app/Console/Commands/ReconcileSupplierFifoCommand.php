@@ -96,17 +96,22 @@ class ReconcileSupplierFifoCommand extends Command
             return ['status' => 'reconciled', 'name' => $name, 'marcate' => 0, 'gap' => abs(abs($totalOpen) - $target)];
         }
 
-        // Caut prefixul de rânduri NOI al căror net (abs) ≈ țintă; restul (vechi) = stinse.
-        $running = 0.0; $bestIdx = -1; $bestDiff = PHP_FLOAT_MAX;
+        // Caut prefixul de rânduri NOI care rămân DESCHISE. Constrângere logică: netul deschis
+        // NU poate depăși soldul (restanțele sunt o parte din sold). Deci UNDERSHOOT: cel mai mare
+        // prefix cu abs(net) <= țintă, cât mai aproape de țintă. Restul (mai vechi) = stinse.
+        $running = 0.0; $bestIdx = -1; $bestNet = 0.0;
         foreach ($rows as $i => $r) {
             $running += (float) $r->rest_de_plata;
-            $diff = abs(abs($running) - $target);
-            if ($diff < $bestDiff) { $bestDiff = $diff; $bestIdx = $i; }
+            if (abs($running) <= $target + 1.0 && abs($running) >= abs($bestNet)) {
+                $bestNet = $running;
+                $bestIdx = $i;
+            }
         }
+        $gapUnder = $target - abs($bestNet); // reziduu nealocat (>=0), <= sold
 
-        if ($bestDiff > $tol) {
-            // Nicio potrivire curată — lăsăm manual
-            return ['status' => 'skip', 'name' => $name, 'marcate' => 0, 'gap' => $bestDiff];
+        if ($gapUnder > $tol) {
+            // Nu se poate ajunge suficient de aproape fără a depăși soldul — lăsăm manual
+            return ['status' => 'skip', 'name' => $name, 'marcate' => 0, 'gap' => $gapUnder];
         }
 
         // Marchez ca stinse toate rândurile DE DUPĂ prefixul păstrat (cele mai vechi)
@@ -127,9 +132,9 @@ class ReconcileSupplierFifoCommand extends Command
             Cache::forget("supp_wm_fin_{$supplier->id}");
         }
         if ($verbose) {
-            $this->line("  {$name}: țintă " . number_format($target, 2) . ", păstrat " . ($bestIdx + 1) . " rânduri noi, marcate {$marcate} vechi (diff " . number_format($bestDiff, 2) . ")");
+            $this->line("  {$name}: țintă " . number_format($target, 2) . ", păstrat net " . number_format(abs($bestNet), 2) . " (" . ($bestIdx + 1) . " rânduri), marcate {$marcate} vechi, nealocat " . number_format($gapUnder, 2));
         }
-        return ['status' => 'reconciled', 'name' => $name, 'marcate' => $marcate, 'gap' => $bestDiff];
+        return ['status' => 'reconciled', 'name' => $name, 'marcate' => $marcate, 'gap' => $gapUnder];
     }
 
     private function parseSold(mixed $s): ?float

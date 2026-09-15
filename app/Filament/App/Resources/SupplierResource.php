@@ -1230,10 +1230,10 @@ class SupplierResource extends Resource
                 'validated'    => $authKnown,
                 'facturi'      => $facturi,        // facturile DESCHISE (mereu afișate, ca să poată fi marcate)
                 'plati'        => $plati,
-                // Restanțele au sens doar când scadențarul e reconciliat cu soldul; altfel vin din date fantomă
-                'restante'     => $isRec ? $restante : 0.0,
+                // Restanțele au sens doar când e reconciliat; ȘI nu pot depăși soldul total (sunt o parte din el)
+                'restante'     => $isRec ? min($restante, $soldPlata) : 0.0,
                 'nr_restante'  => $isRec ? $nrRestante : 0,
-                'restante_fmt' => $fmtNum($isRec ? $restante : 0.0),
+                'restante_fmt' => $fmtNum($isRec ? min($restante, $soldPlata) : 0.0),
                 'reconciled'   => $isRec,
                 'gap'          => $gap,
                 'gap_fmt'      => $fmtNum(abs($gap)),
