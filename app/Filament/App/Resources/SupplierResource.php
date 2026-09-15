@@ -1221,16 +1221,19 @@ class SupplierResource extends Resource
                     . $fmtNum(abs($gap)) . ' lei — marchează facturile deja stinse (butonul „Reconciliere scadențar").';
             }
 
+            $isRec = $authKnown && $reconciled;
+
             return [
                 'sold'         => $fmtNum($soldPlata) . ' lei',
                 'sold_source'  => $authKnown ? 'live' : 'local',
                 'validated'    => $authKnown,
                 'facturi'      => $facturi,        // facturile DESCHISE (mereu afișate, ca să poată fi marcate)
                 'plati'        => $plati,
-                'restante'     => $restante,
-                'nr_restante'  => $nrRestante,
-                'restante_fmt' => $fmtNum($restante),
-                'reconciled'   => $authKnown && $reconciled,
+                // Restanțele au sens doar când scadențarul e reconciliat cu soldul; altfel vin din date fantomă
+                'restante'     => $isRec ? $restante : 0.0,
+                'nr_restante'  => $isRec ? $nrRestante : 0,
+                'restante_fmt' => $fmtNum($isRec ? $restante : 0.0),
+                'reconciled'   => $isRec,
                 'gap'          => $gap,
                 'gap_fmt'      => $fmtNum(abs($gap)),
                 'nr_overrides' => $nrOverrides,
