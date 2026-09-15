@@ -546,14 +546,20 @@ class CustomerResource extends Resource
             $phones  = $ids['phones'];
             $emails  = $ids['emails'];
 
-            if (empty($partIds) && empty($phones) && empty($emails)) {
+            // Pentru matchingul comenzilor folosim DOAR wm_id-ul numeric puternic (fără zero în față).
+            // cod_extern-ul padded (0000...) e un id intern WinMentor nefiabil ca cheie de comandă:
+            // prinde comenzi ale ALTOR clienți. Caz real: DEMCON #119 arăta 3 comenzi B2C străine
+            // (persoane fizice diferite) legate doar prin cod_extern 0000000026673 (card duplicat).
+            $orderPartIds = array_values(array_filter($partIds, fn ($p) => $p !== '' && $p[0] !== '0'));
+
+            if (empty($orderPartIds) && empty($phones) && empty($emails)) {
                 return [];
             }
 
             $orders = \App\Models\WooOrder::query()
-                ->where(function ($w) use ($partIds, $phones, $emails) {
-                    if ($partIds) {
-                        $w->orWhereIn('winmentor_client_id', $partIds);
+                ->where(function ($w) use ($orderPartIds, $phones, $emails) {
+                    if ($orderPartIds) {
+                        $w->orWhereIn('winmentor_client_id', $orderPartIds);
                     }
                     if ($phones) {
                         $w->orWhereRaw("RIGHT(REGEXP_REPLACE(JSON_UNQUOTE(JSON_EXTRACT(billing, '$.phone')), '[^0-9]', ''), 9) IN (" . implode(',', array_fill(0, count($phones), '?')) . ')', $phones);
