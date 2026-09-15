@@ -421,7 +421,7 @@ class CustomerResource extends Resource
                     ->schema([
                         Section::make('Facturi de încasat')
                             ->columnSpan(1)
-                            ->visible(fn (Customer $record): bool => ! empty(self::wmFinanceCached($record)['facturi'] ?? []))
+                            ->visible(fn (Customer $record): bool => ! empty(self::wmFinanceCached($record)['facturi'] ?? []) && auth()->user()?->email === 'codrut@ikonia.ro')
                             ->schema([
                                 TextEntry::make('wm_facturi')->hiddenLabel()->html()->columnSpanFull()
                                     ->getStateUsing(fn (Customer $record): string => self::facturiHtml(self::wmFinanceCached($record)['facturi'] ?? [], $record)),
@@ -430,7 +430,7 @@ class CustomerResource extends Resource
                         Section::make('Încasări prin bancă')
                             ->columnSpan(1)
                             ->description(fn (Customer $record): ?string => trim((self::wmFinanceCached($record)['interval'] ?? '') . ' · doar din jurnalul de bancă/trezorerie (nu numerar/card)', ' ·'))
-                            ->visible(fn (Customer $record): bool => self::wmFinanceCached($record) !== null && empty(self::wmFinanceCached($record)['eroare']))
+                            ->visible(fn (Customer $record): bool => self::wmFinanceCached($record) !== null && empty(self::wmFinanceCached($record)['eroare']) && auth()->user()?->email === 'codrut@ikonia.ro')
                             ->schema([
                                 TextEntry::make('wm_incasari')->hiddenLabel()->html()->columnSpanFull()
                                     ->getStateUsing(fn (Customer $record): string => self::incasariHtml(self::wmFinanceCached($record)['incasari'] ?? [])),
@@ -509,7 +509,8 @@ class CustomerResource extends Resource
                                 return 'gray';
                             }
                             return empty($fin['sold']) ? 'gray' : 'warning';
-                        }),
+                        })
+                        ->visible(fn (Customer $record): bool => auth()->user()?->email === 'codrut@ikonia.ro'),
                     TextEntry::make('wm_hint')->hiddenLabel()
                         ->getStateUsing(fn (): string => 'Apasă „Încarcă date WinMentor" (sus) pentru sold și facturi.')
                         ->visible(fn (Customer $record): bool => self::wmLink($record)['asociat'] && self::wmFinanceCached($record) === null)

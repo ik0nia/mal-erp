@@ -564,25 +564,6 @@ class SupplierResource extends Resource
                         ->color(fn (\App\Models\Supplier $record): string => self::scorecard($record)['rejectRate'] > 10 ? 'danger' : 'gray'),
                 ]),
 
-            \Filament\Schemas\Components\Section::make('Situație financiară (WinMentor)')
-                ->description(fn (\App\Models\Supplier $record): ?string => ($f = self::wmFinance($record)) ? trim(($f['interval'] ? 'Actualizat ' . $f['interval'] . ' · ' : '') . 'date locale, read-only', ' ·') : null)
-                ->columns(3)
-                ->columnSpanFull()
-                ->visible(fn (\App\Models\Supplier $record): bool => self::wmFinance($record) !== null)
-                ->schema([
-                    Infolists\Components\TextEntry::make('wm_sold_furnizor')->label('Sold de plată')
-                        ->getStateUsing(fn (\App\Models\Supplier $record): string => self::wmFinance($record)['sold'] ?? '—')
-                        ->badge()->color('warning')->columnSpan(1),
-                    Infolists\Components\TextEntry::make('wm_id_furnizor')->label('ID WinMentor')
-                        ->getStateUsing(fn (\App\Models\Supplier $record): string => (string) ($record->winmentor_id ?: '—'))->columnSpan(1),
-                    Infolists\Components\TextEntry::make('wm_nr_facturi_plata')->label('Facturi de plată')
-                        ->getStateUsing(fn (\App\Models\Supplier $record): string => (string) count(self::wmFinance($record)['facturi'] ?? []))->columnSpan(1),
-                    Infolists\Components\TextEntry::make('wm_facturi_plata')->label('Facturi de plată (scadențar)')->html()->columnSpanFull()
-                        ->getStateUsing(fn (\App\Models\Supplier $record): string => self::facturiPlataHtml(self::wmFinance($record)['facturi'] ?? [])),
-                    Infolists\Components\TextEntry::make('wm_plati')->label('Plăți efectuate')->html()->columnSpanFull()
-                        ->getStateUsing(fn (\App\Models\Supplier $record): string => self::platiHtml(self::wmFinance($record)['plati'] ?? [])),
-                ]),
-
             \Filament\Schemas\Components\Section::make('Informații generale')
                 ->columns(2)
                 ->schema([
@@ -800,6 +781,36 @@ class SupplierResource extends Resource
                         ]),
 
                     ])->columnSpanFull(),
+                ]),
+
+            \Filament\Schemas\Components\Section::make('Situație financiară (WinMentor)')
+                ->description(fn (\App\Models\Supplier $record): ?string => ($f = self::wmFinance($record)) ? (($f['sold_source'] ?? '') === 'live' ? 'Sold live din WinMentor' : 'Sold din date locale') . ($f['interval'] ? ' · scadențar actualizat ' . $f['interval'] : '') : null)
+                ->icon('heroicon-o-banknotes')
+                ->collapsible()
+                ->columns(4)
+                ->columnSpanFull()
+                ->visible(fn (\App\Models\Supplier $record): bool => self::wmFinance($record) !== null && auth()->user()?->email === 'codrut@ikonia.ro')
+                ->schema([
+                    Infolists\Components\TextEntry::make('wm_sold_furnizor')->label('Sold de plată')
+                        ->getStateUsing(fn (\App\Models\Supplier $record): string => self::wmFinance($record)['sold'] ?? '—')
+                        ->badge()->color('warning')->columnSpan(1),
+                    Infolists\Components\TextEntry::make('wm_restante')->label('Restanțe (peste scadență)')
+                        ->getStateUsing(fn (\App\Models\Supplier $record): string => ($f = self::wmFinance($record)) ? $f['restante_fmt'] . ' lei · ' . $f['nr_restante'] . ' fact.' : '—')
+                        ->badge()->color('danger')->icon('heroicon-o-exclamation-triangle')
+                        ->visible(fn (\App\Models\Supplier $record): bool => (self::wmFinance($record)['restante'] ?? 0) > 0.01)
+                        ->columnSpan(1),
+                    Infolists\Components\TextEntry::make('wm_id_furnizor')->label('ID WinMentor')
+                        ->getStateUsing(fn (\App\Models\Supplier $record): string => (string) ($record->winmentor_id ?: '—'))->columnSpan(1),
+                    Infolists\Components\TextEntry::make('wm_nr_facturi_plata')->label('Facturi de plată')
+                        ->getStateUsing(fn (\App\Models\Supplier $record): string => (string) count(self::wmFinance($record)['facturi'] ?? []))->columnSpan(1),
+                    Infolists\Components\TextEntry::make('wm_warn')->hiddenLabel()->columnSpanFull()
+                        ->getStateUsing(fn (\App\Models\Supplier $record): ?string => self::wmFinance($record)['warn'] ?? null)
+                        ->visible(fn (\App\Models\Supplier $record): bool => ! empty(self::wmFinance($record)['warn'] ?? null))
+                        ->badge()->color('danger')->icon('heroicon-o-exclamation-triangle'),
+                    Infolists\Components\TextEntry::make('wm_facturi_plata')->label('Facturi de plată (scadențar)')->html()->columnSpanFull()
+                        ->getStateUsing(fn (\App\Models\Supplier $record): string => self::facturiPlataHtml(self::wmFinance($record)['facturi'] ?? [])),
+                    Infolists\Components\TextEntry::make('wm_plati')->label('Plăți efectuate')->html()->columnSpanFull()
+                        ->getStateUsing(fn (\App\Models\Supplier $record): string => self::platiHtml(self::wmFinance($record)['plati'] ?? [])),
                 ]),
 
             \Filament\Schemas\Components\Section::make('Persoane de contact')
@@ -1141,13 +1152,81 @@ class SupplierResource extends Resource
 
             $ts = DB::table('winmentor_solduri_raw')->where('directie', 'furnizor')->whereIn('part_id', $pids)->max('fetched_at');
 
+            // Restanțe NETE (după avansuri): soldul e deja netat cu avansurile negative.
+            // Restanța = sold − facturile pozitive care NU au ajuns încă la scadență.
+            // Astfel avansurile reduc întâi datoria veche (restantă), iar restanța ≤ sold mereu.
+            // (numărarea brută a facturilor pozitive depășite umfla totalul peste sold — facturile
+            //  stinse prin „Avans …" apar ca linii separate, dar erau numărate integral.)
+            $today   = \Carbon\Carbon::today();
+            $soldNum = (float) $solduri->sum('rest_de_plata');
+            $neajunse = 0.0; $nrRestante = 0;
+            foreach ($solduri as $f) {
+                $rest = (float) $f->rest_de_plata;
+                if ($rest <= 0.01) {
+                    continue; // avansuri/stornouri (negative) — se reflectă deja în sold
+                }
+                $due = null;
+                if ($f->termen_plata) {
+                    try { $due = \Carbon\Carbon::parse($f->termen_plata)->startOfDay(); } catch (\Throwable $e) {
+                    }
+                }
+                if ($due !== null && $due->lt($today)) {
+                    $nrRestante++;          // factură cu scadență depășită
+                } else {
+                    $neajunse += $rest;     // neajunsă la scadență (sau fără scadență)
+                }
+            }
+            $restante = max(0.0, $soldNum - $neajunse);
+
+            // Sold AUTORITAR din getSoldPartener (per-partener, live) — scadențarul global
+            // /api/solduri/furnizori e nesigur pt unii furnizori (facturi închise nesincronizate;
+            // ex. Cemacon: local 636k vs real 36k). Fallback pe suma locală dacă Bridge-ul e picat.
+            $authSold = null;
+            try {
+                $bridge = app(\App\Services\Winmentor\WinmentorBridgeClient::class);
+                if ($bridge->isReachable()) {
+                    $r = $bridge->getSoldPartener($wm);
+                    $authSold = self::parseWmSold($r['sold'] ?? null);
+                }
+            } catch (\Throwable $e) {
+            }
+
+            // De plată = magnitudinea soldului (furnizor: negativ = datorăm)
+            $soldPlata = $authSold !== null ? abs($authSold) : abs($soldNum);
+
+            // Scadențarul local e „de încredere" doar dacă bate cu soldul autoritar (±10% sau ±50 lei)
+            $reliable = true;
+            if ($authSold !== null) {
+                $reliable = abs(abs($soldNum) - abs($authSold)) <= max(50.0, abs($authSold) * 0.10);
+            }
+
             return [
-                'sold'     => $fmtNum($solduri->sum('rest_de_plata')) . ' lei',
-                'facturi'  => $facturi,
-                'plati'    => $plati,
-                'interval' => $ts ? \Carbon\Carbon::parse($ts)->format('d.m.Y H:i') : '',
+                'sold'        => $fmtNum($soldPlata) . ' lei',
+                'sold_source' => $authSold !== null ? 'live' : 'local',
+                'facturi'     => $reliable ? $facturi : [],
+                'plati'       => $plati,
+                'restante'    => $reliable ? $restante : 0.0,
+                'nr_restante' => $reliable ? $nrRestante : 0,
+                'restante_fmt'=> $fmtNum($reliable ? $restante : 0.0),
+                'reliable'    => $reliable,
+                'warn'        => $reliable ? null : ('Scadențarul local (' . $fmtNum(abs($soldNum)) . ' lei, ' . $solduri->count() . ' linii) diferă de soldul WinMentor — probabil facturi deja stinse nesincronizate. Se afișează doar soldul autoritar per-partener.'),
+                'interval'    => $ts ? \Carbon\Carbon::parse($ts)->format('d.m.Y H:i') : '',
             ];
         });
+    }
+
+    /** Parsează soldul din getSoldPartener („-35512,468" / „-8395" / „636.744,36") în float. */
+    protected static function parseWmSold(mixed $s): ?float
+    {
+        $s = trim((string) $s);
+        if ($s === '') {
+            return null;
+        }
+        if (str_contains($s, ',') && str_contains($s, '.')) {
+            $s = str_replace('.', '', $s); // separator de mii
+        }
+        $s = str_replace(',', '.', $s);
+        return is_numeric($s) ? (float) $s : null;
     }
 
     protected static function facturiPlataHtml(array $facturi): string
@@ -1155,23 +1234,50 @@ class SupplierResource extends Resource
         if (empty($facturi)) {
             return '<p class="text-sm text-gray-500">Nu sunt facturi de plată.</p>';
         }
+        $today = \Carbon\Carbon::today();
         $rows = '';
+        $totalDepasit = 0.0; $nrDepasit = 0;
         foreach ($facturi as $f) {
             $rest = (float) str_replace(['.', ','], ['', '.'], (string) ($f['rest'] ?? '0'));
             $neg  = $rest < 0;
-            $rows .= '<tr>'
+
+            // Scadență depășită? (doar pentru sume încă de plată, nu stornouri)
+            $scad = (string) ($f['dataScadenta'] ?? '');
+            $depasit = false; $zile = 0;
+            if ($scad !== '' && $rest > 0.01) {
+                try {
+                    $d = \Carbon\Carbon::createFromFormat('d.m.Y', $scad)->startOfDay();
+                    if ($d->lt($today)) { $depasit = true; $zile = (int) $d->diffInDays($today); }
+                } catch (\Throwable $e) {
+                }
+            }
+            if ($depasit) { $totalDepasit += $rest; $nrDepasit++; }
+
+            $scadCell = e($scad);
+            if ($depasit) {
+                $scadCell = '<span style="color:#b91c1c;font-weight:700">' . e($scad) . '</span>'
+                    . ' <span style="display:inline-block;background:#fee2e2;color:#b91c1c;border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700;white-space:nowrap">⚠ ' . $zile . ' z întârziere</span>';
+            }
+            $restColor = ($neg || $depasit) ? '#b91c1c' : '#111';
+            $rows .= '<tr style="' . ($depasit ? 'background:#fff5f5' : '') . '">'
                 . '<td style="padding:4px 8px;vertical-align:top">' . e(trim(($f['tip'] ?? '') . ' ' . ($f['nrDocument'] ?? ''))) . '</td>'
                 . '<td style="padding:4px 8px;vertical-align:top">' . e($f['dataDocument'] ?? '') . '</td>'
-                . '<td style="padding:4px 8px;vertical-align:top">' . e($f['dataScadenta'] ?? '') . '</td>'
-                . '<td style="padding:4px 8px;text-align:right;vertical-align:top;color:' . ($neg ? '#b91c1c' : '#111') . '">' . e($f['rest'] ?? '') . ($neg ? ' ↩' : '') . '</td>'
+                . '<td style="padding:4px 8px;vertical-align:top">' . $scadCell . '</td>'
+                . '<td style="padding:4px 8px;text-align:right;vertical-align:top;font-weight:' . ($depasit ? '700' : '400') . ';color:' . $restColor . '">' . e($f['rest'] ?? '') . ($neg ? ' ↩' : '') . '</td>'
                 . '</tr>';
         }
+        $foot = $nrDepasit > 0
+            ? '<tfoot><tr style="position:sticky;bottom:0;background:#fff5f5;border-top:1px solid #fecaca;font-weight:700;color:#b91c1c">'
+                . '<td style="padding:5px 8px" colspan="3">⚠ ' . $nrDepasit . ' facturi cu termen depășit</td>'
+                . '<td style="padding:5px 8px;text-align:right">' . e(number_format($totalDepasit, 2, ',', '.')) . '</td>'
+                . '</tr></tfoot>'
+            : '';
         return '<div style="max-height:320px;overflow-y:auto;border:1px solid #eceff3;border-radius:8px">'
             . '<table style="width:100%;border-collapse:collapse;font-size:13px">'
             . '<thead style="position:sticky;top:0;background:#fff;box-shadow:0 1px 0 #e5e7eb"><tr style="text-align:left">'
             . '<th style="padding:4px 8px">Document</th><th style="padding:4px 8px">Dată</th>'
             . '<th style="padding:4px 8px">Scadență</th><th style="padding:4px 8px;text-align:right">Rest de plată</th>'
-            . '</tr></thead><tbody>' . $rows . '</tbody></table></div>';
+            . '</tr></thead><tbody>' . $rows . '</tbody>' . $foot . '</table></div>';
     }
 
     protected static function platiHtml(array $plati): string

@@ -73,6 +73,20 @@ class ViewSupplier extends ViewRecord
                         ->send();
                 }),
 
+            Actions\Action::make('refreshFinance')
+                ->label('Reîmprospătează financiar')
+                ->icon('heroicon-o-arrow-path')
+                ->color('gray')
+                ->visible(fn (): bool => auth()->user()?->email === 'codrut@ikonia.ro')
+                ->action(function (): void {
+                    \Illuminate\Support\Facades\Cache::forget("supp_wm_fin_{$this->record->id}");
+                    Notification::make()
+                        ->title('Date financiare reîmprospătate')
+                        ->body('Soldul live din WinMentor a fost reîncărcat.')
+                        ->success()
+                        ->send();
+                }),
+
             Actions\EditAction::make(),
         ];
     }
