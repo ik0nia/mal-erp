@@ -784,7 +784,7 @@ class SupplierResource extends Resource
                 ]),
 
             \Filament\Schemas\Components\Section::make('Situație financiară (WinMentor)')
-                ->description(fn (\App\Models\Supplier $record): ?string => ($f = self::wmFinance($record)) ? (($f['sold_source'] ?? '') === 'live' ? 'Sold live din WinMentor' : 'Sold din date locale') . (($f['reconciled'] ?? true) ? ' · scadențar reconciliat ✓' : ' · ⚠ scadențar nereconciliat') . ($f['interval'] ? ' · ' . $f['interval'] : '') : null)
+                ->description(fn (\App\Models\Supplier $record): ?string => ($f = self::wmFinance($record)) ? (! ($f['validated'] ?? false) ? '⚠ sold NEVALIDAT (Bridge indisponibil)' : ('Sold live din WinMentor' . (($f['reconciled'] ?? false) ? ' · scadențar reconciliat ✓' : ' · ⚠ scadențar nereconciliat'))) . ($f['interval'] ? ' · ' . $f['interval'] : '') : null)
                 ->icon('heroicon-o-banknotes')
                 ->collapsible()
                 ->columns(4)
@@ -1185,44 +1185,52 @@ class SupplierResource extends Resource
             // Sold AUTORITAR din getSoldPartener (per-partener, live) — ancora de adevăr.
             // Scadențarul global /api/solduri/furnizori e nesigur (facturi stinse afișate deschise);
             // reconcilierea = marchezi facturile stinse până când scadențarul deschis bate cu soldul.
-            $authSold = null;
+            // authKnown = apelul a REUȘIT (chiar dacă răspunsul e gol = sold ZERO).
+            // ⚠️ getSoldPartener întoarce [] pentru parteneri cu sold 0 → tratăm ca 0, NU ca „necunoscut"
+            // (altfel afișam suma locală fantomă ca și corectă — ex. BUDMAT local 287 dar real 0).
+            $authSold = null; $authKnown = false;
             try {
                 $bridge = app(\App\Services\Winmentor\WinmentorBridgeClient::class);
                 if ($bridge->isReachable()) {
                     $r = $bridge->getSoldPartener($wm);
-                    $authSold = self::parseWmSold($r['sold'] ?? null);
+                    $authKnown = true;
+                    $authSold  = self::parseWmSold($r['sold'] ?? null) ?? 0.0;
                 }
             } catch (\Throwable $e) {
+                $authKnown = false;
             }
 
-            // De plată = magnitudinea soldului autoritar (furnizor: negativ = datorăm)
-            $soldPlata = $authSold !== null ? abs($authSold) : abs($openSum);
+            // De plată = magnitudinea soldului autoritar (furnizor: negativ = datorăm); fallback local doar dacă Bridge picat
+            $soldPlata = $authKnown ? abs($authSold) : abs($openSum);
 
             // Reconciliat = scadențarul DESCHIS bate cu soldul autoritar (±10% sau ±50 lei)
             $reconciled = true; $gap = 0.0;
-            if ($authSold !== null) {
+            if ($authKnown) {
                 $gap = abs($authSold) - abs($openSum);
                 $reconciled = abs($gap) <= max(50.0, abs($authSold) * 0.10);
             }
             $nrOverrides = count($overrides);
 
             $warn = null;
-            if (! $reconciled) {
+            if (! $authKnown) {
+                $warn = 'Sold NEVALIDAT — WinMentor Bridge indisponibil la încărcare. Afișăm suma din scadențarul local, care poate fi eronată. Apasă „Reîmprospătează financiar".';
+            } elseif (! $reconciled) {
                 $warn = 'Scadențarul deschis (' . $fmtNum(abs($openSum)) . ' lei, ' . $openRows->count() . ' facturi'
                     . ($nrOverrides ? ", {$nrOverrides} marcate stinse" : '')
-                    . ') NU bate cu soldul real (' . $fmtNum(abs($authSold ?? 0)) . ' lei). De reconciliat: '
+                    . ') NU bate cu soldul real (' . $fmtNum(abs($authSold)) . ' lei). De reconciliat: '
                     . $fmtNum(abs($gap)) . ' lei — marchează facturile deja stinse (butonul „Reconciliere scadențar").';
             }
 
             return [
                 'sold'         => $fmtNum($soldPlata) . ' lei',
-                'sold_source'  => $authSold !== null ? 'live' : 'local',
+                'sold_source'  => $authKnown ? 'live' : 'local',
+                'validated'    => $authKnown,
                 'facturi'      => $facturi,        // facturile DESCHISE (mereu afișate, ca să poată fi marcate)
                 'plati'        => $plati,
                 'restante'     => $restante,
                 'nr_restante'  => $nrRestante,
                 'restante_fmt' => $fmtNum($restante),
-                'reconciled'   => $reconciled,
+                'reconciled'   => $authKnown && $reconciled,
                 'gap'          => $gap,
                 'gap_fmt'      => $fmtNum(abs($gap)),
                 'nr_overrides' => $nrOverrides,
