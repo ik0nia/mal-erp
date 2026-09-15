@@ -564,6 +564,25 @@ class SupplierResource extends Resource
                         ->color(fn (\App\Models\Supplier $record): string => self::scorecard($record)['rejectRate'] > 10 ? 'danger' : 'gray'),
                 ]),
 
+            \Filament\Schemas\Components\Section::make('Situație financiară (WinMentor)')
+                ->description(fn (\App\Models\Supplier $record): ?string => ($f = self::wmFinance($record)) ? trim(($f['interval'] ? 'Actualizat ' . $f['interval'] . ' · ' : '') . 'date locale, read-only', ' ·') : null)
+                ->columns(3)
+                ->columnSpanFull()
+                ->visible(fn (\App\Models\Supplier $record): bool => self::wmFinance($record) !== null)
+                ->schema([
+                    Infolists\Components\TextEntry::make('wm_sold_furnizor')->label('Sold de plată')
+                        ->getStateUsing(fn (\App\Models\Supplier $record): string => self::wmFinance($record)['sold'] ?? '—')
+                        ->badge()->color('warning')->columnSpan(1),
+                    Infolists\Components\TextEntry::make('wm_id_furnizor')->label('ID WinMentor')
+                        ->getStateUsing(fn (\App\Models\Supplier $record): string => (string) ($record->winmentor_id ?: '—'))->columnSpan(1),
+                    Infolists\Components\TextEntry::make('wm_nr_facturi_plata')->label('Facturi de plată')
+                        ->getStateUsing(fn (\App\Models\Supplier $record): string => (string) count(self::wmFinance($record)['facturi'] ?? []))->columnSpan(1),
+                    Infolists\Components\TextEntry::make('wm_facturi_plata')->label('Facturi de plată (scadențar)')->html()->columnSpanFull()
+                        ->getStateUsing(fn (\App\Models\Supplier $record): string => self::facturiPlataHtml(self::wmFinance($record)['facturi'] ?? [])),
+                    Infolists\Components\TextEntry::make('wm_plati')->label('Plăți efectuate')->html()->columnSpanFull()
+                        ->getStateUsing(fn (\App\Models\Supplier $record): string => self::platiHtml(self::wmFinance($record)['plati'] ?? [])),
+                ]),
+
             \Filament\Schemas\Components\Section::make('Informații generale')
                 ->columns(2)
                 ->schema([
@@ -1067,6 +1086,120 @@ class SupplierResource extends Resource
             ContactsRelationManager::class,
             ProductsRelationManager::class,
         ];
+    }
+
+    /**
+     * Situație financiară furnizor din tabelele WinMentor sincronizate LOCAL (read-only,
+     * fără COM la randare) — sold de plată, scadențar și plăți. Oglindă a fișei client.
+     */
+    public static function wmFinance(\App\Models\Supplier $record): ?array
+    {
+        return \Illuminate\Support\Facades\Cache::remember("supp_wm_fin_{$record->id}", 600, function () use ($record) {
+            $wm = trim((string) ($record->winmentor_id ?? ''));
+            if ($wm === '' || $wm === '0') {
+                return null;
+            }
+            $codEx = (string) (DB::table('winmentor_parteneri')->where('wm_id', $wm)->value('cod_extern') ?? '');
+            $pids  = array_values(array_filter(array_unique([$wm, $codEx])));
+            if (empty($pids)) {
+                return null;
+            }
+
+            $fmtDate = fn ($d) => $d ? \Carbon\Carbon::parse($d)->format('d.m.Y') : '';
+            $fmtNum  = fn ($v) => number_format((float) $v, 2, ',', '.');
+
+            $solduri = DB::table('winmentor_solduri_raw')
+                ->where('directie', 'furnizor')
+                ->whereIn('part_id', $pids)
+                ->whereRaw('ABS(rest_de_plata) >= 0.01')
+                ->orderByDesc('data_factura')
+                ->get();
+
+            // Nimic sincronizat pentru acest furnizor → nu afișăm secțiunea
+            if ($solduri->isEmpty() && DB::table('winmentor_plati_raw')->whereIn('part_id', $pids)->doesntExist()) {
+                return null;
+            }
+
+            $facturi = $solduri->map(fn ($f) => [
+                'tip'          => $f->tip_document,
+                'nrDocument'   => $f->nr_factura,
+                'dataDocument' => $fmtDate($f->data_factura),
+                'rest'         => $fmtNum($f->rest_de_plata),
+                'dataScadenta' => $fmtDate($f->termen_plata),
+            ])->values()->all();
+
+            $plati = DB::table('winmentor_plati_raw')
+                ->whereIn('part_id', $pids)
+                ->orderByDesc('data')
+                ->limit(60)
+                ->get()
+                ->map(fn ($p) => [
+                    'data'        => $fmtDate($p->data),
+                    'documentRef' => $p->document_ref,
+                    'suma'        => $fmtNum($p->suma),
+                ])->all();
+
+            $ts = DB::table('winmentor_solduri_raw')->where('directie', 'furnizor')->whereIn('part_id', $pids)->max('fetched_at');
+
+            return [
+                'sold'     => $fmtNum($solduri->sum('rest_de_plata')) . ' lei',
+                'facturi'  => $facturi,
+                'plati'    => $plati,
+                'interval' => $ts ? \Carbon\Carbon::parse($ts)->format('d.m.Y H:i') : '',
+            ];
+        });
+    }
+
+    protected static function facturiPlataHtml(array $facturi): string
+    {
+        if (empty($facturi)) {
+            return '<p class="text-sm text-gray-500">Nu sunt facturi de plată.</p>';
+        }
+        $rows = '';
+        foreach ($facturi as $f) {
+            $rest = (float) str_replace(['.', ','], ['', '.'], (string) ($f['rest'] ?? '0'));
+            $neg  = $rest < 0;
+            $rows .= '<tr>'
+                . '<td style="padding:4px 8px;vertical-align:top">' . e(trim(($f['tip'] ?? '') . ' ' . ($f['nrDocument'] ?? ''))) . '</td>'
+                . '<td style="padding:4px 8px;vertical-align:top">' . e($f['dataDocument'] ?? '') . '</td>'
+                . '<td style="padding:4px 8px;vertical-align:top">' . e($f['dataScadenta'] ?? '') . '</td>'
+                . '<td style="padding:4px 8px;text-align:right;vertical-align:top;color:' . ($neg ? '#b91c1c' : '#111') . '">' . e($f['rest'] ?? '') . ($neg ? ' ↩' : '') . '</td>'
+                . '</tr>';
+        }
+        return '<div style="max-height:320px;overflow-y:auto;border:1px solid #eceff3;border-radius:8px">'
+            . '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+            . '<thead style="position:sticky;top:0;background:#fff;box-shadow:0 1px 0 #e5e7eb"><tr style="text-align:left">'
+            . '<th style="padding:4px 8px">Document</th><th style="padding:4px 8px">Dată</th>'
+            . '<th style="padding:4px 8px">Scadență</th><th style="padding:4px 8px;text-align:right">Rest de plată</th>'
+            . '</tr></thead><tbody>' . $rows . '</tbody></table></div>';
+    }
+
+    protected static function platiHtml(array $plati): string
+    {
+        if (empty($plati)) {
+            return '<p class="text-sm text-gray-500">Nu sunt plăți înregistrate.</p>';
+        }
+        $rows = '';
+        $total = 0.0;
+        foreach ($plati as $p) {
+            $total += (float) str_replace([' ', '.', ','], ['', '', '.'], (string) ($p['suma'] ?? ''));
+            $rows .= '<tr>'
+                . '<td style="padding:4px 8px">' . e($p['data'] ?? '') . '</td>'
+                . '<td style="padding:4px 8px">' . e($p['documentRef'] ?? '') . '</td>'
+                . '<td style="padding:4px 8px;text-align:right">' . e($p['suma'] ?? '') . '</td>'
+                . '</tr>';
+        }
+        $totalFmt = number_format($total, 2, ',', '.');
+        return '<div style="max-height:320px;overflow-y:auto;border:1px solid #eceff3;border-radius:8px">'
+            . '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+            . '<thead style="position:sticky;top:0;background:#fff;box-shadow:0 1px 0 #e5e7eb"><tr style="text-align:left">'
+            . '<th style="padding:4px 8px">Dată</th><th style="padding:4px 8px">Document</th>'
+            . '<th style="padding:4px 8px;text-align:right">Sumă</th>'
+            . '</tr></thead><tbody>' . $rows . '</tbody>'
+            . '<tfoot><tr style="position:sticky;bottom:0;background:#fff;border-top:1px solid #ddd;font-weight:600">'
+            . '<td style="padding:4px 8px" colspan="2">Total plăți (' . count($plati) . ')</td>'
+            . '<td style="padding:4px 8px;text-align:right">' . e($totalFmt) . '</td>'
+            . '</tr></tfoot></table></div>';
     }
 
     public static function getPages(): array
