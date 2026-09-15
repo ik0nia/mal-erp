@@ -149,6 +149,7 @@ class UpdateToyaDimensionsCommand extends Command
         return ($json['success'] ?? false) ? ($json['data'] ?? null) : null;
     }
 
+    /** ⚠️ Feed-ul Toya e DEJA în cm — NU împărți la 10 (vechiul ÷10 a stricat ~1.386 produse; fix 2026-09-15). */
     private function mmToCm(mixed $value): ?float
     {
         if ($value === null || $value === '' || $value === 'N/A') {
@@ -156,7 +157,7 @@ class UpdateToyaDimensionsCommand extends Command
         }
         $v = (float) $value;
 
-        return $v > 0 ? round($v / 10, 2) : null;
+        return $v > 0 ? round($v, 2) : null;
     }
 
     private function toInt(mixed $value): ?int

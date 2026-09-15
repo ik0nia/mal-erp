@@ -249,10 +249,11 @@ class ImportToyaProductsCommand extends Command
             ? (float) $raw['BruttoWeight']['value']
             : (isset($raw['NettoWeight']['value']) ? (float) $raw['NettoWeight']['value'] : null);
 
-        // Dimensiuni ambalaj unitar HE (mm → cm), fallback pe MC (cutie master)
-        $dimLength = $this->mmToCm($raw['LengthHE'] ?? null) ?? $this->mmToCm($raw['LengthMC'] ?? null);
-        $dimWidth  = $this->mmToCm($raw['WidthHE'] ?? null)  ?? $this->mmToCm($raw['WidthMC'] ?? null);
-        $dimHeight = $this->mmToCm($raw['HeightHE'] ?? null) ?? $this->mmToCm($raw['HeightMC'] ?? null);
+        // Dimensiuni ambalaj unitar HE (feed-ul Toya e DEJA în cm), fallback pe MC (cutie master).
+        // ⚠️ NU împărți la 10 — feed-ul e în cm (verificat 2026-09-15). Vechiul ÷10 a stricat ~1.386 produse.
+        $dimLength = $this->dimCm($raw['LengthHE'] ?? null) ?? $this->dimCm($raw['LengthMC'] ?? null);
+        $dimWidth  = $this->dimCm($raw['WidthHE'] ?? null)  ?? $this->dimCm($raw['WidthMC'] ?? null);
+        $dimHeight = $this->dimCm($raw['HeightHE'] ?? null) ?? $this->dimCm($raw['HeightMC'] ?? null);
 
         // Ambalare/comandare
         $qtyPerInnerBox    = $this->toInt($raw['IB'] ?? null);  // Inner Box
@@ -468,13 +469,14 @@ class ImportToyaProductsCommand extends Command
         }
     }
 
-    private function mmToCm(mixed $value): ?float
+    /** Feed-ul Toya e deja în cm — se păstrează valoarea de față (fără ÷10). */
+    private function dimCm(mixed $value): ?float
     {
         if ($value === null || $value === '' || $value === 'N/A') {
             return null;
         }
         $v = (float) $value;
-        return $v > 0 ? round($v / 10, 2) : null;
+        return $v > 0 ? round($v, 2) : null;
     }
 
     private function toInt(mixed $value): ?int
