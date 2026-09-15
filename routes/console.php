@@ -267,6 +267,16 @@ Schedule::command('winmentor:fetch-solduri')
     ->withoutOverlapping(60)
     ->runInBackground();
 
+// WinMentor — sold AUTORITAR (getSoldPartener) per furnizor, pentru totaluri corecte
+// pe pagina de scadențar (scadențarul brut e umflat de facturi închise care apar deschise).
+// Rulează DUPĂ fetch-solduri (care aduce lista partenerilor cu sold).
+Schedule::command('winmentor:snapshot-sold-autoritar --directie=furnizor')
+    ->dailyAt('20:00')
+    ->timezone('Europe/Bucharest')
+    ->days([1, 2, 3, 4, 5, 6])
+    ->withoutOverlapping(120)
+    ->runInBackground();
+
 // WinMentor — auto-reconciliere scadențar furnizor: marchează facturile plătite bancar ca stinse.
 // Rulează DUPĂ fetch-solduri (care reîmprospătează scadențarul). Marcajele manuale persistă
 // (match pe nr_factura). Facturile stinse prin compensare rămân de marcat manual din fișă.

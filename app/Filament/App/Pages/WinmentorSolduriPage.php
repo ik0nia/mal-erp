@@ -79,11 +79,16 @@ class WinmentorSolduriPage extends Page
             ->whereRaw('ABS(rest_de_plata) >= 0.01')
             ->orderBy('part_id')
             ->orderBy('data_factura')
-            ->get(['part_id', 'data_factura', 'rest_de_plata', 'moneda'])
+            ->get(['part_id', 'data_factura', 'rest_de_plata', 'moneda', 'tip_document', 'nr_factura'])
             ->groupBy('part_id');
 
         $partIds  = $docs->keys()->filter()->values()->all();
         $wmNames  = DB::table('winmentor_parteneri')->whereIn('wm_id', $partIds)->get(['wm_id', 'denumire', 'cod_fiscal', 'clasa'])->keyBy('wm_id');
+
+        // Sold AUTORITAR (getSoldPartener) — snapshot nocturn, pentru totaluri corecte
+        // (scadențarul brut e umflat de facturi închise care apar deschise).
+        $autoritar  = DB::table('winmentor_solduri_autoritar')->where('directie', $directie)->pluck('sold', 'part_id');
+        $snapshotAt = DB::table('winmentor_solduri_autoritar')->where('directie', $directie)->max('fetched_at');
 
         $suppliers = $directie === 'furnizor'
             ? \App\Models\Supplier::whereIn('winmentor_id', $partIds)->pluck('id', 'winmentor_id')
@@ -100,6 +105,9 @@ class WinmentorSolduriPage extends Page
         $totalAvans   = 0.0;
         $totalInterne = 0.0;
         $rows         = [];
+
+        $esteIntern = fn ($p) => $p && (in_array(trim((string) ($p->clasa ?? '')), $claseInterne, true)
+            || str_starts_with(mb_strtolower(trim((string) ($p->denumire ?? ''))), 'x'));
 
         foreach ($docs as $partId => $partDocs) {
             // FIFO: pool-ul de minusuri acoperă plusurile în ordine cronologică
@@ -131,8 +139,7 @@ class WinmentorSolduriPage extends Page
 
             // Conturile interne (clasa Mentor) + partenerii DEZACTIVAȚI (prefix „x")
             // nu sunt creanțe/datorii reale — total separat
-            if (in_array(trim((string) ($p->clasa ?? '')), $claseInterne, true)
-                || str_starts_with(mb_strtolower(trim((string) ($p->denumire ?? ''))), 'x')) {
+            if ($esteIntern($p)) {
                 $totalInterne += $netRecent + $netVechi;
                 continue;
             }
@@ -141,7 +148,9 @@ class WinmentorSolduriPage extends Page
             $totalVechi += $netVechi;
             $totalAvans += $avans;
 
-            if ($netRecent < 1 && $netVechi < 1) continue; // doar avans — apare în total, nu în listă
+            // Ascunde din listă rândurile FĂRĂ sold recent — nu ne interesează istoricul/avansul aici
+            // (rămân totuși în totalurile de mai sus).
+            if ($netRecent < 1) continue;
 
             $url = null;
             if ($directie === 'furnizor' && ($sid = $suppliers->get($partId))) {
@@ -155,24 +164,64 @@ class WinmentorSolduriPage extends Page
 
             $primulDeschis = $deschise[0]['data'] ?? null;
 
+            // Cel mai recent document din scadențar (dată + denumire tip+nr).
+            $ultimulDoc = $partDocs->sortByDesc('data_factura')->first();
+            $docRecent  = $ultimulDoc ? (object) [
+                'data'     => $ultimulDoc->data_factura,
+                'denumire' => trim((string) ($ultimulDoc->tip_document ?? '') . ' ' . (string) ($ultimulDoc->nr_factura ?? '')) ?: 'document',
+            ] : null;
+
+            // Sold autoritar + marcaj divergență față de scadențar.
+            $soldAut   = $autoritar->has($partId) ? round(abs((float) $autoritar->get($partId)), 2) : null;
+            $scadNet   = $netRecent + $netVechi;
+            $divergent = $soldAut !== null && abs($soldAut - $scadNet) > max(50.0, $soldAut * 0.02);
+
             $rows[] = (object) [
-                'partner_name' => $p?->denumire ?: $partId ?: '—',
-                'partner_url'  => $url,
-                'cui'          => $p?->cod_fiscal,
-                'net'          => round($netRecent + $netVechi, 2),
-                'net_recent'   => $netRecent,
-                'net_vechi'    => $netVechi,
-                'are_eur'      => $areEur,
-                'docs'         => count($deschise),
-                'vechi'        => $primulDeschis,
-                'nou'          => $deschise ? end($deschise)['data'] : null,
-                'zile_vechime' => $primulDeschis ? (int) Carbon::parse($primulDeschis)->diffInDays($azi) : null,
+                'partner_name'   => $p?->denumire ?: $partId ?: '—',
+                'partner_url'    => $url,
+                'cui'            => $p?->cod_fiscal,
+                'net'            => round($scadNet, 2),
+                'net_recent'     => $netRecent,
+                'net_vechi'      => $netVechi,
+                'sold_autoritar' => $soldAut,
+                'divergent'      => $divergent,
+                'are_eur'        => $areEur,
+                'docs'           => count($deschise),
+                'vechi'          => $primulDeschis,
+                'nou'            => $deschise ? end($deschise)['data'] : null,
+                'doc_recent'     => $docRecent,
+                'zile_vechime'   => $primulDeschis ? (int) Carbon::parse($primulDeschis)->diffInDays($azi) : null,
             ];
         }
 
         usort($rows, fn ($a, $b) => $b->net_recent <=> $a->net_recent);
 
-        return ['rows' => $rows, 'total_net' => $totalNet, 'total_vechi' => $totalVechi, 'total_avans' => $totalAvans, 'total_interne' => $totalInterne];
+        // Total AUTORITAR real (nu scadențarul umflat): suma soldurilor per partener,
+        // excluzând conturile interne/dezactivate. Furnizor: negativ = de plătit; pozitiv = avans.
+        $totalAutoritar = 0.0;
+        $totalAvansAut  = 0.0;
+        foreach ($autoritar as $pid => $s) {
+            if ($esteIntern($wmNames->get($pid))) continue;
+            $s = (float) $s;
+            $catreNoi = $directie === 'furnizor' ? ($s < 0) : ($s > 0); // ce datorează partea cealaltă
+            if ($catreNoi) {
+                $totalAutoritar += abs($s);
+            } else {
+                $totalAvansAut += abs($s);
+            }
+        }
+
+        return [
+            'rows'                  => $rows,
+            'total_net'             => $totalNet,
+            'total_vechi'           => $totalVechi,
+            'total_avans'           => $totalAvans,
+            'total_interne'         => $totalInterne,
+            'total_autoritar'       => round($totalAutoritar, 2),
+            'total_avans_autoritar' => round($totalAvansAut, 2),
+            'snapshot_at'           => $snapshotAt,
+            'are_autoritar'         => $autoritar->isNotEmpty(),
+        ];
     }
 
     /** Documentele deschise ale unui partener (pentru expandare în UI). */

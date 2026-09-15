@@ -32,11 +32,20 @@
   @endphp
 
   <div class="sc-tot">
-    <span>{{ $this->tab === 'clienti' ? 'De încasat (documente < ' . $this->luniOperational . ' luni)' : 'De plătit (documente < ' . $this->luniOperational . ' luni)' }}<b>{{ number_format($data['total_net'], 0, ',', '.') }} lei</b></span>
-    <span>Sold istoric necompensat (mai vechi — de verificat în contabilitate)<b style="color:#9ca3af;">{{ number_format($data['total_vechi'], 0, ',', '.') }} lei</b></span>
-    <span>{{ $this->tab === 'clienti' ? 'Avansuri / solduri în favoarea clienților' : 'Avansuri plătite furnizorilor (marfă nerecepționată)' }}<b style="color:#b45309;">{{ number_format($data['total_avans'], 0, ',', '.') }} lei</b></span>
+    @if($this->tab === 'furnizori' && ($data['are_autoritar'] ?? false))
+      <span>De plătit — sold real WinMentor
+        <b style="color:#b91c1c;">{{ number_format($data['total_autoritar'], 0, ',', '.') }} lei</b>
+        @if($data['snapshot_at'])<span style="display:block;font-weight:400;color:#9ca3af;font-size:.7rem;margin-top:2px;">actualizat {{ \Carbon\Carbon::parse($data['snapshot_at'])->format('d.m.Y H:i') }}</span>@endif
+      </span>
+      <span>Avansuri plătite furnizorilor<b style="color:#b45309;">{{ number_format($data['total_avans_autoritar'], 0, ',', '.') }} lei</b></span>
+      <span style="opacity:.6;">Scadențar brut (neajustat)<b style="color:#9ca3af;">{{ number_format($data['total_net'], 0, ',', '.') }} lei</b></span>
+    @else
+      <span>{{ $this->tab === 'clienti' ? 'De încasat (documente < ' . $this->luniOperational . ' luni)' : 'De plătit (documente < ' . $this->luniOperational . ' luni)' }}<b>{{ number_format($data['total_net'], 0, ',', '.') }} lei</b></span>
+      <span>Sold istoric necompensat (mai vechi — de verificat în contabilitate)<b style="color:#9ca3af;">{{ number_format($data['total_vechi'], 0, ',', '.') }} lei</b></span>
+      <span>{{ $this->tab === 'clienti' ? 'Avansuri / solduri în favoarea clienților' : 'Avansuri plătite furnizorilor (marfă nerecepționată)' }}<b style="color:#b45309;">{{ number_format($data['total_avans'], 0, ',', '.') }} lei</b></span>
+    @endif
     <span>Conturi interne (consum/istoric — clasa Mentor)<b style="color:#9ca3af;">{{ number_format($data['total_interne'] ?? 0, 0, ',', '.') }} lei</b></span>
-    <span>Parteneri cu sold<b>{{ count($data['rows']) }}</b></span>
+    <span>Parteneri afișați<b>{{ count($data['rows']) }}</b></span>
   </div>
 
   <table class="sc-table">
@@ -45,13 +54,14 @@
       <th style="text-align:right;">Documente</th>
       <th>Cel mai vechi doc. neînchis</th>
       <th>Vechime</th>
+      <th>Ultimul document</th>
       <th style="text-align:right;">Sold recent (lei)</th>
       <th style="text-align:right;">Istoric vechi (lei)</th>
     </tr></thead>
     <tbody>
     @forelse($data['rows'] as $r)
       <tr>
-        <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+        <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
           @if($r->partner_url)<a href="{{ $r->partner_url }}" style="color:#4f46e5;text-decoration:none;" class="hover:underline">{{ $r->partner_name }}</a>
           @else {{ $r->partner_name }} @endif
         </td>
@@ -64,11 +74,23 @@
           @elseif($r->zile_vechime > 30)<span class="sc-badge sc-mid">{{ $r->zile_vechime }} zile</span>
           @else <span class="sc-badge sc-ok">{{ $r->zile_vechime }} zile</span>@endif
         </td>
-        <td style="text-align:right;font-weight:700;">{{ number_format($r->net_recent, 2, ',', '.') }}{!! $r->are_eur ? ' <span style="font-size:.65rem;color:#b45309;font-weight:700;">+EUR</span>' : '' !!}</td>
+        <td style="white-space:nowrap;font-size:.8rem;">
+          @php $dr = $r->doc_recent ?? null; @endphp
+          @if($dr)
+            @if($r->partner_url)<a href="{{ $r->partner_url }}" style="color:#4f46e5;text-decoration:none;">{{ $dr->denumire }}</a>@else{{ $dr->denumire }}@endif
+            <span style="color:#9ca3af;"> · {{ $dr->data ? \Carbon\Carbon::parse($dr->data)->format('d.m.Y') : '' }}</span>
+          @else <span style="color:#9ca3af;">—</span> @endif
+        </td>
+        <td style="text-align:right;font-weight:700;">
+          {{ number_format($r->net_recent, 2, ',', '.') }}{!! $r->are_eur ? ' <span style="font-size:.65rem;color:#b45309;font-weight:700;">+EUR</span>' : '' !!}
+          @if(($r->divergent ?? false) && ($r->sold_autoritar ?? null) !== null)
+            <span style="display:block;font-weight:600;font-size:.7rem;color:#b91c1c;" title="Sold real WinMentor — scadențarul diferă (facturi închise apar deschise)">real: {{ number_format($r->sold_autoritar, 0, ',', '.') }}</span>
+          @endif
+        </td>
         <td style="text-align:right;color:#9ca3af;">{{ $r->net_vechi != 0 ? number_format($r->net_vechi, 2, ',', '.') : '—' }}</td>
       </tr>
     @empty
-      <tr><td colspan="7" style="text-align:center;color:#9ca3af;padding:2rem;">Niciun partener cu sold. Rulează winmentor:fetch-solduri.</td></tr>
+      <tr><td colspan="8" style="text-align:center;color:#9ca3af;padding:2rem;">Niciun partener cu sold. Rulează winmentor:fetch-solduri.</td></tr>
     @endforelse
     </tbody>
   </table>
