@@ -2,6 +2,14 @@
 
 _Ultima actualizare: 2026-09-15. Context: reconciliere scadențar furnizor._
 
+> ✅ **UPDATE 2026-09-15 (semnături confirmate din TLB oficial):** am decodat integral `DocImpServer.tlb`
+> curent (de pe ftp.winmentor.ro). **Semnătura lui `GetSoldFactNeop` e EXACT cea presupusă de cod**
+> — `(const PartID: WideString; out Error: Integer): WideString`. Deci **NU e problemă de parametri/aritate**;
+> cauza `0x8000FFFF` e runtime (excepție internă în DLL). La fel pentru `GetReceivingStatus`,
+> `GetListacarneteExt`, `Get/SetInventoryOrders` — parametri corecți, cauză runtime.
+> Semnăturile complete ale tuturor celor 171 metode: `documente/mentorapi-v1.5.0-documentatie.md`.
+> Nu mai are rost planul „ghicim parametrii la noapte" — rămâne doar deblocarea la runtime/suport Intelsoft.
+
 ## De ce contează (contextul)
 Scadențarul furnizor din WinMentor (`GetSolduriFurn`) e **inconsistent cu soldul real** pentru
 ~38/157 furnizori (3,15 mil. lei „fantomă" — facturi deja stinse prin compensare care apar ca

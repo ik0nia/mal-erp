@@ -1,0 +1,2719 @@
+[
+ {
+  "name": "GetListaFirme",
+  "slot": 7,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": []
+ },
+ {
+  "name": "GetListaLuni",
+  "slot": 8,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "CaleFirma",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "SetNumeFirma",
+  "slot": 9,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "NumeFirma",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "SetLunaLucru",
+  "slot": 10,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "An",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "Luna",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "SetDocsData",
+  "slot": 11,
+  "ret": "Integer",
+  "ret_fmt": "int32 (0=fail / >0=ok, sau HRESULT)",
+  "args": [
+   [
+    "in",
+    "DocData",
+    "OleVariant",
+    "variant / VarArray"
+   ]
+  ]
+ },
+ {
+  "name": "DateValide",
+  "slot": 12,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "GetListaErori",
+  "slot": 13,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": []
+ },
+ {
+  "name": "ImportaFacturi",
+  "slot": 14,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "GetListaParteneri",
+  "slot": 15,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetStocArticole",
+  "slot": 16,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetStocArticol",
+  "slot": 17,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "ArticolID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "in",
+    "GestID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetSoldPart",
+  "slot": 18,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "PartID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetListaPersonal",
+  "slot": 19,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetSoldDetaliat",
+  "slot": 20,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "PartID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetListaGestiuni",
+  "slot": 21,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetClaseParteneri",
+  "slot": 22,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "ExistaFactura",
+  "slot": 23,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "Numar",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GenCodArticole",
+  "slot": 24,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "GenCodParteneri",
+  "slot": 25,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "GetPretVanzare",
+  "slot": 26,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "ArtID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "in",
+    "PartID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetClaseArticole",
+  "slot": 27,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetListaCatPret",
+  "slot": 28,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetListaArtCatPret",
+  "slot": 29,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetListaLocalitati",
+  "slot": 30,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetNomenclatorArticole",
+  "slot": 31,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetSolduri",
+  "slot": 32,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetListaCarnete",
+  "slot": 33,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetNumarFactura",
+  "slot": 34,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "SimbolCarnet",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetIncasariClienti",
+  "slot": 35,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "An1",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "Luna1",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "An2",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "Luna2",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "PartID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "AdaugaPartener",
+  "slot": 36,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "InfoPart",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "ImportaComenzi",
+  "slot": 37,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "ComenziValide",
+  "slot": 38,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "SetIndexNart",
+  "slot": 39,
+  "ret": "Integer",
+  "ret_fmt": "int32 (0=fail / >0=ok, sau HRESULT)",
+  "args": [
+   [
+    "in",
+    "aIndexName",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "ComenziValideExt",
+  "slot": 40,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "ImportaComenziExt",
+  "slot": 41,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "SetIDPartField",
+  "slot": 42,
+  "ret": "Integer",
+  "ret_fmt": "int32 (0=fail / >0=ok, sau HRESULT)",
+  "args": [
+   [
+    "in",
+    "FieldName",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "SetIDArtField",
+  "slot": 43,
+  "ret": "Integer",
+  "ret_fmt": "int32 (0=fail / >0=ok, sau HRESULT)",
+  "args": [
+   [
+    "in",
+    "FieldName",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "GetVersiuni",
+  "slot": 44,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "out",
+    "VerMentor",
+    "Double",
+    "float64"
+   ],
+   [
+    "out",
+    "VerServer",
+    "Double",
+    "float64"
+   ]
+  ]
+ },
+ {
+  "name": "GetInfoPers",
+  "slot": 45,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "IDPers",
+    "Integer",
+    "int32"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetInfoPart",
+  "slot": 46,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "PartID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "IncasariValide",
+  "slot": 47,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "ImportaIncasari",
+  "slot": 48,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "GetListaClienti",
+  "slot": 49,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "AnInceput",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "LunaInceput",
+    "Integer",
+    "int32"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetStringConstanta",
+  "slot": 50,
+  "ret": "WideString",
+  "ret_fmt": "string (BSTR)",
+  "args": [
+   [
+    "in",
+    "Id",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "Simbol",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "GetArticoleVandute",
+  "slot": 51,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "PartID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "in",
+    "MarcaAgent",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "AnInceput",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "LunaInceput",
+    "Integer",
+    "int32"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetUltimeleVanzari",
+  "slot": 52,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "ArtID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "in",
+    "PartID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "in",
+    "MarcaAgent",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "Cate",
+    "Integer",
+    "int32"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetDocFromFile",
+  "slot": 53,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "FileName",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "GetNextPartID",
+  "slot": 54,
+  "ret": "WideString",
+  "ret_fmt": "string (BSTR)",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetIstoricVanzari",
+  "slot": 55,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "Marca",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "AnInceput",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "LunaInceput",
+    "Integer",
+    "int32"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetListRecord",
+  "slot": 56,
+  "ret": "WideString",
+  "ret_fmt": "string (BSTR)",
+  "args": [
+   [
+    "out",
+    "EOF",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetComenziNefacturate",
+  "slot": 57,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetInfoComenzi",
+  "slot": 58,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetSolduriExt",
+  "slot": 59,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetVanzariLuna",
+  "slot": 60,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetVanzariExt",
+  "slot": 61,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetIntrari",
+  "slot": 62,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetListaSubunit",
+  "slot": 63,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "SetClasaArt",
+  "slot": 64,
+  "ret": "Integer",
+  "ret_fmt": "int32 (0=fail / >0=ok, sau HRESULT)",
+  "args": [
+   [
+    "in",
+    "NumeClasa",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "GetOferte",
+  "slot": 65,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetInfoBon",
+  "slot": 66,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "Zi",
+    "Integer",
+    "int32"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetInfoBonExt",
+  "slot": 67,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "NrBon",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "Zi",
+    "Integer",
+    "int32"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetInfoIesiri",
+  "slot": 68,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "Zi",
+    "Integer",
+    "int32"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetInfoIesiriExt",
+  "slot": 69,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "NrDoc",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "Zi",
+    "Integer",
+    "int32"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetStocArtDetaliat",
+  "slot": 70,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "ArtID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "in",
+    "GestID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetListaArtCatPretExt",
+  "slot": 71,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "BonuriConsumValide",
+  "slot": 72,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "ImportaBonuriConsum",
+  "slot": 73,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "GetListaDelegati",
+  "slot": 74,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "SetCmdImplicitAcceptat",
+  "slot": 75,
+  "ret": "Integer",
+  "ret_fmt": "int32 (0=fail / >0=ok, sau HRESULT)",
+  "args": [
+   [
+    "in",
+    "ImplicitAcceptat",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetOferteClienti",
+  "slot": 76,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetCritDiscPeArticole",
+  "slot": 77,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetCritDiscPeClase",
+  "slot": 78,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetCritDiscPart",
+  "slot": 79,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetStocuriPeGestiuni",
+  "slot": 80,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetReceptii",
+  "slot": 81,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetTransferuri",
+  "slot": 82,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "CheckDocument",
+  "slot": 83,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "TipDoc",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "in",
+    "PrefixDoc",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "in",
+    "NrDoc",
+    "Integer",
+    "int32"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetListaBanci",
+  "slot": 84,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "IncasariValideExt",
+  "slot": 85,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "ImportaIncasariExt",
+  "slot": 86,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "GetTranzactiiInCurs",
+  "slot": 87,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "TransferuriValide",
+  "slot": 88,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "ImportaTransferuri",
+  "slot": 89,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "FactIntrareValida",
+  "slot": 90,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "ImportaFactIntrare",
+  "slot": 91,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "GetProducts",
+  "slot": 92,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "LastSyncDate",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetSuppliersOrders",
+  "slot": 93,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "AddProduct",
+  "slot": 94,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "InfoProdus",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "SetReceivingList",
+  "slot": 95,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "Data",
+    "OleVariant",
+    "variant / VarArray"
+   ]
+  ]
+ },
+ {
+  "name": "GetReceivingStatus",
+  "slot": 96,
+  "ret": "WideString",
+  "ret_fmt": "string (BSTR)",
+  "args": [
+   [
+    "in",
+    "PartID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "in",
+    "SerieDoc",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "in",
+    "NrDoc",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "GetInventoryOrders",
+  "slot": 97,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "GestID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "SetInventoryOrders",
+  "slot": 98,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "Data",
+    "OleVariant",
+    "variant / VarArray"
+   ]
+  ]
+ },
+ {
+  "name": "GetDispozitiiDeLivrare",
+  "slot": 99,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "GestID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "SetPickedList",
+  "slot": 100,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "Data",
+    "OleVariant",
+    "variant / VarArray"
+   ]
+  ]
+ },
+ {
+  "name": "ExistaFacturaExt",
+  "slot": 101,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "Numar",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "Serie",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "MonetareValide",
+  "slot": 102,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "ImportaMonetare",
+  "slot": 103,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "GetStocArticoleExt",
+  "slot": 104,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "ExistaFacturaIntrare",
+  "slot": 105,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "PartID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "in",
+    "Serie",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "in",
+    "Numar",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "PotIntroduceDoc",
+  "slot": 106,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "An",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "Luna",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetListaArtCatPret2",
+  "slot": 107,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "ArtID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetDeliveryOrders",
+  "slot": 108,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "SetDeliveryList",
+  "slot": 109,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "Data",
+    "OleVariant",
+    "variant / VarArray"
+   ]
+  ]
+ },
+ {
+  "name": "GetListacarneteExt",
+  "slot": 110,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetInfoCmdNefacturate",
+  "slot": 111,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetNomenclatorLocalitati",
+  "slot": 112,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetMonede",
+  "slot": 113,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "NCValide",
+  "slot": 114,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "ImportaNoteContabile",
+  "slot": 115,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "GetStergeriProduse",
+  "slot": 116,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "LastSyncDate",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "ModificaPartener",
+  "slot": 117,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "InfoPart",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "GetInfoCmdSubNefacturate",
+  "slot": 118,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "AdaugaGestiune",
+  "slot": 119,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "InfoGest",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "ActualizeazaAcceptat",
+  "slot": 120,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "LiniiComenzi",
+    "OleVariant",
+    "variant / VarArray"
+   ]
+  ]
+ },
+ {
+  "name": "GetReceptiiIntrSubunit",
+  "slot": 121,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetInfoCmdBon",
+  "slot": 122,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "NrCmd",
+    "Integer",
+    "int32"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetInfoCmdBonuri",
+  "slot": 123,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "Zi",
+    "Integer",
+    "int32"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetIncasariFactura",
+  "slot": 124,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "An",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "Luna",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "NrFact",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "SerieFact",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "in",
+    "IDPart",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "PlatiValideExt",
+  "slot": 125,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "ImportaPlatiExt",
+  "slot": 126,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "GetNirAtribute",
+  "slot": 127,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "SetDescarcareAutomata",
+  "slot": 128,
+  "ret": "Integer",
+  "ret_fmt": "int32 (0=fail / >0=ok, sau HRESULT)",
+  "args": [
+   [
+    "in",
+    "Automat",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "ModiProduct",
+  "slot": 129,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "InfoProdus",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "AddClasaArt",
+  "slot": 130,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "InfoClasa",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "ModifPretValide",
+  "slot": 131,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "ImportaModifPret",
+  "slot": 132,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "GetStocInitialAmbalaj",
+  "slot": 133,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "An",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "Luna",
+    "Integer",
+    "int32"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetMiscariAmbalaje",
+  "slot": 134,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "AnStart",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "LunaStart",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "AnStop",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "LunaStop",
+    "Integer",
+    "int32"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetStocArticoleExt2",
+  "slot": 135,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "GestID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "ComenziFurnValide",
+  "slot": 136,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "ImportaComenziFurn",
+  "slot": 137,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": []
+ },
+ {
+  "name": "GetSoldFactNeop",
+  "slot": 138,
+  "ret": "WideString",
+  "ret_fmt": "string (BSTR)",
+  "args": [
+   [
+    "in",
+    "PartID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetIncasariLuna",
+  "slot": 139,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "SetFiltruDocNeoperate",
+  "slot": 140,
+  "ret": "Integer",
+  "ret_fmt": "int32 (0=fail / >0=ok, sau HRESULT)",
+  "args": [
+   [
+    "in",
+    "Flag",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetCmdSubunitActive",
+  "slot": 141,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "SetInclusivCmdFurn",
+  "slot": 142,
+  "ret": "Integer",
+  "ret_fmt": "int32 (0=fail / >0=ok, sau HRESULT)",
+  "args": [
+   [
+    "in",
+    "Flag",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "ReglareInventarValida",
+  "slot": 143,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "TipReglare",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "ImportaReglareInventar",
+  "slot": 144,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "TipReglare",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetSolduriFurn",
+  "slot": 145,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetPlatiFactura",
+  "slot": 146,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "An",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "Luna",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "NrFact",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "Serie",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "in",
+    "IDPart",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "SetInclusivFactAviz",
+  "slot": 147,
+  "ret": "Integer",
+  "ret_fmt": "int32 (0=fail / >0=ok, sau HRESULT)",
+  "args": [
+   [
+    "in",
+    "Flag",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetIntervaleDisc",
+  "slot": 148,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "Criteriu",
+    "Integer",
+    "int32"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetArticoleDisc",
+  "slot": 149,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "Criteriu",
+    "Integer",
+    "int32"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "SetArtAnalizat",
+  "slot": 150,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "IDArticol",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "SetCatPretImplicita",
+  "slot": 151,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "IDCatPret",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "LogOn",
+  "slot": 152,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "UserName",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "in",
+    "PassWord",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "GetReteteActive",
+  "slot": 153,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "SetCantReceptii",
+  "slot": 154,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "CodDoc",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "SimbolCarnetNir",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "in",
+    "NrNIR",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "LiniiNIR",
+    "OleVariant",
+    "variant / VarArray"
+   ]
+  ]
+ },
+ {
+  "name": "GetStocArticoleExt3",
+  "slot": 155,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetInfoBonConsum",
+  "slot": 156,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "Numar",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "Serie",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetPretVanzareBrut",
+  "slot": 157,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "ArtID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "in",
+    "PartID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetPlatiLuna",
+  "slot": 158,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "ModificaArticol",
+  "slot": 159,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "InfoArt",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "ExistaMonetarul",
+  "slot": 160,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "Numar",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "Serie",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "GetValoriAtribut",
+  "slot": 161,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "CodAtribut",
+    "Integer",
+    "int32"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetStocArticoleExt4",
+  "slot": 162,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetValoriAtribute",
+  "slot": 163,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetStocArticoleExt5",
+  "slot": 164,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetIncasariClientiExt",
+  "slot": 165,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "in",
+    "An1",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "Luna1",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "An2",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "Luna2",
+    "Integer",
+    "int32"
+   ],
+   [
+    "in",
+    "PartID",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetReceptiiNeoperate",
+  "slot": 166,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetEmulareNedescarcata",
+  "slot": 167,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetArtComenziInterne",
+  "slot": 168,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetMatComenziInterne",
+  "slot": 169,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetVanzariEmulare",
+  "slot": 170,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetListaFirmeExt",
+  "slot": 171,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": []
+ },
+ {
+  "name": "SetDataReferinta",
+  "slot": 172,
+  "ret": "Integer",
+  "ret_fmt": "int32 (0=fail / >0=ok, sau HRESULT)",
+  "args": [
+   [
+    "in",
+    "DataReferinta",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ },
+ {
+  "name": "GetStadiuComanda",
+  "slot": 173,
+  "ret": "WideString",
+  "ret_fmt": "string (BSTR)",
+  "args": [
+   [
+    "in",
+    "IDPart",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "in",
+    "NrComanda",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "in",
+    "DataComanda",
+    "WideString",
+    "string (BSTR)"
+   ],
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "SetCodCmdAnalizata",
+  "slot": 174,
+  "ret": "Integer",
+  "ret_fmt": "int32 (0=fail / >0=ok, sau HRESULT)",
+  "args": [
+   [
+    "in",
+    "CodComanda",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetUM",
+  "slot": 175,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "GetReziduale",
+  "slot": 176,
+  "ret": "OleVariant",
+  "ret_fmt": "variant / VarArray",
+  "args": [
+   [
+    "out",
+    "Error",
+    "Integer",
+    "int32"
+   ]
+  ]
+ },
+ {
+  "name": "SetPartAnalizat",
+  "slot": 177,
+  "ret": "Integer",
+  "ret_fmt": "int32",
+  "args": [
+   [
+    "in",
+    "IDPart",
+    "WideString",
+    "string (BSTR)"
+   ]
+  ]
+ }
+]

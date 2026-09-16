@@ -856,3 +856,38 @@ func (c *Client) SetArtAnalizat(idArticol string) (int, error) {
 func (c *Client) SetCatPretImplicita(idCatPret string) (int, error) {
 	return c.callMethodInt("SetCatPretImplicita", idCatPret)
 }
+
+// --- Metode adăugate 2026-09-15 (acoperire completă TLB DocImpServer, semnături din type library oficial) ---
+
+// GetInfoBonConsum returns the lines of a consumption note (bon de consum).
+// DLL signature: GetInfoBonConsum(Numar: Integer; Serie: WideString; out Error: Integer): OleVariant
+func (c *Client) GetInfoBonConsum(numar int, serie string) ([]string, error) {
+	return c.callWithOutError("GetInfoBonConsum", numar, serie)
+}
+
+// GetPretVanzareBrut returns the gross (pre-discount) selling price of an article for a partner.
+// DLL signature: GetPretVanzareBrut(ArtID: WideString; PartID: WideString; out Error: Integer): OleVariant
+func (c *Client) GetPretVanzareBrut(artID, partID string) ([]string, error) {
+	return c.callWithOutError("GetPretVanzareBrut", artID, partID)
+}
+
+// ExistaMonetarul checks whether a cash-register report (monetar) exists. Returns non-zero if found.
+// DLL signature: ExistaMonetarul(Numar: Integer; Serie: WideString): Integer
+func (c *Client) ExistaMonetarul(numar int, serie string) (int, error) {
+	return c.callMethodInt("ExistaMonetarul", numar, serie)
+}
+
+// GetValoriAtribut returns the possible values of a product attribute by its code.
+// DLL signature: GetValoriAtribut(CodAtribut: Integer; out Error: Integer): OleVariant
+func (c *Client) GetValoriAtribut(codAtribut int) ([]string, error) {
+	return c.callWithOutError("GetValoriAtribut", codAtribut)
+}
+
+// GetListaFirmeExt returns the extended list of companies (name + extra fields).
+// DLL signature: GetListaFirmeExt(): OleVariant
+func (c *Client) GetListaFirmeExt() ([]string, error) {
+	return c.callReturningStrings("GetListaFirmeExt")
+}
+
+// SetPartAnalizat — ELIMINAT în v1.5.1. Setter WinMentor care, la eșec, corupea sesiunea COM
+// (blocarea SetNumeFirma — incident 2026-09-15). Rămâne accesibil, la nevoie, doar via /api/com/call.

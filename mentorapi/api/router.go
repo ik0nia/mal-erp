@@ -245,6 +245,14 @@ func (s *Server) SetupRoutes() http.Handler {
 	mux.HandleFunc("GET /api/system/tranzactii-in-curs", s.handleGetTranzactiiInCurs)
 	mux.HandleFunc("POST /api/system/doc-from-file", s.handleGetDocFromFile)
 
+	// === Completare acoperire TLB (adăugate 2026-09-15) ===
+	mux.HandleFunc("GET /api/documente/bon-consum", s.handleGetInfoBonConsum)
+	mux.HandleFunc("GET /api/documente/monetar/exista", s.handleExistaMonetarul)
+	mux.HandleFunc("GET /api/preturi/vanzare-brut", s.handleGetPretVanzareBrut)
+	mux.HandleFunc("GET /api/atribute/{cod}/valori", s.handleGetValoriAtribut)
+	mux.HandleFunc("GET /api/firme/ext", s.handleGetListaFirmeExt)
+	// SetPartAnalizat: ELIMINAT în v1.5.1 — setter care corupea sesiunea WinMentor (incident 2026-09-15).
+
 	// === COM Generic Call (Discovery & Testing) ===
 	mux.HandleFunc("GET /api/com/methods", s.handleComMethods)
 	mux.HandleFunc("POST /api/com/call", s.handleComCall)

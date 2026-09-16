@@ -26,6 +26,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Kill-switch GLOBAL bridge WinMentor: când e activ standby (storage/app/winmentor_standby),
+        // blochează ORICE cerere HTTP către portul bridge-ului (:9500), indiferent de sursă
+        // (WinmentorBridgeClient, servicii care apelează direct, comenzi, pagini Filament). Nu scapă nimic.
+        \Illuminate\Support\Facades\Http::globalRequestMiddleware(function ($request) {
+            if (\App\Services\Winmentor\WinmentorBridgeClient::isStandby()
+                && str_contains((string) $request->getUri(), ':9500')) {
+                throw new \RuntimeException('WinMentor bridge STANDBY — cerere blocată: ' . $request->getUri());
+            }
+            return $request;
+        });
+
         // Observer: push preț automat pe WooCommerce când regular_price se schimbă în ERP
         WooProduct::observe(WooProductObserver::class);
 

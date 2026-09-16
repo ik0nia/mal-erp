@@ -1248,8 +1248,27 @@ class WinmentorBridgeClient
 
     // ─── HTTP helpers ────────────────────────────────────────────────────────────
 
+    /**
+     * Kill-switch global: dacă există fișierul de standby, TOATE apelurile către bridge
+     * (GET + POST, deci orice sursă) sunt blocate ÎNAINTE de a atinge WinMentor.
+     * Activare:   touch storage/app/winmentor_standby
+     * Reactivare: rm storage/app/winmentor_standby
+     */
+    public static function isStandby(): bool
+    {
+        return is_file(storage_path('app/winmentor_standby'));
+    }
+
+    private function assertNotStandby(string $verb, string $path): void
+    {
+        if (self::isStandby()) {
+            throw new \RuntimeException("WinMentor bridge în STANDBY — apel {$verb} {$path} blocat. Reactivare: șterge storage/app/winmentor_standby.");
+        }
+    }
+
     private function get(string $path, array $query = [], bool $auth = true, int $timeout = 30): array
     {
+        $this->assertNotStandby('GET', $path);
         $request = Http::timeout($timeout)->withoutVerifying();
 
         if ($auth) {
@@ -1331,6 +1350,7 @@ class WinmentorBridgeClient
 
     private function post(string $path, array $body = [], array $query = [], int $timeout = 60): array
     {
+        $this->assertNotStandby('POST', $path);
         $request = Http::timeout($timeout)
             ->withoutVerifying()
             ->withHeaders(['X-API-Key' => $this->apiKey]);

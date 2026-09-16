@@ -13,7 +13,7 @@ import (
 	"github.com/rayone121/libWMEdcom/winmentor"
 )
 
-const Version = "1.4.0"
+const Version = "1.5.1"
 
 // ErrMaintenance is returned while COM is intentionally disconnected
 // (WinMentor month-end closing requires all users disconnected).

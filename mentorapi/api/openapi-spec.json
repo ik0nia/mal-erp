@@ -3,7 +3,7 @@
  "info": {
   "title": "MentorAPI",
   "description": "REST API bridge for WinMentor DocImpServer COM interface v1.2.0\n\nAll endpoints except /api/health require API Key via header X-API-Key.\nMost data endpoints require a firma+luna selected first via POST /api/firme/select.\n\nLast updated: 2026-05-18 09:30",
-  "version": "1.3.0"
+  "version": "1.5.1"
  },
  "servers": [
   {
@@ -11771,6 +11771,287 @@
            "items": {
             "type": "string"
            }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/documente/bon-consum": {
+   "get": {
+    "tags": [
+     "Comenzi"
+    ],
+    "summary": "GetInfoBonConsum",
+    "description": "Liniile unui bon de consum. COM: GetInfoBonConsum(Numar:Integer; Serie:WideString; out Error:Integer):OleVariant",
+    "parameters": [
+     {
+      "name": "numar",
+      "in": "query",
+      "schema": {
+       "type": "integer"
+      },
+      "required": true,
+      "description": "Numărul bonului de consum"
+     },
+     {
+      "name": "serie",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      },
+      "required": false,
+      "description": "Seria (opțional)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "success": {
+           "type": "boolean"
+          },
+          "data": {
+           "type": "array",
+           "items": {
+            "type": "string"
+           }
+          },
+          "errors": {
+           "type": "array",
+           "items": {
+            "type": "string"
+           }
+          },
+          "timestamp": {
+           "type": "string"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/documente/monetar/exista": {
+   "get": {
+    "tags": [
+     "Comenzi"
+    ],
+    "summary": "ExistaMonetarul",
+    "description": "Verifică existența unui monetar (raport casă). COM: ExistaMonetarul(Numar:Integer; Serie:WideString):Integer",
+    "parameters": [
+     {
+      "name": "numar",
+      "in": "query",
+      "schema": {
+       "type": "integer"
+      },
+      "required": true,
+      "description": "Numărul monetarului"
+     },
+     {
+      "name": "serie",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      },
+      "required": false,
+      "description": "Seria (opțional)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "success": {
+           "type": "boolean"
+          },
+          "data": {
+           "type": "object",
+           "properties": {
+            "exista": {
+             "type": "boolean"
+            },
+            "cod": {
+             "type": "integer"
+            }
+           }
+          },
+          "errors": {
+           "type": "array",
+           "items": {
+            "type": "string"
+           }
+          },
+          "timestamp": {
+           "type": "string"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/preturi/vanzare-brut": {
+   "get": {
+    "tags": [
+     "Preturi"
+    ],
+    "summary": "GetPretVanzareBrut",
+    "description": "Prețul de vânzare BRUT (înainte de discount) pt articol/partener. COM: GetPretVanzareBrut(ArtID:WideString; PartID:WideString; out Error:Integer):OleVariant",
+    "parameters": [
+     {
+      "name": "articol",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      },
+      "required": true,
+      "description": "ID articol (winmentor_id)"
+     },
+     {
+      "name": "partener",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      },
+      "required": false,
+      "description": "ID partener"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "success": {
+           "type": "boolean"
+          },
+          "data": {
+           "type": "array",
+           "items": {
+            "type": "string"
+           }
+          },
+          "errors": {
+           "type": "array",
+           "items": {
+            "type": "string"
+           }
+          },
+          "timestamp": {
+           "type": "string"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/atribute/{cod}/valori": {
+   "get": {
+    "tags": [
+     "Nomenclatoare"
+    ],
+    "summary": "GetValoriAtribut",
+    "description": "Valorile posibile ale unui atribut de produs, după cod. COM: GetValoriAtribut(CodAtribut:Integer; out Error:Integer):OleVariant",
+    "parameters": [
+     {
+      "name": "cod",
+      "in": "path",
+      "schema": {
+       "type": "integer"
+      },
+      "required": true,
+      "description": "Codul atributului"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "success": {
+           "type": "boolean"
+          },
+          "data": {
+           "type": "array",
+           "items": {
+            "type": "string"
+           }
+          },
+          "errors": {
+           "type": "array",
+           "items": {
+            "type": "string"
+           }
+          },
+          "timestamp": {
+           "type": "string"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/firme/ext": {
+   "get": {
+    "tags": [
+     "Firme"
+    ],
+    "summary": "GetListaFirmeExt",
+    "description": "Lista extinsă a firmelor (nume + câmpuri suplimentare). COM: GetListaFirmeExt():OleVariant",
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "success": {
+           "type": "boolean"
+          },
+          "data": {
+           "type": "array",
+           "items": {
+            "type": "string"
+           }
+          },
+          "errors": {
+           "type": "array",
+           "items": {
+            "type": "string"
+           }
+          },
+          "timestamp": {
+           "type": "string"
           }
          }
         }

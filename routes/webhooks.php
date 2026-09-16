@@ -38,6 +38,38 @@ Route::middleware(['web', 'auth'])->group(function () {
         return response()->file($path, ['Content-Type' => 'application/json']);
     });
 
+    // Download build MentorAPI (TEMPORAR — pentru deploy manual pe Windows). Șterge ruta după deploy.
+    Route::get('/mentorapi/download-exe', function () {
+        abort_unless(auth()->user()?->isSuperAdmin(), 404);
+        $path = base_path('mentorapi/mentorapi.exe');
+        if (!file_exists($path)) abort(404);
+        return response()->download($path, 'mentorapi.exe');
+    });
+
+    // Raport incident 2026-09-15 (log complet ce s-a întâmplat)
+    Route::get('/mentorapi/incident', function () {
+        abort_unless(auth()->user()?->isSuperAdmin(), 404);
+        $path = base_path('documente/mentorapi-incident-2026-09-15.md');
+        if (!file_exists($path)) abort(404);
+        return response()->file($path, ['Content-Type' => 'text/markdown; charset=utf-8']);
+    });
+
+    // Documentația API completă v1.5.0 (HTML — params, formate, răspunsuri)
+    Route::get('/mentorapi/api-docs', function () {
+        abort_unless(auth()->user()?->isSuperAdmin(), 404);
+        $path = base_path('documente/mentorapi-api-v1.5.0.html');
+        if (!file_exists($path)) abort(404);
+        return response()->file($path, ['Content-Type' => 'text/html; charset=utf-8']);
+    });
+
+    // Documentația completă v1.5.0 (markdown)
+    Route::get('/mentorapi/documentatie', function () {
+        abort_unless(auth()->user()?->isSuperAdmin(), 404);
+        $path = base_path('documente/mentorapi-v1.5.0-documentatie.md');
+        if (!file_exists($path)) abort(404);
+        return response()->file($path, ['Content-Type' => 'text/markdown; charset=utf-8']);
+    });
+
     // MentorAPI audit sections
     Route::get('/mentorapi/audit/{file}', function (string $file) {
         abort_unless(auth()->user()?->isSuperAdmin(), 404);
