@@ -21,8 +21,17 @@ neplătite** per furnizor. O rezolvăm momentan euristic (FIFO), dar am vrea sur
 ---
 
 ## 1. GetSoldFactNeop ⭐ (PRIORITAR — ne-ar da facturile neplătite exacte)
+
+> 🛑 **VERDICT FINAL — NU MAI ÎNCERCA (marcat 2026-09-16).** Testat live cu param string
+> (`GET /api/solduri/facturi-neoperate?partId=728022454`) → `HRESULT 0x8000FFFF`, instant.
+> **Sesiunea a rămas sănătoasă** (select firmă 200 imediat după) → apelul cu STRING e **inofensiv,
+> NU corupe** (spre deosebire de `SetPartAnalizat`). Dar funcția e **nefuncțională la runtime** și
+> semnătura e deja confirmată corectă din TLB → nu mai e nimic de „ghicit". **Dead end via API.**
+> Deblocare posibilă DOAR prin suport Intelsoft (context intern necunoscut). Rămânem pe euristica FIFO.
+> ⚠️ Regula rămâne: NU cu param INT (resetează bridge-ul).
+
 - **Ce ar trebui să facă:** returnează facturile neplătite (sold neoperat) ale unui partener.
-- **Status:** RUPTĂ. 
+- **Status:** RUPTĂ (confirmat 2026-09-16, nu se mai încearcă). 
   - Cu param string (partId) → `HRESULT 0x8000FFFF` / „The server threw an exception".
   - Cu param **int** → **RESETEAZĂ bridge-ul COM** (connection reset + timeout; revine în ~6s prin auto-reconnect). ⚠️ **PERICULOS în producție.**
 - **Implementare curentă:** `libWMEdcom/winmentor/queries.go:278` — `vtblCall("GetSoldFactNeop", partID, &errParam int32, &resPtr BSTR)`.
