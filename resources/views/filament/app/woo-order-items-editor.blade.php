@@ -58,12 +58,17 @@
           <td>
             <div style="font-weight:600;color:#111827;">{{ $item->name }}</div>
             <div style="font-size:.75rem;color:#9ca3af;font-family:monospace;">{{ $item->sku ?: 'fără SKU' }}</div>
+            {{-- Furnizor + termene + stare aprovizionare DOAR la produsele care nu-s pe stoc --}}
             @php $sup = $suppliers->get($item->woo_item_id); @endphp
-            @if($sup && $sup['supplier_name'])
+            @if($stockClass !== 'ok' && $sup && ($sup['supplier_name'] || $sup['proc_kind']))
               <div style="font-size:.72rem;color:#6b7280;margin-top:3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                <span style="font-weight:600;color:#374151;">🏭 {{ $sup['supplier_name'] }}</span>
+                @if($sup['supplier_name'])<span style="font-weight:600;color:#374151;">🏭 {{ $sup['supplier_name'] }}</span>@endif
                 @if($sup['lead_days'] !== null)<span style="color:#059669;font-weight:600;">🚚 {{ $sup['lead_days'] }} zile</span>@endif
-                @if($sup['avg_lead'] !== null)<span style="color:#9ca3af;">medie furnizor: {{ $sup['avg_lead'] }} zile</span>@endif
+                @if($sup['avg_lead'] !== null)<span style="color:#9ca3af;" title="Media reală din istoricul PO→recepție (zile calendaristice)">termen mediu: {{ $sup['avg_lead'] }} zile calendaristice</span>@endif
+                @if($sup['proc_kind'])
+                  @php $pc = ['ordered'=>['#dcfce7','#15803d','📦'],'po'=>['#dbeafe','#1d4ed8','📋'],'necesar'=>['#fef3c7','#b45309','📝']][$sup['proc_kind']] ?? ['#f3f4f6','#374151','•']; @endphp
+                  <span style="background:{{ $pc[0] }};color:{{ $pc[1] }};padding:1px 8px;border-radius:999px;font-weight:700;">{{ $pc[2] }} {{ $sup['proc_text'] }}</span>
+                @endif
               </div>
             @endif
           </td>

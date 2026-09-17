@@ -305,7 +305,7 @@ class ViewWooOrder extends ViewRecord
         $out = [];
         $avgCache = [];
         foreach ($this->record->items as $item) {
-            $info = ['supplier_name' => null, 'lead_days' => null, 'avg_lead' => null];
+            $info = ['supplier_name' => null, 'lead_days' => null, 'avg_lead' => null, 'proc_kind' => null, 'proc_text' => null];
 
             $wooPid = (int) ($item->data['product_id'] ?? $item->woo_product_id);
             $local  = $wooPid ? \App\Models\WooProduct::where('woo_id', $wooPid)->first(['id']) : null;
@@ -318,12 +318,51 @@ class ViewWooOrder extends ViewRecord
                     $info['lead_days']     = $ps->lead_days;
                     $info['supplier_name'] = \App\Models\Supplier::where('id', $ps->supplier_id)->value('name');
 
+                    // Termenul mediu REAL al furnizorului = media lead_time_days din istoricul PO→recepție
+                    // (calculat de MatchPoWinmentorReceptieCommand: sent_at → data recepției WinMentor).
                     if (! array_key_exists($ps->supplier_id, $avgCache)) {
-                        $avgCache[$ps->supplier_id] = \App\Models\ProductSupplier::where('supplier_id', $ps->supplier_id)
-                            ->whereNotNull('lead_days')->avg('lead_days');
+                        $lead = \App\Models\PurchaseOrder::where('supplier_id', $ps->supplier_id)->whereNotNull('lead_time_days');
+                        $avgCache[$ps->supplier_id] = $lead->exists() ? (int) round((float) $lead->avg('lead_time_days')) : null;
                     }
-                    $a = $avgCache[$ps->supplier_id];
-                    $info['avg_lead'] = $a !== null ? (int) round((float) $a) : null;
+                    $info['avg_lead'] = $avgCache[$ps->supplier_id];
+                }
+
+                // Stare aprovizionare (ca buyer-ul să nu dubleze): Comandat > În PO > Necesar.
+                $activePoId = \App\Models\PurchaseOrderItem::where('woo_product_id', $local->id)
+                    ->whereExists(function ($q) {
+                        $q->selectRaw('1')->from('purchase_orders')
+                            ->whereColumn('purchase_orders.id', 'purchase_order_items.purchase_order_id')
+                            ->whereNotIn('purchase_orders.status', ['received', 'rejected', 'cancelled']);
+                    })->value('purchase_order_id');
+
+                if ($activePoId) {
+                    $po = \App\Models\PurchaseOrder::whereKey($activePoId)->first(['number', 'status', 'buyer_id', 'created_at', 'sent_by', 'sent_at']);
+                    if ($po) {
+                        if (in_array($po->status, ['sent', 'partially_received'], true)) {
+                            $who  = $this->userName($po->sent_by);
+                            $when = $po->sent_at ? \Carbon\Carbon::parse($po->sent_at)->format('d.m.Y') : null;
+                            $info['proc_kind'] = 'ordered';
+                            $info['proc_text'] = 'Comandat · ' . $po->number . ($who ? ' · de ' . $who : '') . ($when ? ' · ' . $when : '');
+                        } else {
+                            $who  = $this->userName($po->buyer_id);
+                            $when = $po->created_at ? $po->created_at->format('d.m.Y') : null;
+                            $info['proc_kind'] = 'po';
+                            $info['proc_text'] = 'În PO · ' . $po->number . ($who ? ' · de ' . $who : '') . ($when ? ' · ' . $when : '');
+                        }
+                    }
+                } else {
+                    $nec = \App\Models\PurchaseRequestItem::where('woo_product_id', $local->id)
+                        ->whereExists(function ($q) {
+                            $q->selectRaw('1')->from('purchase_requests')
+                                ->whereColumn('purchase_requests.id', 'purchase_request_items.purchase_request_id')
+                                ->whereNotIn('purchase_requests.status', ['fully_ordered', 'cancelled']);
+                        })->value('purchase_request_id');
+                    if ($nec) {
+                        $pr   = \App\Models\PurchaseRequest::whereKey($nec)->first(['number', 'created_at']);
+                        $when = $pr && $pr->created_at ? $pr->created_at->format('d.m.Y') : null;
+                        $info['proc_kind'] = 'necesar';
+                        $info['proc_text'] = 'Necesar creat' . ($pr && $pr->number ? ' · ' . $pr->number : '') . ($when ? ' · ' . $when : '');
+                    }
                 }
             }
 
@@ -331,6 +370,19 @@ class ViewWooOrder extends ViewRecord
         }
 
         return $out;
+    }
+
+    /** Numele unui user după id, cu cache pe request. */
+    private function userName(?int $id): ?string
+    {
+        static $cache = [];
+        if (! $id) {
+            return null;
+        }
+        if (! array_key_exists($id, $cache)) {
+            $cache[$id] = \App\Models\User::whereKey($id)->value('name');
+        }
+        return $cache[$id];
     }
 
     /** Snapshot complet al unui item — suficient pentru re-adăugare la undo */
