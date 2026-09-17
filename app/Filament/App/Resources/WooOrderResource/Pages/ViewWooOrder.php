@@ -305,17 +305,18 @@ class ViewWooOrder extends ViewRecord
         $out = [];
         $avgCache = [];
         foreach ($this->record->items as $item) {
-            $info = ['supplier_name' => null, 'lead_days' => null, 'avg_lead' => null, 'proc_kind' => null, 'proc_text' => null];
+            $info = ['supplier_name' => null, 'supplier_sku' => null, 'lead_days' => null, 'avg_lead' => null, 'proc_kind' => null, 'proc_text' => null];
 
             $wooPid = (int) ($item->data['product_id'] ?? $item->woo_product_id);
             $local  = $wooPid ? \App\Models\WooProduct::where('woo_id', $wooPid)->first(['id']) : null;
 
             if ($local) {
-                $ps = \App\Models\ProductSupplier::where('woo_product_id', $local->id)->where('is_preferred', true)->first(['supplier_id', 'lead_days'])
-                    ?? \App\Models\ProductSupplier::where('woo_product_id', $local->id)->first(['supplier_id', 'lead_days']);
+                $ps = \App\Models\ProductSupplier::where('woo_product_id', $local->id)->where('is_preferred', true)->first(['supplier_id', 'lead_days', 'supplier_sku'])
+                    ?? \App\Models\ProductSupplier::where('woo_product_id', $local->id)->first(['supplier_id', 'lead_days', 'supplier_sku']);
 
                 if ($ps) {
                     $info['lead_days']     = $ps->lead_days;
+                    $info['supplier_sku']  = $ps->supplier_sku ?: null;
                     $info['supplier_name'] = \App\Models\Supplier::where('id', $ps->supplier_id)->value('name');
 
                     // Termenul mediu REAL al furnizorului = media lead_time_days din istoricul PO→recepție
@@ -327,18 +328,32 @@ class ViewWooOrder extends ViewRecord
                     $info['avg_lead'] = $avgCache[$ps->supplier_id];
                 }
 
-                // Stare aprovizionare (ca buyer-ul să nu dubleze): Comandat > În PO > Necesar.
+                // Stare aprovizionare (ca buyer-ul să nu dubleze): Recepționat-neînreg. > Comandat > În PO > Necesar.
                 $activePoId = \App\Models\PurchaseOrderItem::where('woo_product_id', $local->id)
                     ->whereExists(function ($q) {
                         $q->selectRaw('1')->from('purchase_orders')
                             ->whereColumn('purchase_orders.id', 'purchase_order_items.purchase_order_id')
-                            ->whereNotIn('purchase_orders.status', ['received', 'rejected', 'cancelled']);
-                    })->value('purchase_order_id');
+                            ->whereNotIn('purchase_orders.status', ['rejected', 'cancelled']);
+                    })
+                    ->orderByDesc('id')
+                    ->value('purchase_order_id');
 
                 if ($activePoId) {
-                    $po = \App\Models\PurchaseOrder::whereKey($activePoId)->first(['number', 'status', 'buyer_id', 'created_at', 'sent_by', 'sent_at']);
+                    $po = \App\Models\PurchaseOrder::whereKey($activePoId)->first(['number', 'status', 'buyer_id', 'created_at', 'sent_by', 'sent_at', 'received_at', 'received_by', 'winmentor_receptie_matched_at', 'winmentor_receptie_nr']);
                     if ($po) {
-                        if (in_array($po->status, ['sent', 'partially_received'], true)) {
+                        $isReceived = $po->status === 'received' || $po->received_at;
+                        $isAccounted = ! empty($po->winmentor_receptie_matched_at) || ! empty($po->winmentor_receptie_nr);
+
+                        if ($isReceived && ! $isAccounted) {
+                            // Recepționat fizic, dar încă neînregistrat contabil ca stoc
+                            $who  = $this->userName($po->received_by);
+                            $when = $po->received_at ? \Carbon\Carbon::parse($po->received_at)->format('d.m.Y') : null;
+                            $info['proc_kind'] = 'received_pending';
+                            $info['proc_text'] = 'Recepționat (neînreg. contabil) · ' . $po->number . ($who ? ' · de ' . $who : '') . ($when ? ' · ' . $when : '');
+                        } elseif ($isReceived) {
+                            // Recepționat ȘI înregistrat contabil → nu mai marcăm (stocul se actualizează)
+                            $info['proc_kind'] = null;
+                        } elseif (in_array($po->status, ['sent', 'partially_received'], true)) {
                             $who  = $this->userName($po->sent_by);
                             $when = $po->sent_at ? \Carbon\Carbon::parse($po->sent_at)->format('d.m.Y') : null;
                             $info['proc_kind'] = 'ordered';
@@ -350,7 +365,9 @@ class ViewWooOrder extends ViewRecord
                             $info['proc_text'] = 'În PO · ' . $po->number . ($who ? ' · de ' . $who : '') . ($when ? ' · ' . $when : '');
                         }
                     }
-                } else {
+                }
+
+                if (! $info['proc_kind']) {
                     $nec = \App\Models\PurchaseRequestItem::where('woo_product_id', $local->id)
                         ->whereExists(function ($q) {
                             $q->selectRaw('1')->from('purchase_requests')
