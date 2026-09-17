@@ -191,8 +191,7 @@ class UserResource extends Resource
                         : null)
                     ->tooltip(fn (User $r): ?string => $r->last_activity_at
                         ? 'Ultima activitate: ' . $r->last_activity_at->format('d.m.Y H:i')
-                        : 'Fără activitate înregistrată')
-                    ->action('activitate'),
+                        : 'Fără activitate înregistrată'),
                 Tables\Columns\TextColumn::make('last_login_at')
                     ->label('Ultima logare')
                     ->dateTime('d.m.Y H:i')
