@@ -34,17 +34,19 @@ class ErrorEvent extends Model
     }
 
     /**
-     * Durata (secunde) până la rezolvare pentru ciclul curent: de când s-a deschis până s-a rezolvat.
+     * Durata (secunde) cât a fost ACTIVĂ eroarea: de la deschidere până la ultima apariție.
+     * (Nu până la momentul marcării ca rezolvat — acela include intervalul de așteptare/auto-resolve.)
      * Null dacă nu e rezolvată sau lipsesc reperele.
      */
     public function getResolutionSecondsAttribute(): ?int
     {
         $start = $this->opened_at ?? $this->first_seen_at;
-        if ($this->status !== 'resolved' || ! $this->resolved_at || ! $start) {
+        $end   = $this->last_seen_at;
+        if ($this->status !== 'resolved' || ! $end || ! $start) {
             return null;
         }
         // Carbon 3: diffInSeconds e cu semn → abs() ca durata să fie mereu pozitivă
-        return (int) abs($this->resolved_at->diffInSeconds($start));
+        return (int) abs($end->diffInSeconds($start));
     }
 
     /** Text scurt: „rezolvat în 3h 12m" (resolved) / „deschis de 2h" (open). */
