@@ -6,7 +6,10 @@ use App\Filament\Resources\UserResource\Pages;
 use App\Models\Location;
 use App\Models\User;
 use Filament\Forms;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Placeholder;
 use Filament\Schemas\Components\Utilities\Get;
+use Illuminate\Support\HtmlString;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
@@ -234,7 +237,23 @@ class UserResource extends Resource
                     ->modalWidth('3xl')
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Închide')
-                    ->modalContent(fn (User $r) => new \Illuminate\Support\HtmlString(static::activityHtml($r))),
+                    ->schema(fn (User $r): array => [
+                        Placeholder::make('daily')
+                            ->hiddenLabel()
+                            ->content(new HtmlString(static::activityDailyHtml($r))),
+                        DatePicker::make('zi')
+                            ->label('Activitate orară — alege o zi')
+                            ->native(false)
+                            ->closeOnDateSelection()
+                            ->minDate(now()->subDays(29)->startOfDay())
+                            ->maxDate(now()->endOfDay())
+                            ->disabledDates(static::daysWithoutData($r))
+                            ->live()
+                            ->helperText('Se pot alege doar zile cu activitate. Gol = agregat pe 30 de zile.'),
+                        Placeholder::make('hourly')
+                            ->hiddenLabel()
+                            ->content(fn (Get $get) => new HtmlString(static::activityHourlyHtml($r, $get('zi')))),
+                    ]),
                 Actions\EditAction::make(),
                 Actions\DeleteAction::make(),
             ])
@@ -245,8 +264,13 @@ class UserResource extends Resource
             ]);
     }
 
-    /** Grafic inline (bare CSS, fără JS) cu timpul activ zilnic pe ultimele 30 de zile + statistici. */
-    public static function activityHtml(User $u): string
+    private static function fmtSec(int $s): string
+    {
+        return $s >= 3600 ? round($s / 3600, 1) . 'h' : ($s >= 60 ? round($s / 60) . 'm' : $s . 's');
+    }
+
+    /** Statistici + grafic zilnic (bare CSS) pe ultimele 30 de zile. */
+    public static function activityDailyHtml(User $u): string
     {
         $days = 30;
         $rows = \Illuminate\Support\Facades\DB::table('user_activity_daily')
@@ -262,113 +286,91 @@ class UserResource extends Resource
         $total  = array_sum(array_column($series, 'sec'));
         $active = count(array_filter($series, fn ($s) => $s['sec'] > 0));
         $maxSec = max(1, max(array_column($series, 'sec')));
-        $fmt = fn (int $s): string => $s >= 3600 ? round($s / 3600, 1) . 'h' : ($s >= 60 ? round($s / 60) . 'm' : $s . 's');
 
         $bars = '';
         foreach ($series as $s) {
             $h = max(2, (int) round(($s['sec'] / $maxSec) * 110));
             $c = $s['sec'] > 0 ? '#d42b2b' : '#e5e7eb';
-            $bars .= '<div title="' . $s['d']->format('d.m.Y') . ': ' . $fmt($s['sec']) . '" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;">'
+            $bars .= '<div title="' . $s['d']->format('d.m.Y') . ': ' . self::fmtSec($s['sec']) . '" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;">'
                 . '<div style="width:72%;height:' . $h . 'px;background:' . $c . ';border-radius:3px 3px 0 0;"></div>'
                 . '<div style="font-size:8px;color:#9ca3af;">' . $s['d']->format('j') . '</div></div>';
         }
-
-        // Date orare per zi (ultimele 30 zile) + agregat
-        $hrows = \Illuminate\Support\Facades\DB::table('user_activity_hourly')
-            ->where('user_id', $u->id)
-            ->where('day', '>=', now()->subDays($days - 1)->toDateString())
-            ->get(['day', 'hour', 'active_seconds']);
-        $byDay = [];
-        foreach ($hrows as $r) {
-            $byDay[(string) $r->day][(int) $r->hour] = (int) $r->active_seconds;
-        }
-        $agg = array_fill(0, 24, 0);
-        $perDay = [];
-        $calDays = [];
-        for ($i = $days - 1; $i >= 0; $i--) {
-            $d = now()->subDays($i);
-            $k = $d->toDateString();
-            $arr = [];
-            $sum = 0;
-            for ($h = 0; $h < 24; $h++) {
-                $v = $byDay[$k][$h] ?? 0;
-                $arr[$h] = $v;
-                $agg[$h] += $v;
-                $sum += $v;
-            }
-            $perDay[$k] = $arr;
-            $calDays[] = ['k' => $k, 'dom' => (int) $d->format('j'), 'has' => $sum > 0, 'tip' => $d->format('d.m.Y') . ': ' . $fmt($sum)];
-        }
-        // scalare globală comparabilă + precompute afișare bare
-        $gmax = 1;
-        foreach (['agg' => $agg] + $perDay as $arr) {
-            $gmax = max($gmax, max($arr));
-        }
-        $disp = [];
-        foreach (['agg' => $agg] + $perDay as $k => $arr) {
-            $bb = [];
-            foreach ($arr as $h => $sec) {
-                $bb[] = ['h' => max(2, (int) round($sec / $gmax * 90)), 'c' => $sec > 0 ? '#2563eb' : '#e5e7eb', 't' => 'Ora ' . sprintf('%02d', $h) . ':00 — ' . $fmt($sec)];
-            }
-            $disp[$k] = $bb;
-        }
-        $init = htmlspecialchars(json_encode(['sel' => 'agg', 'd' => $disp], JSON_UNESCAPED_UNICODE), ENT_QUOTES);
-
-        // Mini-calendar (Luni-first): zilele cu date sunt clickabile (albastru), restul gri
-        $wds = ['Lu', 'Ma', 'Mi', 'Jo', 'Vi', 'Sâ', 'Du'];
-        $cal = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;width:236px;flex:0 0 auto;">';
-        foreach ($wds as $wd) {
-            $cal .= '<div style="font-size:9px;text-align:center;color:#9ca3af;font-weight:700;">' . $wd . '</div>';
-        }
-        $firstIso = (int) now()->subDays($days - 1)->isoWeekday();
-        for ($p = 1; $p < $firstIso; $p++) {
-            $cal .= '<div></div>';
-        }
-        foreach ($calDays as $cd) {
-            if ($cd['has']) {
-                $cal .= '<div @click="sel=\'' . $cd['k'] . '\'"'
-                    . ' :style="sel===\'' . $cd['k'] . '\' ? \'outline:2px solid #d42b2b;outline-offset:1px;\' : \'\'"'
-                    . ' title="' . $cd['tip'] . '"'
-                    . ' style="cursor:pointer;text-align:center;font-size:11px;padding:6px 0;border-radius:6px;background:#dbeafe;color:#1d4ed8;font-weight:700;">' . $cd['dom'] . '</div>';
-            } else {
-                $cal .= '<div style="text-align:center;font-size:11px;padding:6px 0;border-radius:6px;background:#f3f4f6;color:#cbd5e1;">' . $cd['dom'] . '</div>';
-            }
-        }
-        $cal .= '</div>';
-
         $stat = fn ($label, $val, $color = '#111827') => '<div><div style="font-size:11px;color:#6b7280;">' . $label . '</div><div style="font-size:20px;font-weight:800;color:' . $color . ';">' . $val . '</div></div>';
-        $sectTitle = fn (string $t) => '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;margin:22px 0 8px;">' . $t . '</div>';
-
-        $hourlyBars = '<div style="flex:1;min-width:240px;">'
-            . '<div style="display:flex;align-items:flex-end;gap:2px;height:110px;border-bottom:1px solid #e5e7eb;padding-bottom:2px;">'
-            . '<template x-for="(b, i) in d[sel]" :key="i">'
-            . '<div :title="b.t" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;">'
-            . '<div :style="\'width:66%;height:\'+b.h+\'px;background:\'+b.c+\';border-radius:3px 3px 0 0;\'"></div>'
-            . '<div x-text="i%3===0 ? i : \'\'" style="font-size:8px;color:#9ca3af;"></div>'
-            . '</div></template>'
-            . '</div>'
-            . '<div style="font-size:11px;color:#6b7280;margin-top:6px;" x-text="sel===\'agg\' ? \'Agregat — ultimele 30 de zile\' : (\'Ziua \'+sel)"></div>'
-            . '</div>';
-
-        $hourlyBlock = '<div x-data="' . $init . '">'
-            . '<button type="button" @click="sel=\'agg\'" :style="sel===\'agg\' ? \'background:#d42b2b;color:#fff;\' : \'background:#f3f4f6;color:#374151;\'" style="border:0;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:12px;">Agregat 30 zile</button>'
-            . '<div style="display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;">' . $cal . $hourlyBars . '</div>'
-            . '</div>';
 
         return '<div style="font-size:13px;color:#374151;">'
-            . '<div style="display:flex;gap:24px;margin-bottom:6px;flex-wrap:wrap;">'
-            . $stat('Total 30 zile', $fmt($total), '#d42b2b')
-            . $stat('Medie / zi activă', $fmt($active ? (int) ($total / $active) : 0))
+            . '<div style="display:flex;gap:24px;margin-bottom:10px;flex-wrap:wrap;">'
+            . $stat('Total 30 zile', self::fmtSec($total), '#d42b2b')
+            . $stat('Medie / zi activă', self::fmtSec($active ? (int) ($total / $active) : 0))
             . $stat('Zile active', $active . ' / 30')
             . '</div>'
-            . $sectTitle('Pe zile (ultimele 30)')
-            . '<div style="display:flex;align-items:flex-end;gap:2px;height:130px;border-bottom:1px solid #e5e7eb;padding-bottom:2px;">' . $bars . '</div>'
-            . $sectTitle('Activitate orară — alege o zi din calendar (albastru = are date)')
-            . $hourlyBlock
-            . '<div style="font-size:11px;color:#9ca3af;margin-top:12px;">'
+            . '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;margin:4px 0 8px;">Pe zile (ultimele 30)</div>'
+            . '<div style="display:flex;align-items:flex-end;gap:2px;height:120px;border-bottom:1px solid #e5e7eb;padding-bottom:2px;">' . $bars . '</div>'
+            . '<div style="font-size:11px;color:#9ca3af;margin-top:8px;">'
             . 'Ultima logare: ' . ($u->last_login_at ? $u->last_login_at->format('d.m.Y H:i') : '—')
             . ' &middot; Ultima activitate: ' . ($u->last_activity_at ? $u->last_activity_at->diffForHumans() : '—')
             . '</div></div>';
+    }
+
+    /** Grafic orar (24h) pentru o zi anume, sau agregat pe 30 de zile dacă $day e gol. */
+    public static function activityHourlyHtml(User $u, ?string $day): string
+    {
+        $days   = 30;
+        $dayKey = $day ? \Illuminate\Support\Carbon::parse($day)->toDateString() : null;
+
+        $q = \Illuminate\Support\Facades\DB::table('user_activity_hourly')->where('user_id', $u->id);
+        if ($dayKey) {
+            $q->where('day', $dayKey);
+        } else {
+            $q->where('day', '>=', now()->subDays($days - 1)->toDateString());
+        }
+        $hourly = $q->selectRaw('hour, SUM(active_seconds) as sec')->groupBy('hour')->pluck('sec', 'hour');
+
+        $vals = [];
+        $totalDay = 0;
+        for ($h = 0; $h < 24; $h++) {
+            $vals[$h] = (int) ($hourly[$h] ?? 0);
+            $totalDay += $vals[$h];
+        }
+        $hmax = max(1, max($vals));
+
+        $bars = '';
+        for ($h = 0; $h < 24; $h++) {
+            $bh = max(2, (int) round($vals[$h] / $hmax * 96));
+            $c  = $vals[$h] > 0 ? '#2563eb' : '#e5e7eb';
+            $bars .= '<div title="Ora ' . sprintf('%02d', $h) . ':00 — ' . self::fmtSec($vals[$h]) . '" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;">'
+                . '<div style="width:66%;height:' . $bh . 'px;background:' . $c . ';border-radius:3px 3px 0 0;"></div>'
+                . '<div style="font-size:8px;color:#9ca3af;">' . ($h % 3 === 0 ? $h : '') . '</div></div>';
+        }
+
+        $caption = $dayKey
+            ? 'Ora activă în ' . \Illuminate\Support\Carbon::parse($dayKey)->format('d.m.Y') . ' — total ' . self::fmtSec($totalDay)
+            : 'Agregat pe ultimele 30 de zile — total ' . self::fmtSec($totalDay);
+
+        return '<div style="font-size:13px;">'
+            . '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;margin:0 0 8px;">Activitate orară</div>'
+            . '<div style="display:flex;align-items:flex-end;gap:2px;height:110px;border-bottom:1px solid #e5e7eb;padding-bottom:2px;">' . $bars . '</div>'
+            . '<div style="font-size:11px;color:#6b7280;margin-top:6px;">' . $caption . '</div>'
+            . '</div>';
+    }
+
+    /** Zilele din intervalul de 30 de zile FĂRĂ activitate — pt DatePicker->disabledDates. */
+    public static function daysWithoutData(User $u): array
+    {
+        $days = 30;
+        $withData = \Illuminate\Support\Facades\DB::table('user_activity_hourly')
+            ->where('user_id', $u->id)
+            ->where('day', '>=', now()->subDays($days - 1)->toDateString())
+            ->distinct()->pluck('day')->map(fn ($d) => (string) $d)->all();
+        $withData = array_flip($withData);
+
+        $disabled = [];
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $k = now()->subDays($i)->toDateString();
+            if (! isset($withData[$k])) {
+                $disabled[] = $k;
+            }
+        }
+        return $disabled;
     }
 
     public static function getRelations(): array
