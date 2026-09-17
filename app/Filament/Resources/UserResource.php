@@ -186,6 +186,9 @@ class UserResource extends Resource
                         'active' => 'heroicon-o-clock',
                         default  => 'heroicon-o-signal-slash',
                     })
+                    ->description(fn (User $r): ?string => $r->last_activity_at
+                        ? 'activ ' . $r->last_activity_at->diffForHumans()
+                        : null)
                     ->tooltip(fn (User $r): ?string => $r->last_activity_at
                         ? 'Ultima activitate: ' . $r->last_activity_at->format('d.m.Y H:i')
                         : 'Fără activitate înregistrată'),
