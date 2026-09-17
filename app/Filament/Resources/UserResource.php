@@ -273,26 +273,67 @@ class UserResource extends Resource
                 . '<div style="font-size:8px;color:#9ca3af;">' . $s['d']->format('j') . '</div></div>';
         }
 
-        // Distribuție pe oră (0-23), agregat pe ultimele 30 de zile — ritmul orar
-        $hourly = \Illuminate\Support\Facades\DB::table('user_activity_hourly')
+        // Date orare per zi (ultimele 30 zile) + agregat — pentru selectorul interactiv (Alpine)
+        $hrows = \Illuminate\Support\Facades\DB::table('user_activity_hourly')
             ->where('user_id', $u->id)
             ->where('day', '>=', now()->subDays($days - 1)->toDateString())
-            ->selectRaw('hour, SUM(active_seconds) as sec')
-            ->groupBy('hour')
-            ->pluck('sec', 'hour');
-        $hmax = max(1, (int) ($hourly->max() ?? 1));
-        $hbars = '';
-        for ($h = 0; $h < 24; $h++) {
-            $sec = (int) ($hourly[$h] ?? 0);
-            $bh  = max(2, (int) round(($sec / $hmax) * 90));
-            $c   = $sec > 0 ? '#2563eb' : '#e5e7eb';
-            $hbars .= '<div title="Ora ' . sprintf('%02d', $h) . ':00 — ' . $fmt($sec) . '" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;">'
-                . '<div style="width:66%;height:' . $bh . 'px;background:' . $c . ';border-radius:3px 3px 0 0;"></div>'
-                . '<div style="font-size:8px;color:#9ca3af;">' . ($h % 3 === 0 ? $h : '') . '</div></div>';
+            ->get(['day', 'hour', 'active_seconds']);
+        $byDay = [];
+        foreach ($hrows as $r) {
+            $byDay[(string) $r->day][(int) $r->hour] = (int) $r->active_seconds;
         }
+        $zileRo = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'];
+        $agg = array_fill(0, 24, 0);
+        $perDay = [];
+        $daysList = [];
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $d = now()->subDays($i);
+            $k = $d->toDateString();
+            $arr = [];
+            for ($h = 0; $h < 24; $h++) {
+                $v = $byDay[$k][$h] ?? 0;
+                $arr[$h] = $v;
+                $agg[$h] += $v;
+            }
+            $perDay[$k] = $arr;
+            $daysList[] = ['k' => $k, 'label' => $d->format('d.m') . ' · ' . mb_substr($zileRo[$d->dayOfWeek], 0, 3)];
+        }
+        // scalare globală comparabilă + precompute afișare bare
+        $gmax = 1;
+        foreach (['agg' => $agg] + $perDay as $arr) {
+            $gmax = max($gmax, max($arr));
+        }
+        $disp = [];
+        foreach (['agg' => $agg] + $perDay as $k => $arr) {
+            $bb = [];
+            foreach ($arr as $h => $sec) {
+                $bb[] = [
+                    'h' => max(2, (int) round($sec / $gmax * 90)),
+                    'c' => $sec > 0 ? '#2563eb' : '#e5e7eb',
+                    't' => 'Ora ' . sprintf('%02d', $h) . ':00 — ' . $fmt($sec),
+                ];
+            }
+            $disp[$k] = $bb;
+        }
+        $init = htmlspecialchars(json_encode(['sel' => 'agg', 'd' => $disp, 'days' => $daysList], JSON_UNESCAPED_UNICODE), ENT_QUOTES);
 
         $stat = fn ($label, $val, $color = '#111827') => '<div><div style="font-size:11px;color:#6b7280;">' . $label . '</div><div style="font-size:20px;font-weight:800;color:' . $color . ';">' . $val . '</div></div>';
         $sectTitle = fn (string $t) => '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;margin:22px 0 8px;">' . $t . '</div>';
+
+        $hourlyBlock = '<div x-data="' . $init . '">'
+            . '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
+            . '<span style="font-size:12px;color:#6b7280;">Ziua:</span>'
+            . '<select x-model="sel" style="border:1px solid #d1d5db;border-radius:6px;padding:5px 8px;font-size:12px;background:#fff;color:#111827;">'
+            . '<option value="agg">Agregat 30 zile</option>'
+            . '<template x-for="dd in days" :key="dd.k"><option :value="dd.k" x-text="dd.label"></option></template>'
+            . '</select></div>'
+            . '<div style="display:flex;align-items:flex-end;gap:2px;height:110px;border-bottom:1px solid #e5e7eb;padding-bottom:2px;">'
+            . '<template x-for="(b, i) in d[sel]" :key="i">'
+            . '<div :title="b.t" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;">'
+            . '<div :style="\'width:66%;height:\'+b.h+\'px;background:\'+b.c+\';border-radius:3px 3px 0 0;\'"></div>'
+            . '<div x-text="i%3===0 ? i : \'\'" style="font-size:8px;color:#9ca3af;"></div>'
+            . '</div></template>'
+            . '</div></div>';
 
         return '<div style="font-size:13px;color:#374151;">'
             . '<div style="display:flex;gap:24px;margin-bottom:6px;flex-wrap:wrap;">'
@@ -302,9 +343,9 @@ class UserResource extends Resource
             . '</div>'
             . $sectTitle('Pe zile (ultimele 30)')
             . '<div style="display:flex;align-items:flex-end;gap:2px;height:130px;border-bottom:1px solid #e5e7eb;padding-bottom:2px;">' . $bars . '</div>'
-            . $sectTitle('Pe oră (ritmul zilnic, agregat 30 zile)')
-            . '<div style="display:flex;align-items:flex-end;gap:2px;height:110px;border-bottom:1px solid #e5e7eb;padding-bottom:2px;">' . $hbars . '</div>'
-            . '<div style="font-size:11px;color:#9ca3af;margin-top:10px;">'
+            . $sectTitle('Pe oră — alege ziua sau agregat')
+            . $hourlyBlock
+            . '<div style="font-size:11px;color:#9ca3af;margin-top:12px;">'
             . 'Ultima logare: ' . ($u->last_login_at ? $u->last_login_at->format('d.m.Y H:i') : '—')
             . ' &middot; Ultima activitate: ' . ($u->last_activity_at ? $u->last_activity_at->diffForHumans() : '—')
             . '</div></div>';
