@@ -191,7 +191,8 @@ class UserResource extends Resource
                         : null)
                     ->tooltip(fn (User $r): ?string => $r->last_activity_at
                         ? 'Ultima activitate: ' . $r->last_activity_at->format('d.m.Y H:i')
-                        : 'Fără activitate înregistrată'),
+                        : 'Fără activitate înregistrată')
+                    ->action('activitate'),
                 Tables\Columns\TextColumn::make('last_login_at')
                     ->label('Ultima logare')
                     ->dateTime('d.m.Y H:i')
@@ -226,6 +227,15 @@ class UserResource extends Resource
             ])
             ->deferFilters(false)
             ->recordActions([
+                Actions\Action::make('activitate')
+                    ->label('Activitate')
+                    ->icon('heroicon-o-chart-bar')
+                    ->color('gray')
+                    ->modalHeading(fn (User $r): string => 'Activitate — ' . $r->name)
+                    ->modalWidth('3xl')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Închide')
+                    ->modalContent(fn (User $r) => new \Illuminate\Support\HtmlString(static::activityHtml($r))),
                 Actions\EditAction::make(),
                 Actions\DeleteAction::make(),
             ])
@@ -234,6 +244,49 @@ class UserResource extends Resource
                     Actions\DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    /** Grafic inline (bare CSS, fără JS) cu timpul activ zilnic pe ultimele 30 de zile + statistici. */
+    public static function activityHtml(User $u): string
+    {
+        $days = 30;
+        $rows = \Illuminate\Support\Facades\DB::table('user_activity_daily')
+            ->where('user_id', $u->id)
+            ->where('day', '>=', now()->subDays($days - 1)->toDateString())
+            ->pluck('active_seconds', 'day');
+
+        $series = [];
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $d = now()->subDays($i);
+            $series[] = ['d' => $d, 'sec' => (int) ($rows[$d->toDateString()] ?? 0)];
+        }
+        $total  = array_sum(array_column($series, 'sec'));
+        $active = count(array_filter($series, fn ($s) => $s['sec'] > 0));
+        $maxSec = max(1, max(array_column($series, 'sec')));
+        $fmt = fn (int $s): string => $s >= 3600 ? round($s / 3600, 1) . 'h' : ($s >= 60 ? round($s / 60) . 'm' : $s . 's');
+
+        $bars = '';
+        foreach ($series as $s) {
+            $h = max(2, (int) round(($s['sec'] / $maxSec) * 110));
+            $c = $s['sec'] > 0 ? '#d42b2b' : '#e5e7eb';
+            $bars .= '<div title="' . $s['d']->format('d.m.Y') . ': ' . $fmt($s['sec']) . '" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;">'
+                . '<div style="width:72%;height:' . $h . 'px;background:' . $c . ';border-radius:3px 3px 0 0;"></div>'
+                . '<div style="font-size:8px;color:#9ca3af;">' . $s['d']->format('j') . '</div></div>';
+        }
+
+        $stat = fn ($label, $val, $color = '#111827') => '<div><div style="font-size:11px;color:#6b7280;">' . $label . '</div><div style="font-size:20px;font-weight:800;color:' . $color . ';">' . $val . '</div></div>';
+
+        return '<div style="font-size:13px;color:#374151;">'
+            . '<div style="display:flex;gap:24px;margin-bottom:18px;flex-wrap:wrap;">'
+            . $stat('Total 30 zile', $fmt($total), '#d42b2b')
+            . $stat('Medie / zi activă', $fmt($active ? (int) ($total / $active) : 0))
+            . $stat('Zile active', $active . ' / 30')
+            . '</div>'
+            . '<div style="display:flex;align-items:flex-end;gap:2px;height:130px;border-bottom:1px solid #e5e7eb;padding-bottom:2px;">' . $bars . '</div>'
+            . '<div style="font-size:11px;color:#9ca3af;margin-top:10px;">'
+            . 'Ultima logare: ' . ($u->last_login_at ? $u->last_login_at->format('d.m.Y H:i') : '—')
+            . ' &middot; Ultima activitate: ' . ($u->last_activity_at ? $u->last_activity_at->diffForHumans() : '—')
+            . '</div></div>';
     }
 
     public static function getRelations(): array
