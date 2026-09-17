@@ -6,8 +6,14 @@ use App\Filament\App\Resources\WooProductResource;
 use App\Jobs\SyncProductSupplierMetaJob;
 use App\Models\WooProduct;
 use App\Services\WooCommerce\WooClient;
+use App\Services\WooCommerce\WooPluginClient;
 use Filament\Actions;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Support\Facades\Storage;
 
 class EditWooProduct extends EditRecord
 {
@@ -24,6 +30,66 @@ class EditWooProduct extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('uploadDoc')
+                ->label('Încarcă document')
+                ->icon('heroicon-o-document-arrow-up')
+                ->color('gray')
+                ->modalHeading('Încarcă document pe produs')
+                ->modalDescription('Fișa tehnică / certificatul se găzduiește pe CDN-ul nostru și apare automat clienților care au cumpărat acest produs.')
+                ->modalSubmitActionLabel('Încarcă')
+                ->schema([
+                    FileUpload::make('file')
+                        ->label('Fișier (PDF, max 20MB)')
+                        ->acceptedFileTypes(['application/pdf'])
+                        ->maxSize(20480)
+                        ->required()
+                        ->disk('local')
+                        ->directory('pdocs-tmp')
+                        ->visibility('private')
+                        ->preserveFilenames(),
+                    TextInput::make('title')
+                        ->label('Titlu document')
+                        ->default('Fișă tehnică')
+                        ->required()
+                        ->maxLength(200),
+                    Textarea::make('description')
+                        ->label('Descriere (opțional)')
+                        ->rows(2),
+                ])
+                ->action(function (array $data, WooProduct $record): void {
+                    $path = $data['file'] ?? null;
+                    if (! $path) {
+                        return;
+                    }
+                    try {
+                        $contents = Storage::disk('local')->get($path);
+                        $filename = basename($path);
+                        if (! str_ends_with(strtolower($filename), '.pdf')) {
+                            $filename .= '.pdf';
+                        }
+                        $res = (new WooPluginClient())->attachProductDocument(
+                            (int) $record->woo_id,
+                            $record->sku,
+                            (string) $data['title'],
+                            (string) ($data['description'] ?? ''),
+                            $filename,
+                            (string) $contents
+                        );
+                        Notification::make()
+                            ->success()
+                            ->title('Document încărcat pe CDN')
+                            ->body($res['url'] ?? 'Documentul a fost atașat produsului.')
+                            ->send();
+                    } catch (\Throwable $e) {
+                        Notification::make()
+                            ->danger()
+                            ->title('Eroare la upload')
+                            ->body($e->getMessage())
+                            ->send();
+                    } finally {
+                        Storage::disk('local')->delete($path);
+                    }
+                }),
             Actions\ViewAction::make(),
         ];
     }

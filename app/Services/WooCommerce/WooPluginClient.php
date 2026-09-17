@@ -16,6 +16,8 @@ class WooPluginClient
 {
     private readonly string $baseUrl;
 
+    private readonly string $siteUrl;
+
     private readonly string $apiKey;
 
     private const NAMESPACE = 'wp-json/malinco-erp/v1';
@@ -33,8 +35,44 @@ class WooPluginClient
             '/'
         );
 
+        $this->siteUrl = $siteUrl;
         $this->baseUrl = $siteUrl . '/' . self::NAMESPACE;
         $this->apiKey  = (string) AppSetting::getEncrypted(AppSetting::KEY_WOO_PLUGIN_API_KEY);
+    }
+
+    /**
+     * Încarcă un document (fișă tehnică etc.) pe un produs, prin plugin-ul malinco-product-docs.
+     * Fișierul se găzduiește local pe CDN-ul nostru. Identifică produsul după wooId sau SKU.
+     *
+     * @return array<string, mixed>  răspunsul plugin-ului (ok, doc_id, url, ...)
+     * @throws \RuntimeException dacă upload-ul eșuează
+     */
+    public function attachProductDocument(int $wooId, ?string $sku, string $title, string $description, string $filename, string $binaryContents): array
+    {
+        $payload = [
+            'title'       => $title,
+            'description' => $description,
+            'filename'    => $filename,
+            'file_base64' => base64_encode($binaryContents),
+        ];
+        if ($wooId > 0) {
+            $payload['product_id'] = $wooId;
+        } elseif ($sku) {
+            $payload['sku'] = $sku;
+        }
+
+        $url = $this->siteUrl . '/wp-json/malinco-pdocs/v1/attach';
+        $response = Http::withHeader('X-ERP-Api-Key', $this->apiKey)
+            ->acceptJson()
+            ->asJson()
+            ->timeout(60)
+            ->post($url, $payload);
+
+        if ($response->successful()) {
+            return (array) $response->json();
+        }
+
+        throw new \RuntimeException('Upload document eșuat (' . $response->status() . '): ' . $response->body());
     }
 
     /**
