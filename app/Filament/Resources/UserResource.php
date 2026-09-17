@@ -273,7 +273,7 @@ class UserResource extends Resource
                 . '<div style="font-size:8px;color:#9ca3af;">' . $s['d']->format('j') . '</div></div>';
         }
 
-        // Date orare per zi (ultimele 30 zile) + agregat — pentru selectorul interactiv (Alpine)
+        // Date orare per zi (ultimele 30 zile) + agregat
         $hrows = \Illuminate\Support\Facades\DB::table('user_activity_hourly')
             ->where('user_id', $u->id)
             ->where('day', '>=', now()->subDays($days - 1)->toDateString())
@@ -282,21 +282,22 @@ class UserResource extends Resource
         foreach ($hrows as $r) {
             $byDay[(string) $r->day][(int) $r->hour] = (int) $r->active_seconds;
         }
-        $zileRo = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'];
         $agg = array_fill(0, 24, 0);
         $perDay = [];
-        $daysList = [];
+        $calDays = [];
         for ($i = $days - 1; $i >= 0; $i--) {
             $d = now()->subDays($i);
             $k = $d->toDateString();
             $arr = [];
+            $sum = 0;
             for ($h = 0; $h < 24; $h++) {
                 $v = $byDay[$k][$h] ?? 0;
                 $arr[$h] = $v;
                 $agg[$h] += $v;
+                $sum += $v;
             }
             $perDay[$k] = $arr;
-            $daysList[] = ['k' => $k, 'label' => $d->format('d.m') . ' · ' . mb_substr($zileRo[$d->dayOfWeek], 0, 3)];
+            $calDays[] = ['k' => $k, 'dom' => (int) $d->format('j'), 'has' => $sum > 0, 'tip' => $d->format('d.m.Y') . ': ' . $fmt($sum)];
         }
         // scalare globală comparabilă + precompute afișare bare
         $gmax = 1;
@@ -307,33 +308,52 @@ class UserResource extends Resource
         foreach (['agg' => $agg] + $perDay as $k => $arr) {
             $bb = [];
             foreach ($arr as $h => $sec) {
-                $bb[] = [
-                    'h' => max(2, (int) round($sec / $gmax * 90)),
-                    'c' => $sec > 0 ? '#2563eb' : '#e5e7eb',
-                    't' => 'Ora ' . sprintf('%02d', $h) . ':00 — ' . $fmt($sec),
-                ];
+                $bb[] = ['h' => max(2, (int) round($sec / $gmax * 90)), 'c' => $sec > 0 ? '#2563eb' : '#e5e7eb', 't' => 'Ora ' . sprintf('%02d', $h) . ':00 — ' . $fmt($sec)];
             }
             $disp[$k] = $bb;
         }
-        $init = htmlspecialchars(json_encode(['sel' => 'agg', 'd' => $disp, 'days' => $daysList], JSON_UNESCAPED_UNICODE), ENT_QUOTES);
+        $init = htmlspecialchars(json_encode(['sel' => 'agg', 'd' => $disp], JSON_UNESCAPED_UNICODE), ENT_QUOTES);
+
+        // Mini-calendar (Luni-first): zilele cu date sunt clickabile (albastru), restul gri
+        $wds = ['Lu', 'Ma', 'Mi', 'Jo', 'Vi', 'Sâ', 'Du'];
+        $cal = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;width:236px;flex:0 0 auto;">';
+        foreach ($wds as $wd) {
+            $cal .= '<div style="font-size:9px;text-align:center;color:#9ca3af;font-weight:700;">' . $wd . '</div>';
+        }
+        $firstIso = (int) now()->subDays($days - 1)->isoWeekday();
+        for ($p = 1; $p < $firstIso; $p++) {
+            $cal .= '<div></div>';
+        }
+        foreach ($calDays as $cd) {
+            if ($cd['has']) {
+                $cal .= '<div @click="sel=\'' . $cd['k'] . '\'"'
+                    . ' :style="sel===\'' . $cd['k'] . '\' ? \'outline:2px solid #d42b2b;outline-offset:1px;\' : \'\'"'
+                    . ' title="' . $cd['tip'] . '"'
+                    . ' style="cursor:pointer;text-align:center;font-size:11px;padding:6px 0;border-radius:6px;background:#dbeafe;color:#1d4ed8;font-weight:700;">' . $cd['dom'] . '</div>';
+            } else {
+                $cal .= '<div style="text-align:center;font-size:11px;padding:6px 0;border-radius:6px;background:#f3f4f6;color:#cbd5e1;">' . $cd['dom'] . '</div>';
+            }
+        }
+        $cal .= '</div>';
 
         $stat = fn ($label, $val, $color = '#111827') => '<div><div style="font-size:11px;color:#6b7280;">' . $label . '</div><div style="font-size:20px;font-weight:800;color:' . $color . ';">' . $val . '</div></div>';
         $sectTitle = fn (string $t) => '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;margin:22px 0 8px;">' . $t . '</div>';
 
-        $hourlyBlock = '<div x-data="' . $init . '">'
-            . '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
-            . '<span style="font-size:12px;color:#6b7280;">Ziua:</span>'
-            . '<select x-model="sel" style="border:1px solid #d1d5db;border-radius:6px;padding:5px 8px;font-size:12px;background:#fff;color:#111827;">'
-            . '<option value="agg">Agregat 30 zile</option>'
-            . '<template x-for="dd in days" :key="dd.k"><option :value="dd.k" x-text="dd.label"></option></template>'
-            . '</select></div>'
+        $hourlyBars = '<div style="flex:1;min-width:240px;">'
             . '<div style="display:flex;align-items:flex-end;gap:2px;height:110px;border-bottom:1px solid #e5e7eb;padding-bottom:2px;">'
             . '<template x-for="(b, i) in d[sel]" :key="i">'
             . '<div :title="b.t" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;">'
             . '<div :style="\'width:66%;height:\'+b.h+\'px;background:\'+b.c+\';border-radius:3px 3px 0 0;\'"></div>'
             . '<div x-text="i%3===0 ? i : \'\'" style="font-size:8px;color:#9ca3af;"></div>'
             . '</div></template>'
-            . '</div></div>';
+            . '</div>'
+            . '<div style="font-size:11px;color:#6b7280;margin-top:6px;" x-text="sel===\'agg\' ? \'Agregat — ultimele 30 de zile\' : (\'Ziua \'+sel)"></div>'
+            . '</div>';
+
+        $hourlyBlock = '<div x-data="' . $init . '">'
+            . '<button type="button" @click="sel=\'agg\'" :style="sel===\'agg\' ? \'background:#d42b2b;color:#fff;\' : \'background:#f3f4f6;color:#374151;\'" style="border:0;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:12px;">Agregat 30 zile</button>'
+            . '<div style="display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;">' . $cal . $hourlyBars . '</div>'
+            . '</div>';
 
         return '<div style="font-size:13px;color:#374151;">'
             . '<div style="display:flex;gap:24px;margin-bottom:6px;flex-wrap:wrap;">'
@@ -343,7 +363,7 @@ class UserResource extends Resource
             . '</div>'
             . $sectTitle('Pe zile (ultimele 30)')
             . '<div style="display:flex;align-items:flex-end;gap:2px;height:130px;border-bottom:1px solid #e5e7eb;padding-bottom:2px;">' . $bars . '</div>'
-            . $sectTitle('Pe oră — alege ziua sau agregat')
+            . $sectTitle('Activitate orară — alege o zi din calendar (albastru = are date)')
             . $hourlyBlock
             . '<div style="font-size:11px;color:#9ca3af;margin-top:12px;">'
             . 'Ultima logare: ' . ($u->last_login_at ? $u->last_login_at->format('d.m.Y H:i') : '—')
