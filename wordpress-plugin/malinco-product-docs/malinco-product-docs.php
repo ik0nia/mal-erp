@@ -290,7 +290,7 @@ add_action('malinco_product_extra_sections', function ($product_id) {
     if (get_option('mpdocs_frontend') !== '1') { return; } // OFF până retragem woo-product-attachment
     $docs = mpdocs_for_product((int) $product_id);
     if (!$docs) { return; }
-    echo '<section class="prod-sec mpdocs-product"><h2 class="prod-sec-title">Documente &amp; fișe tehnice</h2><div style="display:flex;flex-direction:column;gap:8px;">';
+    echo '<section class="prod-sec mpdocs-product" id="sec-docs"><h2 class="prod-sec-title">Documente &amp; fișe tehnice</h2><div style="display:flex;flex-direction:column;gap:8px;">';
     foreach ($docs as $d) {
         echo '<a href="' . esc_url($d['url']) . '" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid #e5e7eb;border-radius:10px;text-decoration:none;color:#374151;">';
         echo mpdocs_ext_badge($d['ext']);
@@ -298,6 +298,15 @@ add_action('malinco_product_extra_sections', function ($product_id) {
         echo '<span style="color:#d42b2b;font-weight:700;">Descarcă &darr;</span></a>';
     }
     echo '</div></section>';
+}, 10);
+
+// Tab „Documente" în bara roșie de navigare (doar dacă produsul are documente).
+add_action('malinco_product_section_nav_links', function ($product_id) {
+    if (get_option('mpdocs_frontend') !== '1') { return; }
+    if (!mpdocs_for_product((int) $product_id)) { return; }
+    echo '<a class="sec-nav-lnk" href="#sec-docs" onclick="return malinco.secNav(this)">'
+       . '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>'
+       . 'Documente</a>';
 }, 10);
 
 /* ─────────────────── REST API pentru ERP (upload documente) ─────────────────── */
