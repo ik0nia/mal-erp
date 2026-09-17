@@ -58,7 +58,7 @@
           <td>
             @php $sup = $suppliers->get($item->woo_item_id); @endphp
             <div style="font-weight:600;color:#111827;">{{ $item->name }}</div>
-            <div style="font-size:.75rem;color:#9ca3af;font-family:monospace;">{{ $item->sku ?: 'fără SKU' }}@if($sup && $sup['supplier_sku'])<span style="color:#6b7280;"> · furnizor: {{ $sup['supplier_sku'] }}</span>@endif</div>
+            <div style="font-size:.75rem;color:#9ca3af;font-family:monospace;">{{ $item->sku ?: 'fără SKU' }}@if($sup && $sup['supplier_sku'])<span style="color:#6b7280;"> · cod furnizor: {{ $sup['supplier_sku'] }}</span>@endif</div>
             {{-- Furnizor + termene + stare aprovizionare DOAR la produsele care nu-s pe stoc --}}
             @if($stockClass !== 'ok' && $sup && ($sup['supplier_name'] || $sup['proc_kind']))
               <div style="font-size:.72rem;color:#6b7280;margin-top:3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
