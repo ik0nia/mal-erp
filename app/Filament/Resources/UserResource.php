@@ -273,15 +273,37 @@ class UserResource extends Resource
                 . '<div style="font-size:8px;color:#9ca3af;">' . $s['d']->format('j') . '</div></div>';
         }
 
+        // Distribuție pe oră (0-23), agregat pe ultimele 30 de zile — ritmul orar
+        $hourly = \Illuminate\Support\Facades\DB::table('user_activity_hourly')
+            ->where('user_id', $u->id)
+            ->where('day', '>=', now()->subDays($days - 1)->toDateString())
+            ->selectRaw('hour, SUM(active_seconds) as sec')
+            ->groupBy('hour')
+            ->pluck('sec', 'hour');
+        $hmax = max(1, (int) ($hourly->max() ?? 1));
+        $hbars = '';
+        for ($h = 0; $h < 24; $h++) {
+            $sec = (int) ($hourly[$h] ?? 0);
+            $bh  = max(2, (int) round(($sec / $hmax) * 90));
+            $c   = $sec > 0 ? '#2563eb' : '#e5e7eb';
+            $hbars .= '<div title="Ora ' . sprintf('%02d', $h) . ':00 — ' . $fmt($sec) . '" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;">'
+                . '<div style="width:66%;height:' . $bh . 'px;background:' . $c . ';border-radius:3px 3px 0 0;"></div>'
+                . '<div style="font-size:8px;color:#9ca3af;">' . ($h % 3 === 0 ? $h : '') . '</div></div>';
+        }
+
         $stat = fn ($label, $val, $color = '#111827') => '<div><div style="font-size:11px;color:#6b7280;">' . $label . '</div><div style="font-size:20px;font-weight:800;color:' . $color . ';">' . $val . '</div></div>';
+        $sectTitle = fn (string $t) => '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;margin:22px 0 8px;">' . $t . '</div>';
 
         return '<div style="font-size:13px;color:#374151;">'
-            . '<div style="display:flex;gap:24px;margin-bottom:18px;flex-wrap:wrap;">'
+            . '<div style="display:flex;gap:24px;margin-bottom:6px;flex-wrap:wrap;">'
             . $stat('Total 30 zile', $fmt($total), '#d42b2b')
             . $stat('Medie / zi activă', $fmt($active ? (int) ($total / $active) : 0))
             . $stat('Zile active', $active . ' / 30')
             . '</div>'
+            . $sectTitle('Pe zile (ultimele 30)')
             . '<div style="display:flex;align-items:flex-end;gap:2px;height:130px;border-bottom:1px solid #e5e7eb;padding-bottom:2px;">' . $bars . '</div>'
+            . $sectTitle('Pe oră (ritmul zilnic, agregat 30 zile)')
+            . '<div style="display:flex;align-items:flex-end;gap:2px;height:110px;border-bottom:1px solid #e5e7eb;padding-bottom:2px;">' . $hbars . '</div>'
             . '<div style="font-size:11px;color:#9ca3af;margin-top:10px;">'
             . 'Ultima logare: ' . ($u->last_login_at ? $u->last_login_at->format('d.m.Y H:i') : '—')
             . ' &middot; Ultima activitate: ' . ($u->last_activity_at ? $u->last_activity_at->diffForHumans() : '—')

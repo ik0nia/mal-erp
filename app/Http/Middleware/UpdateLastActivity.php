@@ -38,6 +38,12 @@ class UpdateLastActivity
                                  ON DUPLICATE KEY UPDATE active_seconds = active_seconds + VALUES(active_seconds), updated_at = VALUES(updated_at)',
                                 [$user->id, $now->toDateString(), $gap, $now, $now]
                             );
+                            DB::statement(
+                                'INSERT INTO user_activity_hourly (user_id, day, hour, active_seconds, created_at, updated_at)
+                                 VALUES (?, ?, ?, ?, ?, ?)
+                                 ON DUPLICATE KEY UPDATE active_seconds = active_seconds + VALUES(active_seconds), updated_at = VALUES(updated_at)',
+                                [$user->id, $now->toDateString(), (int) $now->hour, $gap, $now, $now]
+                            );
                         }
                     }
 
