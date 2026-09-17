@@ -168,10 +168,38 @@ class UserResource extends Resource
                     ->label('Super')
                     ->boolean()
                     ->visible(fn (): bool => static::currentUser()?->isSuperAdmin() ?? false),
+                Tables\Columns\TextColumn::make('status_sesiune')
+                    ->label('Status')
+                    ->badge()
+                    ->getStateUsing(fn (User $r): string => match ($r->activity_status) {
+                        'online' => 'Online',
+                        'active' => 'Sesiune activă',
+                        default  => 'Delogat',
+                    })
+                    ->color(fn (User $r): string => match ($r->activity_status) {
+                        'online' => 'success',
+                        'active' => 'warning',
+                        default  => 'gray',
+                    })
+                    ->icon(fn (User $r): string => match ($r->activity_status) {
+                        'online' => 'heroicon-s-signal',
+                        'active' => 'heroicon-o-clock',
+                        default  => 'heroicon-o-signal-slash',
+                    })
+                    ->tooltip(fn (User $r): ?string => $r->last_activity_at
+                        ? 'Ultima activitate: ' . $r->last_activity_at->format('d.m.Y H:i')
+                        : 'Fără activitate înregistrată'),
+                Tables\Columns\TextColumn::make('last_login_at')
+                    ->label('Ultima logare')
+                    ->dateTime('d.m.Y H:i')
+                    ->description(fn (User $r): ?string => $r->last_login_at ? $r->last_login_at->diffForHumans() : null)
+                    ->placeholder('niciodată')
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Creat la')
                     ->dateTime('d.m.Y H:i')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('role')

@@ -34,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Security headers (CSP, X-Frame-Options, etc.) — doar pe rute web
         $middleware->web(append: [
             \App\Http\Middleware\SecurityHeaders::class,
+            \App\Http\Middleware\UpdateLastActivity::class,
         ]);
 
         // Gate pe matricea RolePermission (rute non-Filament: PWA, exporturi)

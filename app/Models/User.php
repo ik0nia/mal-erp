@@ -56,7 +56,30 @@ class User extends Authenticatable implements FilamentUser
             'location_id' => 'integer',
             'is_admin' => 'boolean',
             'is_super_admin' => 'boolean',
+            'last_login_at' => 'datetime',
+            'last_activity_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Statusul de sesiune pe baza ultimei activități (contează și PWA):
+     *  - 'online'  = activ în ultimele 10 min
+     *  - 'active'  = activ în durata sesiunii (SESSION_LIFETIME) → sesiune validă, dar idle
+     *  - 'offline' = fără activitate recentă (delogat / sesiune expirată)
+     */
+    public function getActivityStatusAttribute(): string
+    {
+        if (! $this->last_activity_at) {
+            return 'offline';
+        }
+        if ($this->last_activity_at->gt(now()->subMinutes(10))) {
+            return 'online';
+        }
+        $lifetime = (int) config('session.lifetime', 120);
+        if ($this->last_activity_at->gt(now()->subMinutes($lifetime))) {
+            return 'active';
+        }
+        return 'offline';
     }
 
     public const ROLE_MANAGER             = 'manager';
