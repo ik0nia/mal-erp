@@ -95,6 +95,17 @@ class ErrorMonitorPage extends Page implements HasTable
                     ->color(fn ($state) => match ($state) {
                         'open' => 'danger', 'resolved' => 'success', 'ignored' => 'gray', default => 'gray',
                     }),
+
+                Tables\Columns\TextColumn::make('durata')
+                    ->label('Durată')
+                    ->badge()
+                    ->getStateUsing(fn (ErrorEvent $r) => $r->duration_label)
+                    ->color(fn (ErrorEvent $r) => match ($r->status) {
+                        'resolved' => 'success', 'open' => 'warning', default => 'gray',
+                    })
+                    ->tooltip(fn (ErrorEvent $r) => $r->resolved_at
+                        ? 'Rezolvat: ' . $r->resolved_at->format('d.m.Y H:i')
+                        : ($r->opened_at ? 'Deschis din: ' . $r->opened_at->format('d.m.Y H:i') : null)),
             ])
             ->filters([
                 SelectFilter::make('status')
@@ -133,7 +144,7 @@ class ErrorMonitorPage extends Page implements HasTable
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->visible(fn (ErrorEvent $r) => $r->status !== 'resolved')
-                        ->action(fn (ErrorEvent $r) => tap($r)->update(['status' => 'resolved'])
+                        ->action(fn (ErrorEvent $r) => tap($r)->update(['status' => 'resolved', 'resolved_at' => now()])
                             && Notification::make()->title('Marcat rezolvat')->success()->send()),
 
                     Action::make('ignore')
@@ -149,7 +160,7 @@ class ErrorMonitorPage extends Page implements HasTable
                         ->icon('heroicon-o-arrow-path')
                         ->color('warning')
                         ->visible(fn (ErrorEvent $r) => $r->status !== 'open')
-                        ->action(fn (ErrorEvent $r) => tap($r)->update(['status' => 'open'])
+                        ->action(fn (ErrorEvent $r) => tap($r)->update(['status' => 'open', 'opened_at' => now(), 'resolved_at' => null])
                             && Notification::make()->title('Redeschis')->send()),
                 ]),
             ]);

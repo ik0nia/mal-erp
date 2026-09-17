@@ -17,6 +17,9 @@ Schedule::command('monitoring:probe')->everyFiveMinutes()->withoutOverlapping(30
 // Detecție automată anomalii securitate (brute-force login) → creează breșe + notifică. La 15 minute.
 Schedule::command('security:detect-anomalies')->everyFifteenMinutes()->withoutOverlapping(30);
 
+// Auto-rezolvă erorile care nu au mai apărut de 24h (se redeschid singure dacă revin). Orar.
+Schedule::command('errors:auto-resolve')->hourly()->withoutOverlapping(10);
+
 // Expiră ofertele trimise cu valabilitatea depășită — zilnic la 00:30.
 Schedule::command('offers:expire')
     ->dailyAt('00:30')

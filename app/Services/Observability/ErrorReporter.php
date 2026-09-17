@@ -48,6 +48,8 @@ class ErrorReporter
             $existing = ErrorEvent::where('fingerprint', $fingerprint)->first();
 
             if ($existing) {
+                // dacă fusese rezolvată și reapare, pornim un ciclu nou (opened_at) și ștergem resolved_at
+                $reopening = $existing->status === 'resolved';
                 $existing->increment('count');
                 $existing->update([
                     'last_seen_at' => $now,
@@ -57,7 +59,7 @@ class ErrorReporter
                     'user_id'      => auth()->id(),
                     // dacă fusese rezolvată și reapare, o redeschidem
                     'status'       => $existing->status === 'ignored' ? 'ignored' : 'open',
-                ]);
+                ] + ($reopening ? ['opened_at' => $now, 'resolved_at' => null] : []));
                 $event = $existing;
                 $isNew = false;
             } else {
@@ -76,6 +78,7 @@ class ErrorReporter
                     'status'          => 'open',
                     'first_seen_at'   => $now,
                     'last_seen_at'    => $now,
+                    'opened_at'       => $now,
                 ]);
                 $isNew = true;
             }
