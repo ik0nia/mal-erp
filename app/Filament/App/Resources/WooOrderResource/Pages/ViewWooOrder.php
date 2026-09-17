@@ -296,6 +296,43 @@ class ViewWooOrder extends ViewRecord
         })->values()->all();
     }
 
+    /**
+     * Info furnizor preferat pentru fiecare item (keyed by woo_item_id):
+     * nume furnizor + termen livrare produs (lead_days) + termenul mediu al furnizorului.
+     */
+    public function orderItemsSupplierInfo(): array
+    {
+        $out = [];
+        $avgCache = [];
+        foreach ($this->record->items as $item) {
+            $info = ['supplier_name' => null, 'lead_days' => null, 'avg_lead' => null];
+
+            $wooPid = (int) ($item->data['product_id'] ?? $item->woo_product_id);
+            $local  = $wooPid ? \App\Models\WooProduct::where('woo_id', $wooPid)->first(['id']) : null;
+
+            if ($local) {
+                $ps = \App\Models\ProductSupplier::where('woo_product_id', $local->id)->where('is_preferred', true)->first(['supplier_id', 'lead_days'])
+                    ?? \App\Models\ProductSupplier::where('woo_product_id', $local->id)->first(['supplier_id', 'lead_days']);
+
+                if ($ps) {
+                    $info['lead_days']     = $ps->lead_days;
+                    $info['supplier_name'] = \App\Models\Supplier::where('id', $ps->supplier_id)->value('name');
+
+                    if (! array_key_exists($ps->supplier_id, $avgCache)) {
+                        $avgCache[$ps->supplier_id] = \App\Models\ProductSupplier::where('supplier_id', $ps->supplier_id)
+                            ->whereNotNull('lead_days')->avg('lead_days');
+                    }
+                    $a = $avgCache[$ps->supplier_id];
+                    $info['avg_lead'] = $a !== null ? (int) round((float) $a) : null;
+                }
+            }
+
+            $out[$item->woo_item_id] = $info;
+        }
+
+        return $out;
+    }
+
     /** Snapshot complet al unui item — suficient pentru re-adăugare la undo */
     private function itemSnapshot(\App\Models\WooOrderItem $item): array
     {

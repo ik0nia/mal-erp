@@ -15,6 +15,7 @@
     };
 
     $vatRates = collect($this->buildEditableItems())->keyBy('woo_item_id');
+    $suppliers = collect($this->orderItemsSupplierInfo());
     $shipLine = collect($record->data['shipping_lines'] ?? [])->first();
     $shipGross = round((float) $record->shipping_total + (float) data_get($record->data, 'shipping_tax', (float) $record->shipping_total * 0.21), 2);
 @endphp
@@ -57,6 +58,14 @@
           <td>
             <div style="font-weight:600;color:#111827;">{{ $item->name }}</div>
             <div style="font-size:.75rem;color:#9ca3af;font-family:monospace;">{{ $item->sku ?: 'fără SKU' }}</div>
+            @php $sup = $suppliers->get($item->woo_item_id); @endphp
+            @if($sup && $sup['supplier_name'])
+              <div style="font-size:.72rem;color:#6b7280;margin-top:3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="font-weight:600;color:#374151;">🏭 {{ $sup['supplier_name'] }}</span>
+                @if($sup['lead_days'] !== null)<span style="color:#059669;font-weight:600;">🚚 {{ $sup['lead_days'] }} zile</span>@endif
+                @if($sup['avg_lead'] !== null)<span style="color:#9ca3af;">medie furnizor: {{ $sup['avg_lead'] }} zile</span>@endif
+              </div>
+            @endif
           </td>
           <td style="text-align:center;">
             <span class="oie-badge oie-{{ $stockClass }}">{{ $stock === null ? '–' : (floor($stock) == $stock ? number_format($stock, 0) : number_format($stock, 2)) }}</span>
