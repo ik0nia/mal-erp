@@ -1105,6 +1105,13 @@ class CreatePurchaseOrder extends CreateRecord
      * (media ultimelor PO-uri recepționate) + 7 zile ciclu de comandă.
      * Fallback 10 zile (7+3) pentru furnizori fără istoric.
      */
+    private ?\App\Services\Purchasing\ReplenishmentCalculator $replCalc = null;
+
+    private function replenishmentCalc(): \App\Services\Purchasing\ReplenishmentCalculator
+    {
+        return $this->replCalc ??= new \App\Services\Purchasing\ReplenishmentCalculator();
+    }
+
     private function resolveCoverDays(int $supplierId): int
     {
         $avgLead = \Illuminate\Support\Facades\DB::table('purchase_orders')
@@ -1178,6 +1185,13 @@ class CreatePurchaseOrder extends CreateRecord
     {
         $items = [];
 
+        // PILOT (codrut): recomandări în masă din serviciul unic (o dată, fără N+1)
+        $pilotRecs = [];
+        if (auth()->user()?->email === 'codrut@ikonia.ro' && ! empty($velocityItems)) {
+            $pairs = array_map(fn ($pid) => [(int) $pid, $supplierId], array_keys($velocityItems));
+            $pilotRecs = $this->replenishmentCalc()->recommendBatch($pairs);
+        }
+
         // TOATE produsele cu rulaj ale furnizorului apar ca propuneri (cerință buyer:
         // la comandă vrei să vezi sortimentul activ complet și să decizi — franco,
         // promoții). Cantitatea sugerată doar unde e necesar; sortare după urgență;
@@ -1189,6 +1203,13 @@ class CreatePurchaseOrder extends CreateRecord
 
             // Round hint to order multiple if set
             $hint = $data['hint'];
+
+            // PILOT (codrut): sugestia vine din serviciul UNIC de recomandare
+            // (aceeași cifră ca pe pagina Necesar). Doar recomandare — buyer decide.
+            if (isset($pilotRecs[$productId . '_' . $supplierId])) {
+                $hint = (int) $pilotRecs[$productId . '_' . $supplierId]['recommended_qty'];
+            }
+
             $ps = ProductSupplier::where('woo_product_id', $productId)
                 ->where('supplier_id', $supplierId)
                 ->first();
