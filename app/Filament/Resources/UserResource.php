@@ -271,7 +271,7 @@ class UserResource extends Resource
 
     /**
      * Grafic cu bare + axă Y (max / jumătate / 0) și linii de reper, ca înălțimea să aibă o unitate clară.
-     * $items: listă de ['val' => secunde, 'x' => etichetă sub bară, 'tip' => tooltip].
+     * $items: listă de ['val' => secunde, 'x' => etichetă sub bară, 'tip' => tooltip, 'click' => expr Alpine opțional].
      */
     private static function barChart(array $items, int $height, string $barColor): string
     {
@@ -291,9 +291,13 @@ class UserResource extends Resource
             $top    = $isPeak
                 ? '<div style="font-size:8px;font-weight:800;color:#b91c1c;line-height:1;margin-bottom:2px;white-space:nowrap;">' . self::fmtSec($v) . '</div>'
                 : '';
-            $bars .= '<div title="' . $i['tip'] . '" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;">'
+            $click  = $i['click'] ?? null;
+            $clk    = $click ? ' x-on:click="' . $click . '"' : '';
+            $cur    = $click ? 'cursor:pointer;' : '';
+            $bars .= '<div' . $clk . ' title="' . $i['tip'] . '" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;' . $cur . '"'
+                . ($click ? ' onmouseover="this.lastElementChild.style.filter=\'brightness(0.85)\'" onmouseout="this.lastElementChild.style.filter=\'\'"' : '') . '>'
                 . $top
-                . '<div style="width:70%;height:' . $bh . 'px;background:' . $c . ';border-radius:3px 3px 0 0;"></div></div>';
+                . '<div style="width:70%;height:' . $bh . 'px;background:' . $c . ';border-radius:3px 3px 0 0;transition:filter .1s;"></div></div>';
         }
 
         $labels = '';
@@ -338,20 +342,22 @@ class UserResource extends Resource
         $active = count(array_filter($series, fn ($s) => $s['sec'] > 0));
 
         $items = array_map(fn ($s) => [
-            'val' => $s['sec'],
-            'x'   => (int) $s['d']->format('j') % 3 === 0 ? $s['d']->format('j') : '',
-            'tip' => $s['d']->format('d.m.Y') . ': ' . self::fmtSec($s['sec']),
+            'val'   => $s['sec'],
+            'x'     => (int) $s['d']->format('j') % 3 === 0 ? $s['d']->format('j') : '',
+            'tip'   => $s['d']->format('d.m.Y') . ': ' . self::fmtSec($s['sec']) . ($s['sec'] > 0 ? ' — click pt. detaliu orar' : ''),
+            // click pe zi (doar cele cu activitate) → setează selectorul „zi" → graficul orar se reîncarcă pe acea zi
+            'click' => $s['sec'] > 0 ? "\$wire.\$set('mountedActions.0.data.zi', '" . $s['d']->toDateString() . "')" : null,
         ], $series);
         $chart = self::barChart($items, 120, '#d42b2b');
         $stat  = fn ($label, $val, $color = '#111827') => '<div><div style="font-size:11px;color:#6b7280;">' . $label . '</div><div style="font-size:20px;font-weight:800;color:' . $color . ';">' . $val . '</div></div>';
 
-        return '<div style="font-size:13px;color:#374151;">'
+        return '<div x-data style="font-size:13px;color:#374151;">'
             . '<div style="display:flex;gap:24px;margin-bottom:10px;flex-wrap:wrap;">'
             . $stat('Total 30 zile', self::fmtSec($total), '#d42b2b')
             . $stat('Medie / zi activă', self::fmtSec($active ? (int) ($total / $active) : 0))
             . $stat('Zile active', $active . ' / 30')
             . '</div>'
-            . '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;margin:4px 0 8px;">Timp activ pe zile (ultimele 30) — înălțimea barei = durata din acea zi</div>'
+            . '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;margin:4px 0 8px;">Timp activ pe zile (ultimele 30) — 👆 apasă pe o zi pt. detaliul orar</div>'
             . $chart
             . '<div style="font-size:11px;color:#9ca3af;margin-top:10px;">'
             . 'Ultima logare: ' . ($u->last_login_at ? $u->last_login_at->format('d.m.Y H:i') : '—')
