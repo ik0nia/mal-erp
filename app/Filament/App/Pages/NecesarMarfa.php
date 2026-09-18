@@ -4,8 +4,10 @@ namespace App\Filament\App\Pages;
 use App\Models\RolePermission;
 use App\Filament\App\Concerns\HasDynamicNavSort;
 use App\Filament\App\Concerns\EnforcesLocationScope;
+use App\Models\ProductSupplier;
 use App\Models\PurchaseRequest;
 use App\Models\PurchaseRequestItem;
+use App\Models\Supplier;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Collection;
@@ -327,6 +329,78 @@ class NecesarMarfa extends Page
         }
 
         $this->redirect(BuyerDashboardPage::getUrl());
+    }
+
+    /**
+     * COMANDĂ RAPIDĂ (pilot, SIMULARE): din selecție arată cum ar arăta comenzile
+     * furnizor grupate pe furnizor (produse, cost, total), FĂRĂ să salveze sau să
+     * trimită ceva. Mecanismul de creare reală (PO draft) e verificat, dar ținut pe
+     * „off" până decide userul — ca să nu apară nimic la echipă.
+     */
+    public function createDraftOrdersFromSelection(array $items): void
+    {
+        // gardă suplimentară — deocamdată doar pilot
+        if (auth()->user()?->email !== 'codrut@ikonia.ro') {
+            return;
+        }
+
+        $items = collect($items)
+            ->filter(fn ($i) => ! empty($i['product_id']) && (int) ($i['supplier_id'] ?? 0) > 0);
+
+        if ($items->isEmpty()) {
+            Notification::make()
+                ->title('Selectează produse care au furnizor')
+                ->warning()->send();
+            return;
+        }
+
+        // SIMULARE — niciun write în DB.
+        $preview   = [];
+        $totalGen  = 0.0;
+        $produse   = 0;
+
+        foreach ($items->groupBy('supplier_id') as $supplierId => $supplierItems) {
+            $supplierId = (int) $supplierId;
+            $supplier   = Supplier::find($supplierId);
+            if (! $supplier) {
+                continue;
+            }
+
+            $total = 0.0;
+            foreach ($supplierItems as $item) {
+                $pid  = (int) $item['product_id'];
+                $qty  = max(1, (int) round((float) ($item['qty'] ?? 1)));
+                $ps   = ProductSupplier::where('woo_product_id', $pid)
+                    ->where('supplier_id', $supplierId)->first();
+                $cost = $ps ? (float) ($ps->purchase_price ?: $ps->last_purchase_price ?: 0) : 0.0;
+                $total += $cost * $qty;
+                $produse++;
+            }
+
+            $preview[] = [
+                'supplier' => $supplier->name,
+                'lines'    => $supplierItems->count(),
+                'total'    => $total,
+            ];
+            $totalGen += $total;
+        }
+
+        if (empty($preview)) {
+            Notification::make()->title('Nimic de simulat')->warning()->send();
+            return;
+        }
+
+        $body = collect($preview)
+            ->map(fn ($d) => "• {$d['supplier']} — {$d['lines']} produse · "
+                . number_format($d['total'], 0, ',', '.') . ' lei')
+            ->implode("\n")
+            . "\n\nTotal estimat: " . number_format($totalGen, 0, ',', '.') . ' lei'
+            . "\n\n⚠️ SIMULARE — nu s-a salvat și nu s-a trimis nimic.";
+
+        Notification::make()
+            ->title(count($preview) . ' ' . (count($preview) === 1 ? 'comandă' : 'comenzi') . " ar fi create ({$produse} produse)")
+            ->body($body)
+            ->info()->persistent()->send();
     }
 
     public function bootGuardAccess(): void

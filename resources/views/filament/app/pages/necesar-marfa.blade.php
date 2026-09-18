@@ -98,19 +98,37 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                 Deselectează tot
             </button>
         </div>
-        <button
-            @click="$wire.createNecesarFromSelection(selected.map(pid => itemData[pid]))"
-            wire:loading.attr="disabled"
-            style="display:inline-flex;align-items:center;gap:8px;border-radius:8px;background-color:#8B1A1A;padding:8px 16px;font-size:0.875rem;font-weight:600;color:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,0.05);border:none;cursor:pointer;">
-            <svg wire:loading wire:target="createNecesarFromSelection" style="height:16px;width:16px;animation:spin 1s linear infinite;" fill="none" viewBox="0 0 24 24">
-                <circle style="opacity:0.25;" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                <path style="opacity:0.75;" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-            </svg>
-            <svg wire:loading.remove wire:target="createNecesarFromSelection" style="height:16px;width:16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-            </svg>
-            Creează necesar
-        </button>
+        <div style="display:flex;align-items:center;gap:8px;">
+            @if(auth()->user()?->email === 'codrut@ikonia.ro')
+            <button
+                @click="$wire.createDraftOrdersFromSelection(selected.map(pid => itemData[pid]))"
+                wire:loading.attr="disabled"
+                title="SIMULARE (pilot): arată cum ar arăta comenzile grupate pe furnizor, cu cost și total. Nu salvează și nu trimite nimic."
+                style="display:inline-flex;align-items:center;gap:8px;border-radius:8px;background-color:#2563eb;padding:8px 16px;font-size:0.875rem;font-weight:700;color:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,0.05);border:none;cursor:pointer;">
+                <svg wire:loading wire:target="createDraftOrdersFromSelection" style="height:16px;width:16px;animation:spin 1s linear infinite;" fill="none" viewBox="0 0 24 24">
+                    <circle style="opacity:0.25;" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path style="opacity:0.75;" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>
+                <svg wire:loading.remove wire:target="createDraftOrdersFromSelection" style="height:16px;width:16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                Simulează comenzile
+            </button>
+            @endif
+            <button
+                @click="$wire.createNecesarFromSelection(selected.map(pid => itemData[pid]))"
+                wire:loading.attr="disabled"
+                style="display:inline-flex;align-items:center;gap:8px;border-radius:8px;background-color:#8B1A1A;padding:8px 16px;font-size:0.875rem;font-weight:600;color:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,0.05);border:none;cursor:pointer;">
+                <svg wire:loading wire:target="createNecesarFromSelection" style="height:16px;width:16px;animation:spin 1s linear infinite;" fill="none" viewBox="0 0 24 24">
+                    <circle style="opacity:0.25;" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path style="opacity:0.75;" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>
+                <svg wire:loading.remove wire:target="createNecesarFromSelection" style="height:16px;width:16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+                Creează necesar
+            </button>
+        </div>
     </div>
 
     {{-- Tab Navigation --}}
