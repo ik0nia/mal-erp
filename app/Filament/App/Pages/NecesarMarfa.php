@@ -222,6 +222,29 @@ class NecesarMarfa extends Page
             return $p;
         });
 
+        // PILOT (codrut): recomandare din serviciul UNIC — lead real + sezon (fereastra
+        // viitoare) + netting + rotunjire ambalaj. Ceilalți cumpărători văd formula veche.
+        if (auth()->user()?->email === 'codrut@ikonia.ro') {
+            $calc  = new \App\Services\Purchasing\ReplenishmentCalculator();
+            $pairs = $rows->map(fn ($p) => [(int) $p->product_id, (int) $p->supplier_id])->values()->all();
+            $rec   = $calc->recommendBatch($pairs);
+            $rows  = $rows->map(function ($p) use ($rec) {
+                $r = $rec[$p->product_id . '_' . $p->supplier_id] ?? null;
+                if ($r) {
+                    $p->recommended_qty   = (int) $r['recommended_qty'];
+                    $p->calc_engine       = true;
+                    $p->calc_season       = $r['season'];
+                    $p->calc_cover        = $r['cover_days'];
+                    $p->calc_lead         = $r['lead_days'];
+                    $p->calc_purchase_qty = $r['purchase_qty'];
+                    $p->calc_purchase_uom = $r['purchase_uom'];
+                    $p->calc_confidence   = $r['confidence'];
+                    $p->calc_flags        = $r['flags'] ?? [];
+                }
+                return $p;
+            });
+        }
+
         // Urgențe: < 7 zile stoc (inclusiv fără furnizor), un rând per produs
         $this->urgentProducts = $rows
             ->filter(fn ($p) => $p->days_until_stockout !== null && $p->days_until_stockout < 7)

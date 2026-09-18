@@ -232,6 +232,7 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                                         <span style="display:block;font-family:monospace;font-size:0.75rem;color:#9ca3af;margin-top:2px;">{{ $product->sku }}</span>
                                     @endif
                                     @include('filament.app.pages._necesar-po-badge')
+                                    @include('filament.app.pages._necesar-calc-badge')
                                 </td>
                                 <td style="padding:10px 12px;text-align:right;font-variant-numeric:tabular-nums;">
                                     @if($product->recommended_qty > 0)
@@ -351,6 +352,7 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                                         <span style="display:block;font-family:monospace;font-size:0.75rem;color:#9ca3af;margin-top:2px;">{{ $product->sku }}</span>
                                     @endif
                                     @include('filament.app.pages._necesar-po-badge')
+                                    @include('filament.app.pages._necesar-calc-badge')
                                 </td>
                                 <td style="padding:10px 12px;text-align:right;font-variant-numeric:tabular-nums;">
                                     @if($product->recommended_qty > 0)
@@ -561,6 +563,7 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                                             <span style="display:block;font-family:monospace;font-size:0.75rem;color:#9ca3af;margin-top:2px;">{{ $product->sku }}</span>
                                         @endif
                                         @include('filament.app.pages._necesar-po-badge')
+                                    @include('filament.app.pages._necesar-calc-badge')
                                     </td>
                                     <td style="padding:10px 12px;text-align:right;font-variant-numeric:tabular-nums;">
                                         @if($product->recommended_qty > 0)
@@ -655,6 +658,7 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                                             <span style="display:block;font-family:monospace;font-size:0.75rem;color:#9ca3af;margin-top:2px;">{{ $product->sku }}</span>
                                         @endif
                                         @include('filament.app.pages._necesar-po-badge')
+                                    @include('filament.app.pages._necesar-calc-badge')
                                     </td>
                                     <td style="padding:10px 12px;text-align:right;color:#d1d5db;">—</td>
                                     <td style="padding:10px 12px;text-align:right;color:#d1d5db;">—</td>

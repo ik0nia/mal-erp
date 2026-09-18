@@ -41,12 +41,68 @@ class ReplenishmentCalculator
      */
     public function recommend(int $productId, int $supplierId, array $opts = []): array
     {
-        $today = isset($opts['referenceDate']) ? Carbon::parse($opts['referenceDate']) : now();
-
         $product  = DB::table('woo_products')->where('id', $productId)->first();
         $supplier = DB::table('suppliers')->where('id', $supplierId)->first();
         $ps       = DB::table('product_suppliers')
             ->where('woo_product_id', $productId)->where('supplier_id', $supplierId)->first();
+        $vel      = ($product && $product->sku) ? DB::table('bi_product_velocity_current')
+            ->where('reference_product_id', $product->sku)->first() : null;
+
+        return $this->compute($productId, $supplierId, $product, $supplier, $ps, $vel,
+            $this->stock($productId, $opts['locationId'] ?? null),
+            $this->onOrder($productId), $this->reserved($productId), $opts);
+    }
+
+    /**
+     * Recomandare în masă pentru multe (produs, furnizor) — pre-încarcă tot în
+     * câteva interogări (fără N+1). Cheie rezultat: "{productId}_{supplierId}".
+     *
+     * @param  array<int, array{0:int,1:int}>  $pairs
+     */
+    public function recommendBatch(array $pairs, array $opts = []): array
+    {
+        $pairs = array_values(array_filter($pairs, fn ($p) => (int) ($p[0] ?? 0) > 0 && (int) ($p[1] ?? 0) >= 0));
+        if (empty($pairs)) {
+            return [];
+        }
+        $pids = array_values(array_unique(array_map(fn ($p) => (int) $p[0], $pairs)));
+        $sids = array_values(array_unique(array_map(fn ($p) => (int) $p[1], $pairs)));
+
+        $products  = DB::table('woo_products')->whereIn('id', $pids)->get()->keyBy('id');
+        $skus      = $products->pluck('sku')->filter()->values()->all();
+        $vels      = $skus ? DB::table('bi_product_velocity_current')->whereIn('reference_product_id', $skus)->get()->keyBy('reference_product_id') : collect();
+        $psByProd  = DB::table('product_suppliers')->whereIn('woo_product_id', $pids)->get()->groupBy('woo_product_id');
+        $suppliers = DB::table('suppliers')->whereIn('id', $sids)->get()->keyBy('id');
+
+        $stock = DB::table('product_stocks')->whereIn('woo_product_id', $pids)
+            ->when($opts['locationId'] ?? null, fn ($q) => $q->where('location_id', $opts['locationId']))
+            ->select('woo_product_id', DB::raw('SUM(quantity) q'))->groupBy('woo_product_id')->pluck('q', 'woo_product_id');
+        $onOrder = DB::table('purchase_order_items as poi')->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->whereIn('poi.woo_product_id', $pids)->whereIn('po.status', ['pending_approval', 'approved', 'sent', 'partially_received'])
+            ->select('poi.woo_product_id', DB::raw('SUM(GREATEST(0, poi.quantity - COALESCE(poi.received_quantity,0))) q'))
+            ->groupBy('poi.woo_product_id')->pluck('q', 'woo_product_id');
+        $reserved = DB::table('purchase_request_items as pri')->join('purchase_requests as pr', 'pr.id', '=', 'pri.purchase_request_id')
+            ->whereIn('pri.woo_product_id', $pids)->where('pri.status', 'pending')->whereNotNull('pri.client_reference')
+            ->whereIn('pr.status', ['submitted', 'partially_ordered'])
+            ->select('pri.woo_product_id', DB::raw('SUM(GREATEST(0, pri.quantity - COALESCE(pri.ordered_quantity,0))) q'))
+            ->groupBy('pri.woo_product_id')->pluck('q', 'woo_product_id');
+
+        $results = [];
+        foreach ($pairs as $pair) {
+            $pid = (int) $pair[0]; $sid = (int) $pair[1];
+            $product = $products->get($pid);
+            $vel     = $product && $product->sku ? $vels->get($product->sku) : null;
+            $psRow   = ($psByProd->get($pid) ?? collect())->firstWhere('supplier_id', $sid);
+            $results[$pid . '_' . $sid] = $this->compute($pid, $sid, $product, $suppliers->get($sid), $psRow, $vel,
+                (float) ($stock[$pid] ?? 0), (float) ($onOrder[$pid] ?? 0), (float) ($reserved[$pid] ?? 0), $opts);
+        }
+        return $results;
+    }
+
+    /** Miezul formulei — primește datele deja încărcate (folosit de recommend + recommendBatch). */
+    private function compute(int $productId, int $supplierId, $product, $supplier, $ps, $vel, float $stock, float $onOrder, float $reserved, array $opts): array
+    {
+        $today = isset($opts['referenceDate']) ? Carbon::parse($opts['referenceDate']) : now();
 
         $out = $this->emptyResult($productId, $supplierId);
         if (! $product) {
@@ -63,10 +119,7 @@ class ReplenishmentCalculator
             return $out;
         }
 
-        // ---- Viteză (cerere zilnică, corectată la ruptură) ----
-        $vel = $product->sku ? DB::table('bi_product_velocity_current')
-            ->where('reference_product_id', $product->sku)->first() : null;
-
+        // ---- Viteză (cerere zilnică, corectată la ruptură) — $vel primit ----
         $avg7  = (float) ($vel->avg_out_qty_7d ?? 0);
         $avg30 = (float) ($vel->avg_out_qty_30d ?? 0);
         $avg90 = (float) ($vel->avg_out_qty_90d ?? 0);
@@ -78,11 +131,7 @@ class ReplenishmentCalculator
 
         $hasRecentSales = $avg7 > 0 || $avg30 > 0;
 
-        // ---- Poziția curentă (netting) ----
-        $stock    = $this->stock($productId, $opts['locationId'] ?? null);
-        $onOrder  = $this->onOrder($productId);
-        $reserved = $this->reserved($productId);
-
+        // ---- Poziția curentă (netting) — $stock / $onOrder / $reserved primite ----
         $out['velocity']    = round($velocity, 3);
         $out['stock']       = $stock;
         $out['on_order']    = $onOrder;
