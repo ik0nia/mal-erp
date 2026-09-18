@@ -269,6 +269,57 @@ class UserResource extends Resource
         return $s >= 3600 ? round($s / 3600, 1) . 'h' : ($s >= 60 ? round($s / 60) . 'm' : $s . 's');
     }
 
+    /**
+     * Grafic cu bare + axă Y (max / jumătate / 0) și linii de reper, ca înălțimea să aibă o unitate clară.
+     * $items: listă de ['val' => secunde, 'x' => etichetă sub bară, 'tip' => tooltip].
+     */
+    private static function barChart(array $items, int $height, string $barColor): string
+    {
+        $vals = array_map(fn ($i) => (int) $i['val'], $items);
+        $max  = max(1, max($vals));
+        $peak = 0;
+        foreach ($vals as $k => $v) { if ($v > $vals[$peak]) $peak = $k; }
+        $hasData = $max > 0 && array_sum($vals) > 0;
+        $barMax  = $height - 12; // lasă loc deasupra pt. eticheta orei de vârf
+
+        $bars = '';
+        foreach ($items as $k => $i) {
+            $v      = (int) $i['val'];
+            $isPeak = $hasData && $k === $peak && $v > 0;
+            $bh     = $v > 0 ? max(3, (int) round($v / $max * $barMax)) : 2;
+            $c      = $v > 0 ? ($isPeak ? '#b91c1c' : $barColor) : '#e5e7eb';
+            $top    = $isPeak
+                ? '<div style="font-size:8px;font-weight:800;color:#b91c1c;line-height:1;margin-bottom:2px;white-space:nowrap;">' . self::fmtSec($v) . '</div>'
+                : '';
+            $bars .= '<div title="' . $i['tip'] . '" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;">'
+                . $top
+                . '<div style="width:70%;height:' . $bh . 'px;background:' . $c . ';border-radius:3px 3px 0 0;"></div></div>';
+        }
+
+        $labels = '';
+        foreach ($items as $k => $i) {
+            $isPeak = $hasData && $k === $peak && (int) $i['val'] > 0;
+            $labels .= '<div style="flex:1;text-align:center;font-size:8px;color:' . ($isPeak ? '#b91c1c' : '#9ca3af')
+                . ';font-weight:' . ($isPeak ? '700' : '400') . ';">' . $i['x'] . '</div>';
+        }
+
+        // Axa Y: max sus, jumătate la mijloc, 0 jos — aliniată la înălțimea graficului.
+        $axis = '<div style="display:flex;flex-direction:column;justify-content:space-between;height:' . $height . 'px;'
+            . 'font-size:9px;color:#9ca3af;text-align:right;min-width:32px;box-sizing:border-box;padding-bottom:1px;">'
+            . '<div>' . self::fmtSec($max) . '</div>'
+            . '<div>' . self::fmtSec((int) round($max / 2)) . '</div>'
+            . '<div>0</div></div>';
+
+        // Grafic + linii de reper (jos și la jumătate) via gradient.
+        $chart = '<div style="flex:1;min-width:0;">'
+            . '<div style="display:flex;align-items:flex-end;gap:2px;height:' . $height . 'px;'
+            . 'background-image:linear-gradient(to top,#e5e7eb 1px,transparent 1px);background-size:100% 50%;'
+            . 'border-bottom:1px solid #e5e7eb;">' . $bars . '</div>'
+            . '<div style="display:flex;gap:2px;margin-top:3px;">' . $labels . '</div></div>';
+
+        return '<div style="display:flex;gap:6px;align-items:flex-start;">' . $axis . $chart . '</div>';
+    }
+
     /** Statistici + grafic zilnic (bare CSS) pe ultimele 30 de zile. */
     public static function activityDailyHtml(User $u): string
     {
@@ -285,17 +336,14 @@ class UserResource extends Resource
         }
         $total  = array_sum(array_column($series, 'sec'));
         $active = count(array_filter($series, fn ($s) => $s['sec'] > 0));
-        $maxSec = max(1, max(array_column($series, 'sec')));
 
-        $bars = '';
-        foreach ($series as $s) {
-            $h = max(2, (int) round(($s['sec'] / $maxSec) * 110));
-            $c = $s['sec'] > 0 ? '#d42b2b' : '#e5e7eb';
-            $bars .= '<div title="' . $s['d']->format('d.m.Y') . ': ' . self::fmtSec($s['sec']) . '" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;">'
-                . '<div style="width:72%;height:' . $h . 'px;background:' . $c . ';border-radius:3px 3px 0 0;"></div>'
-                . '<div style="font-size:8px;color:#9ca3af;">' . $s['d']->format('j') . '</div></div>';
-        }
-        $stat = fn ($label, $val, $color = '#111827') => '<div><div style="font-size:11px;color:#6b7280;">' . $label . '</div><div style="font-size:20px;font-weight:800;color:' . $color . ';">' . $val . '</div></div>';
+        $items = array_map(fn ($s) => [
+            'val' => $s['sec'],
+            'x'   => (int) $s['d']->format('j') % 3 === 0 ? $s['d']->format('j') : '',
+            'tip' => $s['d']->format('d.m.Y') . ': ' . self::fmtSec($s['sec']),
+        ], $series);
+        $chart = self::barChart($items, 120, '#d42b2b');
+        $stat  = fn ($label, $val, $color = '#111827') => '<div><div style="font-size:11px;color:#6b7280;">' . $label . '</div><div style="font-size:20px;font-weight:800;color:' . $color . ';">' . $val . '</div></div>';
 
         return '<div style="font-size:13px;color:#374151;">'
             . '<div style="display:flex;gap:24px;margin-bottom:10px;flex-wrap:wrap;">'
@@ -303,9 +351,9 @@ class UserResource extends Resource
             . $stat('Medie / zi activă', self::fmtSec($active ? (int) ($total / $active) : 0))
             . $stat('Zile active', $active . ' / 30')
             . '</div>'
-            . '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;margin:4px 0 8px;">Pe zile (ultimele 30)</div>'
-            . '<div style="display:flex;align-items:flex-end;gap:2px;height:120px;border-bottom:1px solid #e5e7eb;padding-bottom:2px;">' . $bars . '</div>'
-            . '<div style="font-size:11px;color:#9ca3af;margin-top:8px;">'
+            . '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;margin:4px 0 8px;">Timp activ pe zile (ultimele 30) — înălțimea barei = durata din acea zi</div>'
+            . $chart
+            . '<div style="font-size:11px;color:#9ca3af;margin-top:10px;">'
             . 'Ultima logare: ' . ($u->last_login_at ? $u->last_login_at->format('d.m.Y H:i') : '—')
             . ' &middot; Ultima activitate: ' . ($u->last_activity_at ? $u->last_activity_at->diffForHumans() : '—')
             . '</div></div>';
@@ -331,25 +379,32 @@ class UserResource extends Resource
             $vals[$h] = (int) ($hourly[$h] ?? 0);
             $totalDay += $vals[$h];
         }
-        $hmax = max(1, max($vals));
 
-        $bars = '';
+        $items = [];
         for ($h = 0; $h < 24; $h++) {
-            $bh = max(2, (int) round($vals[$h] / $hmax * 96));
-            $c  = $vals[$h] > 0 ? '#2563eb' : '#e5e7eb';
-            $bars .= '<div title="Ora ' . sprintf('%02d', $h) . ':00 — ' . self::fmtSec($vals[$h]) . '" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;">'
-                . '<div style="width:66%;height:' . $bh . 'px;background:' . $c . ';border-radius:3px 3px 0 0;"></div>'
-                . '<div style="font-size:8px;color:#9ca3af;">' . ($h % 3 === 0 ? $h : '') . '</div></div>';
+            $items[] = [
+                'val' => $vals[$h],
+                'x'   => $h % 3 === 0 ? $h . 'h' : '',
+                'tip' => sprintf('%02d:00–%02d:59 — ', $h, $h) . self::fmtSec($vals[$h]),
+            ];
         }
+        $chart = self::barChart($items, 110, '#2563eb');
 
-        $caption = $dayKey
-            ? 'Ora activă în ' . \Illuminate\Support\Carbon::parse($dayKey)->format('d.m.Y') . ' — total ' . self::fmtSec($totalDay)
-            : 'Agregat pe ultimele 30 de zile — total ' . self::fmtSec($totalDay);
+        $peakH = 0;
+        for ($h = 1; $h < 24; $h++) { if ($vals[$h] > $vals[$peakH]) $peakH = $h; }
+        $peakTxt = $totalDay > 0
+            ? ' &middot; cel mai activ la ora <b style="color:#b91c1c;">' . sprintf('%02d:00', $peakH) . '</b> (' . self::fmtSec($vals[$peakH]) . ')'
+            : '';
+
+        $scope   = $dayKey
+            ? 'Ziua ' . \Illuminate\Support\Carbon::parse($dayKey)->format('d.m.Y')
+            : 'Medie pe ultimele 30 de zile';
+        $caption = $scope . ' — total activ ' . self::fmtSec($totalDay) . $peakTxt;
 
         return '<div style="font-size:13px;">'
-            . '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;margin:0 0 8px;">Activitate orară</div>'
-            . '<div style="display:flex;align-items:flex-end;gap:2px;height:110px;border-bottom:1px solid #e5e7eb;padding-bottom:2px;">' . $bars . '</div>'
-            . '<div style="font-size:11px;color:#6b7280;margin-top:6px;">' . $caption . '</div>'
+            . '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;margin:0 0 8px;">Timp activ pe ore (0–23) — înălțimea barei = cât a fost activ în acea oră</div>'
+            . $chart
+            . '<div style="font-size:11px;color:#6b7280;margin-top:10px;">' . $caption . '</div>'
             . '</div>';
     }
 
