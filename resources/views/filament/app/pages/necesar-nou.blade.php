@@ -84,7 +84,7 @@
   @if(empty($data['rows']))
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:36px;text-align:center;color:#15803d;font-weight:600;">✓ Nimic de comandat cu filtrele curente.</div>
   @else
-    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04);">
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:visible;box-shadow:0 1px 2px rgba(0,0,0,.04);">
     <table style="width:100%;border-collapse:collapse;font-size:.86rem;">
       <thead>
         <tr>
@@ -170,7 +170,21 @@
             </div>
             @if($p['purchase_uom'] && $p['purchase_qty'])<div style="font-size:.72rem;color:#1d4ed8;font-weight:700;margin-top:3px;">≈ {{ $p['purchase_qty'] }} {{ $p['purchase_uom'] }}</div>@endif
             @if($unitCost > 0)<div style="font-size:.82rem;color:#15803d;font-weight:800;margin-top:3px;">≈ <span x-text="Math.round((qty[{{ $p['id'] }}]||0)*{{ $unitCost }}).toLocaleString('ro-RO')"></span> lei</div>@endif
-            <div style="font-size:.66rem;color:#9ca3af;margin-top:2px;cursor:help;">livrare ~{{ $p['lead'] }} {{ (int)$p['lead']===1?'zi':'zile' }} · de ce? ⓘ</div>
+            <div style="font-size:.66rem;color:#9ca3af;margin-top:2px;">
+              livrare ~{{ $p['lead'] }} {{ (int)$p['lead']===1?'zi':'zile' }} ·
+              <span x-data="{o:false}" style="position:relative;display:inline-block;">
+                <button type="button" @click="o=!o" @click.outside="o=false" style="background:none;border:none;color:#2563eb;text-decoration:underline;cursor:pointer;font-size:.66rem;padding:0;">de ce?</button>
+                <div x-show="o" x-cloak x-transition
+                     style="position:absolute;right:0;bottom:135%;width:252px;background:#111827;color:#fff;text-align:left;padding:11px 13px;border-radius:9px;font-size:.7rem;line-height:1.65;font-weight:400;z-index:30;box-shadow:0 10px 28px rgba(0,0,0,.28);white-space:normal;">
+                  <div style="font-weight:700;margin-bottom:5px;color:#93c5fd;">Cum s-a calculat</div>
+                  • se vinde ~<b>{{ round($p['sold30']) }}</b> / lună<br>
+                  • acoperire <b>{{ $p['cover'] }} zile</b> (livrare {{ $p['lead'] }} + ciclu comandă)<br>
+                  • sezon <b>×{{ number_format($p['season'],2) }}</b>@if($p['season']>1.08) ↑ vârf @elseif($p['season']<0.92) ↓ extrasezon @endif<br>
+                  • − stoc curent <b>{{ number_format($p['stock'],0,'.','') }}</b>@if($p['open_po_qty']>0)<br>• − pe drum (PO) <b>{{ number_format($p['open_po_qty'],0,'.','') }}</b>@endif
+                  <div style="border-top:1px solid #374151;margin-top:6px;padding-top:5px;">= recomandat <b style="color:#fca5a5;">{{ number_format($p['qty'],0,'.','') }} buc</b></div>
+                </div>
+              </span>
+            </div>
             @if(isset($p['confidence']) && $p['confidence'] < 0.7)<div style="font-size:.66rem;color:#b45309;margin-top:1px;">⚠ încredere {{ (int) round($p['confidence']*100) }}%</div>@endif
           </td>
         </tr>
