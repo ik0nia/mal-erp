@@ -1,149 +1,177 @@
-@php $opts = $this->getFilterOptions(); $data = $this->getData(); @endphp
+@php $opts = $this->getFilterOptions(); $data = $this->getData(); $luni=['','I','F','M','A','M','I','I','A','S','O','N','D']; @endphp
 
 <x-filament-panels::page>
-<div style="max-width:1080px;" wire:key="necesar-nou">
+<div wire:key="necesar-nou" x-data="{
+    selected: [],
+    itemData: {},
+    toggle(pid, sid, qty) {
+        const i = this.selected.indexOf(pid);
+        if (i > -1) { this.selected.splice(i,1); delete this.itemData[pid]; }
+        else { this.selected.push(pid); this.itemData[pid] = { product_id: pid, supplier_id: sid, qty: qty }; }
+    },
+    has(pid) { return this.selected.includes(pid); }
+}">
 
   {{-- ============ FILTRE ============ --}}
-  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px 16px;margin-bottom:16px;box-shadow:0 1px 2px rgba(0,0,0,.03);">
+  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px 18px;margin-bottom:16px;box-shadow:0 1px 2px rgba(0,0,0,.03);">
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-      {{-- căutare --}}
-      <div style="position:relative;flex:1;min-width:200px;">
-        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#9ca3af;">🔎</span>
+      <div style="position:relative;flex:1;min-width:240px;">
+        <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:.9rem;">🔎</span>
         <input type="text" wire:model.live.debounce.400ms="search" placeholder="Caută produs, SKU sau cod furnizor…"
-               style="width:100%;padding:9px 12px 9px 32px;border:1px solid #d1d5db;border-radius:9px;font-size:.9rem;outline:none;">
+               style="width:100%;padding:9px 12px 9px 34px;border:1px solid #d1d5db;border-radius:9px;font-size:.9rem;outline:none;">
       </div>
-      {{-- furnizor --}}
-      <select wire:model.live="supplierId" style="padding:9px 12px;border:1px solid #d1d5db;border-radius:9px;font-size:.85rem;max-width:200px;background:#fff;">
+      <select wire:model.live="supplierId" style="padding:9px 12px;border:1px solid #d1d5db;border-radius:9px;font-size:.85rem;max-width:230px;background:#fff;">
         <option value="">Toți furnizorii</option>
         @foreach($opts['suppliers'] as $id => $name)<option value="{{ $id }}">{{ $name }}</option>@endforeach
       </select>
-      {{-- categorie --}}
-      <select wire:model.live="categoryId" style="padding:9px 12px;border:1px solid #d1d5db;border-radius:9px;font-size:.85rem;max-width:200px;background:#fff;">
+      <select wire:model.live="categoryId" style="padding:9px 12px;border:1px solid #d1d5db;border-radius:9px;font-size:.85rem;max-width:230px;background:#fff;">
         <option value="">Toate categoriile</option>
         @foreach($opts['categories'] as $id => $name)<option value="{{ $id }}">{{ $name }}</option>@endforeach
       </select>
     </div>
-
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:11px;">
-      {{-- urgență segmentat --}}
-      @php $segs = ['all'=>'Toate','zero'=>'Stoc 0','d7'=>'Sub 7 zile','d14'=>'Sub 14 zile']; @endphp
-      <div style="display:inline-flex;border:1px solid #d1d5db;border-radius:9px;overflow:hidden;">
-        @foreach($segs as $k => $lbl)
-          <button wire:click="$set('urgency','{{ $k }}')"
-                  style="padding:7px 13px;font-size:.8rem;font-weight:600;border:none;cursor:pointer;{{ $urgency===$k ? 'background:#111827;color:#fff;' : 'background:#fff;color:#374151;' }}{{ !$loop->last ? 'border-right:1px solid #e5e7eb;' : '' }}">
-            {{ $lbl }}
-          </button>
-        @endforeach
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:12px;">
+      @php $segStyle = fn($active) => 'padding:7px 14px;font-size:.8rem;font-weight:600;border:none;cursor:pointer;'.($active?'background:#111827;color:#fff;':'background:#fff;color:#374151;'); @endphp
+      {{-- urgență --}}
+      <div style="display:flex;align-items:center;gap:7px;">
+        <span style="font-size:.72rem;color:#9ca3af;font-weight:700;text-transform:uppercase;">Stoc</span>
+        <div style="display:inline-flex;border:1px solid #d1d5db;border-radius:9px;overflow:hidden;">
+          @foreach(['all'=>'Toate','zero'=>'0','d7'=>'Sub 7z','d14'=>'Sub 14z'] as $k=>$lbl)
+            <button wire:click="$set('urgency','{{ $k }}')" style="{{ $segStyle($urgency===$k) }}{{ !$loop->last?'border-right:1px solid #e5e7eb;':'' }}">{{ $lbl }}</button>
+          @endforeach
+        </div>
       </div>
-      {{-- doar necesar --}}
+      {{-- PO deschis --}}
+      <div style="display:flex;align-items:center;gap:7px;">
+        <span style="font-size:.72rem;color:#9ca3af;font-weight:700;text-transform:uppercase;">Comandă</span>
+        <div style="display:inline-flex;border:1px solid #d1d5db;border-radius:9px;overflow:hidden;">
+          @foreach(['all'=>'Toate','with'=>'Are PO deschis','without'=>'Fără PO'] as $k=>$lbl)
+            <button wire:click="$set('poState','{{ $k }}')" style="{{ $segStyle($poState===$k) }}{{ !$loop->last?'border-right:1px solid #e5e7eb;':'' }}">{{ $lbl }}</button>
+          @endforeach
+        </div>
+      </div>
       <label style="display:inline-flex;align-items:center;gap:7px;font-size:.82rem;color:#374151;cursor:pointer;">
-        <input type="checkbox" wire:model.live="onlyNeeded" style="width:16px;height:16px;accent-color:#dc2626;">
-        Doar ce trebuie comandat
+        <input type="checkbox" wire:model.live="onlyNeeded" style="width:16px;height:16px;accent-color:#dc2626;"> Doar ce trebuie comandat
       </label>
-      <button wire:click="resetFilters" style="font-size:.78rem;color:#6b7280;background:none;border:none;text-decoration:underline;cursor:pointer;margin-left:auto;">
-        Șterge filtrele
-      </button>
+      <button wire:click="resetFilters" style="font-size:.78rem;color:#6b7280;background:none;border:none;text-decoration:underline;cursor:pointer;margin-left:auto;">Șterge filtrele</button>
     </div>
   </div>
 
-  {{-- ============ SUMAR ============ --}}
-  <div style="display:flex;align-items:baseline;gap:8px;margin:0 4px 12px;">
-    <span style="font-size:1.05rem;font-weight:800;color:#111827;">{{ $data['to_order'] }}</span>
+  {{-- ============ SUMAR + LEGENDĂ ============ --}}
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 4px 10px;">
+    <span style="font-size:1.15rem;font-weight:800;color:#dc2626;">{{ $data['to_order'] }}</span>
     <span style="font-size:.9rem;color:#6b7280;">produse de comandat</span>
-    @if($data['total'] > count($data['rows']))
-      <span style="font-size:.78rem;color:#9ca3af;margin-left:auto;">se afișează primele {{ count($data['rows']) }} din {{ $data['total'] }}</span>
-    @endif
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-left:auto;font-size:.7rem;color:#9ca3af;">
+      <span><b style="color:#6b7280;">Sezon:</b>
+        <span style="display:inline-block;width:8px;height:10px;background:#cbd5e1;border-radius:2px;vertical-align:-1px;"></span> anul
+        <span style="display:inline-block;width:8px;height:10px;background:#2563eb;border-radius:2px;vertical-align:-1px;margin-left:4px;"></span> sosire marfă
+        <span style="display:inline-block;width:8px;height:10px;border:2px solid #111827;border-radius:2px;vertical-align:-1px;box-sizing:border-box;margin-left:4px;"></span> luna curentă</span>
+      <span><b style="color:#6b7280;">Vânzări:</b> <span style="color:#15803d;">▲</span>/<span style="color:#dc2626;">▼</span> trend</span>
+    </div>
   </div>
 
-  {{-- ============ LISTĂ ============ --}}
+  {{-- ============ TABEL ============ --}}
   @if(empty($data['rows']))
-    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:30px;text-align:center;color:#15803d;font-weight:600;">
-      ✓ Nimic de comandat cu filtrele curente.
-    </div>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:36px;text-align:center;color:#15803d;font-weight:600;">✓ Nimic de comandat cu filtrele curente.</div>
   @else
-    <div style="display:flex;flex-direction:column;gap:9px;">
-      @foreach($data['rows'] as $p)
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04);">
+    <table style="width:100%;border-collapse:collapse;font-size:.86rem;">
+      <thead>
+        <tr>
+          @php $th='padding:11px 14px;font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;border-bottom:1px solid #eef0f2;font-weight:700;background:#fafbfc;'; @endphp
+          <th style="{{ $th }}width:38px;text-align:center;"></th>
+          <th style="{{ $th }}text-align:left;">Produs</th>
+          <th style="{{ $th }}text-align:center;" title="Ritm de vânzare (buc/zi) + cât s-a vândut recent">Vânzări</th>
+          <th style="{{ $th }}text-align:center;">Sezon</th>
+          <th style="{{ $th }}text-align:center;">Stoc</th>
+          <th style="{{ $th }}text-align:right;">De comandat</th>
+        </tr>
+      </thead>
+      <tbody>
+      @foreach($data['rows'] as $i => $p)
         @php
-          // culoarea zilelor de stoc
           $d = $p['days'];
           $dCol = $d===null ? '#9ca3af' : ($d<7 ? '#dc2626' : ($d<14 ? '#ea580c' : '#16a34a'));
-          // luni din fereastra de livrare (poate depăși anul)
-          $win = [];
-          if($p['win_start'] && $p['win_end']){
-            $m=$p['win_start']; for($i=0;$i<13;$i++){ $win[$m]=true; if($m===$p['win_end']) break; $m=$m%12+1; }
-          }
-          $luni=['','I','F','M','A','M','I','I','A','S','O','N','D'];
+          $win = []; if(!empty($p['win_start']) && !empty($p['win_end'])){ $m=$p['win_start']; for($k=0;$k<13;$k++){ $win[$m]=true; if($m===$p['win_end']) break; $m=$m%12+1; } }
+          $qtr=[1=>'I',4=>'A',7=>'I',10=>'O'];
+          $poUrl = $p['open_po_id'] ? \App\Filament\App\Resources\PurchaseOrderResource::getUrl('view',['record'=>$p['open_po_id']]) : null;
         @endphp
-        <div style="display:flex;align-items:center;gap:16px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px 16px;box-shadow:0 1px 2px rgba(0,0,0,.03);">
-
+        <tr :style="has({{ $p['id'] }}) ? 'background:#eff6ff;' : '{{ $i%2 ? 'background:#fcfcfd;' : '' }}'" style="border-bottom:1px solid #f3f4f6;">
+          {{-- select --}}
+          <td style="text-align:center;vertical-align:middle;padding:0 0 0 6px;">
+            <input type="checkbox" :checked="has({{ $p['id'] }})" @change="toggle({{ $p['id'] }}, {{ $p['supplier_id'] }}, {{ $p['qty'] }})"
+                   style="width:16px;height:16px;accent-color:#dc2626;cursor:pointer;">
+          </td>
           {{-- produs --}}
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:600;color:#111827;font-size:.95rem;">{{ $p['name'] }}</div>
-            <div style="font-size:.75rem;color:#9ca3af;margin-top:1px;">
-              {{ $p['sku'] }}@if($p['brand']) · {{ $p['brand'] }}@endif · 🏭 {{ $p['supplier'] }}
+          <td style="padding:11px 14px;vertical-align:middle;max-width:360px;">
+            <div style="font-weight:600;color:#111827;line-height:1.25;">{{ $p['name'] }}</div>
+            <div style="font-size:.72rem;color:#9ca3af;margin-top:2px;">{{ $p['sku'] }}@if($p['brand']) · {{ $p['brand'] }}@endif · 🏭 {{ $p['supplier'] }}</div>
+            <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:5px;align-items:center;">
+              @foreach($p['cues'] as $c)<span style="font-size:.7rem;color:#4b5563;">{{ $c['i'] }} {{ $c['t'] }}</span>@endforeach
+              @if($p['open_po_id'])
+                <a href="{{ $poUrl }}" target="_blank" style="font-size:.7rem;font-weight:700;color:#1d4ed8;background:#dbeafe;padding:1px 8px;border-radius:999px;text-decoration:none;" title="Există deja o comandă deschisă nerecepționată">
+                  📦 în {{ $p['open_po_number'] }} · {{ number_format($p['open_po_qty'],0,'.','') }} buc
+                  @if($p['open_po_date']) · {{ \Illuminate\Support\Carbon::parse($p['open_po_date'])->format('d.m') }} @endif
+                </a>
+              @endif
             </div>
-            {{-- indicii simple --}}
-            @if($p['cues'])
-              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:5px;">
-                @foreach($p['cues'] as $cue)
-                  <span style="font-size:.72rem;color:#4b5563;display:inline-flex;align-items:center;gap:3px;">{{ $cue['i'] }} {{ $cue['t'] }}</span>
-                @endforeach
-              </div>
-            @endif
-          </div>
-
-          {{-- mini-grafic sezon --}}
-          @if($p['curve'])
-            <div style="flex:0 0 auto;text-align:center;" title="Cum se vinde categoria pe parcursul anului. Marcat: luna curentă (contur) și fereastra când sosește marfa (albastru).">
-              <div style="display:flex;align-items:flex-end;gap:1px;height:30px;">
-                @foreach(range(1,12) as $m)
-                  @php
-                    $val = $p['curve'][$m] ?? 1; $h = max(3, (int) round(min($val,2.5)/2.5*28));
-                    $isCur = $m===$p['cur_month']; $inWin = isset($win[$m]);
-                    $bg = $inWin ? '#2563eb' : '#cbd5e1';
-                  @endphp
-                  <div style="width:6px;height:{{ $h }}px;background:{{ $bg }};border-radius:2px 2px 0 0;{{ $isCur ? 'outline:1.5px solid #111827;outline-offset:1px;' : '' }}"></div>
-                @endforeach
-              </div>
-              <div style="display:flex;gap:1px;margin-top:2px;">
-                @foreach(range(1,12) as $m)
-                  <span style="width:6px;font-size:6.5px;color:{{ $m===$p['cur_month'] ? '#111827' : '#cbd5e1' }};text-align:center;font-weight:{{ $m===$p['cur_month']?'700':'400' }};">{{ $luni[$m] }}</span>
-                @endforeach
-              </div>
+          </td>
+          {{-- vanzari --}}
+          <td style="text-align:center;padding:11px 12px;white-space:nowrap;vertical-align:middle;">
+            <div style="font-weight:800;color:#111827;font-size:.95rem;">
+              {{ rtrim(rtrim(number_format($p['vday'],1),'0'),'.') }}<span style="font-size:.68rem;color:#9ca3af;font-weight:500;">/zi</span>
+              @if($p['vtrend']>0)<span style="color:#15803d;" title="în creștere">▲</span>@elseif($p['vtrend']<0)<span style="color:#dc2626;" title="în scădere">▼</span>@endif
             </div>
-          @endif
-
-          {{-- stoc + zile --}}
-          <div style="flex:0 0 auto;text-align:center;min-width:74px;">
-            <div style="font-size:.7rem;color:#9ca3af;">stoc</div>
-            <div style="font-weight:600;color:#374151;">{{ number_format($p['stock'],0,'.','') }}</div>
-            @if($d!==null)
-              <div style="font-size:.72rem;font-weight:700;color:{{ $dCol }};margin-top:1px;">{{ round($d) }} zile</div>
-            @endif
-          </div>
-
+            <div style="font-size:.7rem;color:#6b7280;margin-top:2px;">vândut <b>{{ round($p['sold7']) }}</b> / 7z · <b>{{ round($p['sold30']) }}</b> / 30z</div>
+          </td>
+          {{-- sezon --}}
+          <td style="text-align:center;padding:11px 14px;vertical-align:middle;">
+            @if($p['curve'])
+              <div style="display:inline-block;" title="Cum se vinde categoria pe an. Contur negru = luna curentă · albastru = când sosește marfa.">
+                <div style="display:flex;align-items:flex-end;gap:2px;height:34px;">
+                  @foreach(range(1,12) as $m)
+                    @php $val=$p['curve'][$m]??1; $h=max(4,(int)round(min($val,2.5)/2.5*32)); $bg=isset($win[$m])?'#2563eb':'#cbd5e1'; @endphp
+                    <div style="width:8px;height:{{ $h }}px;background:{{ $bg }};border-radius:2px 2px 0 0;{{ $m===$p['cur_month']?'outline:2px solid #111827;outline-offset:1px;':'' }}"></div>
+                  @endforeach
+                </div>
+                <div style="display:flex;gap:2px;margin-top:5px;">
+                  @foreach(range(1,12) as $m)<span style="width:8px;font-size:7.5px;color:#9ca3af;text-align:center;">{{ $qtr[$m] ?? '' }}</span>@endforeach
+                </div>
+              </div>
+            @else <span style="color:#e5e7eb;">—</span> @endif
+          </td>
+          {{-- stoc --}}
+          <td style="text-align:center;padding:11px 12px;white-space:nowrap;vertical-align:middle;">
+            <div style="font-weight:700;color:#374151;">{{ number_format($p['stock'],0,'.','') }}</div>
+            @if($d!==null)<div style="font-size:.72rem;font-weight:700;color:{{ $dCol }};margin-top:1px;">{{ round($d) }} zile</div>@endif
+          </td>
           {{-- de comandat --}}
-          <div style="flex:0 0 auto;text-align:right;min-width:118px;">
-            <div style="font-size:.68rem;color:#9ca3af;text-transform:uppercase;letter-spacing:.04em;">De comandat</div>
-            <div style="font-size:1.35rem;font-weight:800;color:#111827;line-height:1.1;">
-              {{ number_format($p['qty'],0,'.','') }}
-              <span style="font-size:.8rem;font-weight:600;color:#6b7280;">buc</span>
-            </div>
-            @if($p['purchase_uom'] && $p['purchase_qty'])
-              <div style="font-size:.75rem;color:#1d4ed8;font-weight:700;">≈ {{ $p['purchase_qty'] }} {{ $p['purchase_uom'] }}</div>
-            @endif
-            @if(isset($p['confidence']) && $p['confidence'] < 0.7)
-              <div style="font-size:.68rem;color:#b45309;" title="Recomandare cu date parțiale">⚠ încredere {{ (int) round($p['confidence']*100) }}%</div>
-            @endif
-          </div>
-
-        </div>
+          <td style="text-align:right;padding:11px 16px;white-space:nowrap;vertical-align:middle;">
+            <div style="font-size:1.35rem;font-weight:800;color:#111827;line-height:1;">{{ number_format($p['qty'],0,'.','') }}<span style="font-size:.72rem;font-weight:600;color:#9ca3af;"> buc</span></div>
+            @if($p['purchase_uom'] && $p['purchase_qty'])<div style="font-size:.74rem;color:#1d4ed8;font-weight:700;margin-top:1px;">≈ {{ $p['purchase_qty'] }} {{ $p['purchase_uom'] }}</div>@endif
+            @if(isset($p['confidence']) && $p['confidence'] < 0.7)<div style="font-size:.66rem;color:#b45309;margin-top:1px;" title="Date parțiale">⚠ încredere {{ (int) round($p['confidence']*100) }}%</div>@endif
+          </td>
+        </tr>
       @endforeach
+      </tbody>
+    </table>
     </div>
   @endif
 
-  <div style="margin-top:14px;font-size:.72rem;color:#9ca3af;text-align:center;">
-    Cantitatea ține cont automat de: viteza reală de vânzare, lead time-ul furnizorului, sezonul în care va sosi marfa, stocul curent și comenzile deja pe drum. Pilot — vizibil doar pentru tine.
+  {{-- ============ BARĂ ACȚIUNI (sticky, la selecție) ============ --}}
+  <div x-show="selected.length > 0" x-cloak x-transition
+       style="position:sticky;bottom:16px;margin-top:16px;display:flex;align-items:center;gap:14px;background:#111827;color:#fff;border-radius:14px;padding:13px 20px;box-shadow:0 8px 24px rgba(0,0,0,.22);">
+    <span style="font-weight:700;"><span x-text="selected.length"></span> selectate</span>
+    <button @click="selected=[]; itemData={}" style="font-size:.8rem;color:#cbd5e1;background:none;border:none;text-decoration:underline;cursor:pointer;">deselectează</button>
+    <div style="margin-left:auto;display:flex;gap:10px;">
+      <button @click="$wire.simulateOrders(selected.map(p=>itemData[p]))" wire:loading.attr="disabled"
+              style="background:#374151;color:#fff;font-weight:700;font-size:.85rem;padding:9px 16px;border:none;border-radius:9px;cursor:pointer;">Simulează comanda</button>
+      <button @click="$wire.createNecesarFromSelection(selected.map(p=>itemData[p])); selected=[]; itemData={}" wire:loading.attr="disabled"
+              style="background:#dc2626;color:#fff;font-weight:700;font-size:.85rem;padding:9px 18px;border:none;border-radius:9px;cursor:pointer;">Adaugă la necesar →</button>
+    </div>
+  </div>
+
+  <div style="margin-top:14px;font-size:.72rem;color:#9ca3af;text-align:center;line-height:1.5;">
+    „De comandat" ține cont automat de: viteza reală de vânzare, lead time-ul furnizorului, sezonul în care va sosi marfa, stocul curent și comenzile deja pe drum (PO deschise).<br>Pilot — vizibil doar pentru tine.
   </div>
 
 </div>
