@@ -182,8 +182,6 @@ class NecesarNouPage extends Page
             $cues = [];
             if ($days !== null && $days < 7)       $cues[] = ['i' => '🔴', 't' => 'stoc critic'];
             elseif ($days !== null && $days < 14)  $cues[] = ['i' => '🟠', 't' => 'stoc redus'];
-            if ((float) $r['season'] > 1.1)        $cues[] = ['i' => '🔺', 't' => 'intră în sezon'];
-            elseif ((float) $r['season'] < 0.9)    $cues[] = ['i' => '🔻', 't' => 'extrasezon'];
             if (in_array('suprastoc', $r['flags'] ?? [])) $cues[] = ['i' => '📦', 't' => 'suprastoc'];
 
             $rows[] = [
@@ -200,6 +198,7 @@ class NecesarNouPage extends Page
                 'qty' => (int) $r['recommended_qty'],
                 'purchase_qty' => $r['purchase_qty'], 'purchase_uom' => $r['purchase_uom'],
                 'cover' => $r['cover_days'], 'lead' => $r['lead_days'], 'season' => (float) $r['season'],
+                'est_value' => $r['est_value'], 'unit_cost' => $r['unit_cost'],
                 'confidence' => $r['confidence'], 'cues' => $cues,
                 'curve' => $curves[$r['category_id']] ?? null,
                 'cur_month' => $curMonth,

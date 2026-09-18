@@ -116,20 +116,22 @@
             </div>
           </td>
           {{-- vanzari --}}
-          <td style="text-align:center;padding:11px 12px;white-space:nowrap;vertical-align:middle;">
-            <div style="font-weight:800;color:#111827;font-size:.95rem;">
-              {{ rtrim(rtrim(number_format($p['vday'],1),'0'),'.') }}<span style="font-size:.68rem;color:#9ca3af;font-weight:500;">/zi</span>
-              @if($p['vtrend']>0)<span style="color:#15803d;" title="în creștere">▲</span>@elseif($p['vtrend']<0)<span style="color:#dc2626;" title="în scădere">▼</span>@endif
+          <td style="text-align:center;padding:11px 14px;white-space:nowrap;vertical-align:middle;">
+            <div style="font-weight:800;color:#111827;font-size:1.1rem;line-height:1;">
+              {{ number_format($p['sold30'],0,'.','') }}<span style="font-size:.64rem;color:#9ca3af;font-weight:600;"> /lună</span>
+              @if($p['vtrend']>0)<span style="color:#15803d;font-size:.85rem;" title="ritm în creștere">▲</span>@elseif($p['vtrend']<0)<span style="color:#dc2626;font-size:.85rem;" title="ritm în scădere">▼</span>@endif
             </div>
-            <div style="font-size:.7rem;color:#6b7280;margin-top:2px;">vândut <b>{{ round($p['sold7']) }}</b> / 7z · <b>{{ round($p['sold30']) }}</b> / 30z</div>
+            <div style="font-size:.7rem;color:#9ca3af;margin-top:4px;">{{ round($p['sold7']) }} buc în ultima săptămână</div>
           </td>
           {{-- sezon --}}
           <td style="text-align:center;padding:11px 14px;vertical-align:middle;">
             @if($p['curve'])
+              @php $sf=$p['season']; if($sf>1.08){$sw='↑ intră în sezon';$swc='#15803d';}elseif($sf<0.92){$sw='↓ iese din sezon';$swc='#0891b2';}else{$sw='constant';$swc='#9ca3af';} @endphp
+              <div style="font-size:.7rem;font-weight:700;color:{{ $swc }};margin-bottom:5px;">{{ $sw }}</div>
               <div style="display:inline-block;" title="Cum se vinde categoria pe an. Contur negru = luna curentă · albastru = când sosește marfa.">
-                <div style="display:flex;align-items:flex-end;gap:2px;height:34px;">
+                <div style="display:flex;align-items:flex-end;gap:2px;height:30px;">
                   @foreach(range(1,12) as $m)
-                    @php $val=$p['curve'][$m]??1; $h=max(4,(int)round(min($val,2.5)/2.5*32)); $bg=isset($win[$m])?'#2563eb':'#cbd5e1'; @endphp
+                    @php $val=$p['curve'][$m]??1; $h=max(4,(int)round(min($val,2.5)/2.5*28)); $bg=isset($win[$m])?'#2563eb':'#cbd5e1'; @endphp
                     <div style="width:8px;height:{{ $h }}px;background:{{ $bg }};border-radius:2px 2px 0 0;{{ $m===$p['cur_month']?'outline:2px solid #111827;outline-offset:1px;':'' }}"></div>
                   @endforeach
                 </div>
@@ -147,8 +149,10 @@
           {{-- de comandat --}}
           <td style="text-align:right;padding:11px 16px;white-space:nowrap;vertical-align:middle;">
             <div style="font-size:1.35rem;font-weight:800;color:#111827;line-height:1;">{{ number_format($p['qty'],0,'.','') }}<span style="font-size:.72rem;font-weight:600;color:#9ca3af;"> buc</span></div>
-            @if($p['purchase_uom'] && $p['purchase_qty'])<div style="font-size:.74rem;color:#1d4ed8;font-weight:700;margin-top:1px;">≈ {{ $p['purchase_qty'] }} {{ $p['purchase_uom'] }}</div>@endif
-            @if(isset($p['confidence']) && $p['confidence'] < 0.7)<div style="font-size:.66rem;color:#b45309;margin-top:1px;" title="Date parțiale">⚠ încredere {{ (int) round($p['confidence']*100) }}%</div>@endif
+            @if($p['purchase_uom'] && $p['purchase_qty'])<div style="font-size:.74rem;color:#1d4ed8;font-weight:700;margin-top:2px;">≈ {{ $p['purchase_qty'] }} {{ $p['purchase_uom'] }}</div>@endif
+            @if($p['est_value'])<div style="font-size:.82rem;color:#15803d;font-weight:800;margin-top:3px;">≈ {{ number_format($p['est_value'],0,',','.') }} lei</div>@endif
+            <div style="font-size:.66rem;color:#9ca3af;margin-top:2px;">livrare ~{{ $p['lead'] }} {{ (int)$p['lead']===1?'zi':'zile' }}</div>
+            @if(isset($p['confidence']) && $p['confidence'] < 0.7)<div style="font-size:.66rem;color:#b45309;margin-top:1px;" title="Date parțiale">⚠ {{ (int) round($p['confidence']*100) }}%</div>@endif
           </td>
         </tr>
       @endforeach
