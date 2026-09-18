@@ -35,6 +35,7 @@ class NecesarNouPage extends Page
     public ?int $categoryId = null;
     public string $urgency = 'all';   // all | zero | d7 | d14
     public string $poState = 'all';   // all | with | without  (PO deschis nerecepționat)
+    public string $sort = 'urgent';   // urgent | value | velocity
     public bool $onlyNeeded = true;
 
     public function getMaxContentWidth(): Width|string|null
@@ -59,6 +60,7 @@ class NecesarNouPage extends Page
         $this->categoryId = null;
         $this->urgency = 'all';
         $this->poState = 'all';
+        $this->sort = 'urgent';
         $this->onlyNeeded = true;
     }
 
@@ -207,11 +209,19 @@ class NecesarNouPage extends Page
             ];
         }
 
-        usort($rows, fn ($a, $b) => ($a['days'] ?? 99999) <=> ($b['days'] ?? 99999));
+        if ($this->sort === 'value') {
+            usort($rows, fn ($a, $b) => ((float) ($b['est_value'] ?? 0)) <=> ((float) ($a['est_value'] ?? 0)));
+        } elseif ($this->sort === 'velocity') {
+            usort($rows, fn ($a, $b) => ((float) ($b['sold30'] ?? 0)) <=> ((float) ($a['sold30'] ?? 0)));
+        } else {
+            usort($rows, fn ($a, $b) => ($a['days'] ?? 99999) <=> ($b['days'] ?? 99999));
+        }
+
         $total = count($rows);
         $toOrder = count(array_filter($rows, fn ($r) => $r['qty'] > 0));
+        $totalValue = array_sum(array_map(fn ($r) => (float) ($r['est_value'] ?? 0), $rows));
 
-        return ['rows' => array_slice($rows, 0, 200), 'total' => $total, 'to_order' => $toOrder];
+        return ['rows' => array_slice($rows, 0, 200), 'total' => $total, 'to_order' => $toOrder, 'total_value' => $totalValue];
     }
 
     /** Selecție → creează necesar (PurchaseRequest per furnizor). */

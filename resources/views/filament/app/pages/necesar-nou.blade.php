@@ -3,13 +3,15 @@
 <x-filament-panels::page>
 <div wire:key="necesar-nou" x-data="{
     selected: [],
-    itemData: {},
-    toggle(pid, sid, qty) {
+    qty: {},
+    sid: {},
+    toggle(pid) {
         const i = this.selected.indexOf(pid);
-        if (i > -1) { this.selected.splice(i,1); delete this.itemData[pid]; }
-        else { this.selected.push(pid); this.itemData[pid] = { product_id: pid, supplier_id: sid, qty: qty }; }
+        if (i > -1) this.selected.splice(i,1); else this.selected.push(pid);
     },
-    has(pid) { return this.selected.includes(pid); }
+    has(pid) { return this.selected.includes(pid); },
+    selectAllVisible(ids) { this.selected = [...new Set([...this.selected, ...ids])]; },
+    payload() { return this.selected.map(pid => ({ product_id: pid, supplier_id: this.sid[pid], qty: parseInt(this.qty[pid]) || 1 })); }
 }">
 
   {{-- ============ FILTRE ============ --}}
@@ -52,7 +54,15 @@
       <label style="display:inline-flex;align-items:center;gap:7px;font-size:.82rem;color:#374151;cursor:pointer;">
         <input type="checkbox" wire:model.live="onlyNeeded" style="width:16px;height:16px;accent-color:#dc2626;"> Doar ce trebuie comandat
       </label>
-      <button wire:click="resetFilters" style="font-size:.78rem;color:#6b7280;background:none;border:none;text-decoration:underline;cursor:pointer;margin-left:auto;">Șterge filtrele</button>
+      <div style="display:flex;align-items:center;gap:7px;margin-left:auto;">
+        <span style="font-size:.72rem;color:#9ca3af;font-weight:700;text-transform:uppercase;">Sortează</span>
+        <select wire:model.live="sort" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:9px;font-size:.8rem;background:#fff;">
+          <option value="urgent">Urgență</option>
+          <option value="value">Valoare (lei)</option>
+          <option value="velocity">Cât se vinde</option>
+        </select>
+      </div>
+      <button wire:click="resetFilters" style="font-size:.78rem;color:#6b7280;background:none;border:none;text-decoration:underline;cursor:pointer;">Șterge filtrele</button>
     </div>
   </div>
 
@@ -60,6 +70,7 @@
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 4px 10px;">
     <span style="font-size:1.15rem;font-weight:800;color:#dc2626;">{{ $data['to_order'] }}</span>
     <span style="font-size:.9rem;color:#6b7280;">produse de comandat</span>
+    @if(!empty($data['total_value']))<span style="font-size:.9rem;color:#374151;font-weight:700;">· ≈ {{ number_format($data['total_value'],0,',','.') }} lei</span>@endif
     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-left:auto;font-size:.7rem;color:#9ca3af;">
       <span><b style="color:#6b7280;">Sezon:</b>
         <span style="display:inline-block;width:8px;height:10px;background:#cbd5e1;border-radius:2px;vertical-align:-1px;"></span> anul
@@ -98,7 +109,7 @@
         <tr :style="has({{ $p['id'] }}) ? 'background:#eff6ff;' : '{{ $i%2 ? 'background:#fcfcfd;' : '' }}'" style="border-bottom:1px solid #f3f4f6;">
           {{-- select --}}
           <td style="text-align:center;vertical-align:middle;padding:0 0 0 6px;">
-            <input type="checkbox" :checked="has({{ $p['id'] }})" @change="toggle({{ $p['id'] }}, {{ $p['supplier_id'] }}, {{ $p['qty'] }})"
+            <input type="checkbox" :checked="has({{ $p['id'] }})" @change="toggle({{ $p['id'] }})"
                    style="width:16px;height:16px;accent-color:#dc2626;cursor:pointer;">
           </td>
           {{-- produs --}}
@@ -146,13 +157,21 @@
             <div style="font-weight:700;color:#374151;">{{ number_format($p['stock'],0,'.','') }}</div>
             @if($d!==null)<div style="font-size:.72rem;font-weight:700;color:{{ $dCol }};margin-top:1px;">{{ round($d) }} zile</div>@endif
           </td>
-          {{-- de comandat --}}
-          <td style="text-align:right;padding:11px 16px;white-space:nowrap;vertical-align:middle;">
-            <div style="font-size:1.35rem;font-weight:800;color:#111827;line-height:1;">{{ number_format($p['qty'],0,'.','') }}<span style="font-size:.72rem;font-weight:600;color:#9ca3af;"> buc</span></div>
-            @if($p['purchase_uom'] && $p['purchase_qty'])<div style="font-size:.74rem;color:#1d4ed8;font-weight:700;margin-top:2px;">≈ {{ $p['purchase_qty'] }} {{ $p['purchase_uom'] }}</div>@endif
-            @if($p['est_value'])<div style="font-size:.82rem;color:#15803d;font-weight:800;margin-top:3px;">≈ {{ number_format($p['est_value'],0,',','.') }} lei</div>@endif
-            <div style="font-size:.66rem;color:#9ca3af;margin-top:2px;">livrare ~{{ $p['lead'] }} {{ (int)$p['lead']===1?'zi':'zile' }}</div>
-            @if(isset($p['confidence']) && $p['confidence'] < 0.7)<div style="font-size:.66rem;color:#b45309;margin-top:1px;" title="Date parțiale">⚠ {{ (int) round($p['confidence']*100) }}%</div>@endif
+          {{-- de comandat (editabil) --}}
+          @php
+            $why = 'Recomandare: se vinde ~'.round($p['sold30']).'/lună · acoperă '.$p['cover'].' zile (livrare '.$p['lead'].' + ciclu de comandă) · sezon ×'.number_format($p['season'],2).' · minus stocul curent'.($p['open_po_qty']>0 ? ' și '.number_format($p['open_po_qty'],0,'.','').' buc deja pe drum (PO)' : '');
+            $unitCost = (float) ($p['unit_cost'] ?? 0);
+          @endphp
+          <td style="text-align:right;padding:11px 16px;white-space:nowrap;vertical-align:middle;" title="{{ $why }}">
+            <div style="display:flex;align-items:center;justify-content:flex-end;gap:5px;">
+              <input type="number" min="1" value="{{ $p['qty'] }}" x-init="qty[{{ $p['id'] }}] ??= {{ $p['qty'] }}; sid[{{ $p['id'] }}] = {{ $p['supplier_id'] }}" x-model.number="qty[{{ $p['id'] }}]"
+                     style="width:74px;font-size:1.2rem;font-weight:800;color:#111827;text-align:right;border:1px solid #e5e7eb;border-radius:8px;padding:3px 8px;outline:none;">
+              <span style="font-size:.72rem;font-weight:600;color:#9ca3af;">buc</span>
+            </div>
+            @if($p['purchase_uom'] && $p['purchase_qty'])<div style="font-size:.72rem;color:#1d4ed8;font-weight:700;margin-top:3px;">≈ {{ $p['purchase_qty'] }} {{ $p['purchase_uom'] }}</div>@endif
+            @if($unitCost > 0)<div style="font-size:.82rem;color:#15803d;font-weight:800;margin-top:3px;">≈ <span x-text="Math.round((qty[{{ $p['id'] }}]||0)*{{ $unitCost }}).toLocaleString('ro-RO')"></span> lei</div>@endif
+            <div style="font-size:.66rem;color:#9ca3af;margin-top:2px;cursor:help;">livrare ~{{ $p['lead'] }} {{ (int)$p['lead']===1?'zi':'zile' }} · de ce? ⓘ</div>
+            @if(isset($p['confidence']) && $p['confidence'] < 0.7)<div style="font-size:.66rem;color:#b45309;margin-top:1px;">⚠ încredere {{ (int) round($p['confidence']*100) }}%</div>@endif
           </td>
         </tr>
       @endforeach
@@ -165,11 +184,11 @@
   <div x-show="selected.length > 0" x-cloak x-transition
        style="position:sticky;bottom:16px;margin-top:16px;display:flex;align-items:center;gap:14px;background:#111827;color:#fff;border-radius:14px;padding:13px 20px;box-shadow:0 8px 24px rgba(0,0,0,.22);">
     <span style="font-weight:700;"><span x-text="selected.length"></span> selectate</span>
-    <button @click="selected=[]; itemData={}" style="font-size:.8rem;color:#cbd5e1;background:none;border:none;text-decoration:underline;cursor:pointer;">deselectează</button>
+    <button @click="selected=[]" style="font-size:.8rem;color:#cbd5e1;background:none;border:none;text-decoration:underline;cursor:pointer;">deselectează</button>
     <div style="margin-left:auto;display:flex;gap:10px;">
-      <button @click="$wire.simulateOrders(selected.map(p=>itemData[p]))" wire:loading.attr="disabled"
+      <button @click="$wire.simulateOrders(payload())" wire:loading.attr="disabled"
               style="background:#374151;color:#fff;font-weight:700;font-size:.85rem;padding:9px 16px;border:none;border-radius:9px;cursor:pointer;">Simulează comanda</button>
-      <button @click="$wire.createNecesarFromSelection(selected.map(p=>itemData[p])); selected=[]; itemData={}" wire:loading.attr="disabled"
+      <button @click="$wire.createNecesarFromSelection(payload()); selected=[]" wire:loading.attr="disabled"
               style="background:#dc2626;color:#fff;font-weight:700;font-size:.85rem;padding:9px 18px;border:none;border-radius:9px;cursor:pointer;">Adaugă la necesar →</button>
     </div>
   </div>
