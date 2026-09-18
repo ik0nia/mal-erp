@@ -105,6 +105,13 @@ Schedule::command('bi:compute-daily')
     ->withoutOverlapping(360)
     ->runInBackground();
 
+// Sezonalitate pe categorie — se mișcă lent, recalculată lunar (zi 1, 01:00).
+Schedule::command('bi:compute-seasonality-category')
+    ->monthlyOn(1, '01:00')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping(360)
+    ->runInBackground();
+
 // Watchdog BI — zilnic la 09:00 (Europe/Bucharest).
 // Dacă bi:compute-daily nu a rulat (sau a eșuat) noaptea trecută, îl rulează acum.
 // Auto-healing: detectează și repară singur dacă lipsesc date din ziua anterioară.
