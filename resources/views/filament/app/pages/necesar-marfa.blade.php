@@ -213,6 +213,7 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                                     @if($product->sku)
                                         <span style="display:block;font-family:monospace;font-size:0.75rem;color:#9ca3af;margin-top:2px;">{{ $product->sku }}</span>
                                     @endif
+                                    @include('filament.app.pages._necesar-po-badge')
                                 </td>
                                 <td style="padding:10px 12px;text-align:right;font-variant-numeric:tabular-nums;">
                                     @if($product->recommended_qty > 0)
@@ -331,6 +332,7 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                                     @if($product->sku)
                                         <span style="display:block;font-family:monospace;font-size:0.75rem;color:#9ca3af;margin-top:2px;">{{ $product->sku }}</span>
                                     @endif
+                                    @include('filament.app.pages._necesar-po-badge')
                                 </td>
                                 <td style="padding:10px 12px;text-align:right;font-variant-numeric:tabular-nums;">
                                     @if($product->recommended_qty > 0)
@@ -540,6 +542,7 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                                         @if($product->sku)
                                             <span style="display:block;font-family:monospace;font-size:0.75rem;color:#9ca3af;margin-top:2px;">{{ $product->sku }}</span>
                                         @endif
+                                        @include('filament.app.pages._necesar-po-badge')
                                     </td>
                                     <td style="padding:10px 12px;text-align:right;font-variant-numeric:tabular-nums;">
                                         @if($product->recommended_qty > 0)
@@ -633,6 +636,7 @@ $soonAllItems = $this->soonProducts->map(fn($p) => [
                                         @if($product->sku)
                                             <span style="display:block;font-family:monospace;font-size:0.75rem;color:#9ca3af;margin-top:2px;">{{ $product->sku }}</span>
                                         @endif
+                                        @include('filament.app.pages._necesar-po-badge')
                                     </td>
                                     <td style="padding:10px 12px;text-align:right;color:#d1d5db;">—</td>
                                     <td style="padding:10px 12px;text-align:right;color:#d1d5db;">—</td>

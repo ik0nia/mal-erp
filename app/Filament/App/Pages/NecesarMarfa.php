@@ -89,6 +89,13 @@ class NecesarMarfa extends Page
             $stkSub = DB::raw('(SELECT woo_product_id, COALESCE(SUM(quantity),0) as total_qty
                                  FROM product_stocks GROUP BY woo_product_id) stk');
 
+            // Info PO deschise per produs (nemai ascundem produsele — le marcăm)
+            $openPoSub = DB::table('purchase_order_items as poi')
+                ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+                ->whereIn('po.status', ['pending_approval', 'approved', 'sent'])
+                ->groupBy('poi.woo_product_id')
+                ->select('poi.woo_product_id', DB::raw('SUM(poi.quantity) as open_po_qty'), DB::raw('MAX(po.id) as open_po_id'));
+
             $selectFields = [
                 'wp.id      as product_id',
                 'wp.sku',
@@ -101,6 +108,11 @@ class NecesarMarfa extends Page
                 DB::raw('COALESCE(bpv.avg_out_qty_7d, 0)  as avg_daily_7d'),
                 DB::raw('COALESCE(bpv.avg_out_qty_30d, 0) as avg_daily_30d'),
                 DB::raw('COALESCE(bpv.avg_out_qty_90d, 0) as avg_daily_90d'),
+                DB::raw('opo.open_po_qty  as open_po_qty'),
+                DB::raw('opon.id          as open_po_id'),
+                DB::raw('opon.number      as open_po_number'),
+                DB::raw('opon.status      as open_po_status'),
+                DB::raw('COALESCE(opon.sent_at, opon.created_at) as open_po_date'),
             ];
 
             // -------- Produse cu furnizor activ --------
@@ -109,16 +121,11 @@ class NecesarMarfa extends Page
                 ->join('woo_products as wp', 'wp.id', '=', 'ps.woo_product_id')
                 ->leftJoin($stkSub, 'stk.woo_product_id', '=', 'wp.id')
                 ->leftJoin('bi_product_velocity_current as bpv', 'bpv.reference_product_id', '=', 'wp.sku')
+                ->leftJoinSub($openPoSub, 'opo', 'opo.woo_product_id', '=', 'wp.id')
+                ->leftJoin('purchase_orders as opon', 'opon.id', '=', 'opo.open_po_id')
                 ->where('s.is_active', true)
                 ->where('wp.is_discontinued', false)
                 ->whereRaw("COALESCE(wp.procurement_type, 'stock') != 'on_demand'")
-                ->whereNotExists(function ($q) {
-                    $q->select(DB::raw(1))
-                      ->from('purchase_order_items as poi')
-                      ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
-                      ->whereColumn('poi.woo_product_id', 'wp.id')
-                      ->whereIn('po.status', ['pending_approval', 'approved', 'sent']);
-                })
                 ->whereRaw("COALESCE(stk.total_qty, 0) < GREATEST(
                     COALESCE(bpv.avg_out_qty_7d, 0),
                     COALESCE(bpv.avg_out_qty_30d, 0)
@@ -139,15 +146,10 @@ class NecesarMarfa extends Page
             $rowsNoSupplier = DB::table('woo_products as wp')
                 ->leftJoin($stkSub, 'stk.woo_product_id', '=', 'wp.id')
                 ->leftJoin('bi_product_velocity_current as bpv', 'bpv.reference_product_id', '=', 'wp.sku')
+                ->leftJoinSub($openPoSub, 'opo', 'opo.woo_product_id', '=', 'wp.id')
+                ->leftJoin('purchase_orders as opon', 'opon.id', '=', 'opo.open_po_id')
                 ->where('wp.is_discontinued', false)
                 ->whereRaw("COALESCE(wp.procurement_type, 'stock') != 'on_demand'")
-                ->whereNotExists(function ($q) {
-                    $q->select(DB::raw(1))
-                      ->from('purchase_order_items as poi')
-                      ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
-                      ->whereColumn('poi.woo_product_id', 'wp.id')
-                      ->whereIn('po.status', ['pending_approval', 'approved', 'sent']);
-                })
                 ->whereRaw("COALESCE(stk.total_qty, 0) < GREATEST(
                     COALESCE(bpv.avg_out_qty_7d, 0),
                     COALESCE(bpv.avg_out_qty_30d, 0)
