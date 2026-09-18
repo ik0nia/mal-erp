@@ -299,7 +299,7 @@ class UserResource extends Resource
         $labels = '';
         foreach ($items as $k => $i) {
             $isPeak = $hasData && $k === $peak && (int) $i['val'] > 0;
-            $labels .= '<div style="flex:1;text-align:center;font-size:8px;color:' . ($isPeak ? '#b91c1c' : '#9ca3af')
+            $labels .= '<div style="flex:1;text-align:center;font-size:8px;white-space:nowrap;color:' . ($isPeak ? '#b91c1c' : '#9ca3af')
                 . ';font-weight:' . ($isPeak ? '700' : '400') . ';">' . $i['x'] . '</div>';
         }
 
@@ -380,18 +380,21 @@ class UserResource extends Resource
             $totalDay += $vals[$h];
         }
 
+        $peakH = 0;
+        for ($h = 1; $h < 24; $h++) { if ($vals[$h] > $vals[$peakH]) $peakH = $h; }
+
         $items = [];
         for ($h = 0; $h < 24; $h++) {
+            // etichetă din 4 în 4 ore + ora de vârf întotdeauna vizibilă, în format ceas
+            $show   = $h % 4 === 0 || ($totalDay > 0 && $h === $peakH);
             $items[] = [
                 'val' => $vals[$h],
-                'x'   => $h % 3 === 0 ? $h . 'h' : '',
+                'x'   => $show ? $h . ':00' : '',
                 'tip' => sprintf('%02d:00–%02d:59 — ', $h, $h) . self::fmtSec($vals[$h]),
             ];
         }
         $chart = self::barChart($items, 110, '#2563eb');
 
-        $peakH = 0;
-        for ($h = 1; $h < 24; $h++) { if ($vals[$h] > $vals[$peakH]) $peakH = $h; }
         $peakTxt = $totalDay > 0
             ? ' &middot; cel mai activ la ora <b style="color:#b91c1c;">' . sprintf('%02d:00', $peakH) . '</b> (' . self::fmtSec($vals[$peakH]) . ')'
             : '';
