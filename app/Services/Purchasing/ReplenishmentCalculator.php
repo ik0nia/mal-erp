@@ -87,6 +87,21 @@ class ReplenishmentCalculator
             ->select('pri.woo_product_id', DB::raw('SUM(GREATEST(0, pri.quantity - COALESCE(pri.ordered_quantity,0))) q'))
             ->groupBy('pri.woo_product_id')->pluck('q', 'woo_product_id');
 
+        // preîncarcă categorii + sezon → lookup O(1) în compute (fără N+1)
+        $catLinks  = DB::table('woo_product_category')->whereIn('woo_product_id', $pids)->get()->groupBy('woo_product_id');
+        $allSeason = DB::table('bi_seasonality_category')->get();
+        $ownCats   = $allSeason->where('source', 'own')->pluck('woo_category_id')->map(fn ($c) => (int) $c)->flip();
+        foreach ($allSeason->groupBy('woo_category_id') as $cat => $srows) {
+            $this->seasonRowCache[(int) $cat] = $srows->pluck('seasonal_index', 'month')->map(fn ($v) => (float) $v)->all();
+        }
+        foreach ($pids as $pid) {
+            $cats = ($catLinks->get($pid) ?? collect())->pluck('woo_category_id')->map(fn ($c) => (int) $c)->all();
+            if (empty($cats)) { $this->catCache[$pid] = 0; continue; }
+            $own = null;
+            foreach ($cats as $c) { if (isset($ownCats[$c])) { $own = $c; break; } }
+            $this->catCache[$pid] = $own ?? $cats[0];
+        }
+
         $results = [];
         foreach ($pairs as $pair) {
             $pid = (int) $pair[0]; $sid = (int) $pair[1];
@@ -152,6 +167,7 @@ class ReplenishmentCalculator
 
         // ---- Sezonalitate pe fereastra VIITOARE [azi+lead, azi+lead+cover] ----
         $catId  = $this->primaryCategory($productId);
+        $out['category_id'] = $catId;
         $season = $this->seasonForward($catId, $lead['lead'], $coverDays, $today);
 
         // ---- Țintă & safety ----
@@ -405,7 +421,7 @@ class ReplenishmentCalculator
             'eligible' => true, 'recommended_qty' => 0,
             'velocity' => 0, 'stock' => 0, 'on_order' => 0, 'reserved' => 0,
             'cover_days' => null, 'lead_days' => null, 'cycle_days' => null, 'lead_source' => null,
-            'season' => 1.0, 'safety' => 0, 'target' => 0, 'days_until_stockout' => null,
+            'season' => 1.0, 'safety' => 0, 'target' => 0, 'days_until_stockout' => null, 'category_id' => null,
             'purchase_qty' => 0, 'purchase_uom' => null, 'carton_qty' => null,
             'order_multiple_used' => 1, 'unit_cost' => null, 'est_value' => null, 'weight_kg' => null,
             'confidence' => 0, 'reasons' => [], 'flags' => [],
