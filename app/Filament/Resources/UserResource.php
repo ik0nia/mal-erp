@@ -237,7 +237,12 @@ class UserResource extends Resource
                     ->modalWidth('3xl')
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Închide')
-                    ->schema(fn (User $r): array => [
+                    ->schema(fn (User $r): array => array_values(array_filter([
+                        (static::currentUser()?->isSuperAdmin() ?? false)
+                            ? Placeholder::make('actiuni')
+                                ->hiddenLabel()
+                                ->content(new HtmlString(static::activityActionsHtml($r)))
+                            : null,
                         Placeholder::make('daily')
                             ->hiddenLabel()
                             ->content(new HtmlString(static::activityDailyHtml($r))),
@@ -253,7 +258,7 @@ class UserResource extends Resource
                         Placeholder::make('hourly')
                             ->hiddenLabel()
                             ->content(fn (Get $get) => new HtmlString(static::activityHourlyHtml($r, $get('zi')))),
-                    ]),
+                    ]))),
                 Actions\EditAction::make(),
                 Actions\DeleteAction::make(),
             ])
@@ -322,6 +327,115 @@ class UserResource extends Resource
             . '<div style="display:flex;gap:2px;margin-top:3px;">' . $labels . '</div></div>';
 
         return '<div style="display:flex;gap:6px;align-items:flex-start;">' . $axis . $chart . '</div>';
+    }
+
+    /**
+     * „Ce a făcut" utilizatorul — timeline unificat din activity_log (audit + login-uri)
+     * + WooOrderEdit (modificări comenzi online), pe ultimele 30 de zile. Doar super_admin.
+     */
+    public static function activityActionsHtml(User $u): string
+    {
+        $since = now()->subDays(30);
+
+        $logs = \Spatie\Activitylog\Models\Activity::query()
+            ->where('causer_type', User::class)
+            ->where('causer_id', $u->id)
+            ->where('created_at', '>=', $since)
+            ->orderByDesc('created_at')
+            ->get(['log_name', 'event', 'description', 'subject_type', 'subject_id', 'properties', 'created_at']);
+
+        $orderEdits = \App\Models\WooOrderEdit::with('order:id,number')
+            ->where('user_email', $u->email)
+            ->where('created_at', '>=', $since)
+            ->orderByDesc('created_at')
+            ->get(['woo_order_id', 'action', 'label', 'created_at']);
+
+        // Statistici
+        $created = $logs->where('event', 'created')->count();
+        $updated = $logs->where('event', 'updated')->count();
+        $deleted = $logs->where('event', 'deleted')->count();
+        $logins  = $logs->where('log_name', 'auth')->count();
+        $orders  = $orderEdits->count();
+        $totalActions = $logs->where('log_name', '!=', 'auth')->count() + $orders;
+
+        // Culori pe categorie
+        $catStyle = [
+            'created' => ['#065f46', '#d1fae5', 'Creare'],
+            'updated' => ['#92400e', '#fef3c7', 'Modificare'],
+            'deleted' => ['#991b1b', '#fee2e2', 'Ștergere'],
+            'login'   => ['#1e40af', '#dbeafe', 'Login'],
+            'order'   => ['#3730a3', '#e0e7ff', 'Comandă'],
+            'other'   => ['#374151', '#f3f4f6', 'Acțiune'],
+        ];
+
+        // Timeline unificat
+        $items = [];
+        foreach ($logs as $l) {
+            $isAuth = $l->log_name === 'auth';
+            $cat    = $isAuth ? 'login' : (in_array($l->event, ['created', 'updated', 'deleted'], true) ? $l->event : 'other');
+            $entity = $isAuth || ! $l->subject_type
+                ? ''
+                : class_basename($l->subject_type).' '.($l->properties['subject_label'] ?? ('#'.$l->subject_id));
+            $items[] = [
+                'when'   => $l->created_at,
+                'cat'    => $cat,
+                'text'   => $l->description ?: '—',
+                'entity' => $entity,
+            ];
+        }
+        foreach ($orderEdits as $e) {
+            $items[] = [
+                'when'   => $e->created_at,
+                'cat'    => 'order',
+                'text'   => $e->label ?: $e->action,
+                'entity' => $e->order ? 'Comandă #'.$e->order->number : 'Comandă #'.$e->woo_order_id,
+            ];
+        }
+        usort($items, fn ($a, $b) => $b['when'] <=> $a['when']);
+        $shown = array_slice($items, 0, 40);
+
+        $stat = fn ($label, $val, $color = '#111827') => '<div><div style="font-size:11px;color:#6b7280;">'.$label.'</div><div style="font-size:20px;font-weight:800;color:'.$color.';">'.$val.'</div></div>';
+
+        $rows = '';
+        foreach ($shown as $it) {
+            [$fg, $bg, $lbl] = $catStyle[$it['cat']] ?? $catStyle['other'];
+            $badge = '<span style="display:inline-block;padding:1px 7px;border-radius:9px;font-size:10px;font-weight:700;color:'.$fg.';background:'.$bg.';white-space:nowrap;">'.$lbl.'</span>';
+            $ent   = $it['entity'] ? '<span style="color:#6b7280;"> · '.e($it['entity']).'</span>' : '';
+            $rows .= '<tr>'
+                .'<td style="padding:5px 8px;border-top:1px solid #f1f5f9;white-space:nowrap;color:#6b7280;font-size:11px;vertical-align:top;">'.$it['when']->format('d.m H:i').'</td>'
+                .'<td style="padding:5px 8px;border-top:1px solid #f1f5f9;vertical-align:top;">'.$badge.'</td>'
+                .'<td style="padding:5px 8px;border-top:1px solid #f1f5f9;">'.e($it['text']).$ent.'</td>'
+                .'</tr>';
+        }
+        if ($rows === '') {
+            $rows = '<tr><td colspan="3" style="padding:12px 8px;text-align:center;color:#9ca3af;">Nicio acțiune înregistrată în ultimele 30 de zile.</td></tr>';
+        }
+
+        $journalUrl = ActivityLogResource::getUrl('index', ['tableFilters' => ['causer_id' => ['value' => $u->id]]]);
+
+        return '<div style="font-size:13px;color:#374151;">'
+            .'<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;margin:0 0 8px;">Ce a făcut — ultimele 30 de zile</div>'
+            .'<div style="display:flex;gap:20px;margin-bottom:12px;flex-wrap:wrap;">'
+            .$stat('Acțiuni total', $totalActions, '#d42b2b')
+            .$stat('Creări', $created, '#065f46')
+            .$stat('Modificări', $updated, '#92400e')
+            .$stat('Ștergeri', $deleted, '#991b1b')
+            .$stat('Comenzi online', $orders, '#3730a3')
+            .$stat('Login-uri', $logins, '#1e40af')
+            .'</div>'
+            .'<div style="max-height:280px;overflow-y:auto;border:1px solid #f1f5f9;border-radius:8px;">'
+            .'<table style="width:100%;border-collapse:collapse;">'
+            .'<thead><tr style="font-size:10px;color:#9ca3af;text-transform:uppercase;position:sticky;top:0;background:#fff;">'
+            .'<th style="text-align:left;padding:6px 8px;">Când</th>'
+            .'<th style="text-align:left;padding:6px 8px;">Tip</th>'
+            .'<th style="text-align:left;padding:6px 8px;">Acțiune</th>'
+            .'</tr></thead><tbody>'.$rows.'</tbody></table></div>'
+            .'<div style="margin-top:8px;font-size:11px;color:#6b7280;">'
+            .(count($items) > 40 ? 'Se afișează ultimele 40 din '.count($items).' acțiuni. ' : '')
+            .'<a href="'.$journalUrl.'" style="color:#2563eb;font-weight:600;text-decoration:none;">Vezi tot în Jurnalul de audit →</a>'
+            .'</div>'
+            .'<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">'
+            .'</div>';
     }
 
     /** Statistici + grafic zilnic (bare CSS) pe ultimele 30 de zile. */

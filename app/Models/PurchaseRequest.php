@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Concerns\HasLocationScope;
 use App\Enums\HasStatusEnum;
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class PurchaseRequest extends Model
 {
-    use HasLocationScope, HasStatusEnum;
+    use HasLocationScope, HasStatusEnum, Auditable;
 
     public const STATUS_DRAFT            = 'draft';
     public const STATUS_SUBMITTED        = 'submitted';

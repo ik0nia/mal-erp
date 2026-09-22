@@ -112,6 +112,14 @@ class ActivityLogResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                Tables\Filters\SelectFilter::make('causer_id')
+                    ->label('Utilizator')
+                    ->searchable()
+                    ->options(fn (): array => User::orderBy('name')->pluck('name', 'id')->toArray())
+                    ->query(fn ($query, array $data) => $query->when(
+                        $data['value'] ?? null,
+                        fn ($q, $v) => $q->where('causer_type', User::class)->where('causer_id', $v)
+                    )),
                 Tables\Filters\SelectFilter::make('event')
                     ->label('Acțiune')
                     ->options([

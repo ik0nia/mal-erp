@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Concerns\HasLocationScope;
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -10,6 +11,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class SamedayAwb extends Model
 {
     use HasLocationScope;
+    use Auditable;
+
+    /** Câmpuri actualizate de sync-ul de tracking (fără causer) sau blob-uri mari — excluse din audit. */
+    protected array $auditExcept = [
+        'courier_status', 'courier_status_at', 'tracking_attempts',
+        'picked_up_at', 'delivered_at', 'tracking_history',
+        'request_payload', 'response_payload',
+    ];
 
     public const STATUS_CREATED = 'created';
     public const STATUS_CANCELLED = 'cancelled';
