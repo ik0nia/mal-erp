@@ -295,6 +295,148 @@ class WooOrderResource extends Resource
                     }),
             ])
             ->bulkActions([
+                Actions\BulkAction::make('merge_orders')
+                    ->label('Comasează comenzi')
+                    ->icon('heroicon-o-arrows-pointing-in')
+                    ->color('warning')
+                    // Vizibilă pentru rolurile cu drept de editare comenzi (aceeași permisiune ca editarea din ViewWooOrder).
+                    ->visible(fn (): bool => \App\Models\RolePermission::check(static::class, 'can_edit'))
+                    ->requiresConfirmation()
+                    ->modalHeading('Comasare comenzi')
+                    ->modalSubmitActionLabel('Da, comasează')
+                    ->modalContent(function (\Illuminate\Database\Eloquent\Collection $records): HtmlString {
+                        $p = (new \App\Services\WooCommerce\WooOrderMergeService())->preview($records);
+
+                        if (! $p['ok']) {
+                            return new HtmlString(
+                                '<div style="padding:12px;border-radius:8px;background:#fef2f2;color:#b91c1c;font-size:13px">⛔ '
+                                .e(implode(' ', $p['errors'])).'</div>'
+                            );
+                        }
+
+                        $t    = $p['target'];
+                        $secs = collect($p['secondaries'])->map(fn (WooOrder $o): string => '#'.$o->number)->implode(', ');
+                        $cur  = $t->currency ?: 'RON';
+
+                        $rows = '';
+                        foreach ($p['lines'] as $l) {
+                            $badge = $l['is_new']
+                                ? ' <span style="font-size:10px;color:#2563eb">(adăugat)</span>'
+                                : '';
+                            $rows .= '<tr>'
+                                .'<td style="padding:6px 8px;border-top:1px solid #e5e7eb">'.e($l['name']).$badge.'</td>'
+                                .'<td style="padding:6px 8px;border-top:1px solid #e5e7eb;text-align:center;font-weight:600">×'.$l['qty'].'</td>'
+                                .'<td style="padding:6px 8px;border-top:1px solid #e5e7eb;text-align:right">'.number_format($l['line_total'], 2).'</td>'
+                                .'</tr>';
+                        }
+
+                        $warn = $p['warnings']
+                            ? '<div style="margin-top:10px;padding:8px 10px;border-radius:6px;background:#fffbeb;color:#b45309;font-size:12px">⚠ '
+                                .e(implode(' ', $p['warnings'])).'</div>'
+                            : '';
+
+                        // ── Transport: simulat pe greutatea comasată (nu rămâne cel vechi) ──
+                        $weight  = (float) $p['merged_weight_kg'];
+                        $srcShip = collect($p['source_shipping']);
+                        $shipRef = $srcShip->map(fn ($s): string => '#'.$s['number'].' '.number_format($s['shipping'], 2))->implode(' + ');
+                        $shipSum = $srcShip->sum('shipping');
+
+                        // Transport nou = estimare Sameday pe greutatea comasată (se aplică AUTOMAT la comasare).
+                        $cod  = $t->payment_method === 'cod' ? (float) $p['products_total'] : 0.0;
+                        $est  = empty($p['missing_weight'])
+                            ? static::estimateMergedShippingNet($t, $weight, $cod)
+                            : null;
+
+                        $estRow    = '';
+                        $totalRow  = '';
+                        if ($est) {
+                            $estNet   = $est['net'];
+                            $estCur   = $est['currency'];
+                            $estRow   = '<tr><td colspan="2" style="padding:2px 8px;text-align:right;color:#6b7280">Transport nou ('
+                                .rtrim(rtrim(number_format($weight, 2), '0'), '.').' kg, estimat Sameday)</td>'
+                                .'<td style="padding:2px 8px;text-align:right">'.number_format($estNet, 2).' '.e($estCur).'</td></tr>';
+                            $totalRow = '<tr><td colspan="2" style="padding:6px 8px;text-align:right;font-weight:700">Total estimat (net)</td>'
+                                .'<td style="padding:6px 8px;text-align:right;font-weight:700">'.number_format($p['products_total'] + $estNet, 2).' '.e($estCur).'</td></tr>';
+                        }
+
+                        $weightTxt = $weight > 0
+                            ? rtrim(rtrim(number_format($weight, 2), '0'), '.').' kg'
+                            : 'necunoscută';
+                        $missTxt = ! empty($p['missing_weight'])
+                            ? ' <span style="color:#b45309">(fără greutate: '.e(implode(', ', $p['missing_weight'])).')</span>'
+                            : '';
+
+                        // Bannerul de transport: ce se întâmplă cu taxa.
+                        if ($est) {
+                            $shipBox = '🚚 <b>Transport recalculat automat</b> pentru coletul comasat (~'.$weightTxt.'): '
+                                .'<b>'.number_format($est['net'], 2).' '.e($est['currency']).' net</b> (estimare Sameday, ramburs inclus). '
+                                .'Nu rămâne cel vechi și nu e suma lor ('.e($shipRef).' = '.number_format($shipSum, 2).'). '
+                                .'Îl poți ajusta ulterior din „Editează transportul".';
+                        } else {
+                            $shipBox = '🚚 <b>Transport (colet comasat ~'.$weightTxt.')</b>'.$missTxt.'<br>'
+                                .'Estimarea Sameday nu e disponibilă acum — transportul rămâne cel al comenzii principale și trebuie ajustat manual din „Editează transportul". '
+                                .'Nu e suma lor ('.e($shipRef).' = '.number_format($shipSum, 2).').';
+                        }
+
+                        return new HtmlString(
+                            '<div style="font-size:13px;line-height:1.5">'
+                            .'<p>Se păstrează comanda cea mai veche <b>#'.e($t->number).'</b>'
+                            .($t->order_date ? ' din '.e($t->order_date->format('d.m.Y H:i')) : '').', '
+                            .'iar produsele din <b>'.e($secs).'</b> se mută în ea. '
+                            .'Comenzile mutate se anulează cu notă de trasabilitate.</p>'
+                            .'<p style="margin-top:8px;font-weight:600">Așa va arăta comanda #'.e($t->number).':</p>'
+                            .'<table style="width:100%;border-collapse:collapse;margin-top:4px">'
+                            .'<thead><tr style="font-size:11px;color:#6b7280;text-transform:uppercase">'
+                            .'<th style="text-align:left;padding:0 8px">Produs</th>'
+                            .'<th style="text-align:center;padding:0 8px">Cant.</th>'
+                            .'<th style="text-align:right;padding:0 8px">Total ('.e($cur).')</th>'
+                            .'</tr></thead><tbody>'.$rows.'</tbody>'
+                            .'<tfoot>'
+                            .'<tr><td colspan="2" style="padding:6px 8px;border-top:2px solid #d1d5db;text-align:right;font-weight:600">Total produse</td>'
+                            .'<td style="padding:6px 8px;border-top:2px solid #d1d5db;text-align:right;font-weight:600">'.number_format($p['products_total'], 2).' '.e($cur).'</td></tr>'
+                            .$estRow
+                            .$totalRow
+                            .'</tfoot></table>'
+                            .'<div style="margin-top:10px;padding:8px 10px;border-radius:6px;background:#eff6ff;color:#1e3a8a;font-size:12px">'.$shipBox.'</div>'
+                            .'<p style="margin-top:6px;font-size:11px;color:#6b7280">TVA-ul pe transport îl adaugă WooCommerce peste net. Acțiune ireversibilă printr-un click.</p>'
+                            .$warn
+                            .'</div>'
+                        );
+                    })
+                    ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
+                        $service = new \App\Services\WooCommerce\WooOrderMergeService();
+                        $preview = $service->preview($records);
+
+                        if (! $preview['ok']) {
+                            \Filament\Notifications\Notification::make()
+                                ->danger()->title('Nu se pot comasa')
+                                ->body(implode(' ', $preview['errors']))->persistent()->send();
+
+                            return;
+                        }
+
+                        $target = $preview['target'];
+                        // Transport nou pe greutatea comasată (best-effort; null → merge lasă transportul vechi).
+                        $cod     = $target->payment_method === 'cod' ? (float) $preview['products_total'] : 0.0;
+                        $est     = empty($preview['missing_weight'])
+                            ? static::estimateMergedShippingNet($target, (float) $preview['merged_weight_kg'], $cod)
+                            : null;
+
+                        try {
+                            $result = $service->merge($target, $preview['secondaries'], auth()->user(), $est['net'] ?? null);
+                        } catch (\Throwable $e) {
+                            \Filament\Notifications\Notification::make()
+                                ->danger()->title('Eroare la comasare')
+                                ->body($e->getMessage())->persistent()->send();
+
+                            return;
+                        }
+
+                        \Filament\Notifications\Notification::make()
+                            ->{$result['ok'] ? 'success' : 'danger'}()
+                            ->title($result['ok'] ? 'Comenzi comasate' : 'Comasare eșuată')
+                            ->body($result['message'])->persistent()->send();
+                    }),
                 Actions\BulkAction::make('resync_selected')
                     ->label('Resync selectate')
                     ->icon('heroicon-o-cloud-arrow-down')
@@ -318,6 +460,40 @@ class WooOrderResource extends Resource
                         \Filament\Notifications\Notification::make()->success()->title('Resync finalizat')->send();
                     }),
             ]);
+    }
+
+    /**
+     * Estimează costul de transport NET pentru comanda comasată, pe greutatea totală,
+     * via Sameday (best-effort). Reutilizat de popup-ul de confirmare și de execuția merge-ului.
+     *
+     * @return array{net: float, currency: string}|null
+     */
+    public static function estimateMergedShippingNet(WooOrder $target, float $weight, float $cod): ?array
+    {
+        if ($weight <= 0) {
+            return null;
+        }
+
+        try {
+            $conn = IntegrationConnection::where('provider', IntegrationConnection::PROVIDER_SAMEDAY)
+                ->where('is_active', true)->first();
+            if (! $conn) {
+                return null;
+            }
+
+            $input = \App\Filament\App\Resources\SamedayAwbResource::orderPrefillData($target)['prefill'];
+            $input['package_weight_kg'] = $weight;
+            $input['parcels']           = [['weight_kg' => $weight]];
+            $input['cod_amount']        = max(0, $cod);
+
+            $est = app(SamedayAwbService::class)->estimateAwbCost($conn, $input);
+
+            return ! empty($est['cost'])
+                ? ['net' => round((float) $est['cost'], 2), 'currency' => $est['currency'] ?? 'RON']
+                : null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public static function infolist(Schema $schema): Schema
