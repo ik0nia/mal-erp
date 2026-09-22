@@ -470,9 +470,12 @@ class UserResource extends Resource
 
         $rows = '';
         foreach ($top as $r) {
-            $label = \App\Models\UserPageVisit::labelFor($r->route_name, ltrim($r->path, '/'));
+            $label = \App\Models\UserPageVisit::resolveRecord($r->route_name, $r->path)
+                ?? \App\Models\UserPageVisit::labelFor($r->route_name, ltrim($r->path, '/'));
+            $href  = e(url($r->path));
             $rows .= '<tr>'
-                .'<td style="padding:5px 8px;border-top:1px solid #f1f5f9;">'.e($label)
+                .'<td style="padding:5px 8px;border-top:1px solid #f1f5f9;">'
+                .'<a href="'.$href.'" target="_blank" style="color:#2563eb;text-decoration:none;font-weight:500;">'.e($label).'</a>'
                 .'<div style="font-size:10px;color:#9ca3af;">/'.e($r->path).'</div></td>'
                 .'<td style="padding:5px 8px;border-top:1px solid #f1f5f9;text-align:right;font-weight:700;white-space:nowrap;">'.$r->c.'×</td>'
                 .'<td style="padding:5px 8px;border-top:1px solid #f1f5f9;text-align:right;color:#6b7280;font-size:11px;white-space:nowrap;">'

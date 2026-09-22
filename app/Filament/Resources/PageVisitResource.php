@@ -79,8 +79,11 @@ class PageVisitResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('label')
                     ->label('Pagină')
-                    ->getStateUsing(fn (UserPageVisit $r): string => $r->label)
+                    ->getStateUsing(fn (UserPageVisit $r): string => $r->detail ? $r->label.' → '.$r->detail : $r->label)
                     ->description(fn (UserPageVisit $r): string => '/'.$r->path)
+                    ->url(fn (UserPageVisit $r): string => url($r->path))
+                    ->openUrlInNewTab()
+                    ->color('primary')
                     ->searchable(query: fn (Builder $query, string $search): Builder => $query->where('path', 'like', "%{$search}%"))
                     ->wrap(),
                 Tables\Columns\TextColumn::make('route_name')
