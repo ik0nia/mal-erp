@@ -8,6 +8,7 @@ use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Utilities\Get;
 use Illuminate\Support\HtmlString;
 use Filament\Schemas\Components\Utilities\Set;
@@ -234,36 +235,45 @@ class UserResource extends Resource
                     ->icon('heroicon-o-chart-bar')
                     ->color('gray')
                     ->modalHeading(fn (User $r): string => 'Activitate — ' . $r->name)
-                    ->modalWidth('3xl')
+                    ->modalWidth(fn (): string => (static::currentUser()?->isSuperAdmin() ?? false) ? '7xl' : '3xl')
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Închide')
-                    ->schema(fn (User $r): array => array_values(array_filter([
-                        (static::currentUser()?->isSuperAdmin() ?? false)
-                            ? Placeholder::make('actiuni')
+                    ->schema(function (User $r): array {
+                        $isSuper = static::currentUser()?->isSuperAdmin() ?? false;
+
+                        return array_values(array_filter([
+                            // Sus, pe 2 coloane: „Ce a făcut" | „Pagini vizitate" (doar super_admin).
+                            $isSuper
+                                ? Grid::make(['default' => 1, 'lg' => 2])->schema([
+                                    Placeholder::make('actiuni')
+                                        ->hiddenLabel()
+                                        ->content(new HtmlString(static::activityActionsHtml($r))),
+                                    Placeholder::make('pagini')
+                                        ->hiddenLabel()
+                                        ->content(new HtmlString(static::activityPagesHtml($r))),
+                                ])
+                                : null,
+                            // Jos, pe toată lățimea: graficele de timp.
+                            Placeholder::make('daily')
                                 ->hiddenLabel()
-                                ->content(new HtmlString(static::activityActionsHtml($r)))
-                            : null,
-                        (static::currentUser()?->isSuperAdmin() ?? false)
-                            ? Placeholder::make('pagini')
+                                ->content(new HtmlString(static::activityDailyHtml($r)))
+                                ->columnSpanFull(),
+                            DatePicker::make('zi')
+                                ->label('Activitate orară — alege o zi')
+                                ->native(false)
+                                ->closeOnDateSelection()
+                                ->minDate(now()->subDays(29)->startOfDay())
+                                ->maxDate(now()->endOfDay())
+                                ->disabledDates(static::daysWithoutData($r))
+                                ->live()
+                                ->helperText('Se pot alege doar zile cu activitate. Gol = agregat pe 30 de zile.')
+                                ->columnSpanFull(),
+                            Placeholder::make('hourly')
                                 ->hiddenLabel()
-                                ->content(new HtmlString(static::activityPagesHtml($r)))
-                            : null,
-                        Placeholder::make('daily')
-                            ->hiddenLabel()
-                            ->content(new HtmlString(static::activityDailyHtml($r))),
-                        DatePicker::make('zi')
-                            ->label('Activitate orară — alege o zi')
-                            ->native(false)
-                            ->closeOnDateSelection()
-                            ->minDate(now()->subDays(29)->startOfDay())
-                            ->maxDate(now()->endOfDay())
-                            ->disabledDates(static::daysWithoutData($r))
-                            ->live()
-                            ->helperText('Se pot alege doar zile cu activitate. Gol = agregat pe 30 de zile.'),
-                        Placeholder::make('hourly')
-                            ->hiddenLabel()
-                            ->content(fn (Get $get) => new HtmlString(static::activityHourlyHtml($r, $get('zi')))),
-                    ]))),
+                                ->content(fn (Get $get) => new HtmlString(static::activityHourlyHtml($r, $get('zi'))))
+                                ->columnSpanFull(),
+                        ]));
+                    }),
                 Actions\EditAction::make(),
                 Actions\DeleteAction::make(),
             ])
@@ -439,7 +449,6 @@ class UserResource extends Resource
             .(count($items) > 40 ? 'Se afișează ultimele 40 din '.count($items).' acțiuni. ' : '')
             .'<a href="'.$journalUrl.'" style="color:#2563eb;font-weight:600;text-decoration:none;">Vezi tot în Jurnalul de audit →</a>'
             .'</div>'
-            .'<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">'
             .'</div>';
     }
 
@@ -507,7 +516,6 @@ class UserResource extends Resource
             .'<th style="text-align:right;padding:6px 8px;">Accesări</th>'
             .'<th style="text-align:right;padding:6px 8px;">Ultima</th>'
             .'</tr></thead><tbody>'.$rows.'</tbody></table></div>'
-            .'<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">'
             .'</div>';
     }
 
