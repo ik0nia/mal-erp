@@ -243,6 +243,11 @@ class UserResource extends Resource
                                 ->hiddenLabel()
                                 ->content(new HtmlString(static::activityActionsHtml($r)))
                             : null,
+                        (static::currentUser()?->isSuperAdmin() ?? false)
+                            ? Placeholder::make('pagini')
+                                ->hiddenLabel()
+                                ->content(new HtmlString(static::activityPagesHtml($r)))
+                            : null,
                         Placeholder::make('daily')
                             ->hiddenLabel()
                             ->content(new HtmlString(static::activityDailyHtml($r))),
@@ -434,6 +439,74 @@ class UserResource extends Resource
             .(count($items) > 40 ? 'Se afișează ultimele 40 din '.count($items).' acțiuni. ' : '')
             .'<a href="'.$journalUrl.'" style="color:#2563eb;font-weight:600;text-decoration:none;">Vezi tot în Jurnalul de audit →</a>'
             .'</div>'
+            .'<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">'
+            .'</div>';
+    }
+
+    /** Prietenește o cale/rută într-o etichetă lizibilă pentru jurnalul de navigare. */
+    private static function pageLabel(?string $routeName, string $path): string
+    {
+        // filament.admin.resources.users.index → „Utilizatori · index"
+        if ($routeName && str_contains($routeName, '.resources.')) {
+            $parts = explode('.', $routeName);
+            $res   = $parts[array_search('resources', $parts, true) + 1] ?? null;
+            $page  = end($parts);
+            if ($res) {
+                return ucfirst(str_replace('-', ' ', $res)).($page && $page !== 'index' ? ' · '.$page : '');
+            }
+        }
+        if ($routeName && str_contains($routeName, '.pages.')) {
+            $p = explode('.', $routeName);
+
+            return 'Pagină · '.ucfirst(str_replace('-', ' ', (string) end($p)));
+        }
+
+        return '/'.$path;
+    }
+
+    /** „Pagini vizitate" — top pagini + total, pe ultimele 30 de zile. Doar super_admin. */
+    public static function activityPagesHtml(User $u): string
+    {
+        $since = now()->subDays(30);
+
+        $total = \Illuminate\Support\Facades\DB::table('user_page_visits')
+            ->where('user_id', $u->id)->where('visited_at', '>=', $since)->count();
+
+        $top = \Illuminate\Support\Facades\DB::table('user_page_visits')
+            ->where('user_id', $u->id)->where('visited_at', '>=', $since)
+            ->selectRaw('path, MAX(route_name) as route_name, COUNT(*) as c, MAX(visited_at) as last_at')
+            ->groupBy('path')
+            ->orderByDesc('c')
+            ->limit(15)
+            ->get();
+
+        $rows = '';
+        foreach ($top as $r) {
+            $label = static::pageLabel($r->route_name, ltrim($r->path, '/'));
+            $rows .= '<tr>'
+                .'<td style="padding:5px 8px;border-top:1px solid #f1f5f9;">'.e($label)
+                .'<div style="font-size:10px;color:#9ca3af;">/'.e($r->path).'</div></td>'
+                .'<td style="padding:5px 8px;border-top:1px solid #f1f5f9;text-align:right;font-weight:700;white-space:nowrap;">'.$r->c.'×</td>'
+                .'<td style="padding:5px 8px;border-top:1px solid #f1f5f9;text-align:right;color:#6b7280;font-size:11px;white-space:nowrap;">'
+                .\Illuminate\Support\Carbon::parse($r->last_at)->format('d.m H:i').'</td>'
+                .'</tr>';
+        }
+        if ($rows === '') {
+            $rows = '<tr><td colspan="3" style="padding:12px 8px;text-align:center;color:#9ca3af;">Nicio pagină înregistrată încă (jurnalul de navigare a pornit acum).</td></tr>';
+        }
+
+        return '<div style="font-size:13px;color:#374151;">'
+            .'<div style="display:flex;align-items:baseline;gap:8px;margin:0 0 8px;">'
+            .'<span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;">Pagini vizitate — 30 zile</span>'
+            .'<span style="font-size:11px;color:#9ca3af;">('.$total.' accesări total)</span>'
+            .'</div>'
+            .'<div style="max-height:240px;overflow-y:auto;border:1px solid #f1f5f9;border-radius:8px;">'
+            .'<table style="width:100%;border-collapse:collapse;">'
+            .'<thead><tr style="font-size:10px;color:#9ca3af;text-transform:uppercase;position:sticky;top:0;background:#fff;">'
+            .'<th style="text-align:left;padding:6px 8px;">Pagină</th>'
+            .'<th style="text-align:right;padding:6px 8px;">Accesări</th>'
+            .'<th style="text-align:right;padding:6px 8px;">Ultima</th>'
+            .'</tr></thead><tbody>'.$rows.'</tbody></table></div>'
             .'<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">'
             .'</div>';
     }

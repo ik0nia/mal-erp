@@ -72,6 +72,13 @@ Schedule::call(function () {
         ->each(fn ($post) => \App\Jobs\Social\PublishSmPostJob::dispatch($post));
 })->everyMinute()->name('sm:publish-scheduled')->withoutOverlapping(30);
 
+// Jurnal de navigare — retenție 90 zile (curăță user_page_visits vechi).
+Schedule::call(function () {
+    \Illuminate\Support\Facades\DB::table('user_page_visits')
+        ->where('visited_at', '<', now()->subDays(90))
+        ->delete();
+})->dailyAt('03:30')->name('page-visits:prune')->withoutOverlapping(30);
+
 // Fallback sync comenzi — prinde orice a ratat webhook-ul.
 Schedule::command('woo:sync-orders')
     ->everyFifteenMinutes()

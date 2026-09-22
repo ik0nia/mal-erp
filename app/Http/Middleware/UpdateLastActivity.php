@@ -4,7 +4,10 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
@@ -26,6 +29,9 @@ class UpdateLastActivity
             if ($user) {
                 $now  = now();
                 $prev = $user->last_activity_at;
+
+                // Jurnal de navigare: ce pagini deschide (doar accesări reale de pagini).
+                $this->logPageVisit($request, $user, $now);
 
                 if (! $prev || $prev->lt($now->copy()->subMinute())) {
                     // Acumulează timp activ doar dacă sesiunea e continuă (gap ≤ 10 min, aceeași zi).
@@ -55,5 +61,44 @@ class UpdateLastActivity
         }
 
         return $next($request);
+    }
+
+    /**
+     * Înregistrează o vizită de pagină în `user_page_visits`. Prinde DOAR navigări reale:
+     * GET care acceptă HTML, exclude asset-uri / API / polling Livewire / descărcări.
+     * Throttle 5s pe (user, path) ca să nu dubleze din redirecturi sau refire.
+     */
+    private function logPageVisit(Request $request, $user, Carbon $now): void
+    {
+        if (! $request->isMethod('GET') || $request->ajax() || $request->hasHeader('X-Livewire')) {
+            return;
+        }
+        if (! $request->acceptsHtml()) {
+            return;
+        }
+
+        $path = $request->path();
+
+        // Exclude rute de sistem / asset-uri / descărcări.
+        if (preg_match('#^(livewire|filament|storage|vendor|build|assets|js|css|images?|img|fonts|api|horizon|webhooks|health|up|awb|broadcasting)(/|$)#', $path)) {
+            return;
+        }
+        if (preg_match('#\.(js|css|png|jpe?g|svg|gif|ico|webp|woff2?|ttf|map|pdf|xml|txt|zip|json)$#i', $path)) {
+            return;
+        }
+
+        // Anti-duplicat: aceeași pagină, același user, în 5s → o singură înregistrare.
+        if (! Cache::add('pv:'.$user->id.':'.md5($path), 1, 5)) {
+            return;
+        }
+
+        DB::table('user_page_visits')->insert([
+            'user_id'    => $user->id,
+            'method'     => 'GET',
+            'path'       => Str::limit($path, 500, ''),
+            'route_name' => $request->route()?->getName(),
+            'title'      => null,
+            'visited_at' => $now,
+        ]);
     }
 }
