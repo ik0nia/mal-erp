@@ -452,27 +452,6 @@ class UserResource extends Resource
             .'</div>';
     }
 
-    /** Prietenește o cale/rută într-o etichetă lizibilă pentru jurnalul de navigare. */
-    private static function pageLabel(?string $routeName, string $path): string
-    {
-        // filament.admin.resources.users.index → „Utilizatori · index"
-        if ($routeName && str_contains($routeName, '.resources.')) {
-            $parts = explode('.', $routeName);
-            $res   = $parts[array_search('resources', $parts, true) + 1] ?? null;
-            $page  = end($parts);
-            if ($res) {
-                return ucfirst(str_replace('-', ' ', $res)).($page && $page !== 'index' ? ' · '.$page : '');
-            }
-        }
-        if ($routeName && str_contains($routeName, '.pages.')) {
-            $p = explode('.', $routeName);
-
-            return 'Pagină · '.ucfirst(str_replace('-', ' ', (string) end($p)));
-        }
-
-        return '/'.$path;
-    }
-
     /** „Pagini vizitate" — top pagini + total, pe ultimele 30 de zile. Doar super_admin. */
     public static function activityPagesHtml(User $u): string
     {
@@ -491,7 +470,7 @@ class UserResource extends Resource
 
         $rows = '';
         foreach ($top as $r) {
-            $label = static::pageLabel($r->route_name, ltrim($r->path, '/'));
+            $label = \App\Models\UserPageVisit::labelFor($r->route_name, ltrim($r->path, '/'));
             $rows .= '<tr>'
                 .'<td style="padding:5px 8px;border-top:1px solid #f1f5f9;">'.e($label)
                 .'<div style="font-size:10px;color:#9ca3af;">/'.e($r->path).'</div></td>'
@@ -516,6 +495,10 @@ class UserResource extends Resource
             .'<th style="text-align:right;padding:6px 8px;">Accesări</th>'
             .'<th style="text-align:right;padding:6px 8px;">Ultima</th>'
             .'</tr></thead><tbody>'.$rows.'</tbody></table></div>'
+            .'<div style="margin-top:8px;font-size:11px;color:#6b7280;">'
+            .'<a href="'.\App\Filament\Resources\PageVisitResource::getUrl('index', ['tableFilters' => ['user_id' => ['value' => $u->id]]])
+            .'" style="color:#2563eb;font-weight:600;text-decoration:none;">Vezi cronologic tot parcursul →</a>'
+            .'</div>'
             .'</div>';
     }
 
