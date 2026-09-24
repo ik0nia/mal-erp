@@ -18,6 +18,27 @@
     $suppliers = collect($this->orderItemsSupplierInfo());
     $shipLine = collect($record->data['shipping_lines'] ?? [])->first();
     $shipGross = round((float) $record->shipping_total + (float) data_get($record->data, 'shipping_tax', (float) $record->shipping_total * 0.21), 2);
+
+    // Evidențiere modificări din istoricul ERP (WooOrderEdit) — doar afișare.
+    $addedIds = []; $removedItems = []; $qtyChg = [];
+    foreach ($record->edits()->whereNull('reverted_at')->orderBy('id')->get() as $e) {
+        if ($e->action === 'add_item' && ($e->after['woo_item_id'] ?? null)) {
+            $addedIds[(int) $e->after['woo_item_id']] = true;
+        } elseif ($e->action === 'remove_item' && $e->before) {
+            $removedItems[] = $e->before;
+        } elseif ($e->action === 'edit_items') {
+            $before = collect($e->before['lines'] ?? [])->keyBy('woo_item_id');
+            foreach (($e->after['lines'] ?? []) as $al) {
+                $wid = $al['woo_item_id'] ?? null;
+                if (! $wid) continue;
+                $old = $before->get($wid)['quantity'] ?? null;
+                if ($old !== null && (float) $old != (float) ($al['quantity'] ?? 0)) {
+                    $qtyChg[(int) $wid] = [(float) $old, (float) $al['quantity']];
+                }
+            }
+        }
+    }
+    $fmtQ = fn ($v) => floor($v) == $v ? number_format($v, 0) : number_format($v, 2);
 @endphp
 
 <style>
@@ -54,10 +75,10 @@
             $row   = $vatRates->get($item->woo_item_id);
             $gross = $row['price_gross'] ?? round((float) $item->price * 1.21, 2);
         @endphp
-        <tr wire:key="oie-{{ $item->woo_item_id }}">
+        <tr wire:key="oie-{{ $item->woo_item_id }}" @if(isset($addedIds[(int) $item->woo_item_id])) style="background:#ecfdf5;" @endif>
           <td>
             @php $sup = $suppliers->get($item->woo_item_id); @endphp
-            <div style="font-weight:600;color:#111827;">{{ $item->name }}</div>
+            <div style="font-weight:600;color:#111827;">{{ $item->name }}@if(isset($addedIds[(int) $item->woo_item_id]))<span style="background:#dbeafe;color:#1e40af;font-size:.65rem;font-weight:700;padding:1px 7px;border-radius:9px;margin-left:6px;">＋ adăugat</span>@endif</div>
             <div style="font-size:.75rem;color:#9ca3af;font-family:monospace;">{{ $item->sku ?: 'fără SKU' }}@if($sup && $sup['supplier_sku'])<span style="color:#6b7280;"> · cod furnizor: {{ $sup['supplier_sku'] }}</span>@endif</div>
             {{-- Furnizor + termene + stare aprovizionare DOAR la produsele care nu-s pe stoc --}}
             @if($stockClass !== 'ok' && $sup && ($sup['supplier_name'] || $sup['proc_kind']))
@@ -76,7 +97,11 @@
             <span class="oie-badge oie-{{ $stockClass }}">{{ $stock === null ? '–' : (floor($stock) == $stock ? number_format($stock, 0) : number_format($stock, 2)) }}</span>
           </td>
           <td style="text-align:right;">{{ number_format($gross, 2) }}</td>
-          <td style="text-align:right;">{{ floor($item->quantity) == $item->quantity ? number_format($item->quantity, 0) : number_format($item->quantity, 2) }}</td>
+          <td style="text-align:right;">{{ floor($item->quantity) == $item->quantity ? number_format($item->quantity, 0) : number_format($item->quantity, 2) }}
+            @if(isset($qtyChg[(int) $item->woo_item_id]))
+              <div style="font-size:.68rem;color:#b45309;font-weight:700;">{{ $fmtQ($qtyChg[(int) $item->woo_item_id][0]) }} → {{ $fmtQ($qtyChg[(int) $item->woo_item_id][1]) }}</div>
+            @endif
+          </td>
           <td style="text-align:right;font-weight:600;">{{ number_format($gross * (float) $item->quantity, 2) }}</td>
           @if($editable)
             <td style="text-align:right;white-space:nowrap;">
@@ -90,6 +115,20 @@
               @endif
             </td>
           @endif
+        </tr>
+      @endforeach
+      @foreach($removedItems as $rm)
+        @php $rmGross = isset($rm['price']) ? round((float) $rm['price'] * 1.21, 2) : null; @endphp
+        <tr style="background:#fef2f2;">
+          <td>
+            <div style="font-weight:600;text-decoration:line-through;color:#9ca3af;">{{ $rm['name'] ?? '?' }}</div>
+            <div style="font-size:.72rem;color:#b91c1c;font-weight:600;">✕ șters — NU se trimite în WinMentor</div>
+          </td>
+          <td></td>
+          <td style="text-align:right;text-decoration:line-through;color:#9ca3af;">{{ $rmGross !== null ? number_format($rmGross, 2) : '' }}</td>
+          <td style="text-align:right;text-decoration:line-through;color:#9ca3af;">{{ isset($rm['quantity']) ? $fmtQ((float) $rm['quantity']) : '' }}</td>
+          <td style="text-align:right;text-decoration:line-through;color:#9ca3af;">{{ isset($rm['total']) ? number_format((float) $rm['total'] * 1.21, 2) : '' }}</td>
+          @if($editable)<td></td>@endif
         </tr>
       @endforeach
       @if($shipLine)

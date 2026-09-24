@@ -367,6 +367,11 @@ class ImportWooOrderToWinmentorService
         $missing = [];
 
         foreach ($order->items as $it) {
+            // Produsele cu cantitate 0 (sau șterse) NU se trimit în WinMentor.
+            if ((float) $it->quantity <= 0) {
+                continue;
+            }
+
             // Codul WinMentor al produsului (codExtern) — NU codul furnizorului din câmpul SKU.
             $cod = $this->resolveWinmentorCode($it);
             if ($cod === null) {
