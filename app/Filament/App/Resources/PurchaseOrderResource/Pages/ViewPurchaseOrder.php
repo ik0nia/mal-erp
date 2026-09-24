@@ -1149,9 +1149,9 @@ class ViewPurchaseOrder extends ViewRecord
             }
 
             // Justificare vizibilă: de ce a reintrat în coada de cumpărare (evită confuzia).
-            $qtyTxt     = rtrim(rtrim(number_format($reduction, 3), '0'), '.');
+            $poUrl      = \App\Filament\App\Resources\PurchaseOrderResource::getUrl('view', ['record' => $this->record->getKey()]);
             $reopenNote = 'Redeschis la recepție ('.now()->format('d.m.Y').'): nelivrat pe '
-                .$this->record->number.' — '.$qtyTxt.' buc de recomandat din nou.';
+                .$this->record->number.' — de recomandat. '.$poUrl;
             $updates['notes'] = trim((filled($requestItem->notes) ? $requestItem->notes.' | ' : '').$reopenNote);
 
             $requestItem->update($updates);
