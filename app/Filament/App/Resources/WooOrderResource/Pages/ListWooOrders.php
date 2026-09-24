@@ -21,6 +21,7 @@ class ListWooOrders extends ListRecords
     protected function getHeaderWidgets(): array
     {
         return [
+            \App\Filament\App\Widgets\WooOrderTimelineWidget::class,
             \App\Filament\App\Widgets\AwbDeliveryStatsWidget::class,
         ];
     }
