@@ -30,19 +30,25 @@ class WooOrderTimelineWidget extends Widget
             ));
         };
 
-        // „Ridicat de curier" — timp REAL din tracking-ul AWB (picked_up_at), NU created_at
-        // (care e momentul creării înregistrării la noi / backfill = nesigur).
-        $awb = $gaps('SELECT TIMESTAMPDIFF(HOUR, o.order_date, MIN(a.picked_up_at)) t
-            FROM woo_orders o JOIN sameday_awbs a ON a.woo_order_id = o.id
-            WHERE YEAR(o.order_date) = ? AND a.picked_up_at IS NOT NULL
-            GROUP BY o.id');
-
-        $done = $gaps('SELECT TIMESTAMPDIFF(HOUR, order_date, date_completed) t
+        // 1. Comandă → Finalizare (procesarea internă, până predăm comanda).
+        $toDone = $gaps('SELECT TIMESTAMPDIFF(HOUR, order_date, date_completed) t
             FROM woo_orders WHERE YEAR(order_date) = ? AND date_completed IS NOT NULL');
 
-        // Livrat la client = Sameday (delivered_at real) + flotă proprie (custom_shipping).
-        // Flota proprie nu are tracking AWB → presupunem 8h/livrare (median convenit).
-        $delivSameday = $gaps('SELECT TIMESTAMPDIFF(HOUR, o.order_date, MIN(a.delivered_at)) t
+        // 2. Finalizare → Ridicare Sameday (în cât timp ridică curierul după finalizare).
+        $samedayPickup = array_filter($gaps('SELECT TIMESTAMPDIFF(HOUR, o.date_completed, MIN(a.picked_up_at)) t
+            FROM woo_orders o JOIN sameday_awbs a ON a.woo_order_id = o.id
+            WHERE YEAR(o.order_date) = ? AND o.date_completed IS NOT NULL AND a.picked_up_at IS NOT NULL
+            GROUP BY o.id'), fn ($v) => $v >= 0);
+
+        // 3. Finalizare → Livrare Sameday (durata REALĂ a curierului DUPĂ finalizare).
+        $samedayDeliv = array_filter($gaps('SELECT TIMESTAMPDIFF(HOUR, o.date_completed, MIN(a.delivered_at)) t
+            FROM woo_orders o JOIN sameday_awbs a ON a.woo_order_id = o.id
+            WHERE YEAR(o.order_date) = ? AND o.date_completed IS NOT NULL AND a.delivered_at IS NOT NULL
+            GROUP BY o.id'), fn ($v) => $v >= 0);
+
+        // 3. Comandă → Livrare reală (cât așteaptă clientul total): Sameday (delivered_at real)
+        //    + flotă proprie (custom_shipping completat) presupusă la 8h/livrare.
+        $realSameday = $gaps('SELECT TIMESTAMPDIFF(HOUR, o.order_date, MIN(a.delivered_at)) t
             FROM woo_orders o JOIN sameday_awbs a ON a.woo_order_id = o.id
             WHERE YEAR(o.order_date) = ? AND a.delivered_at IS NOT NULL
             GROUP BY o.id');
@@ -54,9 +60,10 @@ class WooOrderTimelineWidget extends Widget
             [$y]
         )->n ?? 0);
 
-        $deliv = array_merge($delivSameday, array_fill(0, $fleetCount, 8.0)); // flotă = 8h presupus
+        $realDeliv = array_merge($realSameday, array_fill(0, $fleetCount, 8.0));
 
         $median = function (array $v): ?float {
+            $v = array_values($v);
             sort($v);
             $n = count($v);
             if ($n === 0) {
@@ -76,10 +83,11 @@ class WooOrderTimelineWidget extends Widget
         };
 
         return [
-            'year'        => $y,
-            'toAwb'       => $fmt($median($awb)),   'nAwb'       => count($awb),
-            'toDone'      => $fmt($median($done)),  'nDone'      => count($done),
-            'toDelivered' => $fmt($median($deliv)), 'nDelivered' => count($deliv),
+            'year'         => $y,
+            'toDone'        => $fmt($median($toDone)),        'nDone'    => count($toDone),
+            'samedayPickup' => $fmt($median($samedayPickup)), 'nPickup'  => count($samedayPickup),
+            'samedayDeliv'  => $fmt($median($samedayDeliv)),  'nSameday' => count($samedayDeliv),
+            'realDeliv'    => $fmt($median($realDeliv)),    'nReal'     => count($realDeliv),
         ];
     }
 }
