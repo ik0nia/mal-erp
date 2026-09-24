@@ -120,6 +120,23 @@
       @endif
       <tr><td style="color:#6b7280;">TVA</td><td style="text-align:right;">{{ number_format((float) $record->tax_total, 2) }}</td></tr>
       <tr><td style="font-weight:700;color:#111827;border-top:1px solid #e5e7eb;">Total</td><td style="text-align:right;font-weight:700;color:#111827;border-top:1px solid #e5e7eb;">{{ number_format((float) $record->total, 2) }} {{ $record->currency }}</td></tr>
+      @php
+        // Plată în avans (card/online) = bani deja încasați. La ramburs se încasează la
+        // livrare pe totalul curent, deci diferența nu are sens.
+        $prepaid = $record->payment_method && $record->payment_method !== 'cod';
+        $paid    = $record->paid_total !== null ? (float) $record->paid_total : null;
+        $diff    = $paid !== null ? round((float) $record->total - $paid, 2) : 0.0;
+      @endphp
+      @if($prepaid && $paid !== null)
+        <tr><td style="color:#6b7280;padding-top:.4rem;">Încasat (card)</td><td style="text-align:right;padding-top:.4rem;">{{ number_format($paid, 2) }} {{ $record->currency }}</td></tr>
+        @if($diff <= -0.01)
+          <tr><td style="font-weight:800;color:#b91c1c;">↩ De RAMBURSAT clientului</td><td style="text-align:right;font-weight:800;color:#b91c1c;">{{ number_format(abs($diff), 2) }} {{ $record->currency }}</td></tr>
+        @elseif($diff >= 0.01)
+          <tr><td style="font-weight:800;color:#065f46;">＋ De ÎNCASAT suplimentar</td><td style="text-align:right;font-weight:800;color:#065f46;">{{ number_format($diff, 2) }} {{ $record->currency }}</td></tr>
+        @else
+          <tr><td style="color:#065f46;">✓ Încasare = total</td><td></td></tr>
+        @endif
+      @endif
     </table>
   </div>
 </div>
