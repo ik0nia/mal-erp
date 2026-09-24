@@ -57,7 +57,7 @@ class ReconcileWooStockCommand extends Command
             $query->whereIn('woo_id', $ids);
         }
 
-        $products = $query->get(['id', 'woo_id', 'name', 'stock_status']);
+        $products = $query->get(['id', 'woo_id', 'name', 'stock_status', 'winmentor_name']);
         $this->info('Produse candidate: ' . $products->count());
 
         // Stoc real ERP (sumă pe toate locațiile) + flag feed furnizor activ.
@@ -79,12 +79,29 @@ class ReconcileWooStockCommand extends Command
         );
 
         $batch = [];
-        $stats = ['instock' => 0, 'outofstock' => 0, 'onbackorder' => 0, 'no_stock_record' => 0];
+        $stats = ['instock' => 0, 'outofstock' => 0, 'onbackorder' => 0, 'no_stock_record' => 0, 'phantom_zeroed' => 0];
 
         foreach ($products as $p) {
             if (! $stockByProduct->has($p->id)) {
                 $stats['no_stock_record']++;
-                continue; // ERP nu cunoaște stocul → nu atingem produsul
+
+                // Articolele sincronizate cândva din WinMentor (winmentor_name setat) dar care
+                // NU mai au stoc în MP/clasa 1 (nu apar în /api/stocuri = 0 vandabil) NU trebuie
+                // să rămână cu stoc fantomă pe site → permit oversell. Le forțăm outofstock.
+                // filterChangedOnly scrie doar cele care chiar diferă. Produsele pur web (fără
+                // winmentor_name) NU se ating (pot fi gestionate manual pe site).
+                if (filled($p->winmentor_name)) {
+                    $batch[] = [
+                        'id'             => (int) $p->woo_id,
+                        'stock_quantity' => 0,
+                        'stock_status'   => 'outofstock',
+                        'manage_stock'   => true,
+                        'backorders'     => 'no',
+                    ];
+                    $stats['phantom_zeroed']++;
+                }
+
+                continue; // fără winmentor_name → nu-l atingem
             }
 
             $qty = (float) $stockByProduct->get($p->id);
@@ -118,8 +135,8 @@ class ReconcileWooStockCommand extends Command
         $batch = $this->filterChangedOnly($service, $batch);
 
         $this->table(
-            ['instock', 'outofstock', 'onbackorder', 'fără stoc ERP (ignorate)', 'diferite → de scris'],
-            [[$stats['instock'], $stats['outofstock'], $stats['onbackorder'], $stats['no_stock_record'], count($batch)]]
+            ['instock', 'outofstock', 'onbackorder', 'fără stoc ERP', 'orfane→0 (candidate)', 'diferite → de scris'],
+            [[$stats['instock'], $stats['outofstock'], $stats['onbackorder'], $stats['no_stock_record'], $stats['phantom_zeroed'], count($batch)]]
         );
 
         if ($dryRun) {
