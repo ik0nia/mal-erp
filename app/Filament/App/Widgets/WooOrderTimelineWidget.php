@@ -50,7 +50,7 @@ class WooOrderTimelineWidget extends Widget
         $fleetCount = (int) (DB::selectOne(
             'SELECT COUNT(*) n FROM woo_orders
              WHERE YEAR(order_date) = ? AND status = "completed"
-               AND data LIKE \'%"method_id":"custom_shipping"%\'',
+               AND data LIKE \'%custom_shipping%\'',
             [$y]
         )->n ?? 0);
 
