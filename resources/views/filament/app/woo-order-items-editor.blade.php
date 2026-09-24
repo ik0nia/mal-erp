@@ -177,16 +177,40 @@
         // livrare pe totalul curent, deci diferența nu are sens.
         $prepaid = $record->payment_method && $record->payment_method !== 'cod';
         $paid    = $record->paid_total !== null ? (float) $record->paid_total : null;
-        $diff    = $paid !== null ? round((float) $record->total - $paid, 2) : 0.0;
+        $refund  = (float) ($record->refund_amount ?? 0);
+        $eff     = $paid !== null ? round($paid - $refund, 2) : null;               // încasat efectiv
+        $bal     = $eff !== null ? round((float) $record->total - $eff, 2) : 0.0;    // + = de încasat, − = de rambursat
       @endphp
       @if($prepaid && $paid !== null)
         <tr><td style="color:#6b7280;padding-top:.4rem;">Încasat (card)</td><td style="text-align:right;padding-top:.4rem;">{{ number_format($paid, 2) }} {{ $record->currency }}</td></tr>
-        @if($diff <= -0.01)
-          <tr><td style="font-weight:800;color:#b91c1c;">↩ De RAMBURSAT clientului</td><td style="text-align:right;font-weight:800;color:#b91c1c;">{{ number_format(abs($diff), 2) }} {{ $record->currency }}</td></tr>
-        @elseif($diff >= 0.01)
-          <tr><td style="font-weight:800;color:#065f46;">＋ De ÎNCASAT suplimentar</td><td style="text-align:right;font-weight:800;color:#065f46;">{{ number_format($diff, 2) }} {{ $record->currency }}</td></tr>
+        @if($refund > 0.001)
+          <tr><td style="color:#6b7280;">− Rambursat{{ $record->refunded_at ? ' ('.$record->refunded_at->format('d.m.Y').')' : '' }}</td><td style="text-align:right;color:#b91c1c;">−{{ number_format($refund, 2) }}</td></tr>
+          <tr><td style="color:#374151;font-weight:600;">= Încasat efectiv</td><td style="text-align:right;font-weight:600;">{{ number_format($eff, 2) }} {{ $record->currency }}</td></tr>
+        @endif
+        @if($bal <= -0.01)
+          <tr><td style="font-weight:800;color:#b91c1c;">↩ De RAMBURSAT clientului</td><td style="text-align:right;font-weight:800;color:#b91c1c;">{{ number_format(abs($bal), 2) }} {{ $record->currency }}</td></tr>
+          @if($editable)
+            <tr><td colspan="2" style="text-align:right;padding-top:.15rem;">
+              <button type="button" class="oie-add" style="color:#b91c1c;border-color:#fecaca;" wire:click="markRefunded" wire:confirm="Confirmi că ai rambursat {{ number_format(abs($bal), 2) }} lei clientului?" wire:loading.attr="disabled">✓ Marchează rambursat</button>
+            </td></tr>
+          @endif
+        @elseif($bal >= 0.01)
+          <tr><td style="font-weight:800;color:#065f46;">＋ De ÎNCASAT suplimentar</td><td style="text-align:right;font-weight:800;color:#065f46;">{{ number_format($bal, 2) }} {{ $record->currency }}</td></tr>
+          @if($record->diff_payment_url)
+            <tr><td colspan="2" style="padding-top:.25rem;">
+              <div style="font-size:.74rem;color:#065f46;font-weight:600;">🔗 Link plată diferență ({{ number_format((float) $record->diff_payment_amount, 2) }} lei) — trimite-l clientului:</div>
+              <div style="display:flex;gap:.4rem;align-items:center;margin-top:.25rem;">
+                <input type="text" readonly value="{{ $record->diff_payment_url }}" onclick="this.select()" style="flex:1;font-size:.72rem;padding:.32rem .5rem;border:1px solid #d1d5db;border-radius:.4rem;color:#374151;background:#fff;">
+                <a href="{{ $record->diff_payment_url }}" target="_blank" class="oie-add" style="text-decoration:none;">Deschide</a>
+              </div>
+            </td></tr>
+          @elseif($editable)
+            <tr><td colspan="2" style="text-align:right;padding-top:.15rem;">
+              <button type="button" class="oie-add" style="color:#065f46;border-color:#a7f3d0;" wire:click="generateDiffPaymentLink" wire:confirm="Generez un link de plată BT Pay pentru diferența de {{ number_format($bal, 2) }} lei?" wire:loading.attr="disabled">🔗 Generează link de plată</button>
+            </td></tr>
+          @endif
         @else
-          <tr><td style="color:#065f46;">✓ Încasare = total</td><td></td></tr>
+          <tr><td style="color:#065f46;">✓ Achitat integral</td><td></td></tr>
         @endif
       @endif
     </table>

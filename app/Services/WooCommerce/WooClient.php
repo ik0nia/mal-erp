@@ -360,6 +360,22 @@ class WooClient
      *
      * @return array<string, mixed>
      */
+    public function createOrder(array $payload): array
+    {
+        $response = $this->retryRequest(
+            fn () => $this->http->post($this->apiBase.'/orders', $payload)
+        );
+        $response->throw();
+
+        $data = $response->json();
+
+        return is_array($data) ? $data : [];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
     public function updateOrder(int $orderId, array $payload): array
     {
         $response = $this->retryRequest(

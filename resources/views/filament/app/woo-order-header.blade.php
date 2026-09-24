@@ -61,6 +61,17 @@
         {{ \App\Models\WooOrder::STATUS_LABELS[$record->status] ?? $record->status }}
       </span>
     </p>
+    @php
+        $prepaidPaid = $record->payment_method && $record->payment_method !== 'cod' && $record->date_paid;
+        $hdrPaid = (float) ($record->paid_total ?? $record->total);
+        $hdrRefund = (float) ($record->refund_amount ?? 0);
+        $hdrEff = $hdrPaid - $hdrRefund;
+    @endphp
+    @if($prepaidPaid)
+      <p><span style="display:inline-block;padding:.3rem .75rem;border-radius:.45rem;font-size:.85rem;font-weight:800;background:#dcfce7;color:#15803d;border:1px solid #86efac;">💳 PLĂTITĂ CARD — {{ number_format($hdrEff, 2) }} lei încasați@if($hdrRefund > 0.001) <span style="font-weight:600;font-size:.78rem;">({{ number_format($hdrPaid, 2) }} − {{ number_format($hdrRefund, 2) }} rambursat)</span>@endif</span></p>
+    @elseif($record->payment_method === 'cod')
+      <p><span style="display:inline-block;padding:.3rem .75rem;border-radius:.45rem;font-size:.85rem;font-weight:700;background:#fef3c7;color:#b45309;border:1px solid #fcd34d;">📦 RAMBURS — se încasează la livrare</span></p>
+    @endif
     <p>Plată: <span class="oh-strong">{{ $record->payment_method_title ?: '—' }}</span></p>
     @if($record->date_paid)<p class="oh-muted">Plătită: {{ \Carbon\Carbon::parse($record->date_paid)->format('d.m.Y H:i') }}</p>@endif
   </div>

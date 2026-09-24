@@ -455,6 +455,113 @@ class ViewWooOrder extends ViewRecord
         }
     }
 
+    /** Suma încasată efectiv pe card = paid_total − rambursările marcate. Null dacă nu s-a plătit card. */
+    public function effectiveCollected(): ?float
+    {
+        $o = $this->record;
+        if ($o->paid_total === null) {
+            return null;
+        }
+
+        return round((float) $o->paid_total - (float) ($o->refund_amount ?? 0), 2);
+    }
+
+    /** Generează link de plată (BT Pay via order-pay Woo) pentru diferența de încasat suplimentar. */
+    public function generateDiffPaymentLink(): void
+    {
+        /** @var WooOrder $o */
+        $o = $this->record;
+
+        if (! $this->canEditOrder()) {
+            Notification::make()->danger()->title('Nu ai dreptul')->send();
+            return;
+        }
+        if (! $o->payment_method || $o->payment_method === 'cod') {
+            Notification::make()->warning()->title('Doar la comenzi plătite în avans (card)')->send();
+            return;
+        }
+
+        $eff = $this->effectiveCollected();
+        $diff = $eff === null ? 0.0 : round((float) $o->total - $eff, 2);
+        if ($diff <= 0.01) {
+            Notification::make()->info()->title('Nu e nimic de încasat suplimentar')->send();
+            return;
+        }
+
+        try {
+            $client = new WooClient($o->connection);
+            $resp = $client->createOrder([
+                'payment_method'       => $o->payment_method,
+                'payment_method_title' => $o->payment_method_title ?: 'Plată card prin BT Pay',
+                'status'               => 'pending',
+                'currency'             => $o->currency ?: 'RON',
+                'billing'              => is_array($o->billing) ? $o->billing : [],
+                'shipping'             => is_array($o->shipping) ? $o->shipping : [],
+                'fee_lines'            => [[
+                    'name'       => 'Diferență comandă #'.$o->number,
+                    'total'      => number_format($diff, 2, '.', ''),
+                    'tax_status' => 'none',
+                ]],
+                'customer_note' => 'Plata diferenței pentru comanda #'.$o->number.'.',
+                'meta_data'     => [['key' => '_parent_order_number', 'value' => (string) $o->number]],
+            ]);
+
+            $payUrl = $resp['payment_url'] ?? null;
+            if (! $payUrl) {
+                throw new \RuntimeException('WooCommerce nu a returnat link de plată.');
+            }
+
+            $o->update([
+                'diff_payment_url'     => $payUrl,
+                'diff_payment_woo_id'  => (int) ($resp['id'] ?? 0) ?: null,
+                'diff_payment_amount'  => $diff,
+                'diff_payment_at'      => now(),
+            ]);
+
+            $this->logEdit('diff_payment_link', 'Link plată diferență generat: '.number_format($diff, 2).' lei (comanda-diferență #'.($resp['number'] ?? $resp['id'] ?? '?').')', null, [
+                'amount' => $diff, 'woo_id' => (int) ($resp['id'] ?? 0), 'url' => $payUrl,
+            ]);
+
+            $this->record = $o->fresh();
+            Notification::make()->success()->title('Link de plată generat')->body('Copiază-l din comandă și trimite-l clientului.')->persistent()->send();
+        } catch (Throwable $e) {
+            Notification::make()->danger()->title('Eroare la generarea linkului')->body($e->getMessage())->persistent()->send();
+        }
+    }
+
+    /** Marchează că rambursarea către client (diferența de rambursat) a fost efectuată. */
+    public function markRefunded(): void
+    {
+        /** @var WooOrder $o */
+        $o = $this->record;
+
+        if (! $this->canEditOrder()) {
+            Notification::make()->danger()->title('Nu ai dreptul')->send();
+            return;
+        }
+
+        $eff = $this->effectiveCollected();
+        $toRefund = $eff === null ? 0.0 : round($eff - (float) $o->total, 2);
+        if ($toRefund <= 0.01) {
+            Notification::make()->info()->title('Nu e nimic de rambursat')->send();
+            return;
+        }
+
+        $newTotalRefund = round((float) ($o->refund_amount ?? 0) + $toRefund, 2);
+        $o->update([
+            'refund_amount' => $newTotalRefund,
+            'refunded_at'   => now(),
+            'refunded_by'   => auth()->user()?->email,
+        ]);
+
+        $this->logEdit('refund_marked', 'Rambursare marcată: '.number_format($toRefund, 2).' lei către client', null, [
+            'amount' => $toRefund, 'total_refund' => $newTotalRefund,
+        ]);
+
+        $this->record = $o->fresh();
+        Notification::make()->success()->title('Rambursare marcată')->body(number_format($toRefund, 2).' lei — încasat efectiv actualizat.')->send();
+    }
+
     public function addOrderProduct(array $data): void
     {
         /** @var WooOrder $order */
