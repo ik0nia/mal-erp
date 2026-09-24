@@ -110,9 +110,10 @@
           </td>
           <td style="text-align:right;font-weight:600;">{{ number_format($gross * (float) $item->quantity, 2) }}
             @if(isset($qtyChg[(int) $item->woo_item_id]))
-              @php $c = $qtyChg[(int) $item->woo_item_id]; $oG = $c['oldT'] * 1.21; $nG = $c['newT'] * 1.21; $dG = $nG - $oG; @endphp
+              {{-- Aceeași bază ca Totalul de mai sus: preț_gross (cu TVA) × cantitate, ca să fie consistent --}}
+              @php $c = $qtyChg[(int) $item->woo_item_id]; $oG = $gross * $c['oldQ']; $nG = $gross * $c['newQ']; $dG = $nG - $oG; @endphp
               <div style="font-size:.68rem;color:#b45309;font-weight:700;">{{ number_format($oG, 2) }} → {{ number_format($nG, 2) }}</div>
-              <div style="font-size:.66rem;font-weight:700;color:{{ $dG >= 0 ? '#065f46' : '#b91c1c' }};">{{ $dG >= 0 ? '+' : '−' }}{{ number_format(abs($dG), 2) }} lei</div>
+              <div style="font-size:.66rem;font-weight:700;color:{{ $dG >= 0 ? '#065f46' : '#b91c1c' }};">{{ $dG >= 0 ? '+' : '−' }}{{ number_format(abs($dG), 2) }} lei (cu TVA)</div>
             @endif
           </td>
           @if($editable)
