@@ -42,12 +42,15 @@ class ListWooOrders extends ListRecords
             .' WHERE oi.order_id = woo_orders.id AND oi.quantity > COALESCE((SELECT SUM(ps.quantity) FROM product_stocks ps'
             .' WHERE ps.woo_product_id = wp.id AND (woo_orders.location_id = 0 OR ps.location_id = woo_orders.location_id)), 0))';
 
-        $deExpediatQ = fn ($query) => $query
+        // Bază comună: în procesare, non-ridicare din depozit, fără AWB valid.
+        $baseSpre = fn ($query) => $query
             ->whereIn('status', ['processing', 'on-hold'])
             ->where('data', 'not like', '%local_pickup%')
             ->whereDoesntHave('samedayAwbs', fn ($q) => $q
-                ->whereNotNull('awb_number')->where('awb_number', '!=', '')->where('status', '!=', 'cancelled'))
-            ->whereRaw('NOT '.$shortfall);
+                ->whereNotNull('awb_number')->where('awb_number', '!=', '')->where('status', '!=', 'cancelled'));
+
+        $deExpediatQ   = fn ($query) => $baseSpre($query)->whereRaw('NOT '.$shortfall); // stoc suficient
+        $asteaptaStocQ = fn ($query) => $baseSpre($query)->whereRaw($shortfall);         // lipsă la ceva
 
         $countQ = fn (callable $m): ?string => ($n = $m(WooOrder::query())->count()) > 0 ? (string) $n : null;
 
@@ -70,6 +73,11 @@ class ListWooOrders extends ListRecords
                 ->modifyQueryUsing($deExpediatQ)
                 ->badge($countQ($deExpediatQ))
                 ->badgeColor('info'),
+
+            'asteapta_stoc' => Tab::make('⏳ Așteaptă stoc')
+                ->modifyQueryUsing($asteaptaStocQ)
+                ->badge($countQ($asteaptaStocQ))
+                ->badgeColor('warning'),
 
             'finalizate' => Tab::make('Finalizate')
                 ->modifyQueryUsing(fn ($query) => $query->where('status', 'completed'))
