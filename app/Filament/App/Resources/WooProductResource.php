@@ -736,6 +736,7 @@ class WooProductResource extends Resource
                     ->button()
                     ->size(\Filament\Support\Enums\Size::Medium)
                     ->color('warning')
+                    ->hidden(fn (WooProduct $record): bool => $record->isDelistedBySupplier())
                     ->extraAttributes(['style' => 'background-color:#f97316;color:white;border-color:#ea6c00;font-weight:600;'])
                     ->modalHeading(fn (WooProduct $record) => 'Adaugă la necesar: '.($record->decoded_name ?? $record->name))
                     ->modalSubmitActionLabel('Adaugă')
@@ -743,6 +744,14 @@ class WooProductResource extends Resource
                     ->action(function (WooProduct $record, array $data): void {
                         $user = auth()->user();
                         if (! $user instanceof User) {
+                            return;
+                        }
+
+                        if ($record->isDelistedBySupplier()) {
+                            Notification::make()->danger()
+                                ->title('Produs delistat de furnizor')
+                                ->body('Nu se poate adăuga la necesar — furnizorul nu-l mai are în catalog.')
+                                ->send();
                             return;
                         }
 
@@ -862,12 +871,36 @@ class WooProductResource extends Resource
                     ])
                     ->columnSpanFull(),
 
+                // ── Atenționare produs delistat de furnizor ─────────────────
+                Section::make()
+                    ->visible(fn (WooProduct $record): bool => $record->isDelistedBySupplier())
+                    ->schema([
+                        TextEntry::make('delisted_warning')
+                            ->hiddenLabel()
+                            ->state(function (WooProduct $record): \Illuminate\Support\HtmlString {
+                                $names = $record->delistedSupplierNames();
+                                $who   = $names ? implode(', ', $names) : 'furnizor';
+
+                                return new \Illuminate\Support\HtmlString(
+                                    '<div style="background:#fef2f2;border:1px solid #fecaca;border-left:4px solid #dc2626;border-radius:8px;padding:12px 16px;">'
+                                    . '<div style="font-weight:700;color:#991b1b;font-size:0.95rem;">⚠️ Delistat de furnizor (' . e($who) . ')</div>'
+                                    . '<div style="color:#7f1d1d;font-size:0.85rem;margin-top:4px;">Produsul nu mai există în catalogul furnizorului — nu se mai poate aproviziona. '
+                                    . 'Nu se poate adăuga la necesar, nu apare în recomandări de reaprovizionare și nu se acceptă precomenzi pe site.</div>'
+                                    . '</div>'
+                                );
+                            })
+                            ->columnSpanFull(),
+                    ])
+                    ->columnSpanFull(),
+
                 // ── Buton Adaugă la necesar (full-width, roșu) ──────────────
                 Actions::make([
                     InfolistAction::make('add_to_necesar')
-                        ->label('Adaugă la necesar')
-                        ->icon('heroicon-o-shopping-cart')
-                        ->color('danger')
+                        ->label(fn (WooProduct $record) => $record->isDelistedBySupplier() ? 'Delistat de furnizor — indisponibil' : 'Adaugă la necesar')
+                        ->icon(fn (WooProduct $record) => $record->isDelistedBySupplier() ? 'heroicon-o-no-symbol' : 'heroicon-o-shopping-cart')
+                        ->color(fn (WooProduct $record) => $record->isDelistedBySupplier() ? 'gray' : 'danger')
+                        ->disabled(fn (WooProduct $record): bool => $record->isDelistedBySupplier())
+                        ->tooltip(fn (WooProduct $record) => $record->isDelistedBySupplier() ? 'Produs delistat de furnizor — nu se mai poate aproviziona' : null)
                         ->size(\Filament\Support\Enums\Size::Large)
                         ->modalHeading(fn (WooProduct $record) => 'Adaugă la necesar: '.($record->decoded_name ?? $record->name))
                         ->modalDescription(fn (WooProduct $record) => $record->substituted_by_id
@@ -878,6 +911,14 @@ class WooProductResource extends Resource
                         ->action(function (WooProduct $record, array $data): void {
                             $user = auth()->user();
                             if (! $user instanceof User) {
+                                return;
+                            }
+
+                            if ($record->isDelistedBySupplier()) {
+                                Notification::make()->danger()
+                                    ->title('Produs delistat de furnizor')
+                                    ->body('Nu se poate adăuga la necesar — furnizorul nu-l mai are în catalog.')
+                                    ->send();
                                 return;
                             }
 

@@ -78,6 +78,39 @@ class DraftDiscontinuedToyaCommand extends Command
         }
         $this->info("Marcate delistate: {$marked} | re-listate (golite): {$cleared}");
 
+        $connection = IntegrationConnection::where('provider', IntegrationConnection::PROVIDER_WOOCOMMERCE)->where('is_active', true)->first();
+        $client = $connection ? new WooClient($connection) : null;
+
+        // Produsele delistate care RĂMÂN publicate (ex. gestionate în WinMentor): pe site
+        // dezactivăm precomanda (backorders) ca să nu se poată comanda mai mult decât stocul.
+        $noBackorder = 0;
+        if ($client) {
+            $stayPublished = DB::table('product_suppliers as ps')
+                ->join('woo_products as wp', 'wp.id', '=', 'ps.woo_product_id')
+                ->where('ps.supplier_id', self::SUPPLIER_ID)
+                ->whereNotNull('ps.delisted_at')
+                ->where('wp.status', 'publish')
+                ->whereNotNull('wp.woo_id')->where('wp.woo_id', '<', 1_000_000_000_000_000)
+                ->whereRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(wp.data, '\$.backorders')), 'no') <> 'no'")
+                ->select('wp.id', 'wp.woo_id', 'wp.data')
+                ->distinct()
+                ->get();
+
+            foreach ($stayPublished as $p) {
+                if ($dryRun) { $noBackorder++; continue; }
+                try {
+                    $client->updateProduct((int) $p->woo_id, ['backorders' => 'no']);
+                    $data = json_decode($p->data ?? '{}', true) ?: [];
+                    $data['backorders'] = 'no';
+                    WooProduct::where('id', $p->id)->update(['data' => $data]);
+                    $noBackorder++;
+                } catch (\Throwable $e) {
+                    $this->error("backorders #{$p->woo_id}: ".$e->getMessage());
+                }
+            }
+        }
+        $this->info("Precomenzi dezactivate pe site (delistate publicate): {$noBackorder}");
+
         // Produse Toya publicate, cu cod (supplier_sku) care NU mai e în feed, gestionate DOAR de Toya.
         $candidates = DB::table('product_suppliers as ps')
             ->join('woo_products as wp', 'wp.id', '=', 'ps.woo_product_id')
@@ -114,8 +147,10 @@ class DraftDiscontinuedToyaCommand extends Command
             return self::FAILURE;
         }
 
-        $connection = IntegrationConnection::where('provider', IntegrationConnection::PROVIDER_WOOCOMMERCE)->where('is_active', true)->first();
-        $client = new WooClient($connection);
+        if (! $client) {
+            $this->error('Nicio conexiune WooCommerce activă — nu pot drafta.');
+            return self::FAILURE;
+        }
 
         $drafted = 0;
         foreach ($candidates as $c) {

@@ -134,6 +134,13 @@ class ReplenishmentCalculator
             return $out;
         }
 
+        // Furnizorul a delistat produsul (cod dispărut din catalogul lui) → nu se recomandă de la el.
+        if ($ps && ! empty($ps->delisted_at)) {
+            $out['eligible'] = false;
+            $out['reasons'][] = 'delistat de furnizor';
+            return $out;
+        }
+
         // ---- Viteză (cerere zilnică, corectată la ruptură) — $vel primit ----
         $avg7  = (float) ($vel->avg_out_qty_7d ?? 0);
         $avg30 = (float) ($vel->avg_out_qty_30d ?? 0);

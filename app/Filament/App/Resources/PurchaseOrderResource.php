@@ -990,6 +990,7 @@ class PurchaseOrderResource extends Resource
                         $join->on('ps.woo_product_id', '=', 'woo_products.id')
                              ->where('ps.supplier_id', $supplierId);
                     })
+                    ->whereNull('ps.delisted_at') // nu se comandă direct produse delistate de furnizor
                     ->where(fn (Builder $q) => $q
                         ->where('woo_products.name', 'like', "%{$search}%")
                         ->orWhere('woo_products.sku', 'like', "%{$search}%")

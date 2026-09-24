@@ -232,6 +232,27 @@ class WooProduct extends Model
             ->withTimestamps();
     }
 
+    /** Are cel puțin un furnizor care a delistat produsul (cod dispărut din catalogul furnizorului). */
+    public function isDelistedBySupplier(): bool
+    {
+        if ($this->relationLoaded('suppliers')) {
+            return $this->suppliers->contains(fn ($s) => $s->pivot?->delisted_at !== null);
+        }
+
+        return $this->suppliers()->wherePivotNotNull('delisted_at')->exists();
+    }
+
+    /** Numele furnizorilor care au delistat produsul. */
+    public function delistedSupplierNames(): array
+    {
+        $src = $this->relationLoaded('suppliers')
+            ? $this->suppliers
+            : $this->suppliers()->wherePivotNotNull('delisted_at')->get();
+
+        return $src->filter(fn ($s) => $s->pivot?->delisted_at !== null)
+            ->pluck('name')->filter()->values()->all();
+    }
+
     public function offerItems(): HasMany
     {
         return $this->hasMany(OfferItem::class, 'woo_product_id');

@@ -44,6 +44,17 @@ class ComputeBiReplenishmentCommand extends Command
 
         $this->line("  Produse cu consum: <info>{$products->count()}</info>");
 
+        // Pas 1a: Produse delistate de furnizor (niciun furnizor activ, doar delistați) — se exclud complet
+        $delistedProductIds = DB::table('product_suppliers')
+            ->select('woo_product_id')
+            ->groupBy('woo_product_id')
+            ->havingRaw('SUM(delisted_at IS NULL) = 0')      // niciun furnizor activ rămas
+            ->havingRaw('SUM(delisted_at IS NOT NULL) > 0')  // și cel puțin unul delistat
+            ->pluck('woo_product_id')
+            ->flip()
+            ->all();
+        $this->line("  Produse delistate de furnizor (excluse): <info>" . count($delistedProductIds) . "</info>");
+
         // Pas 1b: Produse cu comenzi active (trimise/aprobate/pending) — se exclud
         $openOrderProductIds = DB::table('purchase_order_items as poi')
             ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
@@ -69,6 +80,7 @@ class ComputeBiReplenishmentCommand extends Command
         // Pas 3: Furnizori preferați
         $supplierMap = DB::table('product_suppliers as ps')
             ->leftJoin('suppliers as s', 's.id', '=', 'ps.supplier_id')
+            ->whereNull('ps.delisted_at') // furnizorii delistați nu pot fi aleși ca sursă
             ->select(
                 'ps.woo_product_id',
                 'ps.supplier_id',
@@ -88,6 +100,11 @@ class ComputeBiReplenishmentCommand extends Command
         $now = now();
 
         foreach ($products as $product) {
+            // Sărim produsele delistate de furnizor (nu mai pot fi aprovizionate)
+            if (isset($delistedProductIds[$product->id])) {
+                continue;
+            }
+
             // Sărim produsele care au deja o comandă activă (netrimisă/trimisă/nereceptionată)
             if (isset($openOrderProductIds[$product->id])) {
                 continue;
