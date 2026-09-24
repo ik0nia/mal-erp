@@ -599,6 +599,8 @@ class ViewWooOrder extends ViewRecord
                 'woo_product_id' => (int) $product->woo_id,
                 'name'           => $product->decoded_name,
                 'quantity'       => $qty,
+                'total'          => $newLine['total'] ?? null,
+                'subtotal'       => $newLine['subtotal'] ?? null,
             ]);
 
             $this->syncOrderFromWoo();

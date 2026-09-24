@@ -84,7 +84,12 @@
         // 4. Snapshot simplu (add_item / remove_item fără structură „lines")
         $snap = $after ?: $before;
         if (isset($snap['name'])) {
-            $val = ($snap['quantity'] ?? 1) . ' × ' . $money($snap['total'] ?? $snap['subtotal'] ?? $snap['price'] ?? 0);
+            // add_item vechi nu reținea prețul → fallback la valoarea reală a liniei din comandă.
+            $lineTotal = $snap['total'] ?? $snap['subtotal'] ?? null;
+            if ($lineTotal === null && ! empty($snap['woo_item_id'])) {
+                $lineTotal = \App\Models\WooOrderItem::where('woo_item_id', $snap['woo_item_id'])->value('total');
+            }
+            $val = ($snap['quantity'] ?? 1) . ' × ' . $money($lineTotal ?? $snap['price'] ?? 0);
             $rows[] = $after
                 ? ['what' => $snap['name'], 'from' => null, 'to' => $val]
                 : ['what' => $snap['name'], 'from' => $val, 'to' => null];
