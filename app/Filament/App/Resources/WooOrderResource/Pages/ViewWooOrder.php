@@ -958,9 +958,13 @@ class ViewWooOrder extends ViewRecord
                 continue;
             }
 
+            // Sumăm stocul pe toate sub-locațiile locației (nu doar primul rând) și
+            // clampăm la 0: un stoc negativ/fantomă NU trebuie să umfle necesarul
+            // (altfel o comandă de 1 cu stoc -1 ar cere 2 — dublare).
             $stock = (float) ProductStock::where('woo_product_id', $localProduct->id)
                 ->when($locationId > 0, fn ($q) => $q->where('location_id', $locationId))
-                ->value('quantity') ?? 0.0;
+                ->sum('quantity');
+            $stock = max(0.0, $stock);
 
             $deficit = max(0, (float) $item->quantity - $stock);
             if ($deficit <= 0) {

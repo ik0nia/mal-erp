@@ -1148,6 +1148,12 @@ class ViewPurchaseOrder extends ViewRecord
                 $updates['purchase_order_item_id'] = null;
             }
 
+            // Justificare vizibilă: de ce a reintrat în coada de cumpărare (evită confuzia).
+            $qtyTxt     = rtrim(rtrim(number_format($reduction, 3), '0'), '.');
+            $reopenNote = 'Redeschis la recepție ('.now()->format('d.m.Y').'): nelivrat pe '
+                .$this->record->number.' — '.$qtyTxt.' buc de recomandat din nou.';
+            $updates['notes'] = trim((filled($requestItem->notes) ? $requestItem->notes.' | ' : '').$reopenNote);
+
             $requestItem->update($updates);
             $affectedRequestIds[] = $requestItem->purchase_request_id;
             $remaining -= $reduction;
