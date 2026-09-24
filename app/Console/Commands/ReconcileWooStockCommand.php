@@ -78,6 +78,13 @@ class ReconcileWooStockCommand extends Command
             true
         );
 
+        // Rezerva comenzilor Woo în curs, neînregistrate încă în WinMentor. Se scade din
+        // stocul împins pe site ca push-ul să nu re-umfle o cantitate deja angajată unei
+        // comenzi (altfel: oversell — vezi OpenOrderReservationService).
+        $reserved = \App\Services\WooCommerce\OpenOrderReservationService::reservedByLocalProduct(
+            $products->pluck('id')->all()
+        );
+
         $batch = [];
         $stats = ['instock' => 0, 'outofstock' => 0, 'onbackorder' => 0, 'no_stock_record' => 0, 'phantom_zeroed' => 0];
 
@@ -109,7 +116,8 @@ class ReconcileWooStockCommand extends Command
 
             // WooCommerce stochează stoc întreg → statusul urmează cantitatea întreagă,
             // ca un stoc sub-unitar (0.46) să nu rămână instock + 0 buc = coș blocat.
-            $intQty = max(0, (int) $qty);
+            // Scădem rezerva comenzilor în curs (neajunse în WinMentor) → disponibil real.
+            $intQty = max(0, (int) $qty - (int) ($reserved[$p->id] ?? 0));
             if ($intQty > 0) {
                 $status = 'instock';
             } elseif ($hasFeed) {

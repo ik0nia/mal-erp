@@ -126,6 +126,13 @@ class SyncStockFromBridgeCommand extends Command
                 true
             );
 
+            // Rezerva comenzilor Woo în curs, neînregistrate încă în WinMentor — se scade
+            // din cantitatea împinsă pe site ca push-ul să nu re-umfle stocul deja angajat
+            // unei comenzi (oversell). Vezi OpenOrderReservationService.
+            $reserved = \App\Services\WooCommerce\OpenOrderReservationService::reservedByLocalProduct(
+                $products->pluck('id')->all()
+            );
+
             // ── 6. Procesare ─────────────────────────────────────────────────────
             $now              = now();
             $stockUpserts     = [];
@@ -333,7 +340,8 @@ class SyncStockFromBridgeCommand extends Command
                     // sub-unitar (ex. 0.46 kg) ar deveni 0 buc pe site. De aceea statusul
                     // de pe SITE urmează cantitatea întreagă — altfel ar fi instock + 0 buc
                     // = coș blocat (fantomă). ERP păstrează statusul fin (din WinMentor).
-                    $siteQty = max(0, (int) $newQty);
+                    // Scădem rezerva comenzilor în curs (neajunse în WinMentor) → disponibil real.
+                    $siteQty = max(0, (int) $newQty - (int) ($reserved[$product->id] ?? 0));
                     $siteStatus = $siteQty > 0
                         ? 'instock'
                         : (isset($productIdsWithActiveFeed[$product->id]) ? 'onbackorder' : 'outofstock');
