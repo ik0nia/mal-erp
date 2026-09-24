@@ -9,7 +9,9 @@
         'edit_address' => ['Livrare/client', '#1d4ed8', '#dbeafe'],
     ];
 
-    $money = fn ($v) => number_format((float) $v, 2, ',', '.') . ' lei';
+    // Valorile stocate în istoric sunt NETE (totaluri de linie WooCommerce). Le afișăm
+    // CU TVA (×1.21), pentru consistență cu restul paginii de comandă (preț/total cu TVA).
+    $money = fn ($v) => number_format((float) $v * 1.21, 2, ',', '.') . ' lei';
 
     // Etichete prietenoase pentru câmpurile de adresă (billing/shipping)
     $fieldLabels = [
