@@ -50,6 +50,7 @@ class WooOrder extends Model
         'fee_total',
         'tax_total',
         'total',
+        'paid_total',
         'winmentor_sync_status',
         'winmentor_synced_at',
         'winmentor_client_id',

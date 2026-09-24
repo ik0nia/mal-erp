@@ -139,6 +139,29 @@
   @if($disc != 0)<div class="oh-totals-row" style="color:#b91c1c;"><span>Discount</span><span>−{{ $money($disc) }}</span></div>@endif
   @if($tax != 0)<div class="oh-totals-row"><span>{{ $tvaAditiv ? 'TVA' : 'din care TVA' }}</span><span>{{ ($tvaAditiv ? '' : '') }}{{ $money($tax) }}</span></div>@endif
   <div class="oh-totals-row oh-totals-final"><span>TOTAL</span><span>{{ $money($record->total) }} {{ $record->currency }}</span></div>
+  @php
+    // Plată în avans (card/online) = bani deja încasați. La ramburs se încasează la livrare
+    // pe totalul curent, deci nu are sens diferența.
+    $prepaid = $record->payment_method && $record->payment_method !== 'cod';
+    $paid    = $record->paid_total !== null ? (float) $record->paid_total : null;
+    $diff    = $paid !== null ? round((float) $record->total - $paid, 2) : 0.0;
+  @endphp
+  @if($prepaid && $paid !== null)
+    <div class="oh-totals-row" style="border-top:1px dashed #e5e7eb;margin-top:.2rem;padding-top:.35rem;"><span>Încasat (card)</span><span>{{ $money($paid) }}</span></div>
+    @if(abs($diff) >= 0.01)
+      @if($diff < 0)
+        <div class="oh-totals-row" style="font-weight:800;color:#b91c1c;background:#fef2f2;border-radius:.4rem;padding:.35rem .5rem;">
+          <span>↩ De RAMBURSAT clientului</span><span>{{ $money(abs($diff)) }} {{ $record->currency }}</span>
+        </div>
+      @else
+        <div class="oh-totals-row" style="font-weight:800;color:#065f46;background:#ecfdf5;border-radius:.4rem;padding:.35rem .5rem;">
+          <span>＋ De ÎNCASAT suplimentar</span><span>{{ $money($diff) }} {{ $record->currency }}</span>
+        </div>
+      @endif
+    @else
+      <div class="oh-totals-row" style="color:#065f46;"><span>✓ Încasare = total</span><span></span></div>
+    @endif
+  @endif
 </div>
 <style>
 .oh-totals{margin-top:1rem;margin-left:auto;max-width:340px;border:1px solid #f3f4f6;border-radius:.6rem;padding:.5rem .9rem;background:#fafafa;}

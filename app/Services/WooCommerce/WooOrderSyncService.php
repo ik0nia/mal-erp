@@ -51,6 +51,15 @@ class WooOrderSyncService
             $orderData['subtotal'] = $subtotal;
         }
 
+        // Snapshot suma ÎNCASATĂ la momentul plății (o singură dată). `total` se poate
+        // schimba dacă se modifică comanda ulterior; `paid_total` rămâne cât s-a încasat,
+        // ca să putem evidenția diferența (de rambursat / de încasat suplimentar).
+        $existing = WooOrder::where('connection_id', $connectionId)->where('woo_id', $wooId)
+            ->first(['id', 'paid_total']);
+        if ($orderData['date_paid'] && (! $existing || $existing->paid_total === null)) {
+            $orderData['paid_total'] = (float) $orderData['total'];
+        }
+
         /** @var WooOrder $order */
         $order = WooOrder::updateOrCreate(
             ['connection_id' => $connectionId, 'woo_id' => $wooId],
