@@ -31,9 +31,15 @@
             foreach (($e->after['lines'] ?? []) as $al) {
                 $wid = $al['woo_item_id'] ?? null;
                 if (! $wid) continue;
-                $old = $before->get($wid)['quantity'] ?? null;
+                $bl  = $before->get($wid);
+                $old = $bl['quantity'] ?? null;
                 if ($old !== null && (float) $old != (float) ($al['quantity'] ?? 0)) {
-                    $qtyChg[(int) $wid] = [(float) $old, (float) $al['quantity']];
+                    $qtyChg[(int) $wid] = [
+                        'oldQ' => (float) $old,
+                        'newQ' => (float) ($al['quantity'] ?? 0),
+                        'oldT' => (float) ($bl['total'] ?? 0),   // net
+                        'newT' => (float) ($al['total'] ?? 0),   // net
+                    ];
                 }
             }
         }
@@ -99,10 +105,16 @@
           <td style="text-align:right;">{{ number_format($gross, 2) }}</td>
           <td style="text-align:right;">{{ floor($item->quantity) == $item->quantity ? number_format($item->quantity, 0) : number_format($item->quantity, 2) }}
             @if(isset($qtyChg[(int) $item->woo_item_id]))
-              <div style="font-size:.68rem;color:#b45309;font-weight:700;">{{ $fmtQ($qtyChg[(int) $item->woo_item_id][0]) }} → {{ $fmtQ($qtyChg[(int) $item->woo_item_id][1]) }}</div>
+              <div style="font-size:.68rem;color:#b45309;font-weight:700;">{{ $fmtQ($qtyChg[(int) $item->woo_item_id]['oldQ']) }} → {{ $fmtQ($qtyChg[(int) $item->woo_item_id]['newQ']) }}</div>
             @endif
           </td>
-          <td style="text-align:right;font-weight:600;">{{ number_format($gross * (float) $item->quantity, 2) }}</td>
+          <td style="text-align:right;font-weight:600;">{{ number_format($gross * (float) $item->quantity, 2) }}
+            @if(isset($qtyChg[(int) $item->woo_item_id]))
+              @php $c = $qtyChg[(int) $item->woo_item_id]; $oG = $c['oldT'] * 1.21; $nG = $c['newT'] * 1.21; $dG = $nG - $oG; @endphp
+              <div style="font-size:.68rem;color:#b45309;font-weight:700;">{{ number_format($oG, 2) }} → {{ number_format($nG, 2) }}</div>
+              <div style="font-size:.66rem;font-weight:700;color:{{ $dG >= 0 ? '#065f46' : '#b91c1c' }};">{{ $dG >= 0 ? '+' : '−' }}{{ number_format(abs($dG), 2) }} lei</div>
+            @endif
+          </td>
           @if($editable)
             <td style="text-align:right;white-space:nowrap;">
               <button type="button" class="oie-icon" title="Editează cantitatea/prețul"
