@@ -36,19 +36,18 @@ class ListWooOrders extends ListRecords
 
         $count = fn (array $statuses): ?string => ($n = WooOrder::query()->whereIn('status', $statuses)->count()) > 0 ? (string) $n : null;
 
-        // De expediat: în procesare, fără AWB valid și care nu-s ridicare din depozit.
+        // De expediat = GATA de expediat: în procesare, fără AWB valid, non-ridicare din depozit,
+        // ȘI cu stoc suficient pentru TOATE produsele la locația comenzii (poate fi trimisă acum).
+        $shortfall = 'EXISTS (SELECT 1 FROM woo_order_items oi JOIN woo_products wp ON wp.woo_id = oi.woo_product_id'
+            .' WHERE oi.order_id = woo_orders.id AND oi.quantity > COALESCE((SELECT SUM(ps.quantity) FROM product_stocks ps'
+            .' WHERE ps.woo_product_id = wp.id AND (woo_orders.location_id = 0 OR ps.location_id = woo_orders.location_id)), 0))';
+
         $deExpediatQ = fn ($query) => $query
             ->whereIn('status', ['processing', 'on-hold'])
             ->where('data', 'not like', '%local_pickup%')
             ->whereDoesntHave('samedayAwbs', fn ($q) => $q
-                ->whereNotNull('awb_number')->where('awb_number', '!=', '')->where('status', '!=', 'cancelled'));
-
-        // Diferență de încasare: comenzi plătite card unde totalul ≠ încasatul efectiv
-        // (încasat = paid_total − rambursat) → de rambursat sau de încasat suplimentar.
-        $diferentaQ = fn ($query) => $query
-            ->whereNotNull('paid_total')
-            ->where('payment_method', '!=', 'cod')
-            ->whereRaw('ABS(total - (paid_total - COALESCE(refund_amount, 0))) > 0.01');
+                ->whereNotNull('awb_number')->where('awb_number', '!=', '')->where('status', '!=', 'cancelled'))
+            ->whereRaw('NOT '.$shortfall);
 
         $countQ = fn (callable $m): ?string => ($n = $m(WooOrder::query())->count()) > 0 ? (string) $n : null;
 
@@ -71,11 +70,6 @@ class ListWooOrders extends ListRecords
                 ->modifyQueryUsing($deExpediatQ)
                 ->badge($countQ($deExpediatQ))
                 ->badgeColor('info'),
-
-            'diferenta_incasare' => Tab::make('💳 Diferență încasare')
-                ->modifyQueryUsing($diferentaQ)
-                ->badge($countQ($diferentaQ))
-                ->badgeColor('danger'),
 
             'finalizate' => Tab::make('Finalizate')
                 ->modifyQueryUsing(fn ($query) => $query->where('status', 'completed'))
