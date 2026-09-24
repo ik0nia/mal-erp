@@ -1149,9 +1149,9 @@ class ViewPurchaseOrder extends ViewRecord
             }
 
             // Justificare vizibilă: de ce a reintrat în coada de cumpărare (evită confuzia).
-            $poUrl      = \App\Filament\App\Resources\PurchaseOrderResource::getUrl('view', ['record' => $this->record->getKey()]);
+            // Linkul către PO e în secțiunea „PO-uri asociate" a necesarului, nu în text brut.
             $reopenNote = 'Redeschis la recepție ('.now()->format('d.m.Y').'): nelivrat pe '
-                .$this->record->number.' — de recomandat. '.$poUrl;
+                .$this->record->number.' — de recomandat.';
             $updates['notes'] = trim((filled($requestItem->notes) ? $requestItem->notes.' | ' : '').$reopenNote);
 
             $requestItem->update($updates);

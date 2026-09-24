@@ -237,6 +237,35 @@ class PurchaseRequestResource extends Resource
                     TextEntry::make('notes')->label('Observații')->placeholder('—')->columnSpanFull(),
                 ]),
 
+            InfolistSection::make('PO-uri asociate')
+                ->description('Comenzile de achiziție prin care au trecut produsele acestui necesar (istoric complet)')
+                ->visible(fn (PurchaseRequest $record): bool => $record->relatedPurchaseOrders()->isNotEmpty())
+                ->schema([
+                    TextEntry::make('related_purchase_orders')
+                        ->label('')
+                        ->html()
+                        ->getStateUsing(function (PurchaseRequest $record): string {
+                            return $record->relatedPurchaseOrders()->map(function ($po): string {
+                                $url    = PurchaseOrderResource::getUrl('view', ['record' => $po->id]);
+                                $labels = [
+                                    'draft' => 'Ciornă', 'pending_approval' => 'Așteaptă aprobare',
+                                    'approved' => 'Aprobat', 'rejected' => 'Respins',
+                                    'sent' => 'Trimis', 'received' => 'Recepționat', 'cancelled' => 'Anulat',
+                                ];
+                                $style = match ($po->status) {
+                                    'received' => 'color:#065f46;background:#d1fae5',
+                                    'sent', 'approved' => 'color:#1e40af;background:#dbeafe',
+                                    'rejected', 'cancelled' => 'color:#991b1b;background:#fee2e2',
+                                    default => 'color:#374151;background:#f3f4f6',
+                                };
+                                $when = $po->created_at ? ' · ' . $po->created_at->format('d.m.Y') : '';
+
+                                return '<a href="' . $url . '" style="display:inline-block;margin:2px 6px 2px 0;padding:4px 12px;border-radius:9px;font-size:12px;font-weight:600;text-decoration:none;' . $style . '">'
+                                    . e($po->number) . ' · ' . e($labels[$po->status] ?? $po->status) . $when . '</a>';
+                            })->implode(' ');
+                        }),
+                ]),
+
             InfolistSection::make('Comunicare furnizori')
                 ->collapsed()
                 ->schema([

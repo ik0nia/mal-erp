@@ -200,6 +200,37 @@ class PurchaseRequest extends Model
         }
     }
 
+    /**
+     * Toate PO-urile prin care au trecut vreodată liniile acestui necesar (istoric complet),
+     * din `sources_json` + FK-ul direct. Ordonate cronologic. Folosit în secțiunea „PO-uri asociate".
+     *
+     * @return \Illuminate\Support\Collection<int, PurchaseOrder>
+     */
+    public function relatedPurchaseOrders(): \Illuminate\Support\Collection
+    {
+        $itemIds = $this->items()->pluck('id')->all();
+        if (empty($itemIds)) {
+            return collect();
+        }
+
+        $poIds = PurchaseOrderItem::query()
+            ->where(function ($q) use ($itemIds): void {
+                $q->whereIn('purchase_request_item_id', $itemIds);
+                foreach ($itemIds as $id) {
+                    $q->orWhere('sources_json', 'like', '%"request_item_id":'.(int) $id.'%');
+                }
+            })
+            ->pluck('purchase_order_id')
+            ->filter()
+            ->unique();
+
+        if ($poIds->isEmpty()) {
+            return collect();
+        }
+
+        return PurchaseOrder::whereIn('id', $poIds)->orderBy('created_at')->get();
+    }
+
     private static function generateNumber(): string
     {
         $series    = strtoupper(trim((string) AppSetting::get(AppSetting::KEY_PNR_SERIES, 'PNR')));
