@@ -206,6 +206,7 @@ class WooProduct extends Model
             ->using(ProductSupplier::class)
             ->withPivot([
                 'supplier_sku',
+                'delisted_at',
                 'supplier_product_name',
                 'supplier_package_sku',
                 'supplier_package_ean',

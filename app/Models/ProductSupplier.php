@@ -16,6 +16,7 @@ class ProductSupplier extends Pivot
         'woo_product_id',
         'supplier_id',
         'supplier_sku',
+        'delisted_at',
         'purchase_price',
         'currency',
         'lead_days',
@@ -58,6 +59,7 @@ class ProductSupplier extends Pivot
             'under_delivery_tolerance' => 'decimal:2',
             'last_purchase_date'      => 'date',
             'last_purchase_price'     => 'decimal:4',
+            'delisted_at'             => 'datetime',
         ];
     }
 

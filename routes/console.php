@@ -180,6 +180,13 @@ Schedule::command('toya:sync-prices')
     ->withoutOverlapping(120)
     ->runInBackground();
 
+// Toya — produse scoase din catalog → draft + marcaj „delistat de furnizor" (zilnic 06:30).
+Schedule::command('toya:draft-discontinued')
+    ->dailyAt('06:30')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping(60)
+    ->runInBackground();
+
 // Tracking AWB Sameday — bulk prin status-sync (1-2 apeluri/rulare, la 15 min, 8-21)
 Schedule::command('awb:sync-courier-status')
     ->cron('*/15 8-21 * * *')

@@ -555,13 +555,27 @@ class WooProductResource extends Resource
                     ->toggleable(),
                 TextColumn::make('preferred_supplier')
                     ->label('Furnizor')
-                    ->getStateUsing(fn (WooProduct $record): ?string =>
-                        $record->suppliers->firstWhere('pivot.is_preferred', true)?->name
-                        ?? $record->suppliers->first()?->name
-                    )
+                    ->getStateUsing(function (WooProduct $record): ?string {
+                        $sup = $record->suppliers->firstWhere('pivot.is_preferred', true)
+                            ?? $record->suppliers->first();
+                        if (! $sup) {
+                            return null;
+                        }
+
+                        return $sup->pivot?->delisted_at
+                            ? $sup->name.' · ⚠ DELISTAT'
+                            : $sup->name;
+                    })
                     ->placeholder('-')
                     ->badge()
-                    ->color('gray')
+                    ->color(fn (WooProduct $record): string =>
+                        $record->suppliers->contains(fn ($s) => $s->pivot?->delisted_at) ? 'danger' : 'gray'
+                    )
+                    ->tooltip(fn (WooProduct $record): ?string =>
+                        $record->suppliers->contains(fn ($s) => $s->pivot?->delisted_at)
+                            ? 'Produs delistat de furnizor (cod dispărut din catalog)'
+                            : null
+                    )
                     ->toggleable(),
                 TextColumn::make('price')
                     ->label('Preț')
