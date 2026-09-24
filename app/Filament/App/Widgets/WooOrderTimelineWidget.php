@@ -40,10 +40,21 @@ class WooOrderTimelineWidget extends Widget
         $done = $gaps('SELECT TIMESTAMPDIFF(HOUR, order_date, date_completed) t
             FROM woo_orders WHERE YEAR(order_date) = ? AND date_completed IS NOT NULL');
 
-        $deliv = $gaps('SELECT TIMESTAMPDIFF(HOUR, o.order_date, MIN(a.delivered_at)) t
+        // Livrat la client = Sameday (delivered_at real) + flotă proprie (custom_shipping).
+        // Flota proprie nu are tracking AWB → presupunem 8h/livrare (median convenit).
+        $delivSameday = $gaps('SELECT TIMESTAMPDIFF(HOUR, o.order_date, MIN(a.delivered_at)) t
             FROM woo_orders o JOIN sameday_awbs a ON a.woo_order_id = o.id
             WHERE YEAR(o.order_date) = ? AND a.delivered_at IS NOT NULL
             GROUP BY o.id');
+
+        $fleetCount = (int) (DB::selectOne(
+            'SELECT COUNT(*) n FROM woo_orders
+             WHERE YEAR(order_date) = ? AND status = "completed"
+               AND data LIKE \'%"method_id":"custom_shipping"%\'',
+            [$y]
+        )->n ?? 0);
+
+        $deliv = array_merge($delivSameday, array_fill(0, $fleetCount, 8.0)); // flotă = 8h presupus
 
         $median = function (array $v): ?float {
             sort($v);
