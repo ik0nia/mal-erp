@@ -36,6 +36,22 @@ class ListWooOrders extends ListRecords
 
         $count = fn (array $statuses): ?string => ($n = WooOrder::query()->whereIn('status', $statuses)->count()) > 0 ? (string) $n : null;
 
+        // De expediat: în procesare, fără AWB valid și care nu-s ridicare din depozit.
+        $deExpediatQ = fn ($query) => $query
+            ->whereIn('status', ['processing', 'on-hold'])
+            ->where('data', 'not like', '%local_pickup%')
+            ->whereDoesntHave('samedayAwbs', fn ($q) => $q
+                ->whereNotNull('awb_number')->where('awb_number', '!=', '')->where('status', '!=', 'cancelled'));
+
+        // Diferență de încasare: comenzi plătite card unde totalul ≠ încasatul efectiv
+        // (încasat = paid_total − rambursat) → de rambursat sau de încasat suplimentar.
+        $diferentaQ = fn ($query) => $query
+            ->whereNotNull('paid_total')
+            ->where('payment_method', '!=', 'cod')
+            ->whereRaw('ABS(total - (paid_total - COALESCE(refund_amount, 0))) > 0.01');
+
+        $countQ = fn (callable $m): ?string => ($n = $m(WooOrder::query())->count()) > 0 ? (string) $n : null;
+
         return [
             'toate' => Tab::make('Toate'),
 
@@ -49,6 +65,16 @@ class ListWooOrders extends ListRecords
                 ->modifyQueryUsing(fn ($query) => $query
                     ->whereIn('status', $deProcesat)
                     ->whereRaw('(winmentor_invoice_nr IS NULL OR ABS(total - COALESCE(winmentor_invoice_total, total)) > 0.05)'))
+                ->badgeColor('danger'),
+
+            'de_expediat' => Tab::make('📦 De expediat')
+                ->modifyQueryUsing($deExpediatQ)
+                ->badge($countQ($deExpediatQ))
+                ->badgeColor('info'),
+
+            'diferenta_incasare' => Tab::make('💳 Diferență încasare')
+                ->modifyQueryUsing($diferentaQ)
+                ->badge($countQ($diferentaQ))
                 ->badgeColor('danger'),
 
             'finalizate' => Tab::make('Finalizate')
